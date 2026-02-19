@@ -87,8 +87,8 @@ export default function Library() {
                                         <div className="group/btn relative">
                                             <div className="absolute -inset-1 bg-gold/20 blur opacity-0 group-hover/btn:opacity-100 transition duration-500 rounded-2xl"></div>
                                             <div className="relative px-10 py-4 bg-gold text-primary font-black rounded-2xl text-[13px] shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
-                                                <span>리포트 분석하기</span>
-                                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                                <span>테스트 결과 보기</span>
+                                                <span className="material-symbols-outlined text-lg">analytics</span>
                                             </div>
                                         </div>
                                     </div>
