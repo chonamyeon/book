@@ -139,46 +139,63 @@ export default function Library() {
                             </div>
                             <div className="flex flex-col gap-6">
                                 {myRecs.map((book, idx) => (
-                                    <a
-                                        key={idx}
-                                        href={book.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex gap-5 group items-center"
-                                    >
-                                        <div className="w-24 shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/5">
-                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div key={idx} className="flex items-center gap-4 group">
+                                        <div className="flex flex-1 gap-5 items-center">
+                                            <div className="w-20 shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                                                <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            </div>
+                                            <div className="flex flex-col justify-center min-w-0">
+                                                <h4 className="text-base font-bold text-white leading-tight mb-1 truncate">{book.title}</h4>
+                                                <p className="text-[10px] text-slate-500 mb-2 truncate">{book.author}</p>
+                                                <p className="text-[10px] text-slate-400 line-clamp-1 leading-relaxed opacity-70 italic truncate">"{book.desc}"</p>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col justify-center">
-                                            <h4 className="text-lg font-bold text-white leading-tight mb-1">{book.title}</h4>
-                                            <p className="text-xs text-slate-500 mb-2">{book.author}</p>
-                                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed opacity-70 italic">"{book.desc}"</p>
-                                        </div>
-                                    </a>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-
-
-                    {/* 5. Saved Collection (If any) */}
-                    {savedBooks.length > 0 && (
-                        <section className="pb-10 pt-10 border-t border-white/5">
-                            <div className="mb-6 flex items-center justify-between">
-                                <h2 className="serif-title text-xl font-bold tracking-tight text-white/40 italic font-light tracking-widest">Saved Collection</h2>
-                                <span className="text-[10px] text-slate-600 font-bold">{savedBooks.length} ITEMS</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                {savedBooks.map((book, idx) => (
-                                    <div key={idx} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/5 shadow-xl group">
-                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                                        <a
+                                            href={book.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="size-10 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 hover:bg-gold transition-colors group/btn shrink-0"
+                                        >
+                                            <span className="material-symbols-outlined text-gold group-hover/btn:text-primary text-xl">shopping_cart</span>
+                                        </a>
                                     </div>
                                 ))}
                             </div>
                         </section>
                     )}
+
+                    {/* 5. Saved Collection (If any) */}
+                    {savedBooks.length > 0 && (
+                        <section className="pb-10 pt-10 border-t border-white/5">
+                            <div className="mb-8 flex items-center justify-between">
+                                <h1 className="serif-title text-2xl font-bold tracking-tight text-white italic">Saved Collection</h1>
+                                <span className="text-[10px] text-slate-600 font-bold tracking-widest leading-none">{savedBooks.length} ITEMS</span>
+                            </div>
+                            <div className="space-y-6">
+                                {savedBooks.map((book, idx) => (
+                                    <div key={idx} className="flex items-center gap-5 group">
+                                        <div className="size-20 rounded-xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0 relative">
+                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-base font-bold text-white truncate mb-1">{book.title}</h4>
+                                            <p className="text-xs text-slate-500 truncate">{book.author}</p>
+                                        </div>
+                                        <a
+                                            href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold transition-colors group/btn shrink-0"
+                                        >
+                                            <span className="material-symbols-outlined text-slate-400 group-hover/btn:text-primary text-xl">shopping_cart</span>
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                 </main>
 
 
