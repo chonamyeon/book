@@ -10,41 +10,54 @@ export default function Profile() {
     const { user, loading } = useAuth();
     const navigate = useNavigate();
 
-    // Handle redirect result on mount
+    const [redirectChecking, setRedirectChecking] = useState(true);
+
+    // Handle redirect result on mount - Critical for Mobile
     useEffect(() => {
-        getRedirectResult(auth).catch(err => {
-            if (err.code !== 'auth/redirect-cancelled-by-user') {
+        const checkRedirect = async () => {
+            try {
+                const result = await getRedirectResult(auth);
+                if (result) {
+                    console.log("Mobile Redirect Login Success");
+                }
+            } catch (err) {
                 console.error("Redirect Result Error:", err);
+                if (err.code !== 'auth/redirect-cancelled-by-user') {
+                    alert("로그인 확인 중 오류: " + err.message);
+                }
+            } finally {
+                setRedirectChecking(false);
             }
-        });
+        };
+
+        checkRedirect();
     }, []);
 
     // Handle post-login redirection
     useEffect(() => {
-        if (user && !loading) {
+        if (user && !loading && !redirectChecking) {
             const redirectPath = localStorage.getItem('authRedirectPath');
             if (redirectPath && redirectPath !== '/profile') {
                 localStorage.removeItem('authRedirectPath');
-                const timer = setTimeout(() => {
-                    navigate(redirectPath, { replace: true });
-                }, 800);
-                return () => clearTimeout(timer);
+                navigate(redirectPath, { replace: true });
             }
         }
-    }, [user, loading, navigate]);
+    }, [user, loading, redirectChecking, navigate]);
 
     const handleLogin = async () => {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
         try {
-            // Popup is generally better if the user action is direct
-            await loginWithGoogle();
-        } catch (error) {
-            console.error("Login failed:", error.code);
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-                // If popup is blocked, use redirect as fallback
+            if (isMobile) {
+                // FORCE Redirect for mobile. Popups fail on iOS often.
                 await loginWithGoogleRedirect();
             } else {
-                alert("로그인 중 오류가 발생했습니다: " + error.message);
+                // Desktop can use popup
+                await loginWithGoogle();
             }
+        } catch (error) {
+            console.error("Login failed:", error.code);
+            alert("로그인 시작 실패: " + error.message);
         }
     };
 
@@ -59,7 +72,7 @@ export default function Profile() {
         }
     };
 
-    if (loading) {
+    if (loading || redirectChecking) {
         return (
             <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-10">

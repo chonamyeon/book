@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { auth } from "../firebase";
-import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
 export function useAuth() {
     const [user, setUser] = useState(null);
