@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loginWithGoogle, loginWithGoogleRedirect, logout, auth } from '../firebase';
-import { setPersistence, browserSessionPersistence } from 'firebase/auth'; // browserSessionPersistence for Safari
+// removed unused imports from firebase/auth
 import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
@@ -49,9 +49,8 @@ export default function Profile() {
         // We strongly rely on Redirect for mobile.
         addLog("Attempting Popup Login...");
         try {
-            // Ensure session persistence to allow Safari to keep state after redirect/popup
-            await setPersistence(auth, browserSessionPersistence);
-            await loginWithGoogle(); // In firebase.js this is now defined as Redirect!
+            // In firebase.js this is now defined as Redirect!
+            await loginWithGoogle();
             // If it was popup, it would await here. If redirect, this line won't be reached immediately (page reloads)
         } catch (error) {
             addLog("Popup Failed: " + error.code + " - " + error.message);
@@ -67,8 +66,6 @@ export default function Profile() {
         }
 
         try {
-            // Ensure session persistence
-            await setPersistence(auth, browserSessionPersistence);
             await loginWithGoogleRedirect();
         } catch (error) {
             addLog("Redirect Failed: " + error.code + " - " + error.message);
