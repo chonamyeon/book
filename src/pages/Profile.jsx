@@ -10,39 +10,40 @@ export default function Profile() {
     const { user, loading } = useAuth();
     const navigate = useNavigate();
 
+    // Handle redirect result on mount
+    useEffect(() => {
+        getRedirectResult(auth).catch(err => {
+            if (err.code !== 'auth/redirect-cancelled-by-user') {
+                console.error("Redirect Result Error:", err);
+            }
+        });
+    }, []);
+
     // Handle post-login redirection
     useEffect(() => {
         if (user && !loading) {
             const redirectPath = localStorage.getItem('authRedirectPath');
             if (redirectPath && redirectPath !== '/profile') {
                 localStorage.removeItem('authRedirectPath');
-                // Small delay to ensure state is settled
                 const timer = setTimeout(() => {
                     navigate(redirectPath, { replace: true });
-                }, 500);
+                }, 800);
                 return () => clearTimeout(timer);
             }
         }
     }, [user, loading, navigate]);
 
     const handleLogin = async () => {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
         try {
-            // Priority: Popup if possible (some modern mobile browsers allow it if direct click)
-            // If it fails, fallback to Redirect
-            if (isMobile) {
+            // Popup is generally better if the user action is direct
+            await loginWithGoogle();
+        } catch (error) {
+            console.error("Login failed:", error.code);
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+                // If popup is blocked, use redirect as fallback
                 await loginWithGoogleRedirect();
             } else {
-                await loginWithGoogle();
-            }
-        } catch (error) {
-            console.error("Login Error:", error.code);
-            // On iOS, sometimes the first attempt fails. Try the alternate method.
-            try {
-                await loginWithGoogle();
-            } catch (inner) {
-                window.location.reload(); // Last resort: Refresh and try again
+                alert("로그인 중 오류가 발생했습니다: " + error.message);
             }
         }
     };
@@ -58,32 +59,15 @@ export default function Profile() {
         }
     };
 
-    // Manual State Refresh for iOS
-    const refreshState = () => {
-        window.location.reload();
-    };
-
     if (loading) {
         return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-10">
                     <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
-                    <div className="size-20 rounded-full border-t-2 border-r-2 border-gold animate-spin shadow-[0_0_30px_rgba(212,175,55,0.3)]"></div>
-                    <div className="absolute inset-0 flex items-center justify-center text-gold">
-                        <span className="material-symbols-outlined text-3xl">lock</span>
-                    </div>
+                    <div className="size-20 rounded-full border-t-2 border-gold animate-spin"></div>
                 </div>
-                <h2 className="text-white text-xl font-bold mb-3">인증 처리 중...</h2>
-                <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                    구글 로그인을 완료하셨다면,<br />잠시 후 자동으로 페이지가 전환됩니다.
-                </p>
-                <button
-                    onClick={refreshState}
-                    className="text-gold text-xs font-bold border-b border-gold/30 pb-1 flex items-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-sm">refresh</span>
-                    반응이 없다면 여기를 눌러 새로고침 하세요
-                </button>
+                <h2 className="text-white text-xl font-bold mb-2">인증 확인 중</h2>
+                <p className="text-slate-500 text-sm">잠시만 기다려주세요...</p>
             </div>
         );
     }
@@ -181,24 +165,30 @@ export default function Profile() {
                                 <span>Google로 시작하기</span>
                             </button>
 
-                            {/* iOS Troubleshooting Note */}
+                            {/* Diagnostic & Troubleshooting UI */}
                             <div className="w-full p-6 bg-gold/5 rounded-2xl border border-gold/10 text-center">
                                 <p className="text-gold text-[11px] font-bold mb-3 flex items-center justify-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">info</span>
-                                    아이폰 로그인에 문제가 있으신가요?
+                                    <span className="material-symbols-outlined text-sm">verified_user</span>
+                                    아이폰 이용자 필수 확인사항
                                 </p>
-                                <p className="text-slate-400 text-[10px] leading-snug">
-                                    설정 &gt; Safari &gt; <span className="text-slate-200 font-bold">'크로스 사이트 추적 방지'</span>를<br />
-                                    일시적으로 해제하면 해결될 수 있습니다.<br />
-                                    또는 <span className="text-slate-200 font-bold">Safari 앱</span>에서 직접 접속해주세요.
-                                </p>
+                                <div className="space-y-3 text-left">
+                                    <p className="text-slate-400 text-[10px] leading-snug">
+                                        1. <span className="text-slate-200 font-bold">인앱 브라우저 차단:</span> 카톡/네이버 앱이 아닌 아이폰 전용 <span className="text-slate-200 font-bold">Safari 앱</span>으로 접속해주세요.
+                                    </p>
+                                    <p className="text-slate-400 text-[10px] leading-snug">
+                                        2. <span className="text-slate-200 font-bold">중요! 도메인 승인:</span> Firebase 콘솔의 Auth &gt; 설정 &gt; <span className="text-white font-bold underline">승인된 도메인</span>에 현재 주소가 추가되었는지 꼭 확인하세요.
+                                    </p>
+                                    <p className="text-slate-400 text-[10px] leading-snug">
+                                        3. <span className="text-slate-200 font-bold">브라우저 설정:</span> 설정 &gt; Safari &gt; <span className="text-slate-200 font-bold">크로스 사이트 추적 방지</span>를 잠시 끄면 즉시 해결됩니다.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     )}
 
                     <p className="text-center text-[10px] text-slate-500 mt-12 mb-4">
-                        The Archive v1.0.2<br />
-                        Powered by Stitch MCP
+                        The Archive v1.0.3<br />
+                        Authorized Domain Check Required
                     </p>
                 </main>
 
