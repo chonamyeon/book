@@ -1,0 +1,171 @@
+import React, { useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { celebrities } from '../data/celebrities';
+import BottomNavigation from '../components/BottomNavigation';
+import TopNavigation from '../components/TopNavigation';
+
+export default function Celebrity() {
+    const { id } = useParams();
+    const celeb = celebrities.find(c => c.id === id) || celebrities[0]; // Default to first if not found
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id]);
+
+    return (
+        <div className="bg-white text-slate-900 dark:text-slate-100 antialiased font-display min-h-screen pb-24 flex justify-center">
+            {/* Main Layout Container: Everything constrained to max-w-lg */}
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen rounded-t-[40px] overflow-hidden border-t border-white/5">
+                <TopNavigation title="에디토리얼 시리즈" type="sub" />
+
+                <main className="pb-24">
+                    {/* Hero Section: Block-style Portrait to match Header width */}
+                    <section className="px-4 pt-2 overflow-hidden">
+                        <div className="relative w-full h-[70vh] md:h-[80vh] flex flex-col justify-end overflow-hidden rounded-2xl shadow-xl">
+                            {/* Background Portrait */}
+                            <div className="absolute inset-0 z-0">
+                                <img className="w-full h-full object-cover grayscale brightness-90 contrast-[1.15]" src={celeb.image} alt={celeb.name} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/30 to-transparent"></div>
+                            </div>
+
+                            {/* Hero Text Overlay Case */}
+                            <div className="relative z-20 p-6 md:p-12 mb-4 max-w-full">
+                                <span className="inline-block px-3 py-1.5 bg-gold text-primary text-[10px] font-black uppercase tracking-tighter mb-4 rounded-sm">이달의 인물</span>
+                                <h1 className="text-[32px] md:text-[56px] font-light tracking-tighter text-white mb-4 leading-none whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {celeb.name}
+                                </h1>
+                                <p className="text-slate-300 text-lg md:text-xl leading-relaxed font-light italic opacity-90">
+                                    "{celeb.quote}"
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Transition Content Section */}
+                    <section className="bg-background-dark px-6 py-12 md:py-20 border-b border-primary/20">
+                        <div className="max-w-3xl mx-auto">
+                            <div className="mb-10">
+                                <h3 className="text-gold text-2xl md:text-3xl uppercase tracking-[0.3em] mb-6 font-bold flex items-center gap-4">
+                                    <div className="w-12 h-[2px] bg-gold-start"></div>
+                                    소 개
+                                </h3>
+                                <p className="text-base md:text-lg font-light leading-relaxed text-slate-300 tracking-normal opacity-80">
+                                    {celeb.intro}
+                                </p>
+                            </div>
+
+                            {/* Bottom Stats Grid: Forced 3-column layout to prevent overflow */}
+                            <div className="grid grid-cols-3 gap-4 md:gap-24 pb-4">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.books}</span>
+                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">보유 도서</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.categories}</span>
+                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">카테고리</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.time}</span>
+                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">평균독서시간</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Curated Categories */}
+                    <section className="px-4 py-12 space-y-16">
+                        {/* Category: Pivot */}
+                        <div>
+                            <div className="flex items-center justify-between mb-8 border-b border-primary/30 pb-4">
+                                <h4 className="text-2xl font-light tracking-tight"><span className="text-accent mr-2">01.</span>인생의 책들</h4>
+                                <span className="text-[10px] uppercase tracking-widest text-slate-500">추천 도서</span>
+                            </div>
+                            <div className="flex flex-col gap-8">
+                                {celeb.books.map((book, index) => (
+                                    <div key={index} className="flex gap-6 group">
+                                        <div className="w-1/3 shrink-0">
+                                            <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5">
+                                                <img
+                                                    className="w-full h-full object-cover"
+                                                    src={book.cover}
+                                                    alt={book.title}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col justify-between py-1 w-full">
+                                            <div>
+                                                <h5 className="text-lg font-semibold leading-tight mb-1">{book.title}</h5>
+                                                <p className="text-xs text-slate-500 mb-3 italic">{book.author}</p>
+                                                <p className="text-sm text-slate-400 font-light leading-snug">{book.desc}</p>
+                                                {book.source && (
+                                                    <p className="text-[11px] text-gold/80 mt-2 flex items-center gap-1 font-medium tracking-wide">
+                                                        <span className="material-symbols-outlined text-[12px]">campaign</span>
+                                                        SOURCE: {book.source}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="mt-4 flex flex-col gap-2">
+                                                <span className="text-gold font-bold text-lg">{book.price}</span>
+                                                <div className="flex gap-2">
+                                                    <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-gold hover:bg-gold-light text-primary flex-1 text-center py-3 rounded-lg text-sm font-bold uppercase tracking-wider shadow-md hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-1">
+                                                        <span>구매하기</span>
+                                                        <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                                                    </a>
+                                                    <button
+                                                        onClick={() => {
+                                                            const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
+                                                            const isSaved = saved.some(b => b.title === book.title);
+                                                            if (isSaved) {
+                                                                const filtered = saved.filter(b => b.title !== book.title);
+                                                                localStorage.setItem('savedBooks', JSON.stringify(filtered));
+                                                                alert('서재에서 삭제되었습니다.');
+                                                            } else {
+                                                                saved.push(book);
+                                                                localStorage.setItem('savedBooks', JSON.stringify(saved));
+                                                                alert('서재에 추가되었습니다.');
+                                                            }
+                                                            window.dispatchEvent(new Event('storage')); // Notify other components
+                                                        }}
+                                                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 flex-1 text-center py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1"
+                                                    >
+                                                        <span>추천지정</span>
+                                                        <span className="material-symbols-outlined text-sm">bookmark</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="bg-primary/20 py-16 border-t border-primary/30">
+                        <div className="px-6 mb-10 text-center">
+                            <h4 className="text-accent text-[10px] uppercase tracking-[0.4em] mb-3">유사한 성향의 인물</h4>
+                            <p className="text-3xl font-extralight tracking-tight text-white">명사들의 <span className="text-accent italic">큐레이션 서재</span>를 탐험해 보세요.</p>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-y-10 px-4">
+                            {celebrities.map((c) => (
+                                <Link
+                                    key={c.id}
+                                    to={`/celebrity/${c.id}`}
+                                    className={`flex flex-col items-center gap-3 transition-all duration-300 group ${c.id === celeb.id ? 'opacity-100 scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
+                                >
+                                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 p-1 transition-colors duration-500 ${c.id === celeb.id ? 'border-accent shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'border-primary/30 group-hover:border-accent'}`}>
+                                        <img className={`w-full h-full object-cover rounded-full transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
+                                    </div>
+                                    <div className="text-center">
+                                        <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-widest block transition-colors duration-300 ${c.id === celeb.id ? 'text-accent' : 'text-slate-500 group-hover:text-slate-200'}`}>{c.name}</span>
+                                        {c.id === celeb.id && <div className="w-4 h-[2px] bg-accent mx-auto mt-1 rounded-full"></div>}
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                </main>
+                <BottomNavigation />
+            </div>
+        </div>
+    );
+}
