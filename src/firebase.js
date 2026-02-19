@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserSessionPersistence } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCPfT_tnG5ms3DXPWBFFw4jP2n71tD3E28",
@@ -24,10 +24,11 @@ export const googleProvider = new GoogleAuthProvider();
  *    https://book-66383.firebaseapp.com/__/auth/handler
  */
 
-// Explicitly set persistence - Safari needs this to be robust
-setPersistence(auth, browserLocalPersistence)
+// Safari often works better with session persistence for redirects
+setPersistence(auth, browserSessionPersistence)
     .catch(err => console.error("Persistence error:", err));
 
-export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+// iOS Safari robust login: always use redirect
+export const loginWithGoogle = () => signInWithRedirect(auth, googleProvider);
 export const loginWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider);
 export const logout = () => signOut(auth);

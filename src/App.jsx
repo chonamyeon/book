@@ -19,14 +19,6 @@ export default function App() {
         const result = await getRedirectResult(auth);
         if (result) {
           console.log("Global Redirect Login Success:", result.user.email);
-          // Manually backup state just in case
-          const userData = {
-            uid: result.user.uid,
-            displayName: result.user.displayName,
-            email: result.user.email,
-            photoURL: result.user.photoURL
-          };
-          localStorage.setItem('archive_user', JSON.stringify(userData));
         }
       } catch (error) {
         console.error("Global Redirect Error:", error);

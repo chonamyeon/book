@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loginWithGoogle, loginWithGoogleRedirect, logout, auth } from '../firebase';
-import { getRedirectResult, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
+import { setPersistence, browserSessionPersistence } from 'firebase/auth'; // browserSessionPersistence for Safari
 import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
     const { user, loading } = useAuth();
     const navigate = useNavigate();
     const [debugLogs, setDebugLogs] = useState([]);
-    const [redirectChecking, setRedirectChecking] = useState(true);
     const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
     const addLog = (msg) => {
@@ -29,57 +28,6 @@ export default function Profile() {
         }
     }, []);
 
-    // Handle redirect result on mount - Critical for Mobile
-    useEffect(() => {
-        const checkRedirect = async () => {
-            try {
-                addLog("Checking redirect result...");
-                // Force persistence again just in case
-                await setPersistence(auth, browserLocalPersistence);
-
-                const result = await getRedirectResult(auth);
-                if (result) {
-                    addLog("Redirect Login Success: " + result.user.email);
-                    // Force session save - our useAuth hook also does this now
-                    const userData = {
-                        uid: result.user.uid,
-                        displayName: result.user.displayName,
-                        email: result.user.email,
-                        photoURL: result.user.photoURL
-                    };
-                    localStorage.setItem('archive_user', JSON.stringify(userData));
-                    addLog("Backup session saved to localStorage");
-                } else {
-                    addLog("No pending redirect result found.");
-                }
-            } catch (err) {
-                console.error(err);
-                addLog("Redirect Verify Error: " + err.code);
-
-                if (err.code === 'auth/internal-error' || err.code === 'auth/network-request-failed') {
-                    addLog("HINT: This often happens on Safari when 3rd party cookies are blocked.");
-                }
-
-                if (err.code === 'auth/unauthorized-domain') {
-                    alert("도메인 승인 오류: Firebase 콘솔 -> Authentication -> Settings -> Authorized Domains에 '" + window.location.hostname + "'를 추가해야 합니다.");
-                }
-            } finally {
-                setRedirectChecking(false);
-            }
-        };
-
-        checkRedirect();
-
-        // Re-check on focus (for popup returns or tab switching)
-        const onFocus = () => {
-            if (auth.currentUser) {
-                addLog("Focus: User found: " + auth.currentUser.email);
-            }
-        };
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, []);
-
     // DEBUG: Monitor User State
     useEffect(() => {
         if (user) {
@@ -90,14 +38,17 @@ export default function Profile() {
     }, [user, loading]);
 
     const handleLoginPopup = async () => {
+        // iOS Safari Issue: Popup often fails or is blocked.
+        // We strongly rely on Redirect for mobile.
         addLog("Attempting Popup Login...");
         try {
-            await setPersistence(auth, browserLocalPersistence);
-            await loginWithGoogle();
-            addLog("Popup Login Success");
+            // Ensure session persistence to allow Safari to keep state after redirect/popup
+            await setPersistence(auth, browserSessionPersistence);
+            await loginWithGoogle(); // In firebase.js this is now defined as Redirect!
+            // If it was popup, it would await here. If redirect, this line won't be reached immediately (page reloads)
         } catch (error) {
             addLog("Popup Failed: " + error.code + " - " + error.message);
-            alert("팝업 로그인 실패: " + error.message);
+            alert("로그인 실패: " + error.message);
         }
     };
 
@@ -109,21 +60,18 @@ export default function Profile() {
         }
 
         try {
-            await setPersistence(auth, browserLocalPersistence);
+            // Ensure session persistence
+            await setPersistence(auth, browserSessionPersistence);
             await loginWithGoogleRedirect();
-            // This line won't be reached if redirect happens successfully
         } catch (error) {
             addLog("Redirect Failed: " + error.code + " - " + error.message);
-            alert("페이지 이동 로그인 실패: " + error.message);
+            alert("로그인 시도 실패: " + error.message);
         }
     };
 
     const handleLogout = async () => {
         if (window.confirm("로그아웃 하시겠습니까?")) {
             try {
-                // Clear backup session
-                localStorage.removeItem('archive_user');
-                addLog("Clearing local session...");
                 await logout();
                 addLog("Logged out");
                 navigate('/');
@@ -134,7 +82,7 @@ export default function Profile() {
         }
     };
 
-    if (loading || redirectChecking) {
+    if (loading) {
         return (
             <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-10">
@@ -260,13 +208,7 @@ export default function Profile() {
                                     <span>Google 로그인 (iPhone 추천)</span>
                                 </button>
 
-                                <button
-                                    onClick={handleLoginPopup}
-                                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-white/5 text-white font-bold rounded-2xl border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
-                                >
-                                    <span className="material-symbols-outlined">web_asset</span>
-                                    <span>Google 로그인 (팝업)</span>
-                                </button>
+                                {/* Removed the "Popup" button effectively by making both do redirect or making them clear */}
                             </div>
 
                             {/* Debug Logs UI */}
@@ -294,7 +236,7 @@ export default function Profile() {
                     )}
                     <p className="text-center text-[10px] text-slate-500 mt-12 mb-4">
                         The Archive v1.1.0<br />
-                        Safari Optimized Logic Applied
+                        Safari Optimized Logic Applied (+Global)
                     </p>
                 </main>
 
@@ -303,4 +245,3 @@ export default function Profile() {
         </div>
     );
 }
-
