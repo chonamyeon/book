@@ -7,6 +7,7 @@ import Celebrity from './pages/Celebrity';
 import Quiz from './pages/Quiz';
 import Library from './pages/Library';
 import Profile from './pages/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -15,14 +16,15 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/editorial" element={<Editorial />} />
-          <Route path="/result" element={<Result />} />
+          <Route path="/result" element={<ProtectedRoute><Result /></ProtectedRoute>} />
           <Route path="/celebrity/:id" element={<Celebrity />} />
           <Route path="/celebrity" element={<Celebrity />} />
           <Route path="/quiz" element={<Quiz />} />
-          <Route path="/library" element={<Library />} />
+          <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </Router>
   );
 }
+
