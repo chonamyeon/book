@@ -29,18 +29,19 @@ export default function Profile() {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         try {
-            // Force account selection which can help avoid silent failures on iOS
             if (isMobile) {
+                // Direct call for redirect - Safari is sensitive to async chains
                 await loginWithGoogleRedirect();
             } else {
                 await loginWithGoogle();
             }
         } catch (error) {
             console.error("Login Error:", error.code);
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-                await loginWithGoogleRedirect();
-            } else {
-                alert("로그인 중 오류: " + error.message);
+            // Even on mobile, if redirect fails, popup might work as manual fallback
+            try {
+                await loginWithGoogle();
+            } catch (innerErr) {
+                alert("로그인 중 오류가 발생했습니다. 브라우저 설정을 확인해주세요.");
             }
         }
     };
@@ -58,8 +59,13 @@ export default function Profile() {
 
     if (loading) {
         return (
-            <div className="bg-white dark:bg-background-dark min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
+                <div className="relative mb-8">
+                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
+                    <div className="size-16 rounded-full border-b-2 border-gold animate-spin"></div>
+                </div>
+                <p className="text-white font-bold opacity-80 animate-pulse">인증 정보를 확인하고 있습니다...</p>
+                <p className="text-slate-500 text-xs mt-4 leading-relaxed">아이폰의 경우 로그인이 완료되기까지<br />잠시만 기다려주세요.</p>
             </div>
         );
     }
@@ -75,7 +81,7 @@ export default function Profile() {
                             {/* Logged In View */}
                             <div className="flex flex-col items-center mb-8">
                                 <div className="size-22 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
-                                    <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`} alt={user.displayName} className="w-full h-full object-cover" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-primary dark:text-white mb-1">{user.displayName}</h2>
                                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-white/10 px-3 py-1 rounded-full">
@@ -111,7 +117,10 @@ export default function Profile() {
                                 <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <span className="material-symbols-outlined text-slate-400">dark_mode</span>
-                                        <span className="text-sm font-medium">다크 모드</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">다크 모드</span>
+                                            <span className="text-xs text-slate-400">(준비중)</span>
+                                        </div>
                                     </div>
                                     <div className="w-10 h-5 bg-slate-200 rounded-full relative">
                                         <div className="absolute left-1 top-1 size-3 bg-white rounded-full shadow-sm"></div>
@@ -137,7 +146,7 @@ export default function Profile() {
                             </div>
                         </>
                     ) : (
-                        /* Logged Out View - Moved Up */
+                        /* Logged Out View - Moved Up and Troubleshooting added */
                         <div className="flex flex-col items-center justify-center pt-8 pb-10 animate-fade-in">
                             <div className="size-20 rounded-full bg-white/5 flex items-center justify-center border border-gold/20 mb-8 shadow-2xl">
                                 <span className="material-symbols-outlined text-gold text-4xl">menu_book</span>
@@ -148,11 +157,24 @@ export default function Profile() {
                             </p>
                             <button
                                 onClick={handleLogin}
-                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-primary font-black rounded-2xl shadow-2xl hover:scale-[1.02] transition-all active:scale-95 border-b-4 border-slate-200"
+                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 mb-10 transition-all border-b-4 border-slate-200"
                             >
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-6" />
                                 <span>Google로 시작하기</span>
                             </button>
+
+                            {/* iOS Troubleshooting Note */}
+                            <div className="w-full p-6 bg-gold/5 rounded-2xl border border-gold/10 text-center">
+                                <p className="text-gold text-[11px] font-bold mb-3 flex items-center justify-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">info</span>
+                                    아이폰 로그인에 문제가 있으신가요?
+                                </p>
+                                <p className="text-slate-400 text-[10px] leading-snug">
+                                    설정 &gt; Safari &gt; <span className="text-slate-200 font-bold">'크로스 사이트 추적 방지'</span>를<br />
+                                    일시적으로 해제하면 해결될 수 있습니다.<br />
+                                    또는 네이버/카카오 인앱 브라우저 대신 <span className="text-slate-200 font-bold">Safari 앱</span>을 사용해주세요.
+                                </p>
+                            </div>
                         </div>
                     )}
 
