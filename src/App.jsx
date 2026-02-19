@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { auth } from './firebase';
+import { getRedirectResult } from 'firebase/auth';
 import Home from './pages/Home';
 import Editorial from './pages/Editorial';
 import Result from './pages/Result';
@@ -10,6 +12,33 @@ import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
+  // Global Redirect Handler for Firebase Auth (Critical for iOS Safari)
+  React.useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          console.log("Global Redirect Login Success:", result.user.email);
+          // Manually backup state just in case
+          const userData = {
+            uid: result.user.uid,
+            displayName: result.user.displayName,
+            email: result.user.email,
+            photoURL: result.user.photoURL
+          };
+          localStorage.setItem('archive_user', JSON.stringify(userData));
+        }
+      } catch (error) {
+        console.error("Global Redirect Error:", error);
+        if (error.code === 'auth/unauthorized-domain') {
+          alert(`도메인 승인 오류: Firebase 콘솔에서 '${window.location.hostname}'를 승인해야 합니다.`);
+        }
+      }
+    };
+
+    handleRedirect();
+  }, []);
+
   return (
     <Router>
       <div className="max-w-[430px] mx-auto min-h-screen bg-background-light dark:bg-background-dark shadow-2xl relative overflow-hidden">
