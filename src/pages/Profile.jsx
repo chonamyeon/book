@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import { loginWithGoogle, logout } from '../firebase';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
-    const [name, setName] = useState('Guest Reader');
-    // Simple edit mode state
+    const { user, loading } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
+
+    const handleLogin = async () => {
+        try {
+            await loginWithGoogle();
+        } catch (error) {
+            console.error("Login failed:", error);
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white dark:bg-background-dark min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
@@ -17,22 +42,29 @@ export default function Profile() {
                     {/* Profile Header */}
                     <div className="flex flex-col items-center mb-8">
                         <div className="size-24 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
-                            {/* Placeholder Avatar */}
-                            <img src="https://ui-avatars.com/api/?name=Guest+Reader&background=0D8ABC&color=fff" alt="User" className="w-full h-full object-cover" />
+                            {user ? (
+                                <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                            ) : (
+                                <img src="https://ui-avatars.com/api/?name=Guest+Reader&background=0D8ABC&color=fff" alt="User" className="w-full h-full object-cover" />
+                            )}
                         </div>
-                        {isEditing ? (
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="bg-transparent border-b border-primary text-center text-2xl font-bold mb-1 focus:outline-none"
-                            />
-                        ) : (
-                            <h2 className="text-2xl font-bold text-primary dark:text-white mb-1">{name}</h2>
-                        )}
+
+                        <h2 className="text-2xl font-bold text-primary dark:text-white mb-1">
+                            {user ? user.displayName : 'Guest Reader'}
+                        </h2>
+
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-white/10 px-3 py-1 rounded-full">
-                            Novice Reader
+                            {user ? 'Verified Member' : 'Novice Reader'}
                         </span>
+
+                        {!user && (
+                            <button
+                                onClick={handleLogin}
+                                className="mt-6 px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-transform"
+                            >
+                                Google로 로그인
+                            </button>
+                        )}
                     </div>
 
                     {/* Stats Grid */}
@@ -76,12 +108,17 @@ export default function Profile() {
                             </div>
                             <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward_ios</span>
                         </button>
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors text-red-500">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined">logout</span>
-                                <span className="text-sm font-medium">로그아웃</span>
-                            </div>
-                        </button>
+                        {user && (
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors text-red-500"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined">logout</span>
+                                    <span className="text-sm font-medium">로그아웃</span>
+                                </div>
+                            </button>
+                        )}
                     </div>
 
                     <p className="text-center text-[10px] text-slate-400 mt-8 mb-4">
@@ -95,3 +132,4 @@ export default function Profile() {
         </div>
     );
 }
+
