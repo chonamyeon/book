@@ -72,12 +72,12 @@ export default function Profile() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen rounded-t-[40px] overflow-hidden border-t border-white/5">
                 <TopNavigation title="프로필" type="sub" />
 
-                <main className="px-4 py-20 animate-fade-in-up">
+                <main className="px-4 pt-12 pb-24 animate-fade-in-up">
                     {user ? (
                         <>
                             {/* Logged In View */}
                             <div className="flex flex-col items-center mb-8">
-                                <div className="size-24 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
+                                <div className="size-22 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
                                     <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-primary dark:text-white mb-1">{user.displayName}</h2>
@@ -140,8 +140,8 @@ export default function Profile() {
                             </div>
                         </>
                     ) : (
-                        /* Logged Out View - Only Login Button */
-                        <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+                        /* Logged Out View - Moved Up */
+                        <div className="flex flex-col items-center justify-center pt-8 pb-10 animate-fade-in">
                             <div className="size-20 rounded-full bg-white/5 flex items-center justify-center border border-gold/20 mb-8 shadow-2xl">
                                 <span className="material-symbols-outlined text-gold text-4xl">menu_book</span>
                             </div>
