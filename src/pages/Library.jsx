@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
 import { resultData } from '../data/resultData';
+import { recommendations } from '../data/recommendations';
 
 export default function Library() {
     const [unlocked, setUnlocked] = useState(false);
@@ -37,6 +38,7 @@ export default function Library() {
     }, []);
 
     const result = myResultType ? resultData[myResultType] : null;
+    const myRecs = myResultType ? recommendations[myResultType]?.books : [];
 
     return (
         <div className="bg-[#090b10] font-display text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
@@ -62,10 +64,9 @@ export default function Library() {
                         </div>
                     </section>
 
-                    {/* 2. Discover Your Taste / Test Result Banner */}
+                    {/* 2. Banner Section (Test Teaser or Result) */}
                     <section>
                         {myResultType && result ? (
-                            /* Logged In & Tested Case: Show Result Persona */
                             <Link to="/result" className="block group">
                                 <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-gold/30 shadow-2xl bg-gradient-to-br from-slate-900 via-background-dark to-slate-800">
                                     <div className="absolute inset-0 bg-black/40 z-0"></div>
@@ -81,13 +82,11 @@ export default function Library() {
                                             <span className="material-symbols-outlined text-sm text-gold">analytics</span>
                                         </div>
                                     </div>
-                                    {/* Abstract background glow */}
                                     <div className="absolute -top-10 -right-10 size-40 bg-gold/5 blur-3xl rounded-full"></div>
                                     <div className="absolute -bottom-10 -left-10 size-40 bg-primary/20 blur-3xl rounded-full"></div>
                                 </div>
                             </Link>
                         ) : (
-                            /* Not Tested Case: Show Teaser Banner */
                             <Link to="/quiz" className="block group">
                                 <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
                                     <img
@@ -113,12 +112,43 @@ export default function Library() {
                         )}
                     </section>
 
+                    {/* 3. Persona Recommendations (Only if tested) */}
+                    {myResultType && myRecs.length > 0 && (
+                        <section className="animate-fade-in-up">
+                            <div className="flex items-center justify-between mb-8 border-b border-gold/20 pb-4">
+                                <div>
+                                    <h2 className="serif-title text-2xl font-bold tracking-tight text-white">맞춤 추천 도서</h2>
+                                    <p className="text-gold text-[10px] uppercase tracking-widest mt-1 font-bold">Recommended for {result.persona}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-6">
+                                {myRecs.map((book, idx) => (
+                                    <a
+                                        key={idx}
+                                        href={book.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex gap-5 group items-center"
+                                    >
+                                        <div className="w-24 shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        </div>
+                                        <div className="flex flex-col justify-center">
+                                            <h4 className="text-lg font-bold text-white leading-tight mb-1">{book.title}</h4>
+                                            <p className="text-xs text-slate-500 mb-2">{book.author}</p>
+                                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed opacity-70 italic">"{book.desc}"</p>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
-                    {/* 3. Books of Life Section */}
+                    {/* 4. Designated Books Section (Always Shown) */}
                     <section>
                         <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
                             <h2 className="serif-title text-2xl font-bold tracking-tight">01. 인생의 책들</h2>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">추천 도서</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">추천지정도서</span>
                         </div>
 
                         <div className="space-y-6">
@@ -148,26 +178,25 @@ export default function Library() {
                         </div>
                     </section>
 
-                    {/* 4. Saved Collection Only if exists */}
+                    {/* 5. Saved Collection (If any) */}
                     {savedBooks.length > 0 && (
-                        <section className="pb-10 pt-10">
-                            <div className="mb-6">
-                                <h2 className="serif-title text-xl font-bold tracking-tight text-white opacity-40 italic">Stored Memories</h2>
+                        <section className="pb-10 pt-10 border-t border-white/5">
+                            <div className="mb-6 flex items-center justify-between">
+                                <h2 className="serif-title text-xl font-bold tracking-tight text-white/40 italic font-light tracking-widest">Saved Collection</h2>
+                                <span className="text-[10px] text-slate-600 font-bold">{savedBooks.length} ITEMS</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-3">
                                 {savedBooks.map((book, idx) => (
-                                    <div key={idx} className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 shadow-xl group">
+                                    <div key={idx} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/5 shadow-xl group">
                                         <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                        <div className="absolute bottom-3 left-3">
-                                            <h4 className="text-[10px] font-bold text-white truncate">{book.title}</h4>
-                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
                                     </div>
                                 ))}
                             </div>
                         </section>
                     )}
                 </main>
+
 
 
                 <BottomNavigation />
