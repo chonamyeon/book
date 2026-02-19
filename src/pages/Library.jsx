@@ -9,6 +9,15 @@ export default function Library() {
     const [myResultType, setMyResultType] = useState(null);
     const [savedBooks, setSavedBooks] = useState([]);
 
+    const designatedBooks = [
+        { title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg", tag: "인류학" },
+        { title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg", tag: "고전" },
+        { title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg", tag: "성장" },
+        { title: "연금술사", author: "파울로 코엘료", cover: "/images/covers/alchemist.jpg", tag: "철학" },
+        { title: "슈독", author: "필 나이트", cover: "/images/covers/c_02.jpg", tag: "경영" },
+        { title: "아몬드", author: "손원평", cover: "/images/covers/almond.jpg", tag: "소설" }
+    ];
+
     const loadSavedBooks = () => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
         setSavedBooks(saved);
@@ -22,118 +31,120 @@ export default function Library() {
         setMyResultType(type);
         loadSavedBooks();
 
-        // Listen for storage changes
         const handleStorage = () => loadSavedBooks();
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
 
-    const handleRemoveBook = (title) => {
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        const filtered = saved.filter(b => b.title !== title);
-        localStorage.setItem('savedBooks', JSON.stringify(filtered));
-        loadSavedBooks();
-    };
-
     const result = myResultType ? resultData[myResultType] : null;
 
     return (
-        <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
-            {/* Main Layout Container: Everything constrained to max-w-lg */}
-            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen rounded-t-[40px] overflow-hidden border-t border-white/5">
+        <div className="bg-[#090b10] font-display text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
+            {/* Main Layout Container */}
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden">
                 <TopNavigation title="내 서재" type="sub" />
 
-                <main className="px-4 py-20">
-                    <div className="space-y-8 animate-fade-in-up">
-                        {/* Purchased Report Card */}
-                        {unlocked && result && (
-                            <section>
-                                <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">구매한 리포트</h2>
-                                <Link to="/result" state={{ resultType: myResultType }} className="block group">
-                                    <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-white/5 border border-primary/10 dark:border-white/10 shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-slate-900/90 dark:from-black/80 dark:to-slate-800/80 z-10"></div>
-                                        <div className="relative z-20 p-6 flex items-center justify-between">
-                                            <div>
-                                                <span className="inline-block px-2 py-1 bg-gold text-primary text-[10px] font-bold uppercase tracking-widest rounded mb-2">Premium Unlocked</span>
-                                                <h3 className="text-2xl font-black text-white mb-1">{result.persona}</h3>
-                                                <p className="text-slate-300 text-xs font-medium">{result.subtitle}</p>
-                                            </div>
-                                            <div className="size-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20 group-hover:bg-gold group-hover:text-primary transition-colors">
-                                                <span className="material-symbols-outlined text-2xl text-white group-hover:text-primary">arrow_forward</span>
-                                            </div>
-                                        </div>
-                                        {/* Background Decoration */}
-                                        <div className="absolute right-0 bottom-0 top-0 w-1/2 opacity-20 pointer-events-none" style={{ backgroundImage: `url('${result.image}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-                                    </div>
-                                </Link>
-                            </section>
-                        )}
+                <main className="px-5 pt-8 pb-20 space-y-12 animate-fade-in">
 
-                        {/* Collection */}
-                        <section>
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">저장된 도서</h2>
-                                <Link to="/editorial" className="text-xs text-primary dark:text-gold font-bold flex items-center gap-1">
-                                    에디토리얼 둘러보기 <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                                </Link>
-                            </div>
-                            {savedBooks.length > 0 ? (
-                                <div className="grid grid-cols-2 gap-4">
-                                    {savedBooks.map((book, idx) => (
-                                        <div key={idx} className="flex flex-col bg-white dark:bg-white/5 rounded-xl border border-primary/5 dark:border-white/5 shadow-sm overflow-hidden group relative">
-                                            <div className="aspect-[2/3] relative overflow-hidden">
-                                                <img
-                                                    src={book.cover}
-                                                    alt={book.title}
-                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                                />
-                                                <button
-                                                    onClick={() => handleRemoveBook(book.title)}
-                                                    className="absolute top-2 right-2 size-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-red-500 transition-colors"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">close</span>
-                                                </button>
-                                            </div>
-                                            <div className="p-3">
-                                                <h4 className="text-xs font-bold text-primary dark:text-white truncate">{book.title}</h4>
-                                                <p className="text-[10px] text-slate-500 truncate mb-2">{book.author}</p>
-                                                <a
-                                                    href={book.link || `https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-full py-1.5 bg-primary/5 dark:bg-gold/10 text-primary dark:text-gold text-[10px] font-bold rounded flex items-center justify-center gap-1"
-                                                >
-                                                    구매 <span className="material-symbols-outlined text-[10px]">shopping_cart</span>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="aspect-[2/3] rounded-xl bg-slate-100 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                                    <span className="material-symbols-outlined text-3xl mb-2">playlist_add</span>
-                                    <span className="text-xs">추천 도서를 저장해보세요</span>
-                                </div>
-                            )}
-                        </section>
-                    </div>
-
-                    {!unlocked && savedBooks.length === 0 && (
-                        /* Empty State for brand new users */
-                        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-6 mt-8 animate-fade-in-up">
-                            <div className="size-20 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-6">
-                                <span className="material-symbols-outlined text-4xl text-slate-400">library_books</span>
-                            </div>
-                            <h2 className="text-xl font-bold text-primary dark:text-white mb-2">서재가 비어있습니다</h2>
-                            <p className="text-sm text-slate-500 mb-8 max-w-xs">
-                                나만의 독서 페르소나를 발견하고<br />맞춤형 추천 도서를 채워보세요.
-                            </p>
-                            <Link to="/quiz" className="flex items-center gap-2 bg-primary text-gold px-8 py-3 rounded-full text-sm font-bold uppercase tracking-wider shadow-lg hover:shadow-xl active:scale-95 transition-all">
-                                <span>테스트 시작하기</span>
-                                <span className="material-symbols-outlined text-base">arrow_forward</span>
+                    {/* TOP SECTION: Intellectual Taste Test */}
+                    <section>
+                        <div className="flex items-center justify-between mb-5">
+                            <h2 className="serif-title text-xl font-bold tracking-tight">지적 취향 테스트</h2>
+                            <Link to="/quiz" className="text-gold text-xs font-bold px-3 py-1 bg-gold/10 rounded-full border border-gold/20 flex items-center gap-1 active:scale-95 transition-all">
+                                {myResultType ? '다시 하기' : '시작하기'}
+                                <span className="material-symbols-outlined text-sm">play_arrow</span>
                             </Link>
                         </div>
+
+                        {myResultType && result ? (
+                            <Link to="/result" className="block group">
+                                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 p-6 shadow-2xl transition-all hover:border-gold/30">
+                                    <div className="relative z-10 flex items-center justify-between">
+                                        <div className="max-w-[180px]">
+                                            <span className="inline-block px-2 py-0.5 bg-gold text-primary text-[9px] font-black uppercase tracking-widest rounded mb-3">Your Persona</span>
+                                            <h3 className="text-2xl font-black text-white leading-tight mb-2">{result.persona}</h3>
+                                            <p className="text-slate-400 text-xs font-medium leading-relaxed">{result.subtitle}</p>
+                                        </div>
+                                        <div className="size-16 rounded-full bg-gold/20 flex items-center justify-center border border-gold/30 group-hover:scale-110 transition-transform">
+                                            <span className="material-symbols-outlined text-3xl text-gold">psychology</span>
+                                        </div>
+                                    </div>
+                                    {/* Abstract background art */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 blur-3xl -mr-10 -mt-10 rounded-full"></div>
+                                </div>
+                            </Link>
+                        ) : (
+                            <div className="rounded-3xl p-8 bg-slate-900 border-2 border-dashed border-white/5 flex flex-col items-center text-center">
+                                <span className="material-symbols-outlined text-4xl text-slate-600 mb-4">discover_tune</span>
+                                <h3 className="text-lg font-bold text-white mb-2">아직 지적 취향을 발견하지 못했습니다</h3>
+                                <p className="text-slate-500 text-sm mb-6 leading-relaxed">테스트를 통해 당신의 독서 페르소나와<br />맞춤형 추천 도서를 확인해보세요.</p>
+                                <Link to="/quiz" className="w-full py-4 bg-gold text-primary font-black rounded-2xl shadow-lg shadow-gold/10 active:scale-95 transition-transform">
+                                    취향 테스트 시작하기
+                                </Link>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* BOTTOM SECTION: Recommended Designated Books */}
+                    <section>
+                        <div className="flex items-end justify-between mb-6">
+                            <div>
+                                <h2 className="serif-title text-xl font-bold tracking-tight">추천지정도서</h2>
+                                <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1 font-bold">Curated Masterpieces</p>
+                            </div>
+                            <span className="text-gold text-[10px] font-bold">{designatedBooks.length} Books</span>
+                        </div>
+
+                        <div className="space-y-4">
+                            {designatedBooks.map((book, idx) => (
+                                <a
+                                    key={idx}
+                                    href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all active:scale-[0.98] group"
+                                >
+                                    <div className="size-20 rounded-xl overflow-hidden shadow-lg border border-white/10 flex-shrink-0">
+                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[9px] font-bold text-gold/80 uppercase tracking-widest">{book.tag}</span>
+                                        <h4 className="text-sm font-bold text-white truncate my-0.5">{book.title}</h4>
+                                        <p className="text-xs text-slate-500 truncate">{book.author}</p>
+                                    </div>
+                                    <div className="pr-2">
+                                        <span className="material-symbols-outlined text-slate-600 group-hover:text-gold transition-colors">shopping_cart</span>
+                                    </div>
+                                </a>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Saved Books Section (If any) */}
+                    {savedBooks.length > 0 && (
+                        <section className="pb-10">
+                            <div className="flex items-end justify-between mb-6">
+                                <div>
+                                    <h2 className="serif-title text-xl font-bold tracking-tight text-gold">내가 찜한 도서</h2>
+                                    <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1 font-bold">Your Saved Collection</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {savedBooks.map((book, idx) => (
+                                    <Link key={idx} to="/library" className="flex flex-col gap-3 group">
+                                        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                                            <div className="absolute bottom-3 left-3 right-3">
+                                                <h4 className="text-[11px] font-bold text-white truncate">{book.title}</h4>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </section>
                     )}
+
                 </main>
 
                 <BottomNavigation />
@@ -141,3 +152,4 @@ export default function Library() {
         </div>
     );
 }
+
