@@ -12,14 +12,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
-// Explicitly set persistence to LOCAL for Safari consistency
+// Explicitly set persistence - Safari needs this to be robust
 setPersistence(auth, browserLocalPersistence)
     .catch(err => console.error("Persistence error:", err));
-
-export const googleProvider = new GoogleAuthProvider();
-// Mobile Safari prefers fewer custom parameters during redirects
-// We disable select_account for mobile to streamline the flow
 
 export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const loginWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider);

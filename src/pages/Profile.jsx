@@ -29,19 +29,20 @@ export default function Profile() {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         try {
+            // Priority: Popup if possible (some modern mobile browsers allow it if direct click)
+            // If it fails, fallback to Redirect
             if (isMobile) {
-                // Direct call for redirect - Safari is sensitive to async chains
                 await loginWithGoogleRedirect();
             } else {
                 await loginWithGoogle();
             }
         } catch (error) {
             console.error("Login Error:", error.code);
-            // Even on mobile, if redirect fails, popup might work as manual fallback
+            // On iOS, sometimes the first attempt fails. Try the alternate method.
             try {
                 await loginWithGoogle();
-            } catch (innerErr) {
-                alert("로그인 중 오류가 발생했습니다. 브라우저 설정을 확인해주세요.");
+            } catch (inner) {
+                window.location.reload(); // Last resort: Refresh and try again
             }
         }
     };
@@ -57,15 +58,32 @@ export default function Profile() {
         }
     };
 
+    // Manual State Refresh for iOS
+    const refreshState = () => {
+        window.location.reload();
+    };
+
     if (loading) {
         return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
-                <div className="relative mb-8">
-                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
-                    <div className="size-16 rounded-full border-b-2 border-gold animate-spin"></div>
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                <div className="relative mb-10">
+                    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
+                    <div className="size-20 rounded-full border-t-2 border-r-2 border-gold animate-spin shadow-[0_0_30px_rgba(212,175,55,0.3)]"></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-gold">
+                        <span className="material-symbols-outlined text-3xl">lock</span>
+                    </div>
                 </div>
-                <p className="text-white font-bold opacity-80 animate-pulse">인증 정보를 확인하고 있습니다...</p>
-                <p className="text-slate-500 text-xs mt-4 leading-relaxed">아이폰의 경우 로그인이 완료되기까지<br />잠시만 기다려주세요.</p>
+                <h2 className="text-white text-xl font-bold mb-3">인증 처리 중...</h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-8">
+                    구글 로그인을 완료하셨다면,<br />잠시 후 자동으로 페이지가 전환됩니다.
+                </p>
+                <button
+                    onClick={refreshState}
+                    className="text-gold text-xs font-bold border-b border-gold/30 pb-1 flex items-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-sm">refresh</span>
+                    반응이 없다면 여기를 눌러 새로고침 하세요
+                </button>
             </div>
         );
     }
@@ -146,7 +164,7 @@ export default function Profile() {
                             </div>
                         </>
                     ) : (
-                        /* Logged Out View - Moved Up and Troubleshooting added */
+                        /* Logged Out View */
                         <div className="flex flex-col items-center justify-center pt-8 pb-10 animate-fade-in">
                             <div className="size-20 rounded-full bg-white/5 flex items-center justify-center border border-gold/20 mb-8 shadow-2xl">
                                 <span className="material-symbols-outlined text-gold text-4xl">menu_book</span>
@@ -172,7 +190,7 @@ export default function Profile() {
                                 <p className="text-slate-400 text-[10px] leading-snug">
                                     설정 &gt; Safari &gt; <span className="text-slate-200 font-bold">'크로스 사이트 추적 방지'</span>를<br />
                                     일시적으로 해제하면 해결될 수 있습니다.<br />
-                                    또는 네이버/카카오 인앱 브라우저 대신 <span className="text-slate-200 font-bold">Safari 앱</span>을 사용해주세요.
+                                    또는 <span className="text-slate-200 font-bold">Safari 앱</span>에서 직접 접속해주세요.
                                 </p>
                             </div>
                         </div>
