@@ -9,21 +9,30 @@ import { useAuth } from '../hooks/useAuth';
 export default function Profile() {
     const { user, loading } = useAuth();
     const navigate = useNavigate();
-
+    const [debugLogs, setDebugLogs] = useState([]);
     const [redirectChecking, setRedirectChecking] = useState(true);
+
+    const addLog = (msg) => {
+        const time = new Date().toLocaleTimeString();
+        setDebugLogs(prev => [`[${time}] ${msg}`, ...prev]);
+        console.log(`[${time}] ${msg}`);
+    };
 
     // Handle redirect result on mount - Critical for Mobile
     useEffect(() => {
         const checkRedirect = async () => {
             try {
+                addLog("Checking redirect result...");
                 const result = await getRedirectResult(auth);
                 if (result) {
-                    console.log("Mobile Redirect Login Success");
+                    addLog("Redirect Login Success: " + result.user.email);
+                } else {
+                    addLog("No redirect result found.");
                 }
             } catch (err) {
-                console.error("Redirect Result Error:", err);
+                addLog("Redirect Verify Error: " + err.code + " - " + err.message);
                 if (err.code !== 'auth/redirect-cancelled-by-user') {
-                    alert("로그인 확인 중 오류: " + err.message);
+                    alert("로그인 확인 실패: " + err.code);
                 }
             } finally {
                 setRedirectChecking(false);
@@ -36,6 +45,7 @@ export default function Profile() {
     // Handle post-login redirection
     useEffect(() => {
         if (user && !loading && !redirectChecking) {
+            addLog("User authenticated: " + user.email);
             const redirectPath = localStorage.getItem('authRedirectPath');
             if (redirectPath && redirectPath !== '/profile') {
                 localStorage.removeItem('authRedirectPath');
@@ -44,22 +54,25 @@ export default function Profile() {
         }
     }, [user, loading, redirectChecking, navigate]);
 
-    const handleLogin = async (forceRedirect = false) => {
-        // Robust mobile detection including iPad/iPhone on Desktop Mode
-        const isMobile =
-            /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
+    const handleLoginPopup = async () => {
+        addLog("Attempting Popup Login...");
         try {
-            if (isMobile || forceRedirect) {
-                // Must use Redirect for accurate auth on iOS/Mobile
-                await loginWithGoogleRedirect();
-            } else {
-                await loginWithGoogle();
-            }
+            await loginWithGoogle();
+            addLog("Popup Login Success");
         } catch (error) {
-            console.error("Login failed:", error.code);
-            alert("로그인 시작 실패: " + error.message);
+            addLog("Popup Failed: " + error.code + " - " + error.message);
+            alert("팝업 로그인 실패: " + error.code + "\n" + error.message);
+        }
+    };
+
+    const handleLoginRedirect = async () => {
+        addLog("Attempting Redirect Login...");
+        try {
+            await loginWithGoogleRedirect();
+            // This line won't be reached if redirect happens
+        } catch (error) {
+            addLog("Redirect Failed: " + error.code + " - " + error.message);
+            alert("페이지 이동 로그인 실패: " + error.code + "\n" + error.message);
         }
     };
 
@@ -83,6 +96,9 @@ export default function Profile() {
                 </div>
                 <h2 className="text-white text-xl font-bold mb-2">인증 확인 중</h2>
                 <p className="text-slate-500 text-sm">잠시만 기다려주세요...</p>
+                <div className="mt-8 text-left w-full max-w-xs bg-black/50 p-2 rounded text-[10px] text-green-400 font-mono h-32 overflow-y-auto">
+                    {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+                </div>
             </div>
         );
     }
@@ -169,48 +185,60 @@ export default function Profile() {
                                 <span className="material-symbols-outlined text-gold text-4xl">menu_book</span>
                             </div>
                             <h2 className="serif-title text-white text-2xl font-bold mb-2">아카이브 시작하기</h2>
-                            <p className="text-slate-400 text-sm text-center max-w-[240px] mb-10 leading-relaxed font-medium">
+                            <p className="text-slate-400 text-sm text-center max-w-[240px] mb-8 leading-relaxed font-medium">
                                 당신만의 개인 서재를 완성하고<br />지적인 기록을 즐겨보세요.
                             </p>
-                            <button
-                                onClick={() => handleLogin(false)}
-                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 mb-4 transition-all border-b-4 border-slate-200"
-                            >
-                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-6" />
-                                <span>Google로 시작하기</span>
-                            </button>
 
-                            <button
-                                onClick={() => handleLogin(true)}
-                                className="text-slate-400 text-xs underline mb-8 hover:text-white transition-colors"
-                            >
-                                로그인이 안되나요? (호환 모드 실행)
-                            </button>
+                            <div className="w-full flex flex-col gap-3 mb-10">
+                                <button
+                                    onClick={handleLoginRedirect}
+                                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all border-b-4 border-slate-200"
+                                >
+                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-6" />
+                                    <span>Google 로그인 (페이지 이동)</span>
+                                </button>
 
-                            {/* Diagnostic & Troubleshooting UI */}
-                            <div className="w-full p-6 bg-gold/5 rounded-2xl border border-gold/10 text-center">
-                                <p className="text-gold text-[11px] font-bold mb-3 flex items-center justify-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">verified_user</span>
-                                    아이폰 이용자 필수 확인사항
+                                <button
+                                    onClick={handleLoginPopup}
+                                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-white/5 text-white font-bold rounded-2xl border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
+                                >
+                                    <span className="material-symbols-outlined">web_asset</span>
+                                    <span>Google 로그인 (팝업)</span>
+                                </button>
+                            </div>
+
+                            {/* Debug Logs UI */}
+                            <div className="w-full bg-black/50 rounded-xl p-4 border border-white/10 text-left">
+                                <p className="text-white text-[10px] font-bold mb-2 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm text-red-400">bug_report</span>
+                                    문제 해결 로그 (개발자용)
                                 </p>
-                                <div className="space-y-3 text-left">
-                                    <p className="text-slate-400 text-[10px] leading-snug">
-                                        1. <span className="text-slate-200 font-bold">인앱 브라우저 차단:</span> 카톡/네이버 앱이 아닌 아이폰 전용 <span className="text-slate-200 font-bold">Safari 앱</span>으로 접속해주세요.
-                                    </p>
-                                    <p className="text-slate-400 text-[10px] leading-snug">
-                                        2. <span className="text-slate-200 font-bold">중요! 도메인 승인:</span> Firebase 콘솔의 Auth &gt; 설정 &gt; <span className="text-white font-bold underline">승인된 도메인</span>에 현재 주소가 추가되었는지 꼭 확인하세요.
-                                    </p>
-                                    <p className="text-slate-400 text-[10px] leading-snug">
-                                        3. <span className="text-slate-200 font-bold">브라우저 설정:</span> 설정 &gt; Safari &gt; <span className="text-slate-200 font-bold">크로스 사이트 추적 방지</span>를 잠시 끄면 즉시 해결됩니다.
-                                    </p>
+                                <div className="h-32 overflow-y-auto font-mono text-[9px] text-green-400 space-y-1 bg-black/30 p-2 rounded">
+                                    {debugLogs.length === 0 ? (
+                                        <span className="text-slate-500">대기 중... 로그인 시도 시 로그가 표시됩니다.</span>
+                                    ) : (
+                                        debugLogs.map((log, i) => <div key={i}>{log}</div>)
+                                    )}
                                 </div>
+                            </div>
+
+                            <div className="w-full mt-4 p-4 bg-gold/5 rounded-xl border border-gold/10 text-center">
+                                <p className="text-slate-400 text-[10px] leading-snug">
+                                    * 오류 코드가 <b>auth/unauthorized-domain</b>이라면<br />
+                                    Firebase 콘솔에 현재 주소를 등록해야 합니다.
+                                </p>
+                            </div>
+
+                            <div className="w-full mt-2 p-4 bg-red-500/10 rounded-xl border border-red-500/10 text-center">
+                                <p className="text-red-400 text-[10px] leading-snug">
+                                    * 로그인이 안 될 경우 화면을 캡처해서 개발자에게 보내주세요.
+                                </p>
                             </div>
                         </div>
                     )}
-
                     <p className="text-center text-[10px] text-slate-500 mt-12 mb-4">
-                        The Archive v1.0.3<br />
-                        Authorized Domain Check Required
+                        The Archive v1.0.4<br />
+                        Diagnostic Mode Active
                     </p>
                 </main>
 
