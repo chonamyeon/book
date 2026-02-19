@@ -8,13 +8,22 @@ import { recommendations } from '../data/recommendations';
 export default function Library() {
     const [unlocked, setUnlocked] = useState(false);
     const [myResultType, setMyResultType] = useState(null);
+    const [hiddenRecs, setHiddenRecs] = useState([]);
     const [savedBooks, setSavedBooks] = useState([]);
-
-
 
     const loadSavedBooks = () => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
         setSavedBooks(saved);
+    };
+
+    const removeSavedBook = (title) => {
+        const updated = savedBooks.filter(b => b.title !== title);
+        localStorage.setItem('savedBooks', JSON.stringify(updated));
+        setSavedBooks(updated);
+    };
+
+    const hideRecommendedBook = (title) => {
+        setHiddenRecs(prev => [...prev, title]);
     };
 
     useEffect(() => {
@@ -31,7 +40,7 @@ export default function Library() {
     }, []);
 
     const result = myResultType ? resultData[myResultType] : null;
-    const myRecs = myResultType ? recommendations[myResultType]?.books : [];
+    const myRecs = myResultType ? recommendations[myResultType]?.books.filter(b => !hiddenRecs.includes(b.title)) : [];
 
     return (
         <div className="bg-[#090b10] font-display text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
@@ -150,14 +159,22 @@ export default function Library() {
                                                 <p className="text-[10px] text-slate-400 line-clamp-1 leading-relaxed opacity-70 italic truncate">"{book.desc}"</p>
                                             </div>
                                         </div>
-                                        <a
-                                            href={book.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="size-10 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 hover:bg-gold transition-colors group/btn shrink-0"
-                                        >
-                                            <span className="material-symbols-outlined text-gold group-hover/btn:text-primary text-xl">shopping_cart</span>
-                                        </a>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <a
+                                                href={book.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="size-9 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 hover:bg-gold transition-colors group/btn"
+                                            >
+                                                <span className="material-symbols-outlined text-gold group-hover/btn:text-primary text-lg">shopping_cart</span>
+                                            </a>
+                                            <button
+                                                onClick={() => hideRecommendedBook(book.title)}
+                                                className="size-9 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-red-500/20 hover:border-red-500/40 transition-colors group/del"
+                                            >
+                                                <span className="material-symbols-outlined text-slate-500 group-hover/del:text-red-400 text-lg">delete</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -182,19 +199,28 @@ export default function Library() {
                                             <h4 className="text-base font-bold text-white truncate mb-1">{book.title}</h4>
                                             <p className="text-xs text-slate-500 truncate">{book.author}</p>
                                         </div>
-                                        <a
-                                            href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold transition-colors group/btn shrink-0"
-                                        >
-                                            <span className="material-symbols-outlined text-slate-400 group-hover/btn:text-primary text-xl">shopping_cart</span>
-                                        </a>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <a
+                                                href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="size-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold transition-colors group/btn"
+                                            >
+                                                <span className="material-symbols-outlined text-slate-400 group-hover/btn:text-primary text-lg">shopping_cart</span>
+                                            </a>
+                                            <button
+                                                onClick={() => removeSavedBook(book.title)}
+                                                className="size-9 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-red-500/20 hover:border-red-500/40 transition-colors group/del"
+                                            >
+                                                <span className="material-symbols-outlined text-slate-500 group-hover/del:text-red-400 text-lg">delete</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </section>
                     )}
+
 
                 </main>
 
