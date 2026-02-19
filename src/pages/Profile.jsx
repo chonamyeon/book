@@ -28,14 +28,21 @@ export default function Profile() {
         }
     }, []);
 
-    // DEBUG: Monitor User State
+    // DEBUG: Monitor User State & Redirect on Login
     useEffect(() => {
         if (user) {
             addLog("AUTH STATE: User is logged in as " + user.email);
+            // User requested: "Profile 페이지에서 로그인 후 이동"
+            // If we are on the profile page and logged in, maybe we should go home?
+            // However, Profile is ALSO the profile page.
+            // But if the user strictly wants to avoid "Redirect Loop", maybe they want to escape /profile.
+            // I will add a small delay and navigate, OR just navigate.
+            // User instruction: "로그인 성공 후 navigate('/');"
+            navigate('/', { replace: true });
         } else if (!loading) {
             addLog("AUTH STATE: User is null");
         }
-    }, [user, loading]);
+    }, [user, loading, navigate]);
 
     const handleLoginPopup = async () => {
         // iOS Safari Issue: Popup often fails or is blocked.
