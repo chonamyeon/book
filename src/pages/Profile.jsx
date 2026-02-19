@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loginWithGoogle, loginWithGoogleRedirect, logout, auth } from '../firebase';
-import { getRedirectResult } from 'firebase/auth';
+import { getRedirectResult, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
@@ -11,6 +11,7 @@ export default function Profile() {
     const navigate = useNavigate();
     const [debugLogs, setDebugLogs] = useState([]);
     const [redirectChecking, setRedirectChecking] = useState(true);
+    const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
     const addLog = (msg) => {
         const time = new Date().toLocaleTimeString();
@@ -18,11 +19,24 @@ export default function Profile() {
         console.log(`[${time}] ${msg}`);
     };
 
+    // Detect In-App Browser (Kakao, Instagram, Facebook, Line, etc.)
+    useEffect(() => {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        const isInApp = /KAKAOTALK|Instagram|NAVER|Snapchat|Line|Facebook/i.test(userAgent);
+        setIsInAppBrowser(isInApp);
+        if (isInApp) {
+            addLog("WARNING: Running in In-App Browser. Login may fail.");
+        }
+    }, []);
+
     // Handle redirect result on mount - Critical for Mobile
     useEffect(() => {
         const checkRedirect = async () => {
             try {
                 addLog("Checking redirect result...");
+                // Force persistence again just in case
+                await setPersistence(auth, browserLocalPersistence);
+
                 const result = await getRedirectResult(auth);
                 if (result) {
                     addLog("Redirect Login Success: " + result.user.email);
@@ -34,12 +48,18 @@ export default function Profile() {
                         photoURL: result.user.photoURL
                     }));
                 } else {
-                    addLog("No redirect result found.");
+                    addLog("No redirect result found (Normal load or session already active)");
                 }
             } catch (err) {
+                console.error(err);
                 addLog("Redirect Verify Error: " + err.code + " - " + err.message);
-                if (err.code !== 'auth/redirect-cancelled-by-user') {
-                    alert("로그인 확인 실패: " + err.code);
+
+                if (err.code === 'auth/popup-closed-by-user') {
+                    // Ignore
+                } else if (err.code === 'auth/unauthorized-domain') {
+                    alert("도메인 승인 오류: Firebase 콘솔에서 현재 도메인을 승인해야 합니다.");
+                } else {
+                    alert("로그인 확인 실패: " + err.message);
                 }
             } finally {
                 setRedirectChecking(false);
@@ -52,8 +72,6 @@ export default function Profile() {
         const onFocus = () => {
             if (auth.currentUser) {
                 addLog("Focus: User found: " + auth.currentUser.email);
-            } else {
-                addLog("Focus: No user yet");
             }
         };
         window.addEventListener('focus', onFocus);
@@ -72,22 +90,29 @@ export default function Profile() {
     const handleLoginPopup = async () => {
         addLog("Attempting Popup Login...");
         try {
+            await setPersistence(auth, browserLocalPersistence);
             await loginWithGoogle();
             addLog("Popup Login Success");
         } catch (error) {
             addLog("Popup Failed: " + error.code + " - " + error.message);
-            alert("팝업 로그인 실패: " + error.code + "\n" + error.message);
+            alert("팝업 로그인 실패: " + error.message);
         }
     };
 
     const handleLoginRedirect = async () => {
         addLog("Attempting Redirect Login...");
+
+        if (isInAppBrowser) {
+            alert("인스타그램/카카오톡 등 인앱 브라우저에서는 로그인이 차단될 수 있습니다. \nSafari나 Chrome 등 기본 브라우저에서 실행해주세요.");
+        }
+
         try {
+            await setPersistence(auth, browserLocalPersistence);
             await loginWithGoogleRedirect();
-            // This line won't be reached if redirect happens
+            // This line won't be reached if redirect happens successfully
         } catch (error) {
             addLog("Redirect Failed: " + error.code + " - " + error.message);
-            alert("페이지 이동 로그인 실패: " + error.code + "\n" + error.message);
+            alert("페이지 이동 로그인 실패: " + error.message);
         }
     };
 
@@ -132,8 +157,8 @@ export default function Profile() {
                     {user ? (
                         <>
                             {/* Logged In View */}
-                            <div className="w-full bg-green-500 text-white p-4 font-bold text-center mb-4 rounded-xl shadow-lg animate-pulse">
-                                로그인 성공! {user.displayName}님 환영합니다.
+                            <div className="w-full bg-green-500/10 text-green-500 border border-green-500/20 p-4 font-bold text-center mb-6 rounded-xl shadow-lg">
+                                🎉 로그인 성공! {user.displayName}님 환영합니다.
                             </div>
 
                             <div className="flex flex-col items-center mb-8">
@@ -149,15 +174,15 @@ export default function Profile() {
                             {/* Stats Grid */}
                             <div className="grid grid-cols-3 gap-4 mb-8">
                                 <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">0</span>
+                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">2</span>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase">Books Read</span>
                                 </div>
                                 <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">1</span>
+                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">5</span>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase">Tests Taken</span>
                                 </div>
                                 <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">0</span>
+                                    <span className="block text-2xl font-black text-primary dark:text-gold mb-1">12</span>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase">Saved</span>
                                 </div>
                             </div>
@@ -213,13 +238,24 @@ export default function Profile() {
                                 당신만의 개인 서재를 완성하고<br />지적인 기록을 즐겨보세요.
                             </p>
 
+                            {isInAppBrowser && (
+                                <div className="w-full mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-xl text-center">
+                                    <p className="text-red-200 text-xs font-bold mb-1">⚠️ 인앱 브라우저 감지됨</p>
+                                    <p className="text-red-300 text-[11px] leading-snug">
+                                        인스타그램/카카오톡 내부에서는 로그인이 차단됩니다.<br />
+                                        우측 상단 메뉴 <b>"다른 브라우저로 열기"</b>를<br />
+                                        눌러 Safari/Chrome에서 실행해주세요.
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="w-full flex flex-col gap-3 mb-10">
                                 <button
                                     onClick={handleLoginRedirect}
                                     className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all border-b-4 border-slate-200"
                                 >
                                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-6" />
-                                    <span>Google 로그인 (페이지 이동)</span>
+                                    <span>Google 로그인 (iPhone 추천)</span>
                                 </button>
 
                                 <button
@@ -235,7 +271,7 @@ export default function Profile() {
                             <div className="w-full bg-black/50 rounded-xl p-4 border border-white/10 text-left">
                                 <p className="text-white text-[10px] font-bold mb-2 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-sm text-red-400">bug_report</span>
-                                    문제 해결 로그 (개발자용)
+                                    문제 해결 로그 (개발자용) - {isInAppBrowser ? 'In-App' : 'Browser'}
                                 </p>
                                 <div className="h-32 overflow-y-auto font-mono text-[9px] text-green-400 space-y-1 bg-black/30 p-2 rounded">
                                     {debugLogs.length === 0 ? (
@@ -252,17 +288,11 @@ export default function Profile() {
                                     Firebase 콘솔에 현재 주소를 등록해야 합니다.
                                 </p>
                             </div>
-
-                            <div className="w-full mt-2 p-4 bg-red-500/10 rounded-xl border border-red-500/10 text-center">
-                                <p className="text-red-400 text-[10px] leading-snug">
-                                    * 로그인이 안 될 경우 화면을 캡처해서 개발자에게 보내주세요.
-                                </p>
-                            </div>
                         </div>
                     )}
                     <p className="text-center text-[10px] text-slate-500 mt-12 mb-4">
-                        The Archive v1.0.5<br />
-                        Strict Mode Disabled / Auto-Redirect Off
+                        The Archive v1.1.0<br />
+                        Safari Optimized Logic Applied
                     </p>
                 </main>
 
@@ -271,3 +301,4 @@ export default function Profile() {
         </div>
     );
 }
+
