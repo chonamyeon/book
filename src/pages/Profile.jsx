@@ -79,10 +79,15 @@ export default function Profile() {
     const handleLogout = async () => {
         if (window.confirm("로그아웃 하시겠습니까?")) {
             try {
+                // Clear backup session
+                localStorage.removeItem('archive_user');
+                addLog("Clearing local session...");
                 await logout();
+                addLog("Logged out");
                 navigate('/');
             } catch (error) {
                 console.error("Logout failed:", error);
+                alert("로그아웃 중 오류: " + error.message);
             }
         }
     };
