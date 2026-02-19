@@ -26,6 +26,13 @@ export default function Profile() {
                 const result = await getRedirectResult(auth);
                 if (result) {
                     addLog("Redirect Login Success: " + result.user.email);
+                    // Force session save
+                    localStorage.setItem('archive_user', JSON.stringify({
+                        uid: result.user.uid,
+                        displayName: result.user.displayName,
+                        email: result.user.email,
+                        photoURL: result.user.photoURL
+                    }));
                 } else {
                     addLog("No redirect result found.");
                 }
@@ -40,19 +47,27 @@ export default function Profile() {
         };
 
         checkRedirect();
+
+        // Re-check on focus (for popup returns or tab switching)
+        const onFocus = () => {
+            if (auth.currentUser) {
+                addLog("Focus: User found: " + auth.currentUser.email);
+            } else {
+                addLog("Focus: No user yet");
+            }
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
     }, []);
 
-    // Handle post-login redirection
+    // DEBUG: Monitor User State
     useEffect(() => {
-        if (user && !loading && !redirectChecking) {
-            addLog("User authenticated: " + user.email);
-            const redirectPath = localStorage.getItem('authRedirectPath');
-            if (redirectPath && redirectPath !== '/profile') {
-                localStorage.removeItem('authRedirectPath');
-                navigate(redirectPath, { replace: true });
-            }
+        if (user) {
+            addLog("AUTH STATE: User is logged in as " + user.email);
+        } else if (!loading) {
+            addLog("AUTH STATE: User is null");
         }
-    }, [user, loading, redirectChecking, navigate]);
+    }, [user, loading]);
 
     const handleLoginPopup = async () => {
         addLog("Attempting Popup Login...");
@@ -117,6 +132,10 @@ export default function Profile() {
                     {user ? (
                         <>
                             {/* Logged In View */}
+                            <div className="w-full bg-green-500 text-white p-4 font-bold text-center mb-4 rounded-xl shadow-lg animate-pulse">
+                                로그인 성공! {user.displayName}님 환영합니다.
+                            </div>
+
                             <div className="flex flex-col items-center mb-8">
                                 <div className="size-22 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
                                     <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`} alt={user.displayName} className="w-full h-full object-cover" />
@@ -242,8 +261,8 @@ export default function Profile() {
                         </div>
                     )}
                     <p className="text-center text-[10px] text-slate-500 mt-12 mb-4">
-                        The Archive v1.0.4<br />
-                        Diagnostic Mode Active
+                        The Archive v1.0.5<br />
+                        Strict Mode Disabled / Auto-Redirect Off
                     </p>
                 </main>
 
