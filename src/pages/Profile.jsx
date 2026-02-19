@@ -2,12 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
-import { loginWithGoogle, loginWithGoogleRedirect, logout } from '../firebase';
+import { loginWithGoogle, loginWithGoogleRedirect, logout, auth } from '../firebase';
+import { getRedirectResult } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
-    const { user, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const [redirectLoading, setRedirectLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Check for redirect result on mount
+    useEffect(() => {
+        const checkRedirect = async () => {
+            setRedirectLoading(true);
+            try {
+                const result = await getRedirectResult(auth);
+                if (result) {
+                    console.log("Redirect login success:", result.user);
+                }
+            } catch (error) {
+                console.error("Redirect login error:", error);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    // alert("로그인 과정에서 오류가 발생했습니다: " + error.message);
+                }
+            } finally {
+                setRedirectLoading(false);
+            }
+        };
+        checkRedirect();
+    }, []);
+
+    const loading = authLoading || redirectLoading;
 
     // Handle post-login redirection
     useEffect(() => {
