@@ -9,20 +9,39 @@ export default function Profile() {
     const { user, loading } = useAuth();
     const navigate = useNavigate();
 
+    // Handle post-login redirection
+    useEffect(() => {
+        if (user && !loading) {
+            const redirectPath = localStorage.getItem('authRedirectPath');
+            if (redirectPath && redirectPath !== '/profile') {
+                localStorage.removeItem('authRedirectPath');
+                navigate(redirectPath, { replace: true });
+            }
+        }
+    }, [user, loading, navigate]);
+
     const handleLogin = async () => {
+        // Simple mobile detection
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
         try {
-            await loginWithGoogle();
+            if (isMobile) {
+                // On mobile, popups are almost always blocked or provide poor UX
+                await loginWithGoogleRedirect();
+            } else {
+                await loginWithGoogle();
+            }
         } catch (error) {
             console.error("Login failed:", error);
-            if (error.code === 'auth/popup-blocked') {
-                alert("팝업이 차단되었습니다. 리디렉션 방식으로 로그인을 시도합니다.");
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+                // Fallback to redirect without annoying alert
                 try {
                     await loginWithGoogleRedirect();
                 } catch (err) {
                     alert("로그인 중 오류가 발생했습니다: " + err.message);
                 }
             } else if (error.code === 'auth/operation-not-allowed') {
-                alert("Firebase 콘솔에서 Google 로그인이 활성화되어 있지 않습니다. Authentication > Sign-in method에서 Google을 활성화해주세요.");
+                alert("Firebase 콘솔에서 Google 로그인이 활성화되어 있지 않습니다.");
             } else {
                 alert("로그인 중 오류가 발생했습니다: " + error.message);
             }

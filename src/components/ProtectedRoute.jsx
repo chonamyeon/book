@@ -14,6 +14,11 @@ const ProtectedRoute = ({ children }) => {
     }
 
     if (!user) {
+        // Save where we were trying to go
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/profile') {
+            localStorage.setItem('authRedirectPath', currentPath);
+        }
         // If not logged in, redirect to profile page which now acts as our login page
         return <Navigate to="/profile" replace />;
     }
