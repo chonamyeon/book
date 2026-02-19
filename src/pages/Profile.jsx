@@ -40,26 +40,28 @@ export default function Profile() {
                 const result = await getRedirectResult(auth);
                 if (result) {
                     addLog("Redirect Login Success: " + result.user.email);
-                    // Force session save
-                    localStorage.setItem('archive_user', JSON.stringify({
+                    // Force session save - our useAuth hook also does this now
+                    const userData = {
                         uid: result.user.uid,
                         displayName: result.user.displayName,
                         email: result.user.email,
                         photoURL: result.user.photoURL
-                    }));
+                    };
+                    localStorage.setItem('archive_user', JSON.stringify(userData));
+                    addLog("Backup session saved to localStorage");
                 } else {
-                    addLog("No redirect result found (Normal load or session already active)");
+                    addLog("No pending redirect result found.");
                 }
             } catch (err) {
                 console.error(err);
-                addLog("Redirect Verify Error: " + err.code + " - " + err.message);
+                addLog("Redirect Verify Error: " + err.code);
 
-                if (err.code === 'auth/popup-closed-by-user') {
-                    // Ignore
-                } else if (err.code === 'auth/unauthorized-domain') {
-                    alert("도메인 승인 오류: Firebase 콘솔에서 현재 도메인을 승인해야 합니다.");
-                } else {
-                    alert("로그인 확인 실패: " + err.message);
+                if (err.code === 'auth/internal-error' || err.code === 'auth/network-request-failed') {
+                    addLog("HINT: This often happens on Safari when 3rd party cookies are blocked.");
+                }
+
+                if (err.code === 'auth/unauthorized-domain') {
+                    alert("도메인 승인 오류: Firebase 콘솔 -> Authentication -> Settings -> Authorized Domains에 '" + window.location.hostname + "'를 추가해야 합니다.");
                 }
             } finally {
                 setRedirectChecking(false);
