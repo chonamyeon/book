@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loginWithGoogle, loginWithGoogleRedirect, logout } from '../firebase';
@@ -6,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
     const { user, loading } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
+    const navigate = useNavigate();
 
     const handleLogin = async () => {
         try {
@@ -29,10 +30,13 @@ export default function Profile() {
     };
 
     const handleLogout = async () => {
-        try {
-            await logout();
-        } catch (error) {
-            console.error("Logout failed:", error);
+        if (window.confirm("로그아웃 하시겠습니까?")) {
+            try {
+                await logout();
+                navigate('/');
+            } catch (error) {
+                console.error("Logout failed:", error);
+            }
         }
     };
 
@@ -120,18 +124,19 @@ export default function Profile() {
                             </div>
                             <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward_ios</span>
                         </button>
-                        {user && (
+                    </div>
+
+                    {user && (
+                        <div className="mt-6 px-2">
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors text-red-500"
+                                className="w-full flex items-center justify-center gap-2 py-4 bg-red-500/10 text-red-500 font-bold rounded-xl border border-red-500/20 hover:bg-red-500 hover:text-white transition-all active:scale-95"
                             >
-                                <div className="flex items-center gap-3">
-                                    <span className="material-symbols-outlined">logout</span>
-                                    <span className="text-sm font-medium">로그아웃</span>
-                                </div>
+                                <span className="material-symbols-outlined">logout</span>
+                                <span>로그아웃</span>
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     <p className="text-center text-[10px] text-slate-400 mt-8 mb-4">
                         The Archive v1.0.2<br />
@@ -144,4 +149,3 @@ export default function Profile() {
         </div>
     );
 }
-
