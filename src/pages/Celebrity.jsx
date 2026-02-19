@@ -72,7 +72,34 @@ export default function Celebrity() {
                         </div>
                     </section>
 
+                    {/* Discover Your Taste Banner */}
+                    <section className="px-4 py-8">
+                        <Link to="/quiz" className="block group">
+                            <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                                <img
+                                    src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
+                                    alt="Library Background"
+                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                />
+                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
+                                    <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
+                                        <span className="material-symbols-outlined text-gold">psychology</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
+                                    <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
+                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
+                                    </p>
+                                    <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
+                                        <span>테스트 시작하기</span>
+                                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    </section>
+
                     {/* Curated Categories */}
+
                     <section className="px-4 py-12 space-y-16">
                         {/* Category: Pivot */}
                         <div>
