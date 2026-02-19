@@ -10,14 +10,7 @@ export default function Library() {
     const [myResultType, setMyResultType] = useState(null);
     const [savedBooks, setSavedBooks] = useState([]);
 
-    const designatedBooks = [
-        { title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg", tag: "인류학" },
-        { title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg", tag: "고전" },
-        { title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg", tag: "성장" },
-        { title: "연금술사", author: "파울로 코엘료", cover: "/images/covers/alchemist.jpg", tag: "철학" },
-        { title: "슈독", author: "필 나이트", cover: "/images/covers/c_02.jpg", tag: "경영" },
-        { title: "아몬드", author: "손원평", cover: "/images/covers/almond.jpg", tag: "소설" }
-    ];
+
 
     const loadSavedBooks = () => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -144,39 +137,7 @@ export default function Library() {
                         </section>
                     )}
 
-                    {/* 4. Designated Books Section (Always Shown) */}
-                    <section>
-                        <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
-                            <h2 className="serif-title text-2xl font-bold tracking-tight">01. 인생의 책들</h2>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">추천지정도서</span>
-                        </div>
 
-                        <div className="space-y-6">
-                            {designatedBooks.map((book, idx) => (
-                                <a
-                                    key={idx}
-                                    href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-5 p-2 rounded-2xl transition-all group"
-                                >
-                                    <div className="size-24 rounded-xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0">
-                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] font-black text-gold/60 uppercase tracking-widest mb-1">{book.tag}</span>
-                                            <h4 className="text-lg font-bold text-white truncate mb-0.5">{book.title}</h4>
-                                            <p className="text-sm text-slate-500 truncate">{book.author}</p>
-                                        </div>
-                                    </div>
-                                    <div className="size-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
-                                        <span className="material-symbols-outlined text-slate-400 group-hover:text-gold text-xl">shopping_cart</span>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
-                    </section>
 
                     {/* 5. Saved Collection (If any) */}
                     {savedBooks.length > 0 && (
