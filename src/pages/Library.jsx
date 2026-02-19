@@ -46,61 +46,60 @@ export default function Library() {
                         {myResultType && result ? (
                             /* Premium Result Banner */
                             <Link to="/result" className="block group">
-                                <div className="relative aspect-[4/5] sm:aspect-[16/10] rounded-[40px] overflow-hidden border border-gold/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-background-dark">
+                                <div className="relative w-full rounded-[40px] overflow-hidden border border-gold/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-background-dark min-h-[420px] flex flex-col">
                                     {/* Decorative Background Elements */}
                                     <div className="absolute inset-0 z-0">
                                         <img
-                                            src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop"
-                                            alt="Artistic Library"
-                                            className="w-full h-full object-cover opacity-30 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000"
+                                            src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop"
+                                            alt="Aesthetic Library"
+                                            className="w-full h-full object-cover opacity-20 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000"
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background-dark/80 to-background-dark"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-b from-background-dark/40 via-background-dark/80 to-background-dark"></div>
                                     </div>
 
                                     {/* Content Container */}
-                                    <div className="relative z-10 h-full flex flex-col items-center justify-between px-6 py-14 text-center">
+                                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
                                         {/* Top Part: Icon & Badge */}
-                                        <div className="flex flex-col items-center">
+                                        <div className="flex flex-col items-center mb-6">
                                             <div className="relative mb-6">
                                                 <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full"></div>
-                                                <div className="size-16 rounded-full bg-gradient-to-b from-gold/40 to-transparent flex items-center justify-center border border-gold/40 shadow-xl">
-                                                    <span className="material-symbols-outlined text-gold text-3xl leading-none font-light">psychology</span>
+                                                <div className="size-20 rounded-full bg-gradient-to-b from-gold/40 to-transparent flex items-center justify-center border border-gold/40 shadow-xl">
+                                                    <span className="material-symbols-outlined text-gold text-4xl leading-none font-light">psychology</span>
                                                 </div>
                                             </div>
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 mb-4">
-                                                <span className="text-gold text-[9px] font-black uppercase tracking-[0.3em]">Intellectual Persona</span>
+                                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 border border-gold/20">
+                                                <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Intellectual Persona</span>
                                             </div>
                                         </div>
 
                                         {/* Middle Part: Title & Subtitle */}
-                                        <div className="flex-1 flex flex-col justify-center py-4">
-                                            <h3 className="text-4xl xs:text-5xl font-black text-white mb-3 tracking-tight serif-title drop-shadow-2xl">
+                                        <div className="mb-10">
+                                            <h3 className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight serif-title drop-shadow-2xl leading-tight">
                                                 {result.persona}
                                             </h3>
-                                            <p className="text-slate-400 text-[13px] font-medium max-w-[220px] mx-auto leading-relaxed italic opacity-80">
+                                            <p className="text-slate-400 text-sm sm:text-base font-medium max-w-[280px] mx-auto leading-relaxed italic opacity-80">
                                                 {result.subtitle}
                                             </p>
                                         </div>
 
                                         {/* Bottom Part: CTA Button */}
-                                        <div className="w-full px-4 pt-4">
-                                            <div className="relative group/btn inline-flex items-center justify-center">
-                                                <div className="absolute -inset-1.5 bg-gold/30 blur-md opacity-0 group-hover/btn:opacity-100 transition duration-500 rounded-2xl"></div>
-                                                <div className="relative px-12 py-4 bg-gold text-primary font-black rounded-2xl text-[14px] shadow-[0_10px_30px_rgba(212,175,55,0.3)] flex items-center gap-3 active:scale-95 transition-all">
-                                                    <span>결과 보기</span>
-                                                    <span className="material-symbols-outlined text-xl">analytics</span>
-                                                </div>
+                                        <div className="relative group/btn inline-flex items-center justify-center">
+                                            <div className="absolute -inset-2 bg-gold/30 blur-lg opacity-0 group-hover/btn:opacity-100 transition duration-500 rounded-2xl"></div>
+                                            <div className="relative px-12 py-4 bg-gold text-primary font-black rounded-2xl text-[15px] shadow-[0_15px_35px_rgba(212,175,55,0.4)] flex items-center gap-3 active:scale-95 transition-all">
+                                                <span>결과 보기</span>
+                                                <span className="material-symbols-outlined text-xl">analytics</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Corners Decoration */}
-                                    <div className="absolute top-10 left-10 size-6 border-t-2 border-l-2 border-gold/20 rounded-tl-lg"></div>
-                                    <div className="absolute top-10 right-10 size-6 border-t-2 border-r-2 border-gold/20 rounded-tr-lg"></div>
-                                    <div className="absolute bottom-10 left-10 size-6 border-b-2 border-l-2 border-gold/20 rounded-bl-lg"></div>
-                                    <div className="absolute bottom-10 right-10 size-6 border-b-2 border-r-2 border-gold/20 rounded-br-lg"></div>
+                                    <div className="absolute top-8 left-8 size-8 border-t-2 border-l-2 border-gold/20 rounded-tl-xl pointer-events-none"></div>
+                                    <div className="absolute top-8 right-8 size-8 border-t-2 border-r-2 border-gold/20 rounded-tr-xl pointer-events-none"></div>
+                                    <div className="absolute bottom-8 left-8 size-8 border-b-2 border-l-2 border-gold/20 rounded-bl-xl pointer-events-none"></div>
+                                    <div className="absolute bottom-8 right-8 size-8 border-b-2 border-r-2 border-gold/20 rounded-br-xl pointer-events-none"></div>
                                 </div>
                             </Link>
+
                         ) : (
                             /* Not Tested Case: Same as before but with consistent formatting */
                             <Link to="/quiz" className="block group">
