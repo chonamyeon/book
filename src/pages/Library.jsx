@@ -62,32 +62,57 @@ export default function Library() {
                         </div>
                     </section>
 
-                    {/* 2. Discover Your Taste Banner */}
+                    {/* 2. Discover Your Taste / Test Result Banner */}
                     <section>
-                        <Link to="/quiz" className="block group">
-                            <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                                {/* Background Image with Overlay */}
-                                <img
-                                    src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
-                                    alt="Library Background"
-                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                />
-                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
-                                    <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
-                                        <span className="material-symbols-outlined text-gold">psychology</span>
+                        {myResultType && result ? (
+                            /* Logged In & Tested Case: Show Result Persona */
+                            <Link to="/result" className="block group">
+                                <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-gold/30 shadow-2xl bg-gradient-to-br from-slate-900 via-background-dark to-slate-800">
+                                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                                    <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center h-full">
+                                        <div className="size-14 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
+                                            <span className="material-symbols-outlined text-gold text-3xl">psychology</span>
+                                        </div>
+                                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] mb-2 px-3 py-1 bg-gold/10 rounded-full">Your Intellectual Persona</span>
+                                        <h3 className="text-2xl font-black text-white mb-2 leading-tight drop-shadow-lg">{result.persona}</h3>
+                                        <p className="text-slate-400 text-xs font-medium mb-6 opacity-80">{result.subtitle}</p>
+                                        <div className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs backdrop-blur-md border border-white/10 transition-all flex items-center gap-2">
+                                            <span>결과 다시보기</span>
+                                            <span className="material-symbols-outlined text-sm text-gold">analytics</span>
+                                        </div>
                                     </div>
-                                    <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
-                                    <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
-                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
-                                    </p>
-                                    <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
-                                        <span>테스트 시작하기</span>
-                                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                                    {/* Abstract background glow */}
+                                    <div className="absolute -top-10 -right-10 size-40 bg-gold/5 blur-3xl rounded-full"></div>
+                                    <div className="absolute -bottom-10 -left-10 size-40 bg-primary/20 blur-3xl rounded-full"></div>
+                                </div>
+                            </Link>
+                        ) : (
+                            /* Not Tested Case: Show Teaser Banner */
+                            <Link to="/quiz" className="block group">
+                                <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                                    <img
+                                        src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
+                                        alt="Library Background"
+                                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                    />
+                                    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
+                                        <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
+                                            <span className="material-symbols-outlined text-gold">psychology</span>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
+                                        <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
+                                            나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
+                                        </p>
+                                        <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
+                                            <span>테스트 시작하기</span>
+                                            <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        )}
                     </section>
+
 
                     {/* 3. Books of Life Section */}
                     <section>
