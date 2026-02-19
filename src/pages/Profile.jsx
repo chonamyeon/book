@@ -44,15 +44,17 @@ export default function Profile() {
         }
     }, [user, loading, redirectChecking, navigate]);
 
-    const handleLogin = async () => {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const handleLogin = async (forceRedirect = false) => {
+        // Robust mobile detection including iPad/iPhone on Desktop Mode
+        const isMobile =
+            /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
         try {
-            if (isMobile) {
-                // FORCE Redirect for mobile. Popups fail on iOS often.
+            if (isMobile || forceRedirect) {
+                // Must use Redirect for accurate auth on iOS/Mobile
                 await loginWithGoogleRedirect();
             } else {
-                // Desktop can use popup
                 await loginWithGoogle();
             }
         } catch (error) {
@@ -171,11 +173,18 @@ export default function Profile() {
                                 당신만의 개인 서재를 완성하고<br />지적인 기록을 즐겨보세요.
                             </p>
                             <button
-                                onClick={handleLogin}
-                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 mb-10 transition-all border-b-4 border-slate-200"
+                                onClick={() => handleLogin(false)}
+                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-primary font-black rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 mb-4 transition-all border-b-4 border-slate-200"
                             >
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-6" />
                                 <span>Google로 시작하기</span>
+                            </button>
+
+                            <button
+                                onClick={() => handleLogin(true)}
+                                className="text-slate-400 text-xs underline mb-8 hover:text-white transition-colors"
+                            >
+                                로그인이 안되나요? (호환 모드 실행)
                             </button>
 
                             {/* Diagnostic & Troubleshooting UI */}
