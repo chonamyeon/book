@@ -39,64 +39,86 @@ export default function Library() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden">
                 <TopNavigation title="내 서재" type="sub" />
 
-                <main className="px-6 pt-10 pb-20 space-y-12 animate-fade-in">
+                <main className="px-6 pt-6 pb-20 space-y-12 animate-fade-in">
 
-                    {/* 1. Stats Section */}
-                    <section className="grid grid-cols-3 gap-4 mb-10">
-                        <div className="text-center">
-                            <span className="block text-3xl font-black text-gold mb-1">210</span>
-                            <span className="text-xs font-bold text-slate-400">보유 도서</span>
-                        </div>
-                        <div className="text-center border-x border-white/10">
-                            <span className="block text-3xl font-black text-gold mb-1">7</span>
-                            <span className="text-xs font-bold text-slate-400">카테고리</span>
-                        </div>
-                        <div className="text-center">
-                            <span className="block text-3xl font-black text-gold mb-1">14h</span>
-                            <span className="text-xs font-bold text-slate-400">평균독서시간</span>
-                        </div>
-                    </section>
-
-                    {/* 2. Banner Section (Test Teaser or Result) */}
+                    {/* 1. Redesigned Result / Teaser Banner Section */}
                     <section>
                         {myResultType && result ? (
+                            /* Premium Result Banner */
                             <Link to="/result" className="block group">
-                                <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-gold/30 shadow-2xl bg-gradient-to-br from-slate-900 via-background-dark to-slate-800">
-                                    <div className="absolute inset-0 bg-black/40 z-0"></div>
-                                    <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center h-full">
-                                        <div className="size-14 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
-                                            <span className="material-symbols-outlined text-gold text-3xl">psychology</span>
+                                <div className="relative aspect-[4/5] sm:aspect-[16/10] rounded-[40px] overflow-hidden border border-gold/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-background-dark">
+                                    {/* Decorative Background Elements */}
+                                    <div className="absolute inset-0 z-0">
+                                        <img
+                                            src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop"
+                                            alt="Artistic Library"
+                                            className="w-full h-full object-cover opacity-30 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background-dark/80 to-background-dark"></div>
+                                    </div>
+
+                                    {/* Content Container */}
+                                    <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 py-12 text-center">
+                                        {/* Icon with Ring */}
+                                        <div className="relative mb-8">
+                                            <div className="absolute inset-0 bg-gold/10 blur-xl rounded-full scale-150"></div>
+                                            <div className="size-20 rounded-full bg-gradient-to-b from-gold/30 to-background-dark flex items-center justify-center border border-gold/50 shadow-2xl">
+                                                <span className="material-symbols-outlined text-gold text-4xl leading-none">psychology</span>
+                                            </div>
                                         </div>
-                                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] mb-2 px-3 py-1 bg-gold/10 rounded-full">Your Intellectual Persona</span>
-                                        <h3 className="text-2xl font-black text-white mb-2 leading-tight drop-shadow-lg">{result.persona}</h3>
-                                        <p className="text-slate-400 text-xs font-medium mb-6 opacity-80">{result.subtitle}</p>
-                                        <div className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs backdrop-blur-md border border-white/10 transition-all flex items-center gap-2">
-                                            <span>결과 다시보기</span>
-                                            <span className="material-symbols-outlined text-sm text-gold">analytics</span>
+
+                                        {/* Badge */}
+                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 border border-gold/20 mb-6 group-hover:bg-gold/20 transition-colors">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse"></span>
+                                            <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Intellectual Persona</span>
+                                        </div>
+
+                                        {/* Persona Name */}
+                                        <h3 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight serif-title drop-shadow-2xl">
+                                            {result.persona}
+                                        </h3>
+
+                                        {/* Subtitle */}
+                                        <p className="text-slate-400 text-sm md:text-base font-medium mb-10 max-w-[240px] leading-relaxed opacity-90">
+                                            {result.subtitle}
+                                        </p>
+
+                                        {/* CTA Button */}
+                                        <div className="group/btn relative">
+                                            <div className="absolute -inset-1 bg-gold/20 blur opacity-0 group-hover/btn:opacity-100 transition duration-500 rounded-2xl"></div>
+                                            <div className="relative px-10 py-4 bg-gold text-primary font-black rounded-2xl text-[13px] shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                                                <span>리포트 분석하기</span>
+                                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="absolute -top-10 -right-10 size-40 bg-gold/5 blur-3xl rounded-full"></div>
-                                    <div className="absolute -bottom-10 -left-10 size-40 bg-primary/20 blur-3xl rounded-full"></div>
+
+                                    {/* Corners Decoration */}
+                                    <div className="absolute top-8 left-8 size-4 border-t-2 border-l-2 border-gold/20"></div>
+                                    <div className="absolute top-8 right-8 size-4 border-t-2 border-r-2 border-gold/20"></div>
+                                    <div className="absolute bottom-8 left-8 size-4 border-b-2 border-l-2 border-gold/20"></div>
+                                    <div className="absolute bottom-8 right-8 size-4 border-b-2 border-r-2 border-gold/20"></div>
                                 </div>
                             </Link>
                         ) : (
+                            /* Not Tested Case: Same as before but with consistent formatting */
                             <Link to="/quiz" className="block group">
-                                <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                                <div className="relative aspect-[16/9] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl bg-slate-900">
                                     <img
                                         src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
                                         alt="Library Background"
-                                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60"
                                     />
-                                    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
-                                        <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
+                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-center">
+                                        <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
                                             <span className="material-symbols-outlined text-gold">psychology</span>
                                         </div>
                                         <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
-                                        <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
+                                        <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-8">
                                             나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
                                         </p>
-                                        <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
-                                            <span>테스트 시작하기</span>
+                                        <div className="px-10 py-4 bg-gold text-primary font-black rounded-2xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
+                                            <span>지금 시작하기</span>
                                             <span className="material-symbols-outlined text-sm">auto_awesome</span>
                                         </div>
                                     </div>
@@ -104,6 +126,7 @@ export default function Library() {
                             </Link>
                         )}
                     </section>
+
 
                     {/* 3. Persona Recommendations (Only if tested) */}
                     {myResultType && myRecs.length > 0 && (
