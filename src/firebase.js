@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signO
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s",
-    authDomain: "book-site-123.firebaseapp.com",
+    authDomain: "book-site-123.web.app",
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "book-site-123",
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "book-site-123.firebasestorage.app",
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "176157090689",
