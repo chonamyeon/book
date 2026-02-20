@@ -79,25 +79,60 @@ export default function Editorial() {
                         </h2>
                     </header>
 
-                    {/* Weekly Focus Review - Restored & Updated */}
-                    <div className="group relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                        <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: "url('/images/covers/sapiens.jpg')" }}></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                    {/* Weekly Focus Review - Redesigned for Premium Minimalist Aesthetic */}
+                    <div className="relative w-full rounded-[32px] overflow-hidden bg-[#0f1115] border border-white/5 shadow-2xl group">
+                        {/* Abstract Background Elements */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold/10 blur-[100px] rounded-full -mr-20 -mt-20"></div>
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 blur-[80px] rounded-full -ml-10 -mb-10"></div>
 
-                        <div className="absolute bottom-0 left-0 p-8 w-full z-10 text-left">
-                            <div className="inline-block px-3 py-1 mb-3 rounded-full border border-gold/30 bg-black/30 backdrop-blur-md">
-                                <span className="text-gold text-[10px] font-bold uppercase tracking-widest">이번 주 포커스 리뷰</span>
+                        <div className="relative p-8 flex flex-col items-center">
+                            {/* Focus Tag */}
+                            <div className="flex items-center gap-2 mb-8">
+                                <span className="h-[1px] w-4 bg-gold/50"></span>
+                                <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Weekly Focus</span>
+                                <span className="h-[1px] w-4 bg-gold/50"></span>
                             </div>
-                            <h3 className="serif-title text-3xl text-white mb-2">사피엔스 (Sapiens)</h3>
-                            <p className="text-slate-300 text-xs font-light line-clamp-2 mb-6">
-                                인류가 어떻게 지구의 지배자가 되었는지에 대한 거대한 담론. <br />
-                                빌 게이츠가 탐독한 인류사의 결정적 순간들.
-                            </p>
+
+                            {/* Main Content Layout */}
+                            <div className="w-full flex flex-col md:flex-row gap-8 items-center mb-10">
+                                {/* Floating Book Cover with depth */}
+                                <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-700">
+                                    <div className="absolute -inset-4 bg-black/40 blur-2xl rounded-full opacity-60"></div>
+                                    <div className="relative w-40 aspect-[2/3] rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
+                                        <img src="/images/covers/sapiens.jpg" alt="Sapiens" className="w-full h-full object-cover" />
+                                    </div>
+                                    {/* Decorative badge */}
+                                    <div className="absolute -bottom-2 -right-2 size-12 bg-gold flex items-center justify-center rounded-full shadow-lg border-4 border-[#0f1115]">
+                                        <span className="material-symbols-outlined text-primary text-xl font-bold">star_rate</span>
+                                    </div>
+                                </div>
+
+                                {/* Typography Section */}
+                                <div className="flex-1 text-center md:text-left space-y-4">
+                                    <div className="space-y-1">
+                                        <h3 className="serif-title text-3xl text-white font-medium leading-tight">사피엔스</h3>
+                                        <p className="text-slate-500 text-sm font-light uppercase tracking-widest italic">Yuval Noah Harari</p>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <p className="text-slate-400 text-xs font-light leading-relaxed">
+                                            "변화하는 인류의 운명을 결정짓는 <br />거대한 질문들을 던지다"
+                                        </p>
+                                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                                            <span className="text-[9px] text-white/40 border border-white/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">History</span>
+                                            <span className="text-[9px] text-white/40 border border-white/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">Philosophy</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Refined CTA Button */}
                             <Link
                                 to="/review/sapiens"
-                                className="w-full py-4 bg-white text-primary font-bold rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gold hover:text-primary transition-all active:scale-95 shadow-xl"
+                                className="w-full group/btn relative py-5 bg-transparent overflow-hidden rounded-2xl border border-white/10 flex items-center justify-center gap-3 transition-all duration-300 hover:border-gold/50"
                             >
-                                리뷰 자세히 보기 <span className="material-symbols-outlined text-sm">menu_book</span>
+                                <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-[0.03] transition-opacity"></div>
+                                <span className="text-white text-xs font-bold uppercase tracking-[0.2em] relative z-10 transition-colors group-hover/btn:text-gold">Review Detail</span>
+                                <span className="material-symbols-outlined text-white/30 text-sm relative z-10 group-hover/btn:text-gold group-hover/btn:translate-x-1 transition-all">arrow_forward</span>
                             </Link>
                         </div>
                     </div>
