@@ -1,9 +1,72 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import { celebrities } from '../data/celebrities';
 
 export default function Editorial() {
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            setVoices(window.speechSynthesis.getVoices());
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }, []);
+
+    const speakReview = (text) => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Try to find a premium female Korean voice
+        const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
+        const femaleVoice = preferredVoices.find(v =>
+            v.name.includes('Google') || v.name.includes('Yuna') || v.name.includes('Heami')
+        ) || preferredVoices[0];
+
+        if (femaleVoice) {
+            utterance.voice = femaleVoice;
+        }
+
+        utterance.pitch = 1.05;
+        utterance.rate = 0.95;
+
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const getReviewText = (id) => {
+        // Simple mapping for editorial IDs to celebrity book titles
+        const idMap = {
+            "sapiens": "사피엔스",
+            "1984": "1984",
+            "demian": "데미안",
+            "vegetarian": "채식주의자",
+            "factfulness": "팩트풀니스",
+            "almond": "아몬드",
+            "leverage": "레버리지",
+            "one-thing": "원씽"
+        };
+        const title = idMap[id] || id;
+
+        for (const celeb of celebrities) {
+            const book = celeb.books.find(b => b.title === title);
+            if (book?.review) return book.review;
+            if (book?.desc) return book.desc;
+        }
+        return "";
+    };
+
     const handlePurchase = (item, price) => {
         alert(`[PG_LINK] Processing purchase for ${item} - ${price}`);
     };
@@ -86,11 +149,16 @@ export default function Editorial() {
                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 blur-[80px] rounded-full -ml-10 -mb-10"></div>
 
                         <div className="relative p-8 flex flex-col items-center">
-                            {/* Focus Tag */}
-                            <div className="flex items-center gap-2 mb-8">
+                            <div className="flex items-center gap-2 mb-2">
                                 <span className="h-[1px] w-4 bg-gold/50"></span>
                                 <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Weekly Focus</span>
                                 <span className="h-[1px] w-4 bg-gold/50"></span>
+                            </div>
+
+                            {/* NotebookLM Style Badge */}
+                            <div className="mb-6 flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20">
+                                <span className="material-symbols-outlined text-[12px] text-gold">neurology</span>
+                                <span className="text-[8px] text-gold font-bold uppercase tracking-widest">NotebookLM Audio Experience</span>
                             </div>
 
                             {/* Main Content Layout */}
@@ -125,15 +193,27 @@ export default function Editorial() {
                                 </div>
                             </div>
 
-                            {/* Refined CTA Button */}
-                            <Link
-                                to="/review/sapiens"
-                                className="w-full group/btn relative py-5 bg-transparent overflow-hidden rounded-2xl border border-white/10 flex items-center justify-center gap-3 transition-all duration-300 hover:border-gold/50"
-                            >
-                                <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-[0.03] transition-opacity"></div>
-                                <span className="text-white text-xs font-bold uppercase tracking-[0.2em] relative z-10 transition-colors group-hover/btn:text-gold">Review Detail</span>
-                                <span className="material-symbols-outlined text-white/30 text-sm relative z-10 group-hover/btn:text-gold group-hover/btn:translate-x-1 transition-all">arrow_forward</span>
-                            </Link>
+                            {/* Refined CTA Buttons - Dual Action */}
+                            <div className="w-full flex gap-3">
+                                <Link
+                                    to="/review/sapiens"
+                                    className="flex-1 group/btn relative py-5 bg-white/5 overflow-hidden rounded-2xl border border-white/10 flex items-center justify-center gap-3 transition-all duration-300 hover:border-gold/50"
+                                >
+                                    <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-[0.05] transition-opacity"></div>
+                                    <span className="text-white text-[11px] font-bold uppercase tracking-[0.15em] relative z-10 transition-colors group-hover/btn:text-gold">Review Detail</span>
+                                    <span className="material-symbols-outlined text-white/30 text-sm relative z-10 group-hover/btn:text-gold group-hover/btn:translate-x-1 transition-all">arrow_forward</span>
+                                </Link>
+
+                                <button
+                                    onClick={() => speakReview(getReviewText('sapiens'))}
+                                    className={`flex-none px-6 py-5 rounded-2xl border flex items-center justify-center gap-3 transition-all duration-500 ${isSpeaking ? 'bg-gold border-gold text-primary shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-transparent border-white/10 text-white hover:border-gold/50'}`}
+                                >
+                                    <span className="material-symbols-outlined text-xl">
+                                        {isSpeaking ? 'pause_circle' : 'record_voice_over'}
+                                    </span>
+                                    <span className="text-[11px] font-bold uppercase tracking-widest">Listen</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -164,12 +244,19 @@ export default function Editorial() {
                                             <h4 className="text-white font-bold text-lg leading-tight mb-1">{item.title}</h4>
                                             <p className="text-slate-500 text-xs font-light">{item.subtitle}</p>
                                         </div>
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
                                             <Link
                                                 to={`/review/${item.id}`}
                                                 className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gold hover:text-primary hover:border-gold transition-all active:scale-95">
                                                 리뷰 보기
                                             </Link>
+                                            <button
+                                                onClick={() => speakReview(getReviewText(item.id))}
+                                                className="size-9 rounded-xl bg-white/5 border border-white/10 text-white flex items-center justify-center hover:bg-gold hover:text-primary hover:border-gold transition-all"
+                                                title="음성으로 듣기"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">record_voice_over</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

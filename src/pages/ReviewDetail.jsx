@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import HTMLFlipBook from 'react-pageflip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,41 @@ export default function ReviewDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const bookRef = useRef(null);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            setVoices(window.speechSynthesis.getVoices());
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        return () => window.speechSynthesis.cancel(); // Stop on unmount
+    }, []);
+
+    const speakReview = (text) => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
+        const femaleVoice = preferredVoices.find(v =>
+            v.name.includes('Google') || v.name.includes('Yuna') || v.name.includes('Heami')
+        ) || preferredVoices[0];
+
+        if (femaleVoice) utterance.voice = femaleVoice;
+        utterance.pitch = 1.05;
+        utterance.rate = 0.95;
+
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+    };
 
     const bookMap = {
         "sapiens": "사피엔스",
@@ -100,15 +135,27 @@ export default function ReviewDetail() {
     return (
         <div className="bg-[#0f1115] min-h-screen w-full font-display flex flex-col overflow-x-hidden relative z-[9999]">
             {/* Full screen floating close button */}
-            <button
-                onClick={() => {
-                    document.body.style.overflow = 'auto';
-                    navigate('/editorial');
-                }}
-                className="fixed top-6 right-6 z-[10000] size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
-            >
-                <span className="material-symbols-outlined text-2xl font-bold">close</span>
-            </button>
+            <div className="fixed top-6 right-6 z-[10000] flex gap-3">
+                <button
+                    onClick={() => speakReview(reviewText)}
+                    className={`size-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-2xl backdrop-blur-md border ${isSpeaking ? 'bg-gold border-gold text-primary' : 'bg-black/60 border-white/20 text-white'}`}
+                    title="음성으로 듣기"
+                >
+                    <span className="material-symbols-outlined text-2xl">
+                        {isSpeaking ? 'pause' : 'record_voice_over'}
+                    </span>
+                </button>
+                <button
+                    onClick={() => {
+                        window.speechSynthesis.cancel();
+                        document.body.style.overflow = 'auto';
+                        navigate('/editorial');
+                    }}
+                    className="size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
+                >
+                    <span className="material-symbols-outlined text-2xl font-bold">close</span>
+                </button>
+            </div>
 
             <main className="flex-1 min-h-screen w-full flex flex-col items-center justify-center relative py-12">
                 {/* FlipBook Area - Full Screen Scale */}
