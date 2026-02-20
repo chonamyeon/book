@@ -46,79 +46,129 @@ export default function Profile() {
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
-                <TopNavigation title="프로필" type="sub" />
+                <TopNavigation title="멤버십" type="sub" />
 
-                <main className="px-4 pt-12 pb-24 animate-fade-in-up">
-                    {/* Logged In View */}
-                    <div className="w-full bg-green-500/10 text-green-500 border border-green-500/20 p-4 font-bold text-center mb-6 rounded-xl shadow-lg">
-                        🎉 로그인 성공! {user.displayName}님 환영합니다.
-                    </div>
+                <main className="px-6 pt-8 pb-24 animate-fade-in-up space-y-8">
 
-                    <div className="flex flex-col items-center mb-8">
-                        <div className="size-22 rounded-full bg-slate-200 dark:bg-slate-700 mb-4 overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
-                            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`} alt={user.displayName} className="w-full h-full object-cover" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-primary dark:text-white mb-1">{user.displayName}</h2>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-white/10 px-3 py-1 rounded-full">
-                            Verified Member
-                        </span>
-                    </div>
+                    {/* Membership Card */}
+                    <div className="relative w-full aspect-[1.58/1] rounded-2xl overflow-hidden shadow-2xl group">
+                        {/* Background with texture */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-black"></div>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                        <div className="absolute -top-24 -right-24 size-64 bg-gold/20 blur-[80px] rounded-full"></div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-4 mb-8">
-                        <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                            <span className="block text-2xl font-black text-primary dark:text-gold mb-1">2</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Books Read</span>
-                        </div>
-                        <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                            <span className="block text-2xl font-black text-primary dark:text-gold mb-1">5</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Tests Taken</span>
-                        </div>
-                        <div className="bg-white dark:bg-white/5 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 text-center">
-                            <span className="block text-2xl font-black text-primary dark:text-gold mb-1">12</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Saved</span>
-                        </div>
-                    </div>
-
-                    {/* Settings Menu */}
-                    <div className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-slate-400">notifications</span>
-                                <span className="text-sm font-medium">알림 설정</span>
-                            </div>
-                            <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward_ios</span>
-                        </button>
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-slate-400">dark_mode</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">다크 모드</span>
-                                    <span className="text-xs text-slate-400">(준비중)</span>
+                        {/* Card Content */}
+                        <div className="absolute inset-0 p-6 flex flex-col justify-between">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="serif-title text-gold text-lg italic tracking-wider">The Archive</h3>
+                                    <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] block mt-1">Private Membership</span>
+                                </div>
+                                <div className="size-8 rounded-full border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-sm">
+                                    <span className="material-symbols-outlined text-white/80 text-sm">fingerprint</span>
                                 </div>
                             </div>
-                            <div className="w-10 h-5 bg-slate-200 rounded-full relative">
-                                <div className="absolute left-1 top-1 size-3 bg-white rounded-full shadow-sm"></div>
+
+                            <div>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="size-12 rounded-full bg-slate-700 border-2 border-gold/50 overflow-hidden shadow-lg">
+                                        <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=0D8ABC&color=fff`} alt={user.displayName} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-bold text-lg leading-none">{user.displayName}</p>
+                                        <p className="text-slate-400 text-xs mt-1 font-mono tracking-wide">{user.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                                    <div>
+                                        <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Member Since</span>
+                                        <span className="text-xs text-slate-300 font-mono">2024. 05. 21</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Status</span>
+                                        <span className="text-xs text-emerald-400 font-bold tracking-wide">ACTIVE</span>
+                                    </div>
+                                </div>
                             </div>
-                        </button>
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-slate-400">support</span>
-                                <span className="text-sm font-medium">고객 지원</span>
-                            </div>
-                            <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward_ios</span>
-                        </button>
+                        </div>
                     </div>
 
-                    <div className="mt-8 px-2">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-2 py-4 bg-red-500/10 text-red-500 font-bold rounded-xl border border-red-500/20 hover:bg-red-500 hover:text-white transition-all active:scale-95"
-                        >
-                            <span className="material-symbols-outlined">logout</span>
-                            <span>로그아웃</span>
-                        </button>
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                            <span className="block text-2xl font-black text-white mb-1">12</span>
+                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Archived</span>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                            <span className="block text-2xl font-black text-white mb-1">85</span>
+                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Insights</span>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                            <span className="block text-2xl font-black text-white mb-1">4</span>
+                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Badges</span>
+                        </div>
                     </div>
+
+                    {/* Menu Links */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My Archive</h4>
+
+                        <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined text-lg">book_2</span>
+                                    </div>
+                                    <span className="text-sm text-slate-200 font-medium">나의 서재</span>
+                                </div>
+                                <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
+                            </button>
+                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined text-lg">edit_note</span>
+                                    </div>
+                                    <span className="text-sm text-slate-200 font-medium">독서 노트</span>
+                                </div>
+                                <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
+                            </button>
+                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined text-lg">bookmark</span>
+                                    </div>
+                                    <span className="text-sm text-slate-200 font-medium">스크랩북</span>
+                                </div>
+                                <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Account Management */}
+                    <div className="space-y-4 pt-4">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Account</h4>
+
+                        <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                    <span className="material-symbols-outlined text-slate-400">settings</span>
+                                    <span className="text-sm text-slate-200 font-medium">설정</span>
+                                </div>
+                            </button>
+                            <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 hover:bg-red-500/10 transition-colors group text-red-400">
+                                <div className="flex items-center gap-4">
+                                    <span className="material-symbols-outlined">logout</span>
+                                    <span className="text-sm font-medium">로그아웃</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <p className="text-center text-[10px] text-slate-600 font-mono pt-8">
+                        The Archive ID: {user.uid.slice(0, 8).toUpperCase()}<br />
+                        Version 1.4.0 (Build 2024.05)
+                    </p>
+
                 </main>
 
                 <BottomNavigation />
