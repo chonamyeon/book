@@ -1,20 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-    const [retryMode, setRetryMode] = useState(false);
+    const [isRedirectCheck, setIsRedirectCheck] = useState(true);
 
     useEffect(() => {
-        // Auth State Listener
+        // [Redirect Result Handling]
+        // Crucial for iOS navigation flow.
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Success:", result.user.email);
+                    // Auth state listener below will handle the navigation
+                }
+                setIsRedirectCheck(false);
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                setIsRedirectCheck(false);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    // Only show real errors
+                    setErrorMsg(error.message);
+                }
+            });
+
+        // [Auth State Listener]
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log("Auth State Changed: User Logged In", user.email);
                 navigate('/profile', { replace: true });
             }
         });
@@ -22,50 +40,39 @@ export default function Login() {
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
-        // [Manual Popup Strategy]
-        // Instead of relying on Firebase to open the popup (which Safari blocks as async),
-        // we open our OWN popup immediately upon click (synchronously).
-        // Then we pass this pre-opened window to Firebase.
-        // This is THE most robust way to bypass popup blockers.
-
-        setErrorMsg('');
         setIsLoading(true);
+        setErrorMsg('');
 
-        // 1. Open blank popup IMMEDIATELY (user gesture context)
-        // This usually bypasses blockers because it's synchronous.
-        // const popupWin = window.open('about:blank', 'authWindow', 'width=500,height=600');
+        // Detect Mobile (iOS/Android)
+        // If mobile, use Redirect to avoid "New Tab/Window" confusion.
+        // If PC, use Popup for better UX.
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         try {
-            // 2. Call signInWithPopup normally.
-            // If the browser blocked the window.open above, we catch it here.
-            // Note: We can't easily pass the 'popupWin' to Firebase v9 SDK directly without hacks.
-            // So we revert to standard signInWithPopup, BUT we add a specific catch for 'popup-closed-by-user'
-
-            const result = await signInWithPopup(auth, googleProvider);
-            console.log("Popup Login Success:", result.user.email);
-
-            // [Force Reload] Catch-all for Safari sync issues
-            window.location.reload();
-
-        } catch (error) {
-            console.error("Popup Login Failed:", error);
-            setIsLoading(false);
-
-            // If popupWin was opened but failed, close it? No, browser handles that.
-
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                setRetryMode(true);
-                setErrorMsg("팝업이 차단되었습니다. 아래 '다시 시도' 버튼을 눌러주세요.");
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
-            } else if (error.code === 'auth/cancelled-popup-request') {
-                // Common error when multiple clicks happen
-                setErrorMsg("이전 요청이 취소되었습니다. 다시 시도해주세요.");
+            if (isMobile) {
+                console.log("Starting Mobile Redirect Flow...");
+                await signInWithRedirect(auth, googleProvider);
+                // Page will unload here.
             } else {
-                setErrorMsg("로그인 오류: " + error.message);
+                console.log("Starting PC Popup Flow...");
+                await signInWithPopup(auth, googleProvider);
             }
+        } catch (error) {
+            console.error("Login Error:", error);
+            setIsLoading(false);
+            setErrorMsg(error.message);
         }
     };
+
+    if (isRedirectCheck) {
+        return (
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
+                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
+                <p className="text-slate-600 text-xs mt-2">잠시만 기다려주세요 (v3.0)</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -73,7 +80,7 @@ export default function Login() {
 
             <main className="flex-1 flex flex-col items-center justify-center p-6 pb-24">
                 <div className="w-full max-w-sm">
-                    {/* Logo / Branding */}
+                    {/* Logo */}
                     <div className="text-center mb-10">
                         <div className="size-20 bg-white/5 rounded-2xl mx-auto flex items-center justify-center border border-white/10 mb-6 shadow-2xl shadow-gold/5">
                             <span className="material-symbols-outlined text-4xl text-gold">menu_book</span>
@@ -82,22 +89,12 @@ export default function Login() {
                         <p className="text-slate-400 text-sm">기록하고, 기억하고, 성장하세요.</p>
                     </div>
 
-                    {/* Error Message & Browser Config Hints */}
+                    {/* Error Msg */}
                     {errorMsg && (
-                        <div className={`border rounded-xl p-4 mb-6 text-center animate-pulse ${retryMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep mb-2`}>
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
+                            <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
-
-                            {/* Browser Config Help */}
-                            {!retryMode && (
-                                <div className="text-[11px] text-slate-400 text-left bg-black/20 p-3 rounded-lg border border-white/5 space-y-1">
-                                    <p className="text-amber-500 font-bold mb-1">※ 이런 경우 로그인이 안 될 수 있어요!</p>
-                                    <p>• iPhone 설정 → Safari → <strong>'팝업 차단' 끄기</strong></p>
-                                    <p>• iPhone 설정 → Safari → <strong>'크로스 사이트 추적 방지' 끄기</strong></p>
-                                    <p>• <strong>'개인정보 보호(Private)' 모드 끄기</strong></p>
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -105,29 +102,21 @@ export default function Login() {
                     <button
                         onClick={handleGoogleLogin}
                         disabled={isLoading}
-                        className={`w-full h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 ${retryMode ? 'bg-amber-500 text-slate-900 animate-bounce' : 'bg-white text-slate-900'}`}
+                        className="w-full bg-white text-slate-900 h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                     >
                         {isLoading ? (
                             <div className="size-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                         ) : (
                             <>
-                                {retryMode ? (
-                                    <>
-                                        <span className="material-symbols-outlined text-xl">refresh</span>
-                                        <span>다시 시도하기 (팝업 허용)</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                        <span>Google로 계속하기</span>
-                                    </>
-                                )}
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
+                                <span>Google로 계속하기</span>
                             </>
                         )}
                     </button>
 
                     <p className="text-center text-slate-500 text-[10px] mt-6">
                         로그인 시 이용약관 및 개인정보처리방침에 동의하게 됩니다.
+                        <br /><span className="text-[10px] opacity-30 mt-1 block">v3.0 (Auto-Redirect)</span>
                     </p>
                 </div>
             </main>
