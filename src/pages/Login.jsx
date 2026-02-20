@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -38,28 +38,42 @@ export default function Login() {
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
-        // Infinite Loop Protection
-        const lastAttempt = localStorage.getItem('login_attempt');
-        const now = Date.now();
-
-        // If attempted within last 10 seconds, block it
-        if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
-            alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
-            return;
-        }
-
         setIsLoading(true);
         setErrorMsg('');
 
         try {
-            localStorage.setItem('login_attempt', Date.now().toString());
-            // Use Redirect for maximum mobile compatibility
-            await loginWithGoogleRedirect();
+            // Attempt Popup login first (Works best for PWA/Standalone to keep session in-app)
+            await loginWithGoogle();
+            // Success handled by onAuthStateChanged
         } catch (error) {
-            console.error("Login Error:", error);
-            setErrorMsg(error.message);
-            setIsLoading(false);
-            localStorage.removeItem('login_attempt');
+            console.error("Popup Login Failed:", error);
+
+            // If Popup fails (e.g. blocked on some mobile browsers), fallback to Redirect
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+                try {
+                    console.log("Falling back to Redirect Login...");
+
+                    // Check loop protection before redirecting
+                    const lastAttempt = localStorage.getItem('login_attempt');
+                    const now = Date.now();
+                    if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
+                        alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    localStorage.setItem('login_attempt', Date.now().toString());
+                    await loginWithGoogleRedirect();
+                } catch (redirectError) {
+                    console.error("Redirect Login Failed:", redirectError);
+                    setErrorMsg(redirectError.message);
+                    setIsLoading(false);
+                    localStorage.removeItem('login_attempt');
+                }
+            } else {
+                setErrorMsg(error.message);
+                setIsLoading(false);
+            }
         }
     };
 
