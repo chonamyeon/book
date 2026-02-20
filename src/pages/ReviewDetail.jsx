@@ -87,26 +87,39 @@ export default function ReviewDetail() {
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    const chunks = reviewText.match(/.{1,480}/g) || [reviewText];
+    // Aiming for ~500 chars per page to get around 10 pages for a long review
+    const chunks = reviewText.match(/.{1,500}/g) || [reviewText];
 
     return (
-        <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden">
+        <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden relative">
             {/* Top Navigation Bar */}
             <TopNavigation title="E-BOOK REVIEW" type="sub" />
 
-            <main className="flex-1 w-full flex flex-col items-center justify-between py-6 px-4">
-                {/* Visual Header inspired by sketch */}
-                <div className="text-center space-y-1 mt-4">
-                    <h1 className="text-white text-3xl font-bold tracking-tight">E-BOOK 리뷰</h1>
-                    <div className="flex flex-col items-center gap-1 opacity-40">
-                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">E-BOOK REVIEW</span>
-                        <span className="text-[10px] text-white font-light tracking-widest uppercase italic">페이지를 넘겨서 리뷰를 읽어보세요</span>
+            <main className="flex-1 w-full flex flex-col items-center justify-between py-8 px-4 relative z-10">
+                {/* Visual Header - Refined per request */}
+                <div className="text-center mt-6">
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-gold text-4xl font-black uppercase tracking-[0.3em] drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                            E-BOOK REVIEW
+                        </span>
+                        <span className="text-xs text-white/40 font-light tracking-[0.5em] uppercase italic">
+                            Flip the pages to explore the curation
+                        </span>
                     </div>
                 </div>
 
-                {/* FlipBook Area - Made Larger */}
-                <div className="relative w-full max-w-[420px] flex-1 flex flex-col justify-center items-center">
-                    <div className="w-full flex justify-center items-center">
+                {/* FlipBook Area - Larger & Centered with Side Navigation */}
+                <div className="relative w-full max-w-[1000px] flex-1 flex items-center justify-center">
+
+                    {/* Left Flip Control */}
+                    <button
+                        onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
+                        className="absolute left-0 z-50 size-16 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 hover:bg-black/60 transition-all active:scale-95 hidden md:flex"
+                    >
+                        <span className="material-symbols-outlined text-4xl">chevron_left</span>
+                    </button>
+
+                    <div className="relative w-full max-w-[420px] flex justify-center items-center">
                         <HTMLFlipBook
                             width={380}
                             height={580}
@@ -125,19 +138,19 @@ export default function ReviewDetail() {
                             flippingTime={800}
                             useMouseEvents={true}
                             ref={bookRef}
-                            className="editorial-book shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
+                            className="editorial-book shadow-[0_50px_120px_rgba(0,0,0,0.95)]"
                         >
                             {/* Cover */}
                             <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
 
                             {/* Summary / Intro Page */}
                             <Page number="1">
-                                <div className="space-y-5">
-                                    <div className="h-0.5 w-12 bg-gold"></div>
-                                    <h3 className="text-2xl font-serif text-[#1a1a1a] font-bold tracking-tight">Synopsis</h3>
-                                    <p className="italic text-black/70 leading-relaxed font-serif text-base">"{targetBook.desc}"</p>
-                                    <div className="pt-10">
-                                        <p className="text-xs font-serif text-black/60 leading-relaxed">
+                                <div className="space-y-6">
+                                    <div className="h-1 w-16 bg-gold"></div>
+                                    <h3 className="text-3xl font-serif text-[#1a1a1a] font-bold tracking-tight">Synopsis</h3>
+                                    <p className="italic text-black/80 leading-relaxed font-serif text-lg">"{targetBook.desc}"</p>
+                                    <div className="pt-12 border-t border-black/5">
+                                        <p className="text-sm font-serif text-black/60 leading-relaxed">
                                             세상의 모든 위대한 사유는 한 권의 책에서 시작됩니다.
                                             아카이드 에디터가 포착한 문장의 빛을 따라
                                             당신만의 아카이브를 완성해보세요.
@@ -159,12 +172,12 @@ export default function ReviewDetail() {
                             <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-12 text-center" data-density="hard">
                                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/leather.png')" }}></div>
                                 <div className="z-10 space-y-6 font-serif">
-                                    <div className="text-gold/40 text-4xl italic mb-4">Fin.</div>
-                                    <p className="text-white/30 text-xs leading-relaxed italic">
+                                    <div className="text-gold/40 text-5xl italic mb-6">Fin.</div>
+                                    <p className="text-white/30 text-sm leading-relaxed italic">
                                         "우리가 읽는 책이 우리 머리를 주먹으로 <br />한 대 쳐서 우리를 깨우지 않는다면, <br />왜 그 책을 읽는가?" <br />
                                         - 프란츠 카프카
                                     </p>
-                                    <div className="pt-10 text-[10px] text-white/10 tracking-[0.4em] uppercase">
+                                    <div className="pt-12 text-xs text-white/10 tracking-[0.5em] uppercase">
                                         Archide Archive 2024
                                     </div>
                                 </div>
@@ -172,23 +185,28 @@ export default function ReviewDetail() {
                             </div>
                         </HTMLFlipBook>
                     </div>
-                </div>
 
-                {/* Bottom Flip Controls - More Prominent per sketch */}
-                <div className="flex gap-12 pb-12">
-                    <button
-                        onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        className="size-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-gold hover:border-gold/30 hover:bg-white/10 transition-all active:scale-90"
-                    >
-                        <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
-                    </button>
+                    {/* Right Flip Control */}
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        className="size-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-gold hover:border-gold/30 hover:bg-white/10 transition-all active:scale-90"
+                        className="absolute right-0 z-50 size-16 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 hover:bg-black/60 transition-all active:scale-95 hidden md:flex"
                     >
-                        <span className="material-symbols-outlined text-3xl">arrow_forward_ios</span>
+                        <span className="material-symbols-outlined text-4xl">chevron_right</span>
                     </button>
+
+                    {/* Mobile Controls Overlay */}
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between px-2 pb-4 md:hidden z-50">
+                        <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="size-12 rounded-full bg-black/50 text-white flex items-center justify-center">
+                            <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="size-12 rounded-full bg-black/50 text-white flex items-center justify-center">
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                    </div>
                 </div>
+
+                {/* Empty spacer for flex alignment */}
+                <div className="h-16"></div>
             </main>
 
             {/* Bottom Navigation Dock */}
