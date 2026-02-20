@@ -251,31 +251,33 @@ export default function Home() {
                             <h2 className="serif-title text-xl text-white italic">Essential Reading</h2>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-6">
                             {[
-                                { title: "Sapiens", author: "Yuval Noah Harari", cover: "/images/covers/sapiens.jpg", celebId: "bill-gates" },
-                                { title: "채식주의자", author: "Han Kang", cover: "/images/covers/vegetarian.jpg", celebId: "han-kang" },
-                                { title: "Demian", author: "Hermann Hesse", cover: "/images/covers/demian.jpg", celebId: "rm-bts" },
-                                { title: "소년이 온다", author: "Han Kang", cover: "/images/covers/human_acts.jpg", celebId: "han-kang" },
-                                { title: "1984", author: "George Orwell", cover: "/images/covers/1984.jpg", celebId: "rm-bts" },
-                                { title: "Factfulness", author: "Hans Rosling", cover: "/images/covers/factfulness.jpg", celebId: "bill-gates" },
-                                { title: "Almond", author: "Sohn Won-pyung", cover: "/images/covers/almond.jpg", celebId: "rm-bts" },
-                                { title: "Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/m_01.jpg", celebId: "haruki-murakami" },
-                                { title: "Shoe Dog", author: "Phil Knight", cover: "/images/covers/c_02.jpg", celebId: "tim-cook" }
+                                { title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg", celebId: "bill-gates" },
+                                { title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg", celebId: "rm-bts" },
+                                { title: "채식주의자", author: "한강", cover: "/images/covers/vegetarian.jpg", celebId: "han-kang" },
+                                { title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg", celebId: "rm-bts" },
+                                { title: "팩트풀니스", author: "한스 로슬링", cover: "/images/covers/factfulness.jpg", celebId: "bill-gates" },
+                                { title: "아몬드", author: "손원평", cover: "/images/covers/almond.jpg", celebId: "rm-bts" },
+                                { title: "소년이 온다", author: "한강", cover: "/images/covers/human_acts.jpg", celebId: "han-kang" },
+                                { title: "슈독", author: "필 나이트", cover: "/images/covers/c_02.jpg", celebId: "tim-cook" },
+                                { title: "위대한 개츠비", author: "F. 스콧 피츠제럴드", cover: "/images/covers/m_01.jpg", celebId: "haruki-murakami" }
                             ].map((book, idx) => (
-                                <Link key={idx} to={`/celebrity/${book.celebId}`} className="group block">
-                                    <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 mb-2 border border-white/10 shadow-lg relative">
-                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                <Link key={idx} to={`/celebrity/${book.celebId}`} className="group block cursor-pointer">
+                                    <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 mb-3 border border-white/10 shadow-2xl relative">
+                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                                             onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}
                                         />
-                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 translate-y-full group-hover:translate-y-0 transition-transform">
-                                            <span className="text-[7px] text-gold font-black uppercase tracking-widest flex items-center gap-1">
-                                                Read Review <span className="material-symbols-outlined text-[8px]">arrow_forward</span>
-                                            </span>
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                                            <div className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                                <span className="bg-gold text-primary text-[9px] font-black px-3 py-1.5 rounded-full shadow-xl flex items-center gap-1 uppercase tracking-tighter">
+                                                    Read Review <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <h4 className="text-white text-[10px] font-bold truncate leading-tight">{book.title}</h4>
-                                    <p className="text-slate-500 text-[9px] uppercase tracking-wide truncate">{book.author}</p>
+                                    <h4 className="text-white text-[11px] font-bold truncate leading-tight mb-0.5">{book.title}</h4>
+                                    <p className="text-slate-500 text-[9px] uppercase tracking-wider truncate font-medium">{book.author}</p>
                                 </Link>
                             ))}
                         </div>
