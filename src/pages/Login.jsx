@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
-import { setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { setPersistence, browserLocalPersistence } from 'firebase/auth'; // Import required
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingResult, setIsCheckingResult] = useState(true); // Always check first
+    const [isCheckingResult, setIsCheckingResult] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
-        // [Key Logic] ALWAYS check redirect result first, regardless of platform.
-        // This is the most reliable way to catch a returning user from a redirect flow.
-
+        // [Redirect Result Check]
+        // This MUST run before auth state check to catch users returning from Google.
         getRedirectResult(auth)
             .then((result) => {
                 if (result) {
-                    console.log("Redirect Success:", result.user.email);
-                    // The onAuthStateChanged listener below will handle the navigation part.
+                    console.log("Redirect Login Success:", result.user.email);
+                    // Auth state listener will handle the actual navigation
                 } else {
-                    // No redirect result found. Just a normal page load.
+                    // No redirect result. Just a normal load.
                     setIsCheckingResult(false);
                 }
             })
@@ -30,10 +29,10 @@ export default function Login() {
                 setIsCheckingResult(false);
             });
 
-        // Monitor Auth State
+        // [Auth State Listener]
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log("Auth State Changed: User Logged In", user.email);
+                console.log("Auth State Confirmed:", user.email);
                 setIsCheckingResult(false);
                 navigate('/profile', { replace: true });
             }
@@ -47,19 +46,24 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // [Strategy] Try Redirect FIRST.
-            // Why? Because popup is failing (blank page, blocked).
-            // Redirect is the native web way. If configured correctly (firebaseapp.com), it MUST work.
-            // It will navigate away, then return to this page.
+            // [CRITICAL FIX]
+            // Explicitly force LOCAL persistence before redirecting.
+            // This tells iOS Safari: "Save this session to disk, don't lose it!"
+            await setPersistence(auth, browserLocalPersistence);
+
+            // Using Redirect for Mobile robustness (Popup is too flaky on iOS)
+            // Now that authDomain is correct (firebaseapp.com), redirect should 100% work.
+            // And setPersistence ensures we stay logged in upon return.
             await loginWithGoogleRedirect();
+
         } catch (error) {
-            console.error("Login Failed:", error);
+            console.error("Login Error:", error);
             setErrorMsg(error.message);
             setIsLoading(false);
         }
     };
 
-    // Initial Loading Screen (Crucial for Redirect Flow)
+    // Initial Loading (Wait for Redirect Result)
     if (isCheckingResult) {
         return (
             <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
