@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<title>예스24 - 대한민국 대표 인터넷서점</title>
+<link href="//image.yes24.com/sysimage/mobileN/icon/icon_n.png" type="image/x-icon" rel="shortcut icon" />
+<style>
+html { overflow-y:scroll; }
+html, body { min-height:100%;height:100%;}
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,form,fieldset,p,button{margin:0;padding:0}
+body,h1,h2,h3,h4,input,button { font-family:'돋움',dotum,Helvetica,sans-serif;font-size:12px;color:#555; }
+
+body{background-color:#fff;text-align:center;*word-break:break-all;-ms-word-break:break-all}
+img,fieldset,iframe{border:0 none}
+li{list-style:none}
+i,em,address{font-style:normal}
+
+label,button{cursor:pointer}
+button{margin:0;padding:0}
+a{color:#555;text-decoration:none}
+a:hover{color:#6699cc;text-decoration:underline}
+hr{display:none}
+legend{*width:0}
+
+/* skip */
+#yesSkip {position:relative;z-index:2147483647}
+#yesSkip {position:relative;z-index:2147483647}
+#yesSkip dt { display:none; }
+#yesSkip a { position:absolute;left:0;top:-30px;width:138px;border:1px solid #6699cc;text-align:center;outline:none;background-color:#fff; }
+#yesSkip a:active,
+#yesSkip a:focus{top:0;text-decoration:none;cursor:pointer;zoom:1}
+#yesSkip span{display:inline-block;padding:2px 6px 0 0;font-size:11px;letter-spacing:-1px;color:#fff;line-height:26px}
+
+body { text-align:center;background-color:#f8f8f8; }
+#yesWrap { text-align:center; }
+#yesWrap * { font-family:'맑은 고딕','Malgun Gothic','Apple SD Gothic Neo',AppleGothic,'돋움',Dotum,'굴림',Gulim,Helvetica,sans-serif; }
+#ySHeader { height:100px;text-align:center; }
+#ySHeader:after { content:'';clear:both;display:block; }
+#ySHeader .ySHeaderAera { margin:0 auto;width:960px;height:100px;text-align:left; }
+#ySHeader .ySHeaderAera h1 { height:100px; }
+#ySHeader .ySHeaderAera h1 .lnk_logo { float:left; }
+#ySHeader .ySHeaderAera h1 .servName { height:100px;line-height:100px;font-family:'Noto Sans KR';font-size:24px;color:#333;font-weight:700; }
+#ySHeader .ySHeaderAera h1 .servName a { float:left;display:block;height:100px;line-height:100px;font-family:'Noto Sans KR';font-size:24px;color:#333;font-weight:700; }
+#ySContent { margin:0 auto;padding:60px 0;width:958px;_width:960px;border:solid 1px #d8d8d8;text-align:center;background-color:#fff; }
+#ySContent .ySContRow { margin:0 auto;position:relative;width:760px;text-align:left; }
+#ySContent .ySContRow+.ySContRow { margin-top:50px;padding:50px 0 0 0;border-top:solid 1px #ebebeb; }
+#ySContent .ySContTop { padding:15px 0;line-height:27px;border-bottom:solid 1px #ebebeb;color:#333;font-size:16px;background-color:#f8f8f8; }
+#ySContent .ySCont_tit { display:table;margin:0 auto;width:760px; }
+#ySContent .ySCont_tit .ySCont_titCell { display:table-cell;text-align:left;vertical-align:middle; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_img { width:234px; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_img .bgYUI_ico { width:184px;height:226px; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_img .bgYUI_ico.ico_adult { height:184px;background-position:0 0; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt { padding-bottom:20px; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .txt_tit { font-size:36px;color:#333;font-weight:700;line-height:1.2em;font-family:'Noto Sans KR','맑은 고딕';letter-spacing:-1px; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .txt_tit * { font-family:'Noto Sans KR','맑은 고딕'; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .txt_des { margin-top:20px;line-height:26px;font-size:16px;color:#333;letter-spacing:-1px; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .yesAlertLi {  }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .yesAlertLi li { display:-moz-inline-stack;display:inline-block;zoom:1;*display:inline;text-align:left;vertical-align:top; }
+#ySContent .ySCont_tit .ySCont_titCell.cell_txt .yesAlertLi li { margin-right:10px;color:#333 !important; }
+#ySContent .ySContRow .rowBtnTopTxt { margin-top:25px;height:22px;line-height:22px;font-size:16px;color:#666;text-align:center; }
+#ySContent .ySContRow .rowBtn { margin-top:40px;text-align:center; }
+#ySContent .ySContRow .rowBtnTopTxt+.rowBtn { margin-top:30px; }
+#ySFooter { height:50px;text-align:center; }
+#ySFooter .ySFooterAera { margin:0 auto;width:960px;height:50px;line-height:50px;text-align:center;color:#666; }
+
+#ySContent .error_tit { padding-bottom:30px;line-height:42px;border-bottom:solid 1px #d8d8d8;text-align:center;font-size:36px;color:#333;font-family:'Noto Sans KR','맑은 고딕';font-weight:700; }
+#ySContent .error_tit * { font-family:'Noto Sans KR','맑은 고딕'; }
+#ySContent .error_des { line-height:26px;font-size:16px;color:#333;text-align:center; }
+#ySContent .error_des a { color:#333;text-decoration:underline; }
+#ySContent .error_des p+p { margin-top:20px; }
+#ySContent .error_btn { margin-top:40px;text-align:center; }
+</style>
+<link rel="stylesheet" href="//image.yes24.com/sysimage/yesUI/yesUI.css?ver=171114a" type="text/css" media="all" />
+</head>
+<body>
+<dl id="yesSkip">
+	<dt>콘텐츠 바로가기</dt>
+	<dd><a href="#yWelTop">본문 바로가기</a></dd>
+</dl>
+
+<hr/>
+
+<div id="yesWrap">
+	<!-- #################### 간략 HEADER 영역 시작 #################### -->
+	<div id="ySHeader">
+		<div class="ySHeaderAera">
+			<h1>
+				<a class="lnk_logo" href="http://www.yes24.com/main/default.aspx"><img src="//image.yes24.com/sysimage/renew/sLayout/logo_n.png" border="0" alt="YES24"></a>
+			</h1>
+		</div>
+	</div>
+	<!-- #################### 간략 HEADER 영역 끝 #################### -->
+	<hr/>
+	<!-- #################### 간략 Content 영역 시작 #################### -->
+	<div id="ySContent">
+		<div class="ySContRow">
+			<div class="error_tit">
+				요청하신 페이지를 찾을 수 없습니다.
+			</div>
+			<div class="error_des mgt40">
+				<p>
+					현재 페이지 주소(URL)가 <br/>
+					 정확한지 다시 한번 확인 해 주시기 바랍니다.
+				</p>
+			</div>
+			<div class="error_btn">
+				<a href="http://www.yes24.com" class="btnC w_220 xb_size btn_blue"><span class="bWrap"><em class="txt">예스24 메인</em></span></a>
+				<a href="http://www.yes24.com/Mall/Help/CS/Apply" class="btnC w_220 xb_size"><span class="bWrap"><em class="txt">오류 신고</em></span></a>
+			</div>
+			<div class="error_des mgt40">
+				고객센터 : 1544-3800<br/>
+				문의 메일 : <a href="mailto:yes24help@yes24.com">yes24help@yes24.com</a>
+			</div>
+		</div>
+	</div>
+	<!-- #################### 간략 Content 영역 끝 #################### -->
+	<hr/>
+	<!-- #################### 간략 FOOTER 영역 시작 #################### -->
+	<div id="ySFooter">
+		<div class="ySFooterAera">
+			<address>	
+				Copyright &#0169; <strong>YES24 Corp.</strong> All Rights Reserved.				
+			</address>
+		</div>
+	</div>
+	<!-- #################### 간략 FOOTER 영역 시작 #################### -->
+</div>
+
+</body>
+</html>

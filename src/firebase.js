@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signO
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s",
-    authDomain: "book-site-123.web.app",
+    authDomain: "book-site-123.firebaseapp.com",
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "book-site-123",
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "book-site-123.firebasestorage.app",
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "176157090689",
@@ -12,14 +12,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 
-// Explicitly set parameters to ensure clean OAuth flow
-// Explicitly set parameters to ensure clean OAuth flow and use the CORRECT Client ID
-googleProvider.setCustomParameters({
-    prompt: 'select_account',
-    client_id: '81562499893-ur8s5hh4m8019htb6uo0j52qf7qg0s09.apps.googleusercontent.com'
-});
+// Google Provider Instance
+export const googleProvider = new GoogleAuthProvider();
+// No custom parameters to avoid restricted_client errors on mobile.
 
 /**
  * SAFARI OPTIMIZATION:
