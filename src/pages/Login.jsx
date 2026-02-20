@@ -98,9 +98,13 @@ export default function Login() {
                         <div ref={googleBtnRef} className="w-full flex justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
 
                         <button
-                            onClick={(e) => {
-                                console.log("Mobile login clicked");
-                                handleMobileLogin();
+                            onClick={async (e) => {
+                                setIsLoading(true);
+                                try {
+                                    await loginWithGoogleRedirect();
+                                } catch (error) {
+                                    setIsLoading(false);
+                                }
                             }}
                             className="w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 mt-4"
                             style={{ zIndex: 50, position: 'relative' }}

@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signO
 
 const firebaseConfig = {
     apiKey: "AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s",
-    authDomain: "book-site-123.firebaseapp.com",
+    authDomain: "book-site-123.web.app",
     projectId: "book-site-123",
     storageBucket: "book-site-123.firebasestorage.app",
     messagingSenderId: "176157090689",
