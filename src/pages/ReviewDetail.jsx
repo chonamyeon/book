@@ -96,30 +96,21 @@ export default function ReviewDetail() {
     const chunks = reviewText.match(/[\s\S]{1,350}/g) || [reviewText];
 
     return (
-        <div className="bg-[#0f1115] h-screen w-full font-display flex flex-col overflow-hidden fixed inset-0 z-[9999]">
+        <div className="bg-[#0f1115] min-h-screen w-full font-display flex flex-col overflow-x-hidden relative z-[9999]">
             {/* Full screen floating close button */}
             <button
-                onClick={() => navigate('/editorial')}
-                className="absolute top-6 right-6 z-[10000] size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
+                onClick={() => {
+                    document.body.style.overflow = 'auto';
+                    navigate('/editorial');
+                }}
+                className="fixed top-6 right-6 z-[10000] size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
             >
                 <span className="material-symbols-outlined text-2xl font-bold">close</span>
             </button>
 
-            <main className="flex-1 w-full flex flex-col items-center justify-center relative">
-                {/* Visual Header - More subtle for full screen immersion */}
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center z-10 opacity-40">
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-gold text-lg font-black uppercase tracking-[0.4em]">
-                            E-BOOK REVIEW
-                        </span>
-                        <span className="text-[8px] text-white/50 font-light tracking-[0.5em] uppercase italic">
-                            The Archive Archive
-                        </span>
-                    </div>
-                </div>
-
+            <main className="flex-1 min-h-screen w-full flex flex-col items-center justify-center relative py-12">
                 {/* FlipBook Area - Full Screen Scale */}
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative w-full flex-1 flex items-center justify-center">
 
                     {/* Left Flip Control - Enhanced */}
                     <button
