@@ -43,7 +43,7 @@ const Page = React.forwardRef((props, ref) => {
 
                 <div className="flex-1">
                     <div className="prose prose-sm max-w-none">
-                        <p className="text-[#2a2a2a] text-lg leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
+                        <p className="text-[#2a2a2a] text-base leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
                             {props.children}
                         </p>
                     </div>
@@ -92,9 +92,8 @@ export default function ReviewDetail() {
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    // Ensuring a long enough text is split into small chunks to guarantee 10+ pages
-    // Using 450 chars per page
-    const chunks = reviewText.match(/[\s\S]{1,450}/g) || [reviewText];
+    // Reducing chunk size to ~350 characters to ensure it fits perfectly within the page height (580px)
+    const chunks = reviewText.match(/[\s\S]{1,350}/g) || [reviewText];
 
     return (
         <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden relative">
