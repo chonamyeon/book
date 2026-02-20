@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
