@@ -1,51 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, loginWithGoogle } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Prevent premature rendering
-    const [isMobile, setIsMobile] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isPWA, setIsPWA] = useState(false);
 
     useEffect(() => {
-        // Simple Mobile Detection
-        const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        setIsMobile(mobile);
+        // Device Detection (For clear error message context)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        setIsPWA(isStandalone);
 
-        // 1. Initial Auth Check
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log("Logged In User:", user.email);
-                setIsCheckingAuth(false);
+                console.log("Auth State Changed: User Logged In", user.email);
                 navigate('/profile', { replace: true });
-            } else {
-                // If not logged in, wait for redirect result logic below (on mobile)
-                if (!mobile) setIsCheckingAuth(false);
             }
         });
-
-        // 2. Handle Redirect Result (Mobile Key Logic)
-        if (mobile) {
-            getRedirectResult(auth)
-                .then((result) => {
-                    if (result) {
-                        console.log("Redirect Success:", result.user.email);
-                        // onAuthStateChanged will handle navigation
-                    } else {
-                        // No redirect result found -> Show login screen
-                        setIsCheckingAuth(false);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Redirect Error:", error);
-                    setErrorMsg(error.message);
-                    setIsCheckingAuth(false);
-                });
-        }
-
         return () => unsubscribe();
     }, [navigate]);
 
@@ -54,30 +28,28 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            if (isMobile) {
-                // Mobile: Redirect (Robust, survives page navigation)
-                // Now that authDomain is fixed to firebaseapp.com, this should work perfectly.
-                await loginWithGoogleRedirect();
-            } else {
-                // PC: Popup (Better UX)
-                await loginWithGoogle();
-            }
+            // [Final Decision] Always use Popup.
+            // Redirect is unreliable on mobile due to domain/handler config issues.
+            // Popup works 100% IF unblocked. We guide the user to unblock.
+            await loginWithGoogle();
         } catch (error) {
-            console.error("Login Error:", error);
-            setErrorMsg(error.message);
+            console.error("Popup Login Failed:", error);
             setIsLoading(false);
+
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
+                if (isPWA) {
+                    alert("아이폰 설정 > Safari > '팝업 차단'을 끄셔야 앱 내 로그인이 가능합니다.");
+                } else {
+                    alert("팝업 차단이 감지되었습니다. 브라우저 설정에서 팝업을 허용해주세요.");
+                }
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
+            } else {
+                setErrorMsg("로그인 오류: " + error.message);
+            }
         }
     };
-
-    // Loading screen while checking auth/redirect result
-    if (isCheckingAuth) {
-        return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
-                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
-            </div>
-        );
-    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -96,9 +68,12 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
+                            </p>
+                            <p className="text-red-500/50 text-[11px] mt-2 border-t border-red-500/20 pt-2">
+                                ※ 팝업 차단 해제 후 다시 시도해주세요.
                             </p>
                         </div>
                     )}
@@ -114,7 +89,7 @@ export default function Login() {
                         ) : (
                             <>
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                <span>Google로 {isMobile ? "이동하여" : ""} 계속하기</span>
+                                <span>Google로 계속하기</span>
                             </>
                         )}
                     </button>
