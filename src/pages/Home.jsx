@@ -253,21 +253,26 @@ export default function Home() {
 
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { title: "Sapiens", author: "Yuval Noah Harari", cover: "/images/covers/sapiens.jpg" },
-                                { title: "1984", author: "George Orwell", cover: "/images/covers/1984.jpg" },
-                                { title: "Demian", author: "Hermann Hesse", cover: "/images/covers/demian.jpg" },
-                                { title: "Cosmos", author: "Carl Sagan", cover: "/images/covers/c_01.jpg" },
-                                { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/gatsby.jpg" },
-                                { title: "Steve Jobs", author: "Walter Isaacson", cover: "/images/covers/s_01.jpg" },
-                                { title: "Shoe Dog", author: "Phil Knight", cover: "/images/covers/c_02.jpg" },
-                                { title: "Factfulness", author: "Hans Rosling", cover: "/images/covers/factfulness.jpg" },
-                                { title: "Almond", author: "Sohn Won-pyung", cover: "/images/covers/almond.jpg" }
+                                { title: "Sapiens", author: "Yuval Noah Harari", cover: "/images/covers/sapiens.jpg", celebId: "bill-gates" },
+                                { title: "채식주의자", author: "Han Kang", cover: "/images/covers/vegetarian.jpg", celebId: "han-kang" },
+                                { title: "Demian", author: "Hermann Hesse", cover: "/images/covers/demian.jpg", celebId: "rm-bts" },
+                                { title: "소년이 온다", author: "Han Kang", cover: "/images/covers/human_acts.jpg", celebId: "han-kang" },
+                                { title: "1984", author: "George Orwell", cover: "/images/covers/1984.jpg", celebId: "rm-bts" },
+                                { title: "Factfulness", author: "Hans Rosling", cover: "/images/covers/factfulness.jpg", celebId: "bill-gates" },
+                                { title: "Almond", author: "Sohn Won-pyung", cover: "/images/covers/almond.jpg", celebId: "rm-bts" },
+                                { title: "Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/m_01.jpg", celebId: "haruki-murakami" },
+                                { title: "Shoe Dog", author: "Phil Knight", cover: "/images/covers/c_02.jpg", celebId: "tim-cook" }
                             ].map((book, idx) => (
-                                <Link key={idx} to="#" className="group block">
+                                <Link key={idx} to={`/celebrity/${book.celebId}`} className="group block">
                                     <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 mb-2 border border-white/10 shadow-lg relative">
                                         <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                                             onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}
                                         />
+                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 translate-y-full group-hover:translate-y-0 transition-transform">
+                                            <span className="text-[7px] text-gold font-black uppercase tracking-widest flex items-center gap-1">
+                                                Read Review <span className="material-symbols-outlined text-[8px]">arrow_forward</span>
+                                            </span>
+                                        </div>
                                     </div>
                                     <h4 className="text-white text-[10px] font-bold truncate leading-tight">{book.title}</h4>
                                     <p className="text-slate-500 text-[9px] uppercase tracking-wide truncate">{book.author}</p>
