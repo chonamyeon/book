@@ -8,25 +8,34 @@ export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
-    // Check for redirect result when page loads (in case we returned from Google)
+    // Monitor Auth State Changes (The most reliable way)
     useEffect(() => {
-        const checkLogin = async () => {
-            try {
-                const result = await getRedirectResult(auth);
-                if (result) {
-                    console.log("Login Success:", result.user.email);
-                    navigate('/profile', { replace: true });
-                }
-            } catch (error) {
-                console.error("Login Error:", error);
-                setErrorMsg(error.message);
-                if (error.code === 'auth/popup-closed-by-user') {
-                    // Ignore strictly, but good to know
-                }
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("Auth State Changed: User Logged In", user.email);
+                // Redirect immediately to profile
+                navigate('/profile', { replace: true });
             }
-        };
+        });
 
-        checkLogin();
+        // Also check redirect result for errors specifically
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Result Success:", result.user.email);
+                    // navigate is handled by onAuthStateChanged above
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect Login Error:", error);
+                setErrorMsg(error.message);
+                // Handle specific error codes if needed
+                if (error.code === 'auth/popup-closed-by-user') {
+                    // Ignore strictly
+                }
+            });
+
+        return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
@@ -65,7 +74,7 @@ export default function Login() {
                                 {errorMsg}
                             </p>
                             <p className="text-red-500/50 text-[10px] mt-1">
-                                (설정 > Safari > 팝업 차단 해제 필요할 수 있음)
+                                (설정 → Safari → 팝업 차단 해제 필요할 수 있음)
                             </p>
                         </div>
                     )}
