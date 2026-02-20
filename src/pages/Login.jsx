@@ -1,39 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, loginWithGoogle } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isPWA, setIsPWA] = useState(false);
 
     useEffect(() => {
-        // 1. Monitor Auth State (Primary)
-        // This fires when redirect returns successfully or user is already logged in
+        // Check if running in PWA (Standalone) mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        setIsPWA(isStandalone);
+
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
-                localStorage.removeItem('login_attempt'); // Clear flag
                 navigate('/profile', { replace: true });
             }
         });
-
-        // 2. Check for Redirect Result (Secondary/Error Handling)
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Redirect Success:", result.user.email);
-                    // onAuthStateChanged will handle navigation
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Error:", error);
-                setErrorMsg(error.message);
-                setIsLoading(false);
-                localStorage.removeItem('login_attempt'); // Clear flag on error
-            });
-
         return () => unsubscribe();
     }, [navigate]);
 
@@ -42,37 +28,21 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // Attempt Popup login first (Works best for PWA/Standalone to keep session in-app)
+            // ONLY use Popup. Redirect breaks PWA session sync on iOS.
             await loginWithGoogle();
-            // Success handled by onAuthStateChanged
         } catch (error) {
             console.error("Popup Login Failed:", error);
+            setIsLoading(false);
 
-            // If Popup fails (e.g. blocked on some mobile browsers), fallback to Redirect
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                try {
-                    console.log("Falling back to Redirect Login...");
-
-                    // Check loop protection before redirecting
-                    const lastAttempt = localStorage.getItem('login_attempt');
-                    const now = Date.now();
-                    if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
-                        alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    localStorage.setItem('login_attempt', Date.now().toString());
-                    await loginWithGoogleRedirect();
-                } catch (redirectError) {
-                    console.error("Redirect Login Failed:", redirectError);
-                    setErrorMsg(redirectError.message);
-                    setIsLoading(false);
-                    localStorage.removeItem('login_attempt');
+                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
+                if (isPWA) {
+                    alert("아이폰 설정 > Safari > '팝업 차단'을 끄셔야 앱 내 로그인이 가능합니다.");
                 }
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
             } else {
-                setErrorMsg(error.message);
-                setIsLoading(false);
+                setErrorMsg("로그인 오류: " + error.message);
             }
         }
     };
@@ -94,13 +64,15 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
-                            <p className="text-red-400 text-xs font-bold leading-relaxed">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
+                            <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
-                            <p className="text-red-500/50 text-[10px] mt-1">
-                                (설정 → Safari → 팝업 차단 해제 필요할 수 있음)
-                            </p>
+                            {isPWA && (
+                                <p className="text-red-500/50 text-[11px] mt-2 border-t border-red-500/20 pt-2">
+                                    ※ 홈 화면 앱(PWA)에서는 팝업 차단 해제가 필수입니다.
+                                </p>
+                            )}
                         </div>
                     )}
 
