@@ -1,8 +1,10 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, loginWithGoogleRedirect } from '../firebase';
 import { GoogleAuthProvider, signInWithCredential, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
+import BottomNavigation from '../components/BottomNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -86,7 +88,7 @@ export default function Login() {
                             <span className="material-symbols-outlined text-4xl text-gold">menu_book</span>
                         </div>
                         <h1 className="serif-title text-3xl mb-2">The Archive</h1>
-                        <p className="text-slate-400 text-sm">안전한 로그인을 위해 버튼을 불러오는 중입니다.</p>
+                        <p className="text-slate-400 text-sm">당신의 지적 여정을 기록하는 프리미엄 아카이브</p>
                     </div>
 
                     <div className="flex flex-col items-center justify-center min-h-[60px] relative space-y-4">
@@ -118,12 +120,14 @@ export default function Login() {
 
                     <div className="mt-12 p-5 bg-white/5 rounded-2xl border border-white/10 text-center">
                         <p className="text-[10px] text-slate-500 leading-relaxed">
-                            아이폰 사용자를 위한 구글 공식 버튼이 적용되었습니다. <br />
-                            <strong>버튼이 동작하지 않으면 아래 '구 방식 로그인'을 이용해주세요.</strong>
+                            The Archive는 당신의 독서 취향을 분석하여<br />
+                            최고의 지적 경험을 선사합니다.
                         </p>
                     </div>
                 </div>
             </main>
+            <BottomNavigation />
         </div>
     );
 }
+
