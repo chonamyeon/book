@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
 import { resultData } from '../data/resultData';
@@ -8,8 +8,10 @@ import { recommendations } from '../data/recommendations';
 export default function Library() {
     const [unlocked, setUnlocked] = useState(false);
     const [myResultType, setMyResultType] = useState(null);
+    const [quizResult, setQuizResult] = useState(null);
     const [hiddenRecs, setHiddenRecs] = useState([]);
     const [savedBooks, setSavedBooks] = useState([]);
+    const navigate = useNavigate();
 
     const loadSavedBooks = () => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -25,9 +27,11 @@ export default function Library() {
     useEffect(() => {
         const isUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
         const type = localStorage.getItem('myResultType');
+        const qResult = localStorage.getItem('quizResult');
 
         setUnlocked(isUnlocked);
         setMyResultType(type);
+        setQuizResult(qResult);
         loadSavedBooks();
 
         const handleStorage = () => loadSavedBooks();
@@ -45,6 +49,32 @@ export default function Library() {
                 <TopNavigation title="내 서재" type="sub" />
 
                 <main className="px-6 pt-8 pb-24 space-y-12 animate-fade-in">
+
+                    {/* Personality Test Banner */}
+                    <div className="relative rounded-2xl overflow-hidden border border-white/10 group mb-8">
+                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-1000"></div>
+                        <div className="absolute inset-0 bg-background-dark/80"></div>
+
+                        <div className="relative p-6 text-center flex flex-col items-center">
+                            <span className="material-symbols-outlined text-gold text-3xl mb-3">psychology_alt</span>
+                            <h3 className="serif-title text-white text-xl mb-2">Find Your Persona</h3>
+                            <p className="text-slate-400 text-xs font-light mb-5 max-w-xs leading-relaxed">
+                                Take our literary personality test to discover the books that resonate with your soul.
+                            </p>
+                            {quizResult ? (
+                                <button
+                                    onClick={() => navigate('/result', { state: { resultType: quizResult } })}
+                                    className="px-6 py-2.5 bg-white text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-gold transition-colors flex items-center gap-2"
+                                >
+                                    View Analysis Result <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </button>
+                            ) : (
+                                <Link to="/quiz" className="px-6 py-2.5 bg-gold text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-white transition-colors">
+                                    Start Diagnostics
+                                </Link>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Personal Collection Header */}
                     <div className="text-center space-y-2 border-b border-white/5 pb-8">

@@ -27,6 +27,7 @@ export default function Quiz() {
             window.scrollTo(0, 0);
         } else {
             const resultType = calculateResult(answers);
+            localStorage.setItem('quizResult', resultType); // Save result for Library access
             navigate('/result', { state: { resultType } });
         }
     };
@@ -114,8 +115,8 @@ export default function Quiz() {
                                     key={option.id}
                                     onClick={() => handleOptionSelect(option.id)}
                                     className={`w-full p-6 text-left transition-all duration-300 rounded-xl border relative overflow-hidden group ${selected
-                                            ? 'bg-gold/10 border-gold shadow-[0_0_20px_rgba(212,175,55,0.15)]'
-                                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+                                        ? 'bg-gold/10 border-gold shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                                        : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between relative z-10">
@@ -124,8 +125,8 @@ export default function Quiz() {
                                             {option.text}
                                         </span>
                                         <div className={`size-5 rounded-full border flex items-center justify-center transition-all ${selected
-                                                ? 'border-gold bg-gold text-black scale-110'
-                                                : 'border-white/20 group-hover:border-white/40'
+                                            ? 'border-gold bg-gold text-black scale-110'
+                                            : 'border-white/20 group-hover:border-white/40'
                                             }`}>
                                             {selected && <span className="material-symbols-outlined text-xs font-bold">check</span>}
                                         </div>
@@ -143,8 +144,8 @@ export default function Quiz() {
                             onClick={handleNext}
                             disabled={!isSelected}
                             className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-300 flex items-center justify-center gap-2 ${isSelected
-                                    ? 'bg-gold text-primary shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_25px_rgba(212,175,55,0.6)] active:scale-[0.98]'
-                                    : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+                                ? 'bg-gold text-primary shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_25px_rgba(212,175,55,0.6)] active:scale-[0.98]'
+                                : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
                                 }`}
                         >
                             {currentQuestionIndex === totalQuestions - 1 ? (
