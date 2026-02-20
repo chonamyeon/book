@@ -69,11 +69,11 @@ export default function Editorial() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation title="에디토리얼" type="sub" />
 
-                <main className="px-6 pt-24 pb-24 space-y-16">
+                <main className="px-6 pt-16 pb-24 space-y-12">
                     {/* Header Section */}
-                    <header className="space-y-4">
-                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block">Editorial Picks</span>
-                        <h2 className="serif-title text-4xl text-white font-light leading-none">
+                    <header className="space-y-2">
+                        <span className="text-gold text-[9px] font-black uppercase tracking-[0.2em] block">Editorial Picks</span>
+                        <h2 className="serif-title text-3xl text-white font-light leading-snug">
                             지적인 한 주를 위한 <br />
                             <span className="italic text-slate-400">Archide Curation</span>
                         </h2>

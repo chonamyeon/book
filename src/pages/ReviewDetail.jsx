@@ -97,13 +97,13 @@ export default function ReviewDetail() {
 
             <main className="flex-1 w-full flex flex-col items-center justify-between py-8 px-4 relative z-10">
                 {/* Visual Header - Refined per request */}
-                <div className="text-center mt-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-gold text-4xl font-black uppercase tracking-[0.3em] drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                <div className="text-center mt-2">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-gold text-2xl font-black uppercase tracking-[0.3em] drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
                             E-BOOK REVIEW
                         </span>
-                        <span className="text-xs text-white/40 font-light tracking-[0.5em] uppercase italic">
-                            Flip the pages to explore the curation
+                        <span className="text-[10px] text-white/30 font-light tracking-[0.4em] uppercase italic">
+                            Flip the pages to explore
                         </span>
                     </div>
                 </div>
