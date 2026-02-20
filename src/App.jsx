@@ -9,6 +9,7 @@ import Celebrity from './pages/Celebrity';
 import Quiz from './pages/Quiz';
 import Library from './pages/Library';
 import Profile from './pages/Profile';
+import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
       </div>
     </Router>
