@@ -1,18 +1,23 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserSessionPersistence } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence, getRedirectResult } from "firebase/auth";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCPfT_tnG5ms3DXPWBFFw4jP2n71tD3E28",
-    authDomain: "book-66383.firebaseapp.com",
-    projectId: "book-66383",
-    storageBucket: "book-66383.firebasestorage.app",
-    messagingSenderId: "449271998600",
-    appId: "1:449271998600:web:b1699676c3f76176cbd73d"
+    apiKey: "AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s",
+    authDomain: "book-site-123.web.app",
+    projectId: "book-site-123",
+    storageBucket: "book-site-123.firebasestorage.app",
+    messagingSenderId: "176157090689",
+    appId: "1:176157090689:web:107f25429239f25ffd7e80"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Explicitly set parameters to ensure clean OAuth flow
+googleProvider.setCustomParameters({
+    prompt: 'select_account'
+});
 
 /**
  * SAFARI OPTIMIZATION:
@@ -24,11 +29,13 @@ export const googleProvider = new GoogleAuthProvider();
  *    https://book-66383.firebaseapp.com/__/auth/handler
  */
 
-// Safari often works better with session persistence for redirects
-setPersistence(auth, browserSessionPersistence)
+// Safari often works better with session persistence for redirects, but user needs persistent login:
+setPersistence(auth, browserLocalPersistence)
     .catch(err => console.error("Persistence error:", err));
 
 // iOS Safari robust login: always use redirect
-export const loginWithGoogle = () => signInWithRedirect(auth, googleProvider);
+export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const loginWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider);
 export const logout = () => signOut(auth);
+// Export getRedirectResult strictly for component usage if needed (though already imported directly in components usually)
+export { getRedirectResult };

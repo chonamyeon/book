@@ -12,24 +12,8 @@ import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
-  // Global Redirect Handler for Firebase Auth (Critical for iOS Safari)
-  React.useEffect(() => {
-    const handleRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          console.log("Global Redirect Login Success:", result.user.email);
-        }
-      } catch (error) {
-        console.error("Global Redirect Error:", error);
-        if (error.code === 'auth/unauthorized-domain') {
-          alert(`도메인 승인 오류: Firebase 콘솔에서 '${window.location.hostname}'를 승인해야 합니다.`);
-        }
-      }
-    };
-
-    handleRedirect();
-  }, []);
+  // Global Redirect Handler logic moved to Profile.jsx to show debug logs on screen
+  // This prevents the "redirect result consumed" issue where errors were hidden in console.
 
   return (
     <Router>
