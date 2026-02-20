@@ -85,49 +85,57 @@ export default function ReviewDetail() {
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    // Slightly more characters per page for single-page mode
     const chunks = reviewText.match(/.{1,480}/g) || [reviewText];
 
     return (
-        <div className="bg-[#0a0a0c] min-h-screen font-display flex flex-col items-center justify-center overflow-hidden">
+        <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden">
             {/* Top Navigation Bar */}
             <TopNavigation title="E-BOOK REVIEW" type="sub" />
 
-            <main className="flex-1 w-full flex flex-col items-center justify-center px-4 pt-16 pb-24">
-                {/* FlipBook Wrapper - Forced Single Page for Mobile/Desktop */}
-                <div className="relative w-full max-w-[380px] flex flex-col items-center">
-                    <div className="w-full flex justify-center items-center py-4">
+            <main className="flex-1 w-full flex flex-col items-center justify-between py-6 px-4">
+                {/* Visual Header inspired by sketch */}
+                <div className="text-center space-y-1 mt-4">
+                    <h1 className="text-white text-3xl font-bold tracking-tight">E-BOOK 리뷰</h1>
+                    <div className="flex flex-col items-center gap-1 opacity-40">
+                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">E-BOOK REVIEW</span>
+                        <span className="text-[10px] text-white font-light tracking-widest uppercase italic">페이지를 넘겨서 리뷰를 읽어보세요</span>
+                    </div>
+                </div>
+
+                {/* FlipBook Area - Made Larger */}
+                <div className="relative w-full max-w-[420px] flex-1 flex flex-col justify-center items-center">
+                    <div className="w-full flex justify-center items-center">
                         <HTMLFlipBook
-                            width={350}
-                            height={520}
+                            width={380}
+                            height={580}
                             size="fixed"
-                            minWidth={300}
-                            maxWidth={380}
-                            minHeight={450}
-                            maxHeight={550}
+                            minWidth={320}
+                            maxWidth={420}
+                            minHeight={500}
+                            maxHeight={650}
                             maxShadowOpacity={0.4}
                             showCover={true}
                             mobileScrollSupport={true}
                             clickEventForward={true}
-                            usePortrait={true} // FORCE SINGLE PAGE
+                            usePortrait={true}
                             startPage={0}
                             drawShadow={true}
                             flippingTime={800}
                             useMouseEvents={true}
                             ref={bookRef}
-                            className="editorial-book shadow-[0_30px_60px_rgba(0,0,0,0.7)]"
+                            className="editorial-book shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
                         >
                             {/* Cover */}
                             <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
 
                             {/* Summary / Intro Page */}
                             <Page number="1">
-                                <div className="space-y-4">
-                                    <div className="h-0.5 w-10 bg-gold"></div>
-                                    <h3 className="text-xl font-serif text-[#1a1a1a] font-bold">Synopsis</h3>
-                                    <p className="italic text-black/70 leading-relaxed font-serif text-sm">"{targetBook.desc}"</p>
-                                    <div className="pt-8">
-                                        <p className="text-[11px] font-serif text-black/60 leading-relaxed">
+                                <div className="space-y-5">
+                                    <div className="h-0.5 w-12 bg-gold"></div>
+                                    <h3 className="text-2xl font-serif text-[#1a1a1a] font-bold tracking-tight">Synopsis</h3>
+                                    <p className="italic text-black/70 leading-relaxed font-serif text-base">"{targetBook.desc}"</p>
+                                    <div className="pt-10">
+                                        <p className="text-xs font-serif text-black/60 leading-relaxed">
                                             세상의 모든 위대한 사유는 한 권의 책에서 시작됩니다.
                                             아카이드 에디터가 포착한 문장의 빛을 따라
                                             당신만의 아카이브를 완성해보세요.
@@ -139,7 +147,9 @@ export default function ReviewDetail() {
                             {/* Content Pages */}
                             {chunks.map((chunk, idx) => (
                                 <Page key={idx} number={idx + 2}>
-                                    <span className="text-sm md:text-base">{chunk}</span>
+                                    <div className="font-serif leading-relaxed text-[#2a2a2a] text-lg">
+                                        {chunk}
+                                    </div>
                                 </Page>
                             ))}
 
@@ -147,12 +157,12 @@ export default function ReviewDetail() {
                             <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-12 text-center" data-density="hard">
                                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/leather.png')" }}></div>
                                 <div className="z-10 space-y-6 font-serif">
-                                    <div className="text-gold/40 text-3xl italic mb-4">Fin.</div>
-                                    <p className="text-white/30 text-[10px] leading-relaxed italic">
+                                    <div className="text-gold/40 text-4xl italic mb-4">Fin.</div>
+                                    <p className="text-white/30 text-xs leading-relaxed italic">
                                         "우리가 읽는 책이 우리 머리를 주먹으로 <br />한 대 쳐서 우리를 깨우지 않는다면, <br />왜 그 책을 읽는가?" <br />
                                         - 프란츠 카프카
                                     </p>
-                                    <div className="pt-8 text-[8px] text-white/10 tracking-[0.3em] uppercase">
+                                    <div className="pt-10 text-[10px] text-white/10 tracking-[0.4em] uppercase">
                                         Archide Archive 2024
                                     </div>
                                 </div>
@@ -162,19 +172,19 @@ export default function ReviewDetail() {
                     </div>
                 </div>
 
-                {/* Bottom Flip Controls */}
-                <div className="mt-6 flex gap-10">
+                {/* Bottom Flip Controls - More Prominent per sketch */}
+                <div className="flex gap-12 pb-12">
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        className="size-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/30 hover:text-gold hover:border-gold/30 transition-all"
+                        className="size-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-gold hover:border-gold/30 hover:bg-white/10 transition-all active:scale-90"
                     >
-                        <span className="material-symbols-outlined">west</span>
+                        <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
                     </button>
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        className="size-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/30 hover:text-gold hover:border-gold/30 transition-all"
+                        className="size-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-gold hover:border-gold/30 hover:bg-white/10 transition-all active:scale-90"
                     >
-                        <span className="material-symbols-outlined">east</span>
+                        <span className="material-symbols-outlined text-3xl">arrow_forward_ios</span>
                     </button>
                 </div>
             </main>
@@ -185,8 +195,12 @@ export default function ReviewDetail() {
             <style>{`
                 .editorial-book {
                    border-radius: 4px;
+                   overflow: visible !important;
                 }
                 .stf__parent {
+                   background-color: transparent !important;
+                }
+                .stf__block {
                    background-color: transparent !important;
                 }
                 canvas {
