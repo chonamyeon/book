@@ -1,43 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
-import { setPersistence, browserLocalPersistence } from 'firebase/auth'; // Import required
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth'; // Direct import
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingResult, setIsCheckingResult] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
+    const [retryMode, setRetryMode] = useState(false); // New state to handle blocked popups
 
     useEffect(() => {
-        // [Redirect Result Check]
-        // This MUST run before auth state check to catch users returning from Google.
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Redirect Login Success:", result.user.email);
-                    // Auth state listener will handle the actual navigation
-                } else {
-                    // No redirect result. Just a normal load.
-                    setIsCheckingResult(false);
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Error:", error);
-                setErrorMsg(error.message);
-                setIsCheckingResult(false);
-            });
-
-        // [Auth State Listener]
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log("Auth State Confirmed:", user.email);
-                setIsCheckingResult(false);
+                console.log("Auth State Changed: User Logged In", user.email);
                 navigate('/profile', { replace: true });
             }
         });
-
         return () => unsubscribe();
     }, [navigate]);
 
@@ -46,32 +25,26 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // [CRITICAL FIX]
-            // Explicitly force LOCAL persistence before redirecting.
-            // This tells iOS Safari: "Save this session to disk, don't lose it!"
-            await setPersistence(auth, browserLocalPersistence);
-
-            // Using Redirect for Mobile robustness (Popup is too flaky on iOS)
-            // Now that authDomain is correct (firebaseapp.com), redirect should 100% work.
-            // And setPersistence ensures we stay logged in upon return.
-            await loginWithGoogleRedirect();
-
+            // [Retry Strategy]
+            // If the first attempt was blocked, this second click (Retry) is a "strong user gesture".
+            // Safari is much more likely to allow this popup.
+            await signInWithPopup(auth, googleProvider);
+            // Success will be handled by onAuthStateChanged
         } catch (error) {
-            console.error("Login Error:", error);
-            setErrorMsg(error.message);
+            console.error("Popup Login Failed:", error);
             setIsLoading(false);
+
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+                // Blocked! Activate Retry Mode.
+                setRetryMode(true);
+                setErrorMsg("팝업이 차단되었습니다. 아래 '다시 시도' 버튼을 눌러주세요.");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
+            } else {
+                setErrorMsg("로그인 오류: " + error.message);
+            }
         }
     };
-
-    // Initial Loading (Wait for Redirect Result)
-    if (isCheckingResult) {
-        return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
-                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
-            </div>
-        );
-    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -90,8 +63,8 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
-                            <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
+                        <div className={`border rounded-xl p-4 mb-6 text-center animate-pulse ${retryMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep`}>
                                 {errorMsg}
                             </p>
                         </div>
@@ -101,14 +74,23 @@ export default function Login() {
                     <button
                         onClick={handleGoogleLogin}
                         disabled={isLoading}
-                        className="w-full bg-white text-slate-900 h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                        className={`w-full h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 ${retryMode ? 'bg-amber-500 text-slate-900 animate-bounce' : 'bg-white text-slate-900'}`}
                     >
                         {isLoading ? (
                             <div className="size-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                         ) : (
                             <>
-                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                <span>Google로 계속하기</span>
+                                {retryMode ? (
+                                    <>
+                                        <span className="material-symbols-outlined text-xl">refresh</span>
+                                        <span>다시 시도하기 (팝업 허용)</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
+                                        <span>Google로 계속하기</span>
+                                    </>
+                                )}
                             </>
                         )}
                     </button>
