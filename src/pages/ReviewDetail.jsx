@@ -96,35 +96,40 @@ export default function ReviewDetail() {
     const chunks = reviewText.match(/[\s\S]{1,350}/g) || [reviewText];
 
     return (
-        <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden relative">
-            {/* Top Navigation Bar */}
-            <TopNavigation title="E-BOOK REVIEW" type="sub" />
+        <div className="bg-[#0f1115] h-screen w-full font-display flex flex-col overflow-hidden fixed inset-0 z-[9999]">
+            {/* Full screen floating close button */}
+            <button
+                onClick={() => navigate('/editorial')}
+                className="absolute top-6 right-6 z-[10000] size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
+            >
+                <span className="material-symbols-outlined text-2xl font-bold">close</span>
+            </button>
 
-            <main className="flex-1 w-full flex flex-col items-center justify-between py-8 px-4 relative z-10">
-                {/* Visual Header - Refined per request */}
-                <div className="text-center mt-2">
+            <main className="flex-1 w-full flex flex-col items-center justify-center relative">
+                {/* Visual Header - More subtle for full screen immersion */}
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center z-10 opacity-40">
                     <div className="flex flex-col items-center gap-1">
-                        <span className="text-gold text-2xl font-black uppercase tracking-[0.3em] drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                        <span className="text-gold text-lg font-black uppercase tracking-[0.4em]">
                             E-BOOK REVIEW
                         </span>
-                        <span className="text-[10px] text-white/30 font-light tracking-[0.4em] uppercase italic">
-                            Flip the pages to explore
+                        <span className="text-[8px] text-white/50 font-light tracking-[0.5em] uppercase italic">
+                            The Archive Archive
                         </span>
                     </div>
                 </div>
 
-                {/* FlipBook Area - Larger & Centered with Side Navigation */}
-                <div className="relative w-full max-w-[1000px] flex-1 flex items-center justify-center">
+                {/* FlipBook Area - Full Screen Scale */}
+                <div className="relative w-full h-full flex items-center justify-center">
 
-                    {/* Left Flip Control */}
+                    {/* Left Flip Control - Enhanced */}
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        className="absolute left-0 z-50 size-16 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 hover:bg-black/60 transition-all active:scale-95 hidden md:flex"
+                        className="absolute left-8 z-50 size-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 hover:text-gold hover:border-gold/40 hover:bg-white/10 transition-all active:scale-95 hidden md:flex"
                     >
-                        <span className="material-symbols-outlined text-4xl">chevron_left</span>
+                        <span className="material-symbols-outlined text-5xl">chevron_left</span>
                     </button>
 
-                    <div className="relative w-full max-w-[420px] flex justify-center items-center">
+                    <div className="relative w-full max-w-[440px] flex justify-center items-center scale-110 md:scale-125">
                         <HTMLFlipBook
                             width={380}
                             height={580}
@@ -143,7 +148,7 @@ export default function ReviewDetail() {
                             flippingTime={800}
                             useMouseEvents={true}
                             ref={bookRef}
-                            className="editorial-book shadow-[0_50px_120px_rgba(0,0,0,0.95)]"
+                            className="editorial-book shadow-[0_60px_150px_rgba(0,0,0,0.95)]"
                         >
                             {/* Cover */}
                             <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
@@ -167,7 +172,7 @@ export default function ReviewDetail() {
                             {/* Content Pages */}
                             {chunks.map((chunk, idx) => (
                                 <Page key={idx} number={idx + 2}>
-                                    <div className="font-serif leading-relaxed text-[#2a2a2a] text-lg">
+                                    <div className="font-serif leading-relaxed text-[#2a2a2a] text-base">
                                         {chunk}
                                     </div>
                                 </Page>
@@ -191,31 +196,25 @@ export default function ReviewDetail() {
                         </HTMLFlipBook>
                     </div>
 
-                    {/* Right Flip Control */}
+                    {/* Right Flip Control - Enhanced */}
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        className="absolute right-0 z-50 size-16 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 hover:bg-black/60 transition-all active:scale-95 hidden md:flex"
+                        className="absolute right-8 z-50 size-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 hover:text-gold hover:border-gold/40 hover:bg-white/10 transition-all active:scale-95 hidden md:flex"
                     >
-                        <span className="material-symbols-outlined text-4xl">chevron_right</span>
+                        <span className="material-symbols-outlined text-5xl">chevron_right</span>
                     </button>
 
                     {/* Mobile Controls Overlay */}
-                    <div className="absolute inset-x-0 bottom-0 flex justify-between px-2 pb-4 md:hidden z-50">
-                        <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="size-12 rounded-full bg-black/50 text-white flex items-center justify-center">
-                            <span className="material-symbols-outlined">chevron_left</span>
+                    <div className="absolute inset-x-0 bottom-12 flex justify-between px-6 md:hidden z-50">
+                        <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="size-16 rounded-full bg-black/60 border border-white/10 text-white flex items-center justify-center shadow-2xl backdrop-blur-md">
+                            <span className="material-symbols-outlined text-3xl">chevron_left</span>
                         </button>
-                        <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="size-12 rounded-full bg-black/50 text-white flex items-center justify-center">
-                            <span className="material-symbols-outlined">chevron_right</span>
+                        <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="size-16 rounded-full bg-black/60 border border-white/10 text-white flex items-center justify-center shadow-2xl backdrop-blur-md">
+                            <span className="material-symbols-outlined text-3xl">chevron_right</span>
                         </button>
                     </div>
                 </div>
-
-                {/* Empty spacer for flex alignment */}
-                <div className="h-16"></div>
             </main>
-
-            {/* Bottom Navigation Dock */}
-            <BottomNavigation />
 
             <style>{`
                 .editorial-book {
