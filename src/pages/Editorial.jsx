@@ -79,6 +79,28 @@ export default function Editorial() {
                         </h2>
                     </header>
 
+                    {/* Featured / Hero Item - Restored */}
+                    <div className="group relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                        <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=1200&auto=format&fit=crop')" }}></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+
+                        <div className="absolute bottom-0 left-0 p-8 w-full z-10 text-left">
+                            <div className="inline-block px-3 py-1 mb-3 rounded-full border border-gold/30 bg-black/30 backdrop-blur-md">
+                                <span className="text-gold text-[10px] font-bold uppercase tracking-widest">Limited Edition</span>
+                            </div>
+                            <h3 className="serif-title text-2xl text-white mb-2">골든 아워 리딩 세트</h3>
+                            <p className="text-slate-300 text-xs font-light line-clamp-2 mb-4">
+                                늦은 오후의 햇살과 함께하기 좋은 문학 큐레이션과 굿즈 패키지입니다.
+                            </p>
+                            <button
+                                onClick={() => handlePurchase("골든 아워 리딩 세트", "45,000")}
+                                className="w-full py-4 bg-white text-primary font-bold rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gold hover:text-primary transition-colors active:scale-95"
+                            >
+                                구매하기 — ₩45,000
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Section 1: Weekly Picks (5 Items) */}
                     <section className="space-y-8">
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
