@@ -36,8 +36,9 @@ setPersistence(auth, browserLocalPersistence)
     .catch(err => console.error("Persistence error:", err));
 
 // iOS Safari robust login: always use redirect
-export const loginWithGoogle = async () => {
-    await setPersistence(auth, browserLocalPersistence);
+export const loginWithGoogle = () => {
+    // Popup must be triggered synchronously to avoid blocker
+    // Persistence is already set globally above
     return signInWithPopup(auth, googleProvider);
 };
 
