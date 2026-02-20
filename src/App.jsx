@@ -9,6 +9,7 @@ import Celebrity from './pages/Celebrity';
 import Quiz from './pages/Quiz';
 import Library from './pages/Library';
 import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -27,11 +28,19 @@ export default function App() {
           <Route path="/celebrity" element={<Celebrity />} />
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
         </Routes>
       </div>
     </Router>
   );
 }
-

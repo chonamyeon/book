@@ -64,155 +64,154 @@ export default function Home() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation type="main" />
 
-                <main className="pb-24">
-                    {/* Hero Slider Section */}
-                    <section className="relative overflow-hidden">
+                <main className="pb-24 space-y-16">
+                    {/* Hero Slider Section - Immersive */}
+                    <section className="relative overflow-visible pt-4">
                         <div
-                            className="flex transition-transform duration-500 ease-out"
-                            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
+                            className="flex transition-transform duration-700 cubic-bezier(0.4, 0, 0.2, 1)"
+                            style={{ transform: `translateX(calc(-${currentSlide * 100}%))` }}
                         >
                             {/* Slide 1: Bill Gates */}
-                            <div className="flex-none w-full px-4 pt-4">
-                                <div className="relative h-[420px] w-full rounded-xl overflow-hidden group border border-white/10">
-                                    <div className="absolute inset-0 bg-cover bg-center grayscale contrast-125" style={{ backgroundImage: 'url("/images/celebrities/bill-gates.jpg")' }}></div>
-                                    <div className="absolute inset-0 navy-gradient opacity-80 group-hover:opacity-60 transition-opacity duration-700"></div>
-                                    <div className="absolute bottom-0 left-0 p-6 w-full">
-                                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em] mb-2 block">독점 공개</span>
-                                        <h2 className="serif-title text-white text-3xl font-bold leading-tight mb-3">게이츠 컬렉션</h2>
-                                        <p className="text-slate-300 text-sm font-light leading-relaxed mb-4 max-w-[280px]">거장의 서재 속으로 들어가 보세요. 시대를 바꾼 기록들을 만나보실 수 있습니다.</p>
-                                        <Link to="/celebrity/bill-gates" className="inline-flex items-center gap-2 px-6 py-2 rounded-full border border-gold text-gold text-xs font-bold hover:bg-gold hover:text-primary transition-colors">
-                                            <span>지금 둘러보기</span>
-                                            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            <div className="flex-none w-full px-4"
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden group shadow-2xl border border-white/10">
+                                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: 'url("/images/celebrities/bill-gates.jpg")' }}></div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
+                                    <div className="absolute bottom-0 left-0 p-8 w-full">
+                                        <span className="inline-block px-3 py-1 rounded-full border border-gold/30 bg-black/40 backdrop-blur-md text-gold text-[10px] font-bold uppercase tracking-widest mb-4">
+                                            Archive Exclusive
+                                        </span>
+                                        <h2 className="serif-title text-white text-4xl leading-none mb-3">Bill Gates' <br /><span className="italic text-slate-400">Summer List</span></h2>
+                                        <Link to="/celebrity/bill-gates" className="text-white text-xs font-bold uppercase tracking-widest border-b border-white/30 pb-1 inline-flex items-center gap-2 hover:text-gold hover:border-gold transition-colors">
+                                            Read Collection <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                         </Link>
                                     </div>
                                 </div>
                             </div>
                             {/* Slide 2: Elon Musk */}
-                            <div className="flex-none w-full px-4 pt-4">
-                                <div className="relative h-[420px] w-full rounded-xl overflow-hidden group border border-white/10">
-                                    <div className="absolute inset-0 bg-cover bg-center grayscale contrast-125" style={{ backgroundImage: 'url("/images/celebrities/elon-musk.jpg")' }}></div>
-                                    <div className="absolute inset-0 navy-gradient opacity-80 group-hover:opacity-60 transition-opacity duration-700"></div>
-                                    <div className="absolute bottom-0 left-0 p-6 w-full">
-                                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em] mb-2 block">Visionary</span>
-                                        <h2 className="serif-title text-white text-3xl font-bold leading-tight mb-3">미래를 설계하다</h2>
-                                        <p className="text-slate-300 text-sm font-light leading-relaxed mb-4">SF적 상상력을 현실로 만든 일론 머스크의 영감의 원천.</p>
-                                        <Link to="/celebrity/elon-musk" className="inline-flex items-center gap-2 px-6 py-2 rounded-full border border-gold text-gold text-xs font-bold hover:bg-gold hover:text-primary transition-colors">
-                                            <span>서재 탐험하기</span>
-                                            <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                            <div className="flex-none w-full px-4"
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden group shadow-2xl border border-white/10">
+                                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: 'url("/images/celebrities/elon-musk.jpg")' }}></div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
+                                    <div className="absolute bottom-0 left-0 p-8 w-full">
+                                        <span className="inline-block px-3 py-1 rounded-full border border-blue-400/30 bg-black/40 backdrop-blur-md text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                                            Visionary
+                                        </span>
+                                        <h2 className="serif-title text-white text-4xl leading-none mb-3">Elon Musk's <br /><span className="italic text-slate-400">Foundation</span></h2>
+                                        <Link to="/celebrity/elon-musk" className="text-white text-xs font-bold uppercase tracking-widest border-b border-white/30 pb-1 inline-flex items-center gap-2 hover:text-gold hover:border-gold transition-colors">
+                                            Explore Books <span className="material-symbols-outlined text-sm">rocket_launch</span>
                                         </Link>
                                     </div>
                                 </div>
                             </div>
                             {/* Slide 3: Barack Obama */}
-                            <div className="flex-none w-full px-4 pt-4">
-                                <div className="relative h-[420px] w-full rounded-xl overflow-hidden group border border-white/10">
-                                    <div className="absolute inset-0 bg-cover bg-center grayscale contrast-125" style={{ backgroundImage: 'url("/images/celebrities/barack-obama.jpg")' }}></div>
-                                    <div className="absolute inset-0 navy-gradient opacity-80 group-hover:opacity-60 transition-opacity duration-700"></div>
-                                    <div className="absolute bottom-0 left-0 p-6 w-full">
-                                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em] mb-2 block">Presidential Note</span>
-                                        <h2 className="serif-title text-white text-3xl font-bold leading-tight mb-3">기록하는 리더십</h2>
-                                        <p className="text-slate-300 text-sm font-light leading-relaxed mb-4">백악관의 독서가, 오바마가 추천하는 시대를 읽는 안목.</p>
-                                        <Link to="/celebrity/barack-obama" className="inline-flex items-center gap-2 px-6 py-2 rounded-full border border-gold text-gold text-xs font-bold hover:bg-gold hover:text-primary transition-colors">
-                                            <span>리스트 보기</span>
-                                            <span className="material-symbols-outlined text-sm">menu_book</span>
+                            <div className="flex-none w-full px-4"
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden group shadow-2xl border border-white/10">
+                                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: 'url("/images/celebrities/barack-obama.jpg")' }}></div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
+                                    <div className="absolute bottom-0 left-0 p-8 w-full">
+                                        <span className="inline-block px-3 py-1 rounded-full border border-white/30 bg-black/40 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest mb-4">
+                                            Presidential Note
+                                        </span>
+                                        <h2 className="serif-title text-white text-4xl leading-none mb-3">Barack Obama's <br /><span className="italic text-slate-400">Perspectives</span></h2>
+                                        <Link to="/celebrity/barack-obama" className="text-white text-xs font-bold uppercase tracking-widest border-b border-white/30 pb-1 inline-flex items-center gap-2 hover:text-gold hover:border-gold transition-colors">
+                                            View Reading List <span className="material-symbols-outlined text-sm">menu_book</span>
                                         </Link>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Slider Dots */}
-                        <div className="flex justify-center gap-2 mt-4 z-10 relative">
+
+                        {/* Indicators */}
+                        <div className="flex justify-center gap-3 mt-6">
                             {[0, 1, 2].map((index) => (
                                 <button
                                     key={index}
                                     onClick={() => setCurrentSlide(index)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'w-6 bg-gold' : 'w-1.5 bg-slate-700 hover:bg-slate-500'}`}
+                                    className={`h-1 transition-all duration-500 rounded-full ${currentSlide === index ? 'w-8 bg-gold' : 'w-2 bg-white/20'}`}
                                     aria-label={`Go to slide ${index + 1}`}
                                 />
                             ))}
                         </div>
                     </section>
 
-                    {/* Celebrity Grid Section */}
-                    <section className="mt-10 px-4">
-                        <div className="flex items-end justify-between mb-6">
+                    {/* Celebrity List - Minimal */}
+                    <section className="px-6">
+                        <div className="flex items-end justify-between mb-8 border-b border-white/10 pb-4">
                             <div>
-                                <h2 className="serif-title text-white text-2xl font-bold italic">우리를 만든 생각들</h2>
-                                <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mt-1">명사들과 그들의 서재</p>
+                                <h2 className="serif-title text-2xl text-white">Curated Minds</h2>
+                                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-1">Intellectual Archives</p>
                             </div>
-                            <Link to="/celebrity/bill-gates" className="text-gold text-xs font-bold flex items-center gap-1 border-b border-gold/30 pb-1">단독 인터뷰 <span className="material-symbols-outlined text-sm">arrow_forward</span></Link>
+                            <Link to="/celebrity/bill-gates" className="text-[10px] font-bold text-gold uppercase tracking-widest hover:text-white transition-colors">View All</Link>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {celebrities.slice(0, 20).map((celeb) => (
-                                <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="flex flex-col gap-3 group">
-                                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/5">
-                                        <img
-                                            src={celeb.image}
-                                            alt={celeb.name}
-                                            className="absolute inset-0 w-full h-full object-cover object-top grayscale hover:grayscale-0 transition-all duration-500"
-                                            onError={(e) => {
-                                                e.target.onerror = null; // Prevent infinite loop
-                                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(celeb.name)}&background=random&color=fff&size=800`;
-                                            }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-all"></div>
-                                        <div className="absolute bottom-3 left-3 right-3">
-                                            <div className="bg-primary/80 backdrop-blur-md p-3 rounded-lg border border-gold/20">
-                                                <p className="text-white text-sm font-bold truncate">{celeb.name}</p>
-                                                <p className="text-gold text-[10px] font-medium leading-tight mt-0.5">읽는 중: "{celeb.readingNow}"</p>
-                                            </div>
-                                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                            {celebrities.slice(0, 4).map((celeb) => (
+                                <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="group relative block">
+                                    <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 relative shadow-lg">
+                                        <img src={celeb.image} alt={celeb.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                                        <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
                                     </div>
+                                    <h3 className="text-white font-medium text-lg leading-none group-hover:text-gold transition-colors">{celeb.name}</h3>
+                                    <p className="text-slate-500 text-xs mt-1 truncate italic">{celeb.readingNow}</p>
                                 </Link>
                             ))}
                         </div>
                     </section>
 
-                    {/* Interactive Banner */}
-                    <section className="mt-12 px-4">
-                        <div className="rounded-2xl p-8 relative overflow-hidden flex flex-col items-center text-center shadow-2xl shadow-black/50 group">
-                            {/* Background Image */}
-                            <div className="absolute inset-0 bg-cover bg-center grayscale group-hover:grayscale-0 transition-all duration-700 scale-105 group-hover:scale-110" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop")' }}></div>
-                            <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors duration-500"></div>
+                    {/* Quiz Banner - Refined */}
+                    <section className="px-4">
+                        <div className="relative rounded-2xl overflow-hidden border border-white/10 group">
+                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-1000"></div>
+                            <div className="absolute inset-0 bg-background-dark/80"></div>
 
-                            {/* Content */}
-                            <div className="relative z-10 w-full flex flex-col items-center">
-                                <span className="material-symbols-outlined text-gold text-5xl mb-4">psychology</span>
-                                <h3 className="serif-title text-white text-[26px] font-bold leading-tight mb-2">당신의 지적 취향을 발견하세요</h3>
-                                <p className="text-slate-200 text-base font-medium mb-6 max-w-[260px]">나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.</p>
-                                <Link to="/quiz" className="bg-gold text-primary w-full py-4 rounded-xl text-sm font-bold uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-white hover:text-primary">
-                                    테스트 시작하기 <span className="material-symbols-outlined text-base">auto_awesome</span>
+                            <div className="relative p-8 text-center flex flex-col items-center">
+                                <span className="material-symbols-outlined text-gold text-4xl mb-4">psychology_alt</span>
+                                <h3 className="serif-title text-white text-2xl mb-2">Find Your Persona</h3>
+                                <p className="text-slate-400 text-sm font-light mb-6 max-w-xs leading-relaxed">
+                                    Take our literary personality test to discover the books that resonate with your soul.
+                                </p>
+                                <Link to="/quiz" className="px-8 py-3 bg-gold text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-white transition-colors">
+                                    Start Diagnostics
                                 </Link>
                             </div>
                         </div>
                     </section>
 
-                    {/* Featured Shelf */}
-                    <section className="mt-12 pl-4 overflow-hidden">
-                        <h2 className="serif-title text-white text-xl font-bold italic mb-4">인사들의 공통 추천 도서</h2>
-                        <div className="grid grid-cols-3 gap-4 pr-4 pb-4">
+                    {/* Bestsellers / Recommended */}
+                    <section className="px-6">
+                        <div className="flex items-end justify-between mb-6">
+                            <h2 className="serif-title text-xl text-white italic">Essential Reading</h2>
+                        </div>
+
+                        <div className="flex overflow-x-auto gap-4 pb-4 hide-scrollbar snap-x">
                             {[
-                                { title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg" },
-                                { title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg" },
-                                { title: "호밀밭의 파수꾼", author: "J.D. 샐린저", cover: "/images/covers/catcher_in_the_rye.jpg" },
-                                { title: "연금술사", author: "파울로 코엘료", cover: "/images/covers/alchemist.jpg" },
-                                { title: "앵무새 죽이기", author: "하퍼 리", cover: "/images/covers/c_01.jpg" }, // Tim Cook cover
-                                { title: "우리 본성의 선한 천사", author: "스티븐 핑커", cover: "/images/covers/ju_02.jpg" },
-                                { title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg" },
-                                { title: "채식주의자", author: "한강", cover: "/images/covers/vegetarian.jpg" },
-                                { title: "인간 실격", author: "다자이 오사무", cover: "/images/covers/i_01.jpg" }
+                                { title: "Sapiens", author: "Yuval Noah Harari", cover: "/images/covers/sapiens.jpg" },
+                                { title: "1984", author: "George Orwell", cover: "/images/covers/1984.jpg" },
+                                { title: "Demian", author: "Hermann Hesse", cover: "/images/covers/demian.jpg" },
+                                { title: "Cosmos", author: "Carl Sagan", cover: "/images/covers/c_01.jpg" },
+                                { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/gatsby.jpg" }
                             ].map((book, idx) => (
-                                <a key={idx} href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="block hover:opacity-80 transition-opacity group">
-                                    <div className="relative aspect-[2/3] bg-primary rounded-lg shadow-xl overflow-hidden mb-2 border border-white/5">
-                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                                <Link key={idx} to="#" className="snap-start shrink-0 w-32 group block">
+                                    <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 mb-3 border border-white/10 shadow-lg relative">
+                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}
+                                        />
                                     </div>
-                                    <p className="text-white text-xs font-bold truncate">{book.title}</p>
-                                    <p className="text-slate-500 text-[10px]">{book.author}</p>
-                                </a>
+                                    <h4 className="text-white text-sm font-bold truncate">{book.title}</h4>
+                                    <p className="text-slate-500 text-[10px] uppercase tracking-wide truncate">{book.author}</p>
+                                </Link>
                             ))}
                         </div>
                     </section>

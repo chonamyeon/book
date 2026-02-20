@@ -22,10 +22,6 @@ export default function Library() {
         setSavedBooks(updated);
     };
 
-    const hideRecommendedBook = (title) => {
-        setHiddenRecs(prev => [...prev, title]);
-    };
-
     useEffect(() => {
         const isUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
         const type = localStorage.getItem('myResultType');
@@ -43,189 +39,87 @@ export default function Library() {
     const myRecs = myResultType ? recommendations[myResultType]?.books.filter(b => !hiddenRecs.includes(b.title)) : [];
 
     return (
-        <div className="bg-[#090b10] font-display text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
+        <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
             {/* Main Layout Container */}
-            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden">
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation title="내 서재" type="sub" />
 
-                <main className="px-6 pt-6 pb-20 space-y-12 animate-fade-in">
+                <main className="px-6 pt-8 pb-24 space-y-12 animate-fade-in">
 
-                    {/* 1. Redesigned Result / Teaser Banner Section */}
-                    <section>
-                        {myResultType && result ? (
-                            /* Premium Result Banner */
-                            <Link to="/result" className="block group">
-                                <div className="relative w-full rounded-[40px] overflow-hidden border border-gold/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-background-dark min-h-[420px] flex flex-col">
-                                    {/* Decorative Background Elements */}
-                                    <div className="absolute inset-0 z-0">
-                                        <img
-                                            src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop"
-                                            alt="Aesthetic Library"
-                                            className="w-full h-full object-cover opacity-20 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-background-dark/40 via-background-dark/80 to-background-dark"></div>
-                                    </div>
+                    {/* Personal Collection Header */}
+                    <div className="text-center space-y-2 border-b border-white/5 pb-8">
+                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em]">Personal Archive</span>
+                        <h2 className="serif-title text-3xl text-white font-medium leading-tight">
+                            당신의 기록
+                        </h2>
+                        <p className="text-slate-400 text-xs font-light">
+                            {savedBooks.length} items collected
+                        </p>
+                    </div>
 
-                                    {/* Content Container */}
-                                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
-                                        {/* Top Part: Icon & Badge */}
-                                        <div className="flex flex-col items-center mb-6">
-                                            <div className="relative mb-6">
-                                                <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full"></div>
-                                                <div className="size-20 rounded-full bg-gradient-to-b from-gold/40 to-transparent flex items-center justify-center border border-gold/40 shadow-xl">
-                                                    <span className="material-symbols-outlined text-gold text-4xl leading-none font-light">psychology</span>
-                                                </div>
-                                            </div>
-                                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 border border-gold/20">
-                                                <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Intellectual Persona</span>
-                                            </div>
-                                        </div>
+                    {/* Saved Books Grid */}
+                    {savedBooks.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                            {savedBooks.map((book, idx) => (
+                                <div key={idx} className="group relative">
+                                    <div className="relative aspect-[2/3] bg-white/5 rounded-lg overflow-hidden border border-white/10 shadow-lg mb-3">
+                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
 
-                                        {/* Middle Part: Title & Subtitle */}
-                                        <div className="mb-10">
-                                            <h3 className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight serif-title drop-shadow-2xl leading-tight">
-                                                {result.persona}
-                                            </h3>
-                                            <p className="text-slate-400 text-sm sm:text-base font-medium max-w-[280px] mx-auto leading-relaxed italic opacity-80">
-                                                {result.subtitle}
-                                            </p>
-                                        </div>
-
-                                        {/* Bottom Part: CTA Button */}
-                                        <div className="relative group/btn inline-flex items-center justify-center">
-                                            <div className="absolute -inset-2 bg-gold/30 blur-lg opacity-0 group-hover/btn:opacity-100 transition duration-500 rounded-2xl"></div>
-                                            <div className="relative px-12 py-4 bg-gold text-primary font-black rounded-2xl text-[15px] shadow-[0_15px_35px_rgba(212,175,55,0.4)] flex items-center gap-3 active:scale-95 transition-all">
-                                                <span>결과 보기</span>
-                                                <span className="material-symbols-outlined text-xl">analytics</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Corners Decoration */}
-                                    <div className="absolute top-8 left-8 size-8 border-t-2 border-l-2 border-gold/20 rounded-tl-xl pointer-events-none"></div>
-                                    <div className="absolute top-8 right-8 size-8 border-t-2 border-r-2 border-gold/20 rounded-tr-xl pointer-events-none"></div>
-                                    <div className="absolute bottom-8 left-8 size-8 border-b-2 border-l-2 border-gold/20 rounded-bl-xl pointer-events-none"></div>
-                                    <div className="absolute bottom-8 right-8 size-8 border-b-2 border-r-2 border-gold/20 rounded-br-xl pointer-events-none"></div>
-                                </div>
-                            </Link>
-
-                        ) : (
-                            /* Not Tested Case: Same as before but with consistent formatting */
-                            <Link to="/quiz" className="block group">
-                                <div className="relative aspect-[16/9] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl bg-slate-900">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
-                                        alt="Library Background"
-                                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60"
-                                    />
-                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-center">
-                                        <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
-                                            <span className="material-symbols-outlined text-gold">psychology</span>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
-                                        <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-8">
-                                            나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
-                                        </p>
-                                        <div className="px-10 py-4 bg-gold text-primary font-black rounded-2xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
-                                            <span>지금 시작하기</span>
-                                            <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
-                        )}
-                    </section>
-
-
-                    {/* 3. Persona Recommendations (Only if tested) */}
-                    {myResultType && myRecs.length > 0 && (
-                        <section className="animate-fade-in-up">
-                            <div className="flex items-center justify-between mb-8 border-b border-gold/20 pb-4">
-                                <div>
-                                    <h2 className="serif-title text-2xl font-bold tracking-tight text-white">맞춤 추천 도서</h2>
-                                    <p className="text-gold text-[10px] uppercase tracking-widest mt-1 font-bold">Recommended for {result.persona}</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-6">
-                                {myRecs.map((book, idx) => (
-                                    <div key={idx} className="flex items-center gap-4 group">
-                                        <div className="flex flex-1 gap-5 items-center">
-                                            <div className="w-20 shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/5">
-                                                <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            </div>
-                                            <div className="flex flex-col justify-center min-w-0">
-                                                <h4 className="text-base font-bold text-white leading-tight mb-1 truncate">{book.title}</h4>
-                                                <p className="text-[10px] text-slate-500 mb-2 truncate">{book.author}</p>
-                                                <p className="text-[10px] text-slate-400 line-clamp-1 leading-relaxed opacity-70 italic truncate">"{book.desc}"</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <a
-                                                href={book.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="size-9 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 hover:bg-gold transition-colors group/btn"
-                                            >
-                                                <span className="material-symbols-outlined text-gold group-hover/btn:text-primary text-lg">shopping_cart</span>
-                                            </a>
-                                            <button
-                                                onClick={() => hideRecommendedBook(book.title)}
-                                                className="size-9 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-red-500/20 hover:border-red-500/40 transition-colors group/del"
-                                            >
-                                                <span className="material-symbols-outlined text-slate-500 group-hover/del:text-red-400 text-lg">delete</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* 5. Saved Collection (If any) */}
-                    {savedBooks.length > 0 && (
-                        <section className="pb-10 pt-10 border-t border-white/5">
-                            <div className="mb-8 flex items-center justify-between">
-                                <h1 className="serif-title text-2xl font-bold tracking-tight text-white italic">Saved Collection</h1>
-                                <span className="text-[10px] text-slate-600 font-bold tracking-widest leading-none">{savedBooks.length} ITEMS</span>
-                            </div>
-                            <div className="space-y-6">
-                                {savedBooks.map((book, idx) => (
-                                    <div key={idx} className="flex items-center gap-5 group">
-                                        <div className="size-20 rounded-xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0 relative">
-                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-base font-bold text-white truncate mb-1">{book.title}</h4>
-                                            <p className="text-xs text-slate-500 truncate">{book.author}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
+                                        {/* Overlay Actions */}
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
                                             <a
                                                 href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="size-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold transition-colors group/btn"
+                                                className="size-10 rounded-full bg-white text-primary flex items-center justify-center hover:bg-gold transition-colors"
                                             >
-                                                <span className="material-symbols-outlined text-slate-400 group-hover/btn:text-primary text-lg">shopping_cart</span>
+                                                <span className="material-symbols-outlined text-lg">shopping_cart</span>
                                             </a>
                                             <button
                                                 onClick={() => removeSavedBook(book.title)}
-                                                className="size-9 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-red-500/20 hover:border-red-500/40 transition-colors group/del"
+                                                className="size-10 rounded-full bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
                                             >
-                                                <span className="material-symbols-outlined text-slate-500 group-hover/del:text-red-400 text-lg">delete</span>
+                                                <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-white text-sm font-bold truncate pr-2">{book.title}</h3>
+                                    <p className="text-slate-500 text-[10px] uppercase tracking-wide truncate">{book.author}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl bg-white/5 mx-4">
+                            <span className="material-symbols-outlined text-slate-600 text-4xl mb-4">bookmark_border</span>
+                            <p className="text-slate-400 text-sm mb-6">아직 보관된 도서가 없습니다.</p>
+                            <Link to="/" className="px-6 py-2 bg-gold text-primary font-bold rounded-full text-xs hover:bg-white transition-colors">
+                                도서 둘러보기
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Recommendations (if any) */}
+                    {myResultType && myRecs.length > 0 && (
+                        <div className="pt-8 border-t border-white/10">
+                            <h3 className="serif-title text-xl text-white mb-6 italic">Recommended for You</h3>
+                            <div className="space-y-4">
+                                {myRecs.map((book, idx) => (
+                                    <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                                        <div className="w-16 h-24 shrink-0 bg-slate-800 rounded border border-white/10 overflow-hidden">
+                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 min-w-0 py-1">
+                                            <h4 className="text-white text-sm font-bold truncate mb-1">{book.title}</h4>
+                                            <p className="text-slate-400 text-xs mb-2">{book.author}</p>
+                                            <p className="text-slate-500 text-[10px] line-clamp-2 leading-relaxed">"{book.desc}"</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </section>
+                        </div>
                     )}
 
-
                 </main>
-
-
-
                 <BottomNavigation />
             </div>
         </div>
