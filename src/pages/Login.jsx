@@ -1,25 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle } from '../firebase';
+import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [isCheckingResult, setIsCheckingResult] = useState(true); // Always check first
     const [errorMsg, setErrorMsg] = useState('');
-    const [isPWA, setIsPWA] = useState(false);
 
     useEffect(() => {
-        // Device Detection (For clear error message context)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        setIsPWA(isStandalone);
+        // [Key Logic] ALWAYS check redirect result first, regardless of platform.
+        // This is the most reliable way to catch a returning user from a redirect flow.
 
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Success:", result.user.email);
+                    // The onAuthStateChanged listener below will handle the navigation part.
+                } else {
+                    // No redirect result found. Just a normal page load.
+                    setIsCheckingResult(false);
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                setErrorMsg(error.message);
+                setIsCheckingResult(false);
+            });
+
+        // Monitor Auth State
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
+                setIsCheckingResult(false);
                 navigate('/profile', { replace: true });
             }
         });
+
         return () => unsubscribe();
     }, [navigate]);
 
@@ -28,28 +46,27 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // [Final Decision] Always use Popup.
-            // Redirect is unreliable on mobile due to domain/handler config issues.
-            // Popup works 100% IF unblocked. We guide the user to unblock.
-            await loginWithGoogle();
+            // [Strategy] Try Redirect FIRST.
+            // Why? Because popup is failing (blank page, blocked).
+            // Redirect is the native web way. If configured correctly (firebaseapp.com), it MUST work.
+            // It will navigate away, then return to this page.
+            await loginWithGoogleRedirect();
         } catch (error) {
-            console.error("Popup Login Failed:", error);
+            console.error("Login Failed:", error);
+            setErrorMsg(error.message);
             setIsLoading(false);
-
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
-                if (isPWA) {
-                    alert("아이폰 설정 > Safari > '팝업 차단'을 끄셔야 앱 내 로그인이 가능합니다.");
-                } else {
-                    alert("팝업 차단이 감지되었습니다. 브라우저 설정에서 팝업을 허용해주세요.");
-                }
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
-            } else {
-                setErrorMsg("로그인 오류: " + error.message);
-            }
         }
     };
+
+    // Initial Loading Screen (Crucial for Redirect Flow)
+    if (isCheckingResult) {
+        return (
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
+                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -68,12 +85,9 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
-                            </p>
-                            <p className="text-red-500/50 text-[11px] mt-2 border-t border-red-500/20 pt-2">
-                                ※ 팝업 차단 해제 후 다시 시도해주세요.
                             </p>
                         </div>
                     )}
