@@ -10,47 +10,28 @@ export default function Login() {
 
     useEffect(() => {
         // 1. Monitor Auth State (Primary)
+        // This fires when redirect returns successfully or user is already logged in
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
-                localStorage.removeItem('login_attempt'); // Success!
-                // Critical: Ensure we replace history to avoid back-button loops
+                localStorage.removeItem('login_attempt'); // Clear flag
                 navigate('/profile', { replace: true });
             }
         });
 
-        // 2. Safari Session Recovery (Force Reload if stuck)
-        // If we have a login attempt flag but no user after 3 seconds, reload page to sync session
-        const loginAttempt = localStorage.getItem('login_attempt');
-        if (loginAttempt) {
-            const timePassed = Date.now() - parseInt(loginAttempt);
-            if (timePassed < 60000) { // Only checking recent attempts (< 1 min)
-                const timer = setTimeout(() => {
-                    if (!auth.currentUser) {
-                        console.log("Safari Session Recovery: Reloading page...");
-                        window.location.reload();
-                    }
-                }, 3000);
-                return () => {
-                    clearTimeout(timer);
-                    unsubscribe();
-                };
-            }
-        }
-
-        // 3. Check for Redirect Result (Secondary/Error Handling)
+        // 2. Check for Redirect Result (Secondary/Error Handling)
         getRedirectResult(auth)
             .then((result) => {
                 if (result) {
                     console.log("Redirect Success:", result.user.email);
-                    // onAuthStateChanged handles navigation
+                    // onAuthStateChanged will handle navigation
                 }
             })
             .catch((error) => {
                 console.error("Redirect Error:", error);
                 setErrorMsg(error.message);
                 setIsLoading(false);
-                localStorage.removeItem('login_attempt');
+                localStorage.removeItem('login_attempt'); // Clear flag on error
             });
 
         return () => unsubscribe();
