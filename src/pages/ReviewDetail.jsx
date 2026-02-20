@@ -77,10 +77,15 @@ export default function ReviewDetail() {
     const bookTitle = bookMap[id] || "사피엔스";
 
     let targetBook = null;
-    celebrities.forEach(celeb => {
+    for (const celeb of celebrities) {
         const found = celeb.books.find(b => b.title === bookTitle);
-        if (found) targetBook = found;
-    });
+        if (found) {
+            targetBook = found;
+            // If we found one with a review, we stop immediately.
+            // If it doesn't have a review, we keep looking just in case another celeb has a better entry.
+            if (found.review) break;
+        }
+    }
 
     if (!targetBook) {
         return <div className="p-20 text-white text-center">리뷰를 찾을 수 없습니다.</div>;
