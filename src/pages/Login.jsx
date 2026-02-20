@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, loginWithGoogle } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -8,43 +8,14 @@ export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
-    // Monitor Auth State Changes (The most reliable way)
+    // Monitor Auth State Changes
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
-                // Clear login flag
-                localStorage.removeItem('isLoggingIn');
-                // Redirect immediately to profile
                 navigate('/profile', { replace: true });
             }
         });
-
-        // Also check redirect result for errors specifically
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Redirect Result Success:", result.user.email);
-                    // navigate is handled by onAuthStateChanged above
-                } else {
-                    // If we expected a redirect result (flag set) but got null, maybe it's still loading?
-                    const isLoggingIn = localStorage.getItem('isLoggingIn');
-                    if (isLoggingIn) {
-                        console.log("Redirect returned null but flag is set. Waiting for Auth State...");
-                        // Don't clear flag yet, let onAuthStateChanged handle it or timeout
-                    }
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Login Error:", error);
-                setErrorMsg(error.message);
-                localStorage.removeItem('isLoggingIn'); // Clear flag on error
-                // Handle specific error codes if needed
-                if (error.code === 'auth/popup-closed-by-user') {
-                    // Ignore strictly
-                }
-            });
-
         return () => unsubscribe();
     }, [navigate]);
 
@@ -52,16 +23,17 @@ export default function Login() {
         setIsLoading(true);
         setErrorMsg('');
         try {
-            // Set flag to track login attempt across redirects
-            localStorage.setItem('isLoggingIn', 'true');
-
-            // Using Redirect method for maximum compatibility (mobile/desktop)
-            // ensuring no popup blocker issues on a dedicated login page.
-            await loginWithGoogleRedirect();
+            // Reverting to Popup method for immediate feedback and stability
+            // Using loginWithGoogle from firebase.js (which uses signInWithPopup)
+            await loginWithGoogle();
         } catch (error) {
-            console.error("Initiate Login Error:", error);
+            console.error("Login Error:", error);
             setErrorMsg(error.message);
             setIsLoading(false);
+
+            if (error.code === 'auth/popup-blocked') {
+                alert("팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.");
+            }
         }
     };
 
