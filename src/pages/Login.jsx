@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, loginWithGoogle } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -17,64 +17,37 @@ export default function Login() {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
-                localStorage.removeItem('login_attempt'); // Clear flag
                 navigate('/profile', { replace: true });
             }
         });
-
-        // Check for Redirect Result (Mobile Specific)
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Redirect Success:", result.user.email);
-                    // onAuthStateChanged will handle navigation
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Error:", error);
-                setErrorMsg(error.message);
-                setIsLoading(false);
-                localStorage.removeItem('login_attempt');
-            });
-
         return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
+        if (isPWA) {
+            // Force open in external browser (Safari)
+            // By adding a random query param, we force the browser to treat it as a new navigation
+            const targetUrl = window.location.origin;
+            window.location.href = targetUrl;
+            alert("Safari 브라우저가 열리면 거기서 로그인해주세요.\n(아이폰 보안 정책상 앱 내 로그인이 제한됩니다.)");
+            return;
+        }
+
         setIsLoading(true);
         setErrorMsg('');
 
         try {
-            // Attempt Popup login first (Preferred for PC & Modern Mobile)
             await loginWithGoogle();
         } catch (error) {
             console.error("Popup Login Failed:", error);
+            setIsLoading(false);
 
-            // If Popup fails (blocked or mobile PWA restriction), fallback to Redirect
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                try {
-                    console.log("Falling back to Redirect Login...");
-
-                    // Check loop protection before redirecting
-                    const lastAttempt = localStorage.getItem('login_attempt');
-                    const now = Date.now();
-                    if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
-                        alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    localStorage.setItem('login_attempt', Date.now().toString());
-                    await loginWithGoogleRedirect();
-                } catch (redirectError) {
-                    console.error("Redirect Login Failed:", redirectError);
-                    setErrorMsg(redirectError.message);
-                    setIsLoading(false);
-                    localStorage.removeItem('login_attempt');
-                }
+                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
             } else {
-                setErrorMsg(error.message);
-                setIsLoading(false);
+                setErrorMsg("로그인 오류: " + error.message);
             }
         }
     };
@@ -100,25 +73,42 @@ export default function Login() {
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
-                            {/* PWA Hint */}
                         </div>
                     )}
 
-                    {/* Login Button */}
-                    <button
-                        onClick={handleGoogleLogin}
-                        disabled={isLoading}
-                        className="w-full bg-white text-slate-900 h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
-                    >
-                        {isLoading ? (
-                            <div className="size-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                            <>
-                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                <span>Google로 계속하기</span>
-                            </>
-                        )}
-                    </button>
+                    {/* PWA Warning & Action */}
+                    {isPWA ? (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6 text-center">
+                            <p className="text-amber-400 font-bold mb-2">⚠️ 아이폰 앱 로그인 제한</p>
+                            <p className="text-slate-400 text-xs mb-4 leading-relaxed break-keep">
+                                아이폰 보안 정책상 홈 화면 앱에서는 구글 로그인이 제한됩니다.<br />
+                                아래 버튼을 눌러 <strong>Safari</strong>에서 로그인해주세요.
+                            </p>
+                            <button
+                                onClick={handleGoogleLogin}
+                                className="w-full bg-amber-500 text-slate-900 h-12 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg mb-2"
+                            >
+                                <span className="material-symbols-outlined text-xl">open_in_browser</span>
+                                <span>Safari에서 열기</span>
+                            </button>
+                        </div>
+                    ) : (
+                        /* Standard Login Button */
+                        <button
+                            onClick={handleGoogleLogin}
+                            disabled={isLoading}
+                            className="w-full bg-white text-slate-900 h-14 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                        >
+                            {isLoading ? (
+                                <div className="size-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
+                                    <span>Google로 계속하기</span>
+                                </>
+                            )}
+                        </button>
+                    )}
 
                     <p className="text-center text-slate-500 text-[10px] mt-6">
                         로그인 시 이용약관 및 개인정보처리방침에 동의하게 됩니다.
