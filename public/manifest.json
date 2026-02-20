@@ -1,0 +1,18 @@
+{
+    "name": "The Archive",
+    "short_name": "The Archive",
+    "start_url": "/?source=pwa",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#121212",
+    "theme_color": "#121212",
+    "scope": "/",
+    "description": "기록하고, 기억하고, 성장하세요.",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512"
+        }
+    ]
+}
