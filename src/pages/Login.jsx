@@ -95,8 +95,10 @@ export default function Login() {
                                 <div className="size-8 border-3 border-gold/20 border-t-gold rounded-full animate-spin"></div>
                             </div>
                         )}
-                        <div ref={googleBtnRef} className="w-full flex justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
+                        {/* PC: Show Google Button, Hide Mobile Button */}
+                        <div ref={googleBtnRef} className="hidden md:flex w-full justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
 
+                        {/* Mobile: Show Mobile Button, Hide Google Button */}
                         <button
                             onClick={async (e) => {
                                 setIsLoading(true);
@@ -106,7 +108,7 @@ export default function Login() {
                                     setIsLoading(false);
                                 }
                             }}
-                            className="w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 mt-4"
+                            className="md:hidden w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 mt-4"
                             style={{ zIndex: 50, position: 'relative' }}
                         >
                             <span className="material-symbols-outlined">touch_app</span>
