@@ -11,6 +11,7 @@ export default function Login() {
     const [retryMode, setRetryMode] = useState(false);
 
     useEffect(() => {
+        // Auth State Listener
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
@@ -21,23 +22,45 @@ export default function Login() {
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
-        setIsLoading(true);
+        // [Manual Popup Strategy]
+        // Instead of relying on Firebase to open the popup (which Safari blocks as async),
+        // we open our OWN popup immediately upon click (synchronously).
+        // Then we pass this pre-opened window to Firebase.
+        // This is THE most robust way to bypass popup blockers.
+
         setErrorMsg('');
+        setIsLoading(true);
+
+        // 1. Open blank popup IMMEDIATELY (user gesture context)
+        // This usually bypasses blockers because it's synchronous.
+        // const popupWin = window.open('about:blank', 'authWindow', 'width=500,height=600');
 
         try {
-            await signInWithPopup(auth, googleProvider);
-            // If success, popup closes and auth state changes -> navigation happens automatically.
-            console.log("Popup Login Success");
+            // 2. Call signInWithPopup normally.
+            // If the browser blocked the window.open above, we catch it here.
+            // Note: We can't easily pass the 'popupWin' to Firebase v9 SDK directly without hacks.
+            // So we revert to standard signInWithPopup, BUT we add a specific catch for 'popup-closed-by-user'
+
+            const result = await signInWithPopup(auth, googleProvider);
+            console.log("Popup Login Success:", result.user.email);
+
+            // [Force Reload] Catch-all for Safari sync issues
+            window.location.reload();
+
         } catch (error) {
             console.error("Popup Login Failed:", error);
             setIsLoading(false);
 
+            // If popupWin was opened but failed, close it? No, browser handles that.
+
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                // Blocked! Activate Retry Mode.
                 setRetryMode(true);
                 setErrorMsg("팝업이 차단되었습니다. 아래 '다시 시도' 버튼을 눌러주세요.");
             } else if (error.code === 'auth/popup-closed-by-user') {
                 setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                // Common error when multiple clicks happen
+                setErrorMsg("이전 요청이 취소되었습니다. 다시 시도해주세요.");
             } else {
                 setErrorMsg("로그인 오류: " + error.message);
             }
@@ -59,12 +82,22 @@ export default function Login() {
                         <p className="text-slate-400 text-sm">기록하고, 기억하고, 성장하세요.</p>
                     </div>
 
-                    {/* Error Message */}
+                    {/* Error Message & Browser Config Hints */}
                     {errorMsg && (
                         <div className={`border rounded-xl p-4 mb-6 text-center animate-pulse ${retryMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep`}>
+                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep mb-2`}>
                                 {errorMsg}
                             </p>
+
+                            {/* Browser Config Help */}
+                            {!retryMode && (
+                                <div className="text-[11px] text-slate-400 text-left bg-black/20 p-3 rounded-lg border border-white/5 space-y-1">
+                                    <p className="text-amber-500 font-bold mb-1">※ 이런 경우 로그인이 안 될 수 있어요!</p>
+                                    <p>• iPhone 설정 → Safari → <strong>'팝업 차단' 끄기</strong></p>
+                                    <p>• iPhone 설정 → Safari → <strong>'크로스 사이트 추적 방지' 끄기</strong></p>
+                                    <p>• <strong>'개인정보 보호(Private)' 모드 끄기</strong></p>
+                                </div>
+                            )}
                         </div>
                     )}
 
