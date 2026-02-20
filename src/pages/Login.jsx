@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup } from 'firebase/auth'; // Direct import
+import { signInWithPopup } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-    const [retryMode, setRetryMode] = useState(false); // New state to handle blocked popups
+    const [retryMode, setRetryMode] = useState(false);
 
     useEffect(() => {
+        // Auth State Listener
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
@@ -25,17 +26,23 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // [Retry Strategy]
-            // If the first attempt was blocked, this second click (Retry) is a "strong user gesture".
-            // Safari is much more likely to allow this popup.
-            await signInWithPopup(auth, googleProvider);
-            // Success will be handled by onAuthStateChanged
+            // [Force Sync Strategy]
+            // We await the popup result. If it succeeds, it means the user authenticated in the popup.
+            const result = await signInWithPopup(auth, googleProvider);
+
+            console.log("Popup Login Success:", result.user.email);
+
+            // [CRITICAL FIX for Safari]
+            // Even if signInWithPopup succeeds, the main window might not detect the cookie change immediately due to ITP.
+            // We FORCE a page reload. This forces the browser to re-establish the session from the server/cookies.
+            alert("로그인에 성공했습니다. 잠시 후 이동합니다.");
+            window.location.reload();
+
         } catch (error) {
             console.error("Popup Login Failed:", error);
             setIsLoading(false);
 
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                // Blocked! Activate Retry Mode.
                 setRetryMode(true);
                 setErrorMsg("팝업이 차단되었습니다. 아래 '다시 시도' 버튼을 눌러주세요.");
             } else if (error.code === 'auth/popup-closed-by-user') {
