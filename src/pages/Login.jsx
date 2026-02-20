@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle } from '../firebase';
+import { auth, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -8,32 +8,58 @@ export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
-    // Monitor Auth State Changes
     useEffect(() => {
+        // 1. Monitor Auth State (Primary)
+        // This fires when redirect returns successfully or user is already logged in
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
+                localStorage.removeItem('login_attempt'); // Clear flag
                 navigate('/profile', { replace: true });
             }
         });
+
+        // 2. Check for Redirect Result (Secondary/Error Handling)
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Success:", result.user.email);
+                    // onAuthStateChanged will handle navigation
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                setErrorMsg(error.message);
+                setIsLoading(false);
+                localStorage.removeItem('login_attempt'); // Clear flag on error
+            });
+
         return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
+        // Infinite Loop Protection
+        const lastAttempt = localStorage.getItem('login_attempt');
+        const now = Date.now();
+
+        // If attempted within last 10 seconds, block it
+        if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
+            alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
+            return;
+        }
+
         setIsLoading(true);
         setErrorMsg('');
+
         try {
-            // Reverting to Popup method for immediate feedback and stability
-            // Using loginWithGoogle from firebase.js (which uses signInWithPopup)
-            await loginWithGoogle();
+            localStorage.setItem('login_attempt', Date.now().toString());
+            // Use Redirect for maximum mobile compatibility
+            await loginWithGoogleRedirect();
         } catch (error) {
             console.error("Login Error:", error);
             setErrorMsg(error.message);
             setIsLoading(false);
-
-            if (error.code === 'auth/popup-blocked') {
-                alert("팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.");
-            }
+            localStorage.removeItem('login_attempt');
         }
     };
 
