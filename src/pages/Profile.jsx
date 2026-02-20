@@ -45,7 +45,7 @@ export default function Profile() {
 
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
-            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen rounded-t-[40px] overflow-hidden border-t border-white/5">
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation title="프로필" type="sub" />
 
                 <main className="px-4 pt-12 pb-24 animate-fade-in-up">

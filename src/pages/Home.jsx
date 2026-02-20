@@ -61,7 +61,7 @@ export default function Home() {
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden min-h-screen pb-24 flex justify-center">
             {/* Main Layout Container: Everything constrained to max-w-lg */}
-            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen rounded-t-[40px] overflow-hidden border-t border-white/5">
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation type="main" />
 
                 <main className="pb-24">
