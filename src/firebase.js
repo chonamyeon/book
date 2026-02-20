@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence, getRedirectResult } from "firebase/auth";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s",
-    authDomain: "book-site-123.web.app",
-    projectId: "book-site-123",
-    storageBucket: "book-site-123.firebasestorage.app",
-    messagingSenderId: "176157090689",
-    appId: "1:176157090689:web:107f25429239f25ffd7e80"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -15,8 +15,10 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Explicitly set parameters to ensure clean OAuth flow
+// Explicitly set parameters to ensure clean OAuth flow and use the CORRECT Client ID
 googleProvider.setCustomParameters({
-    prompt: 'select_account'
+    prompt: 'select_account',
+    client_id: '81562499893-ur8s5hh4m8019htb6uo0j52qf7qg0s09.apps.googleusercontent.com'
 });
 
 /**
