@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle } from '../firebase';
+import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -17,9 +17,26 @@ export default function Login() {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
+                localStorage.removeItem('login_attempt'); // Clear flag
                 navigate('/profile', { replace: true });
             }
         });
+
+        // Check for Redirect Result (Mobile Specific)
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Success:", result.user.email);
+                    // onAuthStateChanged will handle navigation
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                setErrorMsg(error.message);
+                setIsLoading(false);
+                localStorage.removeItem('login_attempt');
+            });
+
         return () => unsubscribe();
     }, [navigate]);
 
@@ -28,21 +45,36 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // ONLY use Popup. Redirect breaks PWA session sync on iOS.
+            // Attempt Popup login first (Preferred for PC & Modern Mobile)
             await loginWithGoogle();
         } catch (error) {
             console.error("Popup Login Failed:", error);
-            setIsLoading(false);
 
+            // If Popup fails (blocked or mobile PWA restriction), fallback to Redirect
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
-                if (isPWA) {
-                    alert("아이폰 설정 > Safari > '팝업 차단'을 끄셔야 앱 내 로그인이 가능합니다.");
+                try {
+                    console.log("Falling back to Redirect Login...");
+
+                    // Check loop protection before redirecting
+                    const lastAttempt = localStorage.getItem('login_attempt');
+                    const now = Date.now();
+                    if (lastAttempt && now - parseInt(lastAttempt) < 10000) {
+                        alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    localStorage.setItem('login_attempt', Date.now().toString());
+                    await loginWithGoogleRedirect();
+                } catch (redirectError) {
+                    console.error("Redirect Login Failed:", redirectError);
+                    setErrorMsg(redirectError.message);
+                    setIsLoading(false);
+                    localStorage.removeItem('login_attempt');
                 }
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
             } else {
-                setErrorMsg("로그인 오류: " + error.message);
+                setErrorMsg(error.message);
+                setIsLoading(false);
             }
         }
     };
@@ -68,11 +100,7 @@ export default function Login() {
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
-                            {isPWA && (
-                                <p className="text-red-500/50 text-[11px] mt-2 border-t border-red-500/20 pt-2">
-                                    ※ 홈 화면 앱(PWA)에서는 팝업 차단 해제가 필수입니다.
-                                </p>
-                            )}
+                            {/* PWA Hint */}
                         </div>
                     )}
 
