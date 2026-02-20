@@ -36,8 +36,15 @@ setPersistence(auth, browserLocalPersistence)
     .catch(err => console.error("Persistence error:", err));
 
 // iOS Safari robust login: always use redirect
-export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const loginWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider);
+export const loginWithGoogle = async () => {
+    await setPersistence(auth, browserLocalPersistence);
+    return signInWithPopup(auth, googleProvider);
+};
+
+export const loginWithGoogleRedirect = async () => {
+    await setPersistence(auth, browserLocalPersistence);
+    return signInWithRedirect(auth, googleProvider);
+};
 export const logout = () => signOut(auth);
 // Export getRedirectResult strictly for component usage if needed (though already imported directly in components usually)
 export { getRedirectResult };

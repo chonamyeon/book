@@ -13,6 +13,8 @@ export default function Login() {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
+                // Clear login flag
+                localStorage.removeItem('isLoggingIn');
                 // Redirect immediately to profile
                 navigate('/profile', { replace: true });
             }
@@ -24,11 +26,19 @@ export default function Login() {
                 if (result) {
                     console.log("Redirect Result Success:", result.user.email);
                     // navigate is handled by onAuthStateChanged above
+                } else {
+                    // If we expected a redirect result (flag set) but got null, maybe it's still loading?
+                    const isLoggingIn = localStorage.getItem('isLoggingIn');
+                    if (isLoggingIn) {
+                        console.log("Redirect returned null but flag is set. Waiting for Auth State...");
+                        // Don't clear flag yet, let onAuthStateChanged handle it or timeout
+                    }
                 }
             })
             .catch((error) => {
                 console.error("Redirect Login Error:", error);
                 setErrorMsg(error.message);
+                localStorage.removeItem('isLoggingIn'); // Clear flag on error
                 // Handle specific error codes if needed
                 if (error.code === 'auth/popup-closed-by-user') {
                     // Ignore strictly
@@ -42,6 +52,9 @@ export default function Login() {
         setIsLoading(true);
         setErrorMsg('');
         try {
+            // Set flag to track login attempt across redirects
+            localStorage.setItem('isLoggingIn', 'true');
+
             // Using Redirect method for maximum compatibility (mobile/desktop)
             // ensuring no popup blocker issues on a dedicated login page.
             await loginWithGoogleRedirect();
