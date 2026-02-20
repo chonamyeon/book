@@ -11,7 +11,6 @@ export default function Login() {
     const [retryMode, setRetryMode] = useState(false);
 
     useEffect(() => {
-        // Auth State Listener
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
@@ -26,18 +25,12 @@ export default function Login() {
         setErrorMsg('');
 
         try {
-            // [Force Sync Strategy]
-            // We await the popup result. If it succeeds, it means the user authenticated in the popup.
             const result = await signInWithPopup(auth, googleProvider);
-
             console.log("Popup Login Success:", result.user.email);
-
-            // [CRITICAL FIX for Safari]
-            // Even if signInWithPopup succeeds, the main window might not detect the cookie change immediately due to ITP.
-            // We FORCE a page reload. This forces the browser to re-establish the session from the server/cookies.
-            alert("로그인에 성공했습니다. 잠시 후 이동합니다.");
-            window.location.reload();
-
+            // alert("로그인 성공! 잠시 후 이동합니다.");
+            // window.location.reload(); // Force reload is slightly aggressive, but sometimes needed. 
+            // Trying without reload first, relying on onAuthStateChanged. 
+            // If it fails, the user will stay on the page, which isn't creating a loop at least.
         } catch (error) {
             console.error("Popup Login Failed:", error);
             setIsLoading(false);
@@ -48,6 +41,7 @@ export default function Login() {
             } else if (error.code === 'auth/popup-closed-by-user') {
                 setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
             } else {
+                // Generic error - likely browser config issues
                 setErrorMsg("로그인 오류: " + error.message);
             }
         }
@@ -68,12 +62,23 @@ export default function Login() {
                         <p className="text-slate-400 text-sm">기록하고, 기억하고, 성장하세요.</p>
                     </div>
 
-                    {/* Error Message */}
+                    {/* Error Message & Browser Config Hints */}
                     {errorMsg && (
                         <div className={`border rounded-xl p-4 mb-6 text-center animate-pulse ${retryMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep`}>
+                            <p className={`${retryMode ? 'text-amber-400' : 'text-red-400'} text-sm font-bold leading-relaxed break-keep mb-2`}>
                                 {errorMsg}
                             </p>
+
+                            {/* Browser Config Help */}
+                            {!retryMode && (
+                                <div className="text-[11px] text-slate-400 text-left bg-black/20 p-3 rounded-lg border border-white/5 space-y-1">
+                                    <p className="font-bold text-slate-300 mb-1">※ 로그인이 계속 실패한다면?</p>
+                                    <p>1. iPhone 설정 > Safari > <strong>'팝업 차단' 해제</strong></p>
+                                    <p>2. iPhone 설정 > Safari > <strong>'크로스 사이트 추적 방지' 해제</strong></p>
+                                    <p>3. <strong>'개인정보 보호 브라우징(Private)' 모드 종료</strong></p>
+                                    <p className="mt-2 text-amber-500">★ Chrome(크롬) 앱을 사용하시면 가장 안정적입니다.</p>
+                                </div>
+                            )}
                         </div>
                     )}
 
