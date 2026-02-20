@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
@@ -9,54 +10,40 @@ export default function Login() {
     const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
-        // 1. Check for Redirect Result (Crucial for Mobile Browser Flow)
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Redirect Login Success:", result.user.email);
-                    // Auth state change will handle navigation
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Error:", error);
-                setErrorMsg(error.message);
-                setIsLoading(false);
-            });
-
-        // 2. Monitor Auth State
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
                 navigate('/profile', { replace: true });
             }
         });
-
         return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
+        // [Key Strategy] Pre-open method doesn't work well with Firebase directly.
+        // Instead, we use synchronous call to signInWithPopup directly without await/wrappers before it.
+        // The most critical part for iOS Safari:
+        // signInWithPopup MUST be the direct result of a user gesture.
+
         setIsLoading(true);
         setErrorMsg('');
 
         try {
-            // Try Popup first (Best UX for PC/Android)
-            await loginWithGoogle();
+            // DIRECT call without any async/await delay or wrapper function overhead
+            // This is the cleanest way to signal "User Gesture" to Safari
+            await signInWithPopup(auth, googleProvider);
+            // Success handled by onAuthStateChanged
         } catch (error) {
             console.error("Popup Login Failed:", error);
+            setIsLoading(false);
 
-            // If Popup fails (Common on iOS Safari), fallback to Redirect
             if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                try {
-                    console.log("Falling back to Redirect Login...");
-                    await loginWithGoogleRedirect();
-                } catch (redirectError) {
-                    console.error("Redirect Login Failed:", redirectError);
-                    setErrorMsg(redirectError.message);
-                    setIsLoading(false);
-                }
+                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
+                alert("로그인을 위해 팝업 창을 허용해주세요.");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
             } else {
-                setErrorMsg(error.message);
-                setIsLoading(false);
+                setErrorMsg("로그인 오류: " + error.message);
             }
         }
     };
@@ -78,7 +65,7 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
