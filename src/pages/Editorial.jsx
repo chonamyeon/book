@@ -150,7 +150,9 @@ export default function Editorial() {
                                 { id: "demian", title: "데미안", subtitle: "내면의 성장을 향한 투쟁", author: "헤르만 헤세", image: "/images/covers/demian.jpg", tag: "PHILOSOPHY" },
                                 { id: "vegetarian", title: "채식주의자", subtitle: "인간 본성에 대한 고통스러운 질문", author: "한강", image: "/images/covers/vegetarian.jpg", tag: "NOBEL" },
                                 { id: "factfulness", title: "팩트풀니스", subtitle: "막연한 두려움을 이기는 데이터의 힘", author: "한스 로슬링", image: "/images/covers/factfulness.jpg", tag: "SOCIETY" },
-                                { id: "almond", title: "아몬드", subtitle: "감정을 느끼지 못하는 소년의 성장기", author: "손원평", image: "/images/covers/almond.jpg", tag: "K-NOVEL" }
+                                { id: "almond", title: "아몬드", subtitle: "감정을 느끼지 못하는 소년의 성장기", author: "손원평", image: "/images/covers/almond.jpg", tag: "K-NOVEL" },
+                                { id: "leverage", title: "레버리지", subtitle: "최소의 노력으로 최대의 결과를 얻는 법", author: "롭 무어", image: "/images/covers/b_06.jpg", tag: "BUSINESS" },
+                                { id: "one-thing", title: "원씽", subtitle: "복잡한 세상을 이기는 단 하나의 원칙", author: "게리 켈러", image: "/images/covers/b_03.jpg", tag: "GROWTH" }
                             ].map((item) => (
                                 <div key={item.id} className="flex gap-5 group">
                                     <div className="w-24 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 border border-white/10 relative shadow-xl">

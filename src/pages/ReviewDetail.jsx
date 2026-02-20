@@ -71,7 +71,9 @@ export default function ReviewDetail() {
         "demian": "데미안",
         "vegetarian": "채식주의자",
         "factfulness": "팩트풀니스",
-        "almond": "아몬드"
+        "almond": "아몬드",
+        "leverage": "레버리지",
+        "one-thing": "원씽"
     };
 
     const bookTitle = bookMap[id] || "사피엔스";
