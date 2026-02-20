@@ -5,94 +5,61 @@ import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false); // Initial loading state
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Separate state for initial auth check
+    const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        // Device Detection
-        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        setIsMobile(mobile);
+        // 1. Check for Redirect Result (Crucial for Mobile Browser Flow)
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect Login Success:", result.user.email);
+                    // Auth state change will handle navigation
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                setErrorMsg(error.message);
+                setIsLoading(false);
+            });
 
-        // 1. Initial Auth Check (Wait sufficiently)
+        // 2. Monitor Auth State
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 console.log("Auth State Changed: User Logged In", user.email);
-                setIsCheckingAuth(false);
-                localStorage.removeItem('login_attempt');
                 navigate('/profile', { replace: true });
-            } else {
-                // Not logged in, but check redirect result first
-                // Wait for getRedirectResult before showing login form
-                if (!mobile) setIsCheckingAuth(false);
             }
         });
-
-        // 2. Check for Redirect Result (Mobile Specific)
-        if (mobile) {
-            getRedirectResult(auth)
-                .then((result) => {
-                    if (result) {
-                        console.log("Redirect Success:", result.user.email);
-                        // onAuthStateChanged will handle navigation
-                    } else {
-                        // No result and no user -> Stop loading
-                        setIsCheckingAuth(false);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Redirect Error:", error);
-                    setErrorMsg(error.message);
-                    setIsCheckingAuth(false);
-                    localStorage.removeItem('login_attempt');
-                });
-        }
 
         return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
-        // Loop Protection (Mobile Redirect Only)
-        if (isMobile) {
-            const lastAttempt = localStorage.getItem('login_attempt');
-            const now = Date.now();
-            if (lastAttempt && now - parseInt(lastAttempt) < 5000) { // 5 seconds ample time
-                alert("로그인 처리 중입니다. 잠시만 기다려주세요.");
-                return;
-            }
-            localStorage.setItem('login_attempt', Date.now().toString());
-        }
-
         setIsLoading(true);
         setErrorMsg('');
 
         try {
-            if (isMobile) {
-                // Mobile: Use Redirect (Page navigation, no popup)
-                await loginWithGoogleRedirect();
-            } else {
-                // PC: Use Popup (Better UX)
-                await loginWithGoogle();
-            }
+            // Try Popup first (Best UX for PC/Android)
+            await loginWithGoogle();
         } catch (error) {
-            console.error("Login Error:", error);
-            setErrorMsg(error.message);
-            setIsLoading(false);
-            if (isMobile) localStorage.removeItem('login_attempt');
+            console.error("Popup Login Failed:", error);
+
+            // If Popup fails (Common on iOS Safari), fallback to Redirect
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+                try {
+                    console.log("Falling back to Redirect Login...");
+                    await loginWithGoogleRedirect();
+                } catch (redirectError) {
+                    console.error("Redirect Login Failed:", redirectError);
+                    setErrorMsg(redirectError.message);
+                    setIsLoading(false);
+                }
+            } else {
+                setErrorMsg(error.message);
+                setIsLoading(false);
+            }
         }
     };
-
-    // Initial Loading Screen (Crucial for Redirect Flow)
-    if (isCheckingAuth) {
-        return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
-                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
-            </div>
-        );
-    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -111,7 +78,7 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
@@ -129,7 +96,7 @@ export default function Login() {
                         ) : (
                             <>
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                <span>Google로 {isMobile ? "이동하여" : ""} 계속하기</span>
+                                <span>Google로 계속하기</span>
                             </>
                         )}
                     </button>
