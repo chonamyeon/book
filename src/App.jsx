@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Contact from './pages/Contact';
+import ReviewDetail from './pages/ReviewDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/review/:id" element={<ReviewDetail />} />
         </Routes>
       </div>
     </Router>

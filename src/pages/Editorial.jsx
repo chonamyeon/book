@@ -72,44 +72,51 @@ export default function Editorial() {
                 <main className="px-6 pt-24 pb-24 space-y-16">
                     {/* Header Section */}
                     <header className="space-y-4">
-                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block">Editorial Picks</span>
+                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block">Weekly Curation</span>
                         <h2 className="serif-title text-4xl text-white font-light leading-none">
-                            지적인 한 주를 위한 <br />
-                            <span className="italic text-slate-400">Archide Curation</span>
+                            한 주를 채우는 <br />
+                            <span className="italic text-slate-400">지적인 기록들</span>
                         </h2>
                     </header>
 
-                    {/* Featured / Hero Item - Restored */}
+                    {/* Weekly Focus Review - Restored & Updated */}
                     <div className="group relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                        <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=1200&auto=format&fit=crop')" }}></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: "url('/images/covers/sapiens.jpg')" }}></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
 
                         <div className="absolute bottom-0 left-0 p-8 w-full z-10 text-left">
                             <div className="inline-block px-3 py-1 mb-3 rounded-full border border-gold/30 bg-black/30 backdrop-blur-md">
-                                <span className="text-gold text-[10px] font-bold uppercase tracking-widest">Limited Edition</span>
+                                <span className="text-gold text-[10px] font-bold uppercase tracking-widest">이번 주 포커스 리뷰</span>
                             </div>
-                            <h3 className="serif-title text-2xl text-white mb-2">골든 아워 리딩 세트</h3>
-                            <p className="text-slate-300 text-xs font-light line-clamp-2 mb-4">
-                                늦은 오후의 햇살과 함께하기 좋은 문학 큐레이션과 굿즈 패키지입니다.
+                            <h3 className="serif-title text-3xl text-white mb-2">사피엔스 (Sapiens)</h3>
+                            <p className="text-slate-300 text-xs font-light line-clamp-2 mb-6">
+                                인류가 어떻게 지구의 지배자가 되었는지에 대한 거대한 담론. <br />
+                                빌 게이츠가 탐독한 인류사의 결정적 순간들.
                             </p>
-                            <button
-                                onClick={() => handlePurchase("골든 아워 리딩 세트", "45,000")}
-                                className="w-full py-4 bg-white text-primary font-bold rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gold hover:text-primary transition-colors active:scale-95"
+                            <Link
+                                to="/review/sapiens"
+                                className="w-full py-4 bg-white text-primary font-bold rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gold hover:text-primary transition-all active:scale-95 shadow-xl"
                             >
-                                구매하기 — ₩45,000
-                            </button>
+                                리뷰 자세히 보기 <span className="material-symbols-outlined text-sm">menu_book</span>
+                            </Link>
                         </div>
                     </div>
 
-                    {/* Section 1: Weekly Picks (5 Items) */}
+                    {/* Section 1: Weekly Picks (5 Items - Reviews Only) */}
                     <section className="space-y-8">
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                            <span className="text-white text-xl font-bold serif-title italic">Weekly Picks</span>
-                            <span className="text-gold text-[10px] font-bold uppercase tracking-widest">5 items</span>
+                            <span className="text-white text-xl font-bold serif-title italic">Editors' Picks</span>
+                            <span className="text-gold text-[10px] font-bold uppercase tracking-widest">Review Collection</span>
                         </div>
 
                         <div className="space-y-6">
-                            {weeklyPicks.map((item) => (
+                            {[
+                                { id: "1984", title: "1984", subtitle: "감시 사회에 대한 소름 끼치는 예언", author: "조지 오웰", image: "/images/covers/1984.jpg", tag: "CLASSIC" },
+                                { id: "demian", title: "데미안", subtitle: "내면의 성장을 향한 투쟁", author: "헤르만 헤세", image: "/images/covers/demian.jpg", tag: "PHILOSOPHY" },
+                                { id: "vegetarian", title: "채식주의자", subtitle: "인간 본성에 대한 고통스러운 질문", author: "한강", image: "/images/covers/vegetarian.jpg", tag: "NOBEL" },
+                                { id: "factfulness", title: "팩트풀니스", subtitle: "막연한 두려움을 이기는 데이터의 힘", author: "한스 로슬링", image: "/images/covers/factfulness.jpg", tag: "SOCIETY" },
+                                { id: "almond", title: "아몬드", subtitle: "감정을 느끼지 못하는 소년의 성장기", author: "손원평", image: "/images/covers/almond.jpg", tag: "K-NOVEL" }
+                            ].map((item) => (
                                 <div key={item.id} className="flex gap-5 group">
                                     <div className="w-24 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 border border-white/10 relative shadow-xl">
                                         <img src={item.image} alt={item.title} className="w-full h-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:scale-110" />
@@ -121,12 +128,11 @@ export default function Editorial() {
                                             <p className="text-slate-500 text-xs font-light">{item.subtitle}</p>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-white font-black text-sm">₩{item.price}</span>
-                                            <button
-                                                onClick={() => handlePurchase(item.title, item.price)}
+                                            <Link
+                                                to={`/review/${item.id}`}
                                                 className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gold hover:text-primary hover:border-gold transition-all active:scale-95">
-                                                Purchase
-                                            </button>
+                                                리뷰 보기
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>
@@ -145,7 +151,7 @@ export default function Editorial() {
                             {bestReviews.map((book, idx) => (
                                 <Link
                                     key={idx}
-                                    to={`/celebrity/${book.celebId}`}
+                                    to={`/review/${book.title === "사피엔스" ? "sapiens" : book.title === "1984" ? "1984" : "sapiens"}`}
                                     className="flex items-center gap-6 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
                                 >
                                     <div className="size-16 rounded-xl overflow-hidden shrink-0 shadow-lg border border-white/10">
