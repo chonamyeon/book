@@ -11,6 +11,9 @@ import Library from './pages/Library';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
+import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Contact from './pages/Contact';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -39,6 +42,9 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/contact" element={<Contact />} />
         </Routes>
       </div>
     </Router>

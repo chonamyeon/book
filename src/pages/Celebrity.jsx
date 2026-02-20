@@ -107,59 +107,76 @@ export default function Celebrity() {
                                 <h4 className="text-2xl font-light tracking-tight"><span className="text-accent mr-2">01.</span>인생의 책들</h4>
                                 <span className="text-[10px] uppercase tracking-widest text-slate-500">추천 도서</span>
                             </div>
-                            <div className="flex flex-col gap-8">
+                            <div className="flex flex-col gap-12">
                                 {celeb.books.map((book, index) => (
-                                    <div key={index} className="flex gap-6 group">
-                                        <div className="w-1/3 shrink-0">
-                                            <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5">
-                                                <img
-                                                    className="w-full h-full object-cover"
-                                                    src={book.cover}
-                                                    alt={book.title}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col justify-between py-1 w-full">
-                                            <div>
-                                                <h5 className="text-lg font-semibold leading-tight mb-1">{book.title}</h5>
-                                                <p className="text-xs text-slate-500 mb-3 italic">{book.author}</p>
-                                                <p className="text-sm text-slate-400 font-light leading-snug">{book.desc}</p>
-                                                {book.source && (
-                                                    <p className="text-[11px] text-gold/80 mt-2 flex items-center gap-1 font-medium tracking-wide">
-                                                        <span className="material-symbols-outlined text-[12px]">campaign</span>
-                                                        SOURCE: {book.source}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="mt-4 flex flex-col gap-2">
-                                                <span className="text-gold font-bold text-lg">{book.price}</span>
-                                                <div className="flex gap-2">
-                                                    <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-gold hover:bg-gold-light text-primary flex-1 text-center py-3 rounded-lg text-sm font-bold uppercase tracking-wider shadow-md hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-1">
-                                                        <span>구매하기</span>
-                                                        <span className="material-symbols-outlined text-sm">shopping_cart</span>
-                                                    </a>
-                                                    <button
-                                                        onClick={() => {
-                                                            const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-                                                            const isSaved = saved.some(b => b.title === book.title);
-                                                            if (isSaved) {
-                                                                const filtered = saved.filter(b => b.title !== book.title);
-                                                                localStorage.setItem('savedBooks', JSON.stringify(filtered));
-                                                                alert('서재에서 삭제되었습니다.');
-                                                            } else {
-                                                                saved.push(book);
-                                                                localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                                alert('서재에 추가되었습니다.');
-                                                            }
-                                                            window.dispatchEvent(new Event('storage')); // Notify other components
-                                                        }}
-                                                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 flex-1 text-center py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1"
-                                                    >
-                                                        <span>추천지정</span>
-                                                        <span className="material-symbols-outlined text-sm">bookmark</span>
-                                                    </button>
+                                    <div key={index} className="flex flex-col gap-6 group">
+                                        <div className="flex gap-6">
+                                            <div className="w-1/3 shrink-0">
+                                                <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5">
+                                                    <img
+                                                        className="w-full h-full object-cover"
+                                                        src={book.cover}
+                                                        alt={book.title}
+                                                    />
                                                 </div>
                                             </div>
+                                            <div className="flex flex-col justify-between py-1 w-full">
+                                                <div>
+                                                    <h5 className="text-xl font-bold leading-tight mb-1 text-white">{book.title}</h5>
+                                                    <p className="text-xs text-slate-500 mb-3 italic">{book.author}</p>
+                                                    <p className="text-sm text-slate-400 font-light leading-snug line-clamp-3">{book.desc}</p>
+                                                    {book.source && (
+                                                        <p className="text-[10px] text-gold/80 mt-3 flex items-center gap-1 font-bold tracking-wider uppercase">
+                                                            <span className="material-symbols-outlined text-[12px]">campaign</span>
+                                                            {book.source}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="mt-4">
+                                                    <span className="text-white font-black text-xl">{book.price}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Detailed Review Section for AdSense */}
+                                        {book.review && (
+                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-gold/50"></div>
+                                                <h6 className="text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-sm">edit_note</span>
+                                                    Insight & Review
+                                                </h6>
+                                                <p className="text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap">
+                                                    {book.review}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-3">
+                                            <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-gold hover:bg-gold-light text-primary flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-gold/10 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                                <span>쿠팡 최저가 구매</span>
+                                                <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                                            </a>
+                                            <button
+                                                onClick={() => {
+                                                    const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
+                                                    const isSaved = saved.some(b => b.title === book.title);
+                                                    if (isSaved) {
+                                                        const filtered = saved.filter(b => b.title !== book.title);
+                                                        localStorage.setItem('savedBooks', JSON.stringify(filtered));
+                                                        alert('서재에서 삭제되었습니다.');
+                                                    } else {
+                                                        saved.push(book);
+                                                        localStorage.setItem('savedBooks', JSON.stringify(saved));
+                                                        alert('서재에 추가되었습니다.');
+                                                    }
+                                                    window.dispatchEvent(new Event('storage'));
+                                                }}
+                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <span>서재에 담기</span>
+                                                <span className="material-symbols-outlined text-sm">bookmark</span>
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

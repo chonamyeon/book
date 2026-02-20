@@ -167,24 +167,20 @@ export default function Result() {
                 </section>
 
                 {/* Gated Premium Section */}
-                <section className="relative mx-4 mt-8 mb-12 overflow-hidden rounded-2xl border border-primary/10 dark:border-white/10 bg-white dark:bg-white/5 shadow-2xl animate-fade-in-up delay-500">
+                <section className="relative mx-4 mt-8 mb-12 overflow-hidden rounded-3xl border border-primary/20 dark:border-white/10 bg-white dark:bg-[#0f172a] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-fade-in-up delay-500">
                     <div className="p-6 md:p-8">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h3 className="text-xl font-extrabold text-primary dark:text-white flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-gold">psychology_alt</span>
-                                    상세 인지 분석 리포트
+                                <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-gold font-bold">workspace_premium</span>
+                                    프리미엄 정밀 분석 리포트
                                 </h3>
-                                <p className="text-xs text-slate-500 mt-1 font-medium">B.D.A (Big Data Analysis) 기반 프리미엄 인사이트</p>
+                                <p className="text-[11px] text-slate-500 mt-1 font-bold uppercase tracking-wider">Big Data Cognitive Analysis Suite</p>
                             </div>
-                            {!isPremiumUnlocked && (
-                                <span className="px-3 py-1 bg-slate-900 text-gold text-[10px] font-bold uppercase tracking-widest rounded-full border border-gold/30">Premium</span>
-                            )}
                         </div>
 
                         {/* Blurred Content / Real Content */}
-                        <div className={`space-y-8 transition-all duration-700 ${!isPremiumUnlocked ? 'filter blur-md opacity-30 pointer-events-none select-none h-[400px] overflow-hidden' : ''}`}>
-
+                        <div className={`space-y-8 transition-all duration-700 ${!isPremiumUnlocked ? 'filter blur-xl opacity-20 pointer-events-none select-none h-[500px] overflow-hidden' : ''}`}>
                             {/* 1. Radar Chart Component (SVG) */}
                             <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-2xl border border-primary/5 dark:border-white/5 relative">
                                 <h4 className="text-sm font-bold text-primary dark:text-white mb-6 flex items-center gap-2">
@@ -319,8 +315,6 @@ export default function Result() {
                                 </p>
                             </div>
 
-
-
                             {/* 4. Tailored Book Recommendations (Premium) */}
                             <div className="pt-8 border-t border-primary/10 dark:border-white/10">
                                 <div className="mb-6">
@@ -423,62 +417,70 @@ export default function Result() {
                             )}
                         </div>
 
-                        {/* Overlay CTA */}
+                        {/* Enhanced Overlay CTA */}
                         {!isPremiumUnlocked && (
-                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 dark:bg-[#0f172a]/80 backdrop-blur-[4px] p-6 text-center">
-                                {/* Limited Time Badge */}
-                                <div className="mb-6 animate-bounce-subtle">
-                                    <span className="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-widest">
-                                        Limited Time Offer
-                                    </span>
-                                </div>
-
-                                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-white to-slate-100 shadow-2xl ring-1 ring-black/5 dark:from-slate-800 dark:to-slate-900 dark:ring-white/10">
-                                    <span className="material-symbols-outlined text-4xl text-primary dark:text-gold">lock_clock</span>
-                                </div>
-
-                                <h4 className="text-xl md:text-2xl font-black text-primary dark:text-white leading-tight mb-2">프리미엄 리포트 & 추천 도서</h4>
-                                <p className="mb-4 text-sm font-medium text-slate-600 dark:text-slate-300 max-w-xs mx-auto">
-                                    상위 1%를 위한 맞춤형 분석과 도서 추천<br />
-                                    <strong>지금 66% 특별 할인가</strong>로 만나보세요.
-                                </p>
-
-                                {/* Price Anchor */}
-                                <div className="mb-6 flex items-center justify-center gap-3">
-                                    <span className="text-slate-400 font-bold decoration-2 line-through text-lg">₩29,000</span>
-                                    <span className="text-3xl font-black text-red-500">₩9,900</span>
-                                </div>
-
-                                {/* Countdown Timer */}
-                                <div className="mb-6 bg-slate-900/5 dark:bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-slate-900/10 dark:border-white/10">
-                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Offer Ends In</p>
-                                    <div className="text-2xl font-black text-primary dark:text-white font-mono tracking-widest flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-red-500 animate-pulse">timer</span>
-                                        {formatTime(timeLeft)}
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm p-6 text-center">
+                                {/* Time Sale Badge */}
+                                <div className="mb-8 animate-bounce-subtle">
+                                    <div className="bg-red-600 text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] uppercase tracking-[0.2em] border border-white/20">
+                                        ⚡ Limited Time Sale ⚡
                                     </div>
                                 </div>
 
-                                <button onClick={handleUnlock} className="group relative w-full max-w-sm overflow-hidden rounded-xl bg-gradient-to-r from-gold to-yellow-300 text-slate-900 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
-                                    <div className="relative flex items-center justify-center gap-3 py-4">
-                                        <div className="flex flex-col items-start leading-none">
-                                            <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">Instant Unlock</span>
-                                            <span className="text-sm font-black uppercase tracking-widest">9,900원으로 확인하기</span>
+                                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[2.5rem] p-8 border border-white/20 shadow-2xl w-full max-w-sm">
+                                    <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-gold/20 to-gold/5 mx-auto ring-1 ring-gold/30">
+                                        <span className="material-symbols-outlined text-5xl text-gold animate-pulse">lock</span>
+                                    </div>
+
+                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-tight mb-2">당신만을 위한<br />정밀 분석이 완료되었습니다</h4>
+                                    <p className="mb-6 text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        상위 1%의 인지 처리 패턴과<br />
+                                        인물 기반 맞춤 도서/여행지 추천을 확인하세요.
+                                    </p>
+
+                                    {/* Price Section */}
+                                    <div className="mb-6 flex flex-col items-center">
+                                        <span className="text-slate-400 line-through text-sm font-bold opacity-75 mb-1">정가 ₩29,000</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-4xl font-black text-red-500">₩9,900</span>
+                                            <span className="text-xs font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded">66% OFF</span>
                                         </div>
-                                        <span className="material-symbols-outlined text-slate-900">arrow_forward</span>
                                     </div>
-                                </button>
 
-                                <div className="mt-6 flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider opacity-70">
-                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">encrypted</span> SSL 보안</span>
-                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">history</span> 평생 소장</span>
-                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">stars</span> 100% 환불</span>
+                                    {/* Countdown Timer */}
+                                    <div className="mb-8 bg-slate-100 dark:bg-white/5 py-3 rounded-2xl border border-slate-200 dark:border-white/10">
+                                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">할인 마감까지 남은 시간</p>
+                                        <div className="text-3xl font-black text-slate-900 dark:text-white font-mono tracking-widest flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-red-500 animate-pulse">alarm</span>
+                                            {formatTime(timeLeft)}
+                                        </div>
+                                    </div>
+
+                                    <button onClick={handleUnlock} className="group relative w-full overflow-hidden rounded-2xl bg-gold text-slate-900 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+                                        <div className="relative flex items-center justify-center gap-3 py-5 px-6">
+                                            <span className="text-base font-black uppercase tracking-tight">리포트 평생 소장하기</span>
+                                            <span className="material-symbols-outlined font-bold">arrow_forward</span>
+                                        </div>
+                                    </button>
+
+                                    <div className="mt-6 flex items-center justify-center gap-4 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-80">
+                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">shield_check</span> 안전 결제</span>
+                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">history_edu</span> 분석 저장</span>
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
                 </section>
 
-                <div className="h-6"></div> {/* Extra spacer */}
+                {/* Brand Message Section */}
+                <section className="px-8 py-16 text-center border-t border-white/5 opacity-80 mb-8">
+                    <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
+                    <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light">
+                        "책을 기록하는 '아카이드'의 공간에서,<br />
+                        오롯이 나만의 '생각의 시간'을 갖는다"
+                    </p>
+                </section>
             </main>
 
             {/* Bottom Navigation */}

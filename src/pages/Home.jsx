@@ -1,14 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { celebrities } from '../data/celebrities';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
+import { resultData } from '../data/resultData';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Home() {
+    const { user } = useAuth();
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [unlocked, setUnlocked] = useState(false);
+    const [myResultType, setMyResultType] = useState(null);
+    const [quizResult, setQuizResult] = useState(null);
+    const navigate = useNavigate();
     const touchStart = useRef(0);
     const touchEnd = useRef(0);
     const autoPlayRef = useRef(null);
+
+    useEffect(() => {
+        const isUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
+        const type = localStorage.getItem('myResultType');
+        const qResult = localStorage.getItem('quizResult');
+        setUnlocked(isUnlocked);
+        setMyResultType(type);
+        setQuizResult(qResult);
+    }, []);
+
+    const result = myResultType ? resultData[myResultType] : null;
+    const isTeaserVisible = user && unlocked && result;
 
     // Auto-play functionality
     useEffect(() => {
@@ -172,21 +191,58 @@ export default function Home() {
 
                     {/* Quiz Banner - Refined */}
                     <section className="px-4">
-                        <div className="relative rounded-2xl overflow-hidden border border-white/10 group">
-                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-1000"></div>
-                            <div className="absolute inset-0 bg-background-dark/80"></div>
-
-                            <div className="relative p-8 text-center flex flex-col items-center">
-                                <span className="material-symbols-outlined text-gold text-4xl mb-4">psychology_alt</span>
-                                <h3 className="serif-title text-white text-2xl mb-2">Find Your Persona</h3>
-                                <p className="text-slate-400 text-sm font-light mb-6 max-w-xs leading-relaxed">
-                                    Take our literary personality test to discover the books that resonate with your soul.
-                                </p>
-                                <Link to="/quiz" className="px-8 py-3 bg-gold text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-white transition-colors">
-                                    Start Diagnostics
-                                </Link>
+                        {isTeaserVisible ? (
+                            <div
+                                onClick={() => navigate('/result', { state: { resultType: myResultType } })}
+                                className="relative rounded-3xl overflow-hidden border border-gold/30 bg-gradient-to-br from-slate-900 via-slate-800 to-black p-1 group cursor-pointer shadow-2xl"
+                            >
+                                <div className="relative bg-background-dark/40 backdrop-blur-xl rounded-[22px] p-6 flex items-center gap-6">
+                                    <div className="relative size-24 shrink-0">
+                                        <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full"></div>
+                                        <img src={result.image} alt={result.persona} className="relative w-full h-full object-cover rounded-2xl shadow-xl border border-gold/30" />
+                                    </div>
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <span className="text-gold text-[10px] font-bold uppercase tracking-widest block mb-1">My Persona</span>
+                                        <h3 className="serif-title text-white text-2xl font-bold leading-none mb-2 tracking-tight">{result.persona}</h3>
+                                        <p className="text-slate-400 text-[11px] font-medium truncate mb-4">{result.subtitle}</p>
+                                        <div className="flex gap-2">
+                                            {Object.entries(result.metrics).slice(0, 2).map(([key, m]) => (
+                                                <div key={key} className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 flex flex-col items-center min-w-[64px]">
+                                                    <span className="text-slate-500 text-[7px] uppercase block leading-none mb-1">{m.label}</span>
+                                                    <span className="text-gold text-[10px] font-extrabold">{m.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <span className="material-symbols-outlined text-gold opacity-30 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="relative rounded-2xl overflow-hidden border border-white/10 group">
+                                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-1000"></div>
+                                <div className="absolute inset-0 bg-background-dark/80"></div>
+
+                                <div className="relative p-8 text-center flex flex-col items-center">
+                                    <span className="material-symbols-outlined text-gold text-4xl mb-4">psychology_alt</span>
+                                    <h3 className="serif-title text-white text-2xl mb-2">Find Your Persona</h3>
+                                    <p className="text-slate-400 text-sm font-light mb-6 max-w-xs leading-relaxed">
+                                        Take our literary personality test to discover the books that resonate with your soul.
+                                    </p>
+                                    {quizResult ? (
+                                        <button
+                                            onClick={() => navigate('/result', { state: { resultType: quizResult } })}
+                                            className="px-8 py-3 bg-white text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-gold transition-colors flex items-center gap-2"
+                                        >
+                                            View Analysis Result <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        </button>
+                                    ) : (
+                                        <Link to="/quiz" className="px-8 py-3 bg-gold text-primary font-bold rounded-lg text-xs uppercase tracking-widest hover:bg-white transition-colors">
+                                            Start Diagnostics
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </section>
 
                     {/* Bestsellers / Recommended - 3x3 Grid */}
@@ -218,6 +274,23 @@ export default function Home() {
                                 </Link>
                             ))}
                         </div>
+                    </section>
+
+                    {/* Brand Message Section */}
+                    <section className="px-8 pt-16 pb-12 text-center border-t border-white/5">
+                        <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
+                        <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light mb-10">
+                            "책을 기록하는 '아카이드'의 공간에서,<br />
+                            오롯이 나만의 '생각의 시간'을 갖는다"
+                        </p>
+
+                        {/* Information Links */}
+                        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 pt-8 border-t border-white/5">
+                            <Link to="/about" className="text-[10px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">About</Link>
+                            <Link to="/contact" className="text-[10px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">Contact</Link>
+                            <Link to="/privacy" className="text-[10px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">Privacy Policy</Link>
+                        </div>
+                        <p className="mt-8 text-[9px] text-slate-600 uppercase tracking-widest">&© 2026 ARCHIDE. ALL RIGHTS RESERVED.</p>
                     </section>
                 </main>
 

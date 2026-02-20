@@ -168,7 +168,14 @@ export default function Profile() {
                         The Archive ID: {user.uid.slice(0, 8).toUpperCase()}<br />
                         Version 1.4.0 (Build 2024.05)
                     </p>
-
+                    {/* Brand Message Section */}
+                    <section className="px-8 py-16 text-center border-t border-white/5 opacity-60">
+                        <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
+                        <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light">
+                            "책을 기록하는 '아카이드'의 공간에서,<br />
+                            오롯이 나만의 '생각의 시간'을 갖는다"
+                        </p>
+                    </section>
                 </main>
 
                 <BottomNavigation />
