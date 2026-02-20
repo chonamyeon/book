@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { questions } from '../data/questions';
 import BottomNavigation from '../components/BottomNavigation';
+import TopNavigation from '../components/TopNavigation';
 
 export default function Quiz() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -10,24 +11,18 @@ export default function Quiz() {
     const navigate = useNavigate();
 
     // Initialize quiz with random questions on mount
-    React.useEffect(() => {
+    useEffect(() => {
         const shuffled = [...questions].sort(() => 0.5 - Math.random());
         setQuizQuestions(shuffled.slice(0, 10)); // Select 10 random questions
     }, []);
 
-    if (quizQuestions.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark text-slate-500">Loading Quiz...</div>;
-
-    const currentQuestion = quizQuestions[currentQuestionIndex];
-    const totalQuestions = quizQuestions.length;
-    const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
-
     const handleOptionSelect = (optionId) => {
-        const newAnswers = { ...answers, [currentQuestion.id]: optionId };
-        setAnswers(newAnswers);
+        const questionId = quizQuestions[currentQuestionIndex].id;
+        setAnswers(prev => ({ ...prev, [questionId]: optionId }));
     };
 
     const handleNext = () => {
-        if (currentQuestionIndex < totalQuestions - 1) {
+        if (currentQuestionIndex < quizQuestions.length - 1) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
             window.scrollTo(0, 0);
         } else {
@@ -66,92 +61,109 @@ export default function Quiz() {
         return resultType;
     };
 
+    if (quizQuestions.length === 0) return (
+        <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
+            <div className="relative mb-10">
+                <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
+                <div className="size-20 rounded-full border-t-2 border-gold animate-spin"></div>
+            </div>
+            <h2 className="text-white text-xl font-bold mb-2">질문 준비 중...</h2>
+            <p className="text-slate-500 text-sm">잠시만 기다려주세요.</p>
+        </div>
+    );
+
+    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const totalQuestions = quizQuestions.length;
+    const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+    const isSelected = !!answers[currentQuestion.id];
+
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col pb-24">
-            {/* Header */}
-            <header className="sticky top-0 z-50 flex items-center justify-between bg-background-light/80 dark:bg-background-dark/80 px-4 py-4 backdrop-blur-md border-b border-primary/10 dark:border-white/10">
-                <Link to="/" className="flex size-10 items-center justify-center rounded-full hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
-                    <span className="material-symbols-outlined text-2xl">arrow_back</span>
-                </Link>
-                <div className="flex-1 px-4">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div
-                            className="h-full bg-primary transition-all duration-500 ease-out"
-                            style={{ width: `${progress}%` }}
-                        ></div>
+        <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5 flex flex-col">
+                <TopNavigation title="성향 분석" type="sub" />
+
+                {/* Progress Bar */}
+                <div className="w-full h-1 bg-white/5">
+                    <div
+                        className="h-full bg-gold transition-all duration-500 ease-out shadow-[0_0_10px_rgba(212,175,55,0.5)]"
+                        style={{ width: `${progress}%` }}
+                    ></div>
+                </div>
+
+                <main className="flex-1 px-6 pt-10 pb-24 flex flex-col animate-fade-in relative z-10">
+
+                    {/* Decorative Elements */}
+                    <div className="absolute top-20 right-0 w-64 h-64 bg-gold/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+                    {/* Question Header */}
+                    <div className="mb-10 text-center relative">
+                        <span className="inline-block px-3 py-1 mb-6 text-[10px] font-bold tracking-[0.2em] text-gold uppercase border border-gold/20 rounded-full bg-gold/5">
+                            Question {currentQuestionIndex + 1}
+                        </span>
+                        <h2 className="serif-title text-2xl md:text-3xl font-medium leading-relaxed text-white drop-shadow-xl">
+                            {currentQuestion.question}
+                        </h2>
                     </div>
-                </div>
-                <div className="text-xs font-bold text-slate-500">
-                    <span className="text-primary dark:text-white">{currentQuestionIndex + 1}</span> / {totalQuestions}
-                </div>
-            </header>
 
-            <main className="flex-1 flex flex-col items-center justify-center px-6 py-8 md:max-w-xl md:mx-auto w-full animate-fade-in">
-
-                {/* Product Section */}
-                <div className="w-full mb-8 relative rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
-                    <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-50 transition-opacity" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop")' }}></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/50 to-transparent"></div>
-                    <div className="relative p-6 flex flex-col justify-end h-32">
-                        <span className="text-gold text-[10px] font-bold uppercase tracking-widest mb-1">당신의 지적 취향을 발견하세요</span>
-                        <h3 className="text-white font-bold text-lg leading-tight">나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.</h3>
+                    {/* Options */}
+                    <div className="space-y-4 flex-1">
+                        {currentQuestion.options.map((option) => {
+                            const selected = answers[currentQuestion.id] === option.id;
+                            return (
+                                <button
+                                    key={option.id}
+                                    onClick={() => handleOptionSelect(option.id)}
+                                    className={`w-full p-6 text-left transition-all duration-300 rounded-xl border relative overflow-hidden group ${selected
+                                            ? 'bg-gold/10 border-gold shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <span className={`text-sm md:text-base font-medium transition-colors ${selected ? 'text-white' : 'text-slate-300 group-hover:text-white'
+                                            }`}>
+                                            {option.text}
+                                        </span>
+                                        <div className={`size-5 rounded-full border flex items-center justify-center transition-all ${selected
+                                                ? 'border-gold bg-gold text-black scale-110'
+                                                : 'border-white/20 group-hover:border-white/40'
+                                            }`}>
+                                            {selected && <span className="material-symbols-outlined text-xs font-bold">check</span>}
+                                        </div>
+                                    </div>
+                                    {/* Selection Glow Effect */}
+                                    {selected && <div className="absolute inset-0 bg-gradient-to-r from-gold/5 to-transparent pointer-events-none"></div>}
+                                </button>
+                            );
+                        })}
                     </div>
-                </div>
 
-                {/* Question Section */}
-                <div className="w-full mb-8">
-                    <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold tracking-widest text-gold uppercase bg-gold/10 rounded-full">
-                        Question {currentQuestionIndex + 1}
-                    </span>
-                    <h2 className="text-2xl md:text-3xl font-extrabold leading-tight text-primary dark:text-white mb-2">
-                        {currentQuestion.question}
-                    </h2>
-                </div>
-
-                {/* Options Section */}
-                <div className="w-full space-y-3">
-                    {currentQuestion.options.map((option) => (
+                    {/* Next Button */}
+                    <div className="mt-12">
                         <button
-                            key={option.id}
-                            onClick={() => handleOptionSelect(option.id)}
-                            className={`group flex w-full items-center justify-between p-5 text-left transition-all border rounded-2xl ${answers[currentQuestion.id] === option.id
-                                ? 'bg-primary text-white border-primary ring-4 ring-primary/20 shadow-xl scale-[1.02]'
-                                : 'bg-white dark:bg-white/5 border-primary/5 dark:border-white/10 hover:border-primary hover:bg-primary/5'
+                            onClick={handleNext}
+                            disabled={!isSelected}
+                            className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-300 flex items-center justify-center gap-2 ${isSelected
+                                    ? 'bg-gold text-primary shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_25px_rgba(212,175,55,0.6)] active:scale-[0.98]'
+                                    : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
                                 }`}
                         >
-                            <span className={`text-sm md:text-base font-medium transition-colors ${answers[currentQuestion.id] === option.id ? 'text-white' : 'text-slate-700 dark:text-slate-200'
-                                }`}>
-                                {option.text}
-                            </span>
-
-                            <div className={`size-6 rounded-full border shrink-0 ml-4 flex items-center justify-center transition-colors ${answers[currentQuestion.id] === option.id
-                                ? 'border-white bg-white/20 text-white'
-                                : 'border-slate-300 dark:border-slate-600 group-hover:border-primary group-hover:bg-primary/10'
-                                }`}>
-                                {answers[currentQuestion.id] === option.id && (
-                                    <span className="material-symbols-outlined text-sm font-bold">check</span>
-                                )}
-                            </div>
+                            {currentQuestionIndex === totalQuestions - 1 ? (
+                                <>
+                                    결과 분석하기
+                                    <span className="material-symbols-outlined text-sm">analytics</span>
+                                </>
+                            ) : (
+                                <>
+                                    다음 질문
+                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </>
+                            )}
                         </button>
-                    ))}
-                </div>
+                    </div>
 
-                {/* Navigation Buttons */}
-                <div className="w-full mt-10">
-                    <button
-                        onClick={handleNext}
-                        disabled={!answers[currentQuestion.id]}
-                        className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all shadow-lg ${answers[currentQuestion.id]
-                            ? 'bg-primary text-white hover:bg-primary-dark active:scale-[0.98]'
-                            : 'bg-slate-200 dark:bg-white/5 text-slate-400 cursor-not-allowed'
-                            }`}
-                    >
-                        {currentQuestionIndex === totalQuestions - 1 ? '결과 확인하기' : '다음 질문'}
-                    </button>
-                </div>
-
-            </main>
-            <BottomNavigation />
+                </main>
+                <BottomNavigation />
+            </div>
         </div>
     );
 }
