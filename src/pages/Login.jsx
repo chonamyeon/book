@@ -98,11 +98,15 @@ export default function Login() {
                         <div ref={googleBtnRef} className="w-full flex justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
 
                         <button
-                            onClick={handleMobileLogin}
-                            className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 rounded-xl text-sm text-slate-300 transition-all flex items-center justify-center gap-2"
+                            onClick={(e) => {
+                                console.log("Mobile login clicked");
+                                handleMobileLogin();
+                            }}
+                            className="w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 mt-4"
+                            style={{ zIndex: 50, position: 'relative' }}
                         >
-                            <span className="material-symbols-outlined text-lg">touch_app</span>
-                            로그인이 안 되나요? (구 방식 로그인)
+                            <span className="material-symbols-outlined">touch_app</span>
+                            여기를 눌러 로그인하세요
                         </button>
                     </div>
 
