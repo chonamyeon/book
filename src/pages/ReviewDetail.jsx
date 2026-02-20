@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import HTMLFlipBook from 'react-pageflip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { celebrities } from '../data/celebrities';
+import TopNavigation from '../components/TopNavigation';
+import BottomNavigation from '../components/BottomNavigation';
 
 // Page components for the flipbook
 const PageCover = React.forwardRef((props, ref) => {
