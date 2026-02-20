@@ -72,10 +72,10 @@ export default function Editorial() {
                 <main className="px-6 pt-24 pb-24 space-y-16">
                     {/* Header Section */}
                     <header className="space-y-4">
-                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block">Weekly Curation</span>
+                        <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block">Editorial Picks</span>
                         <h2 className="serif-title text-4xl text-white font-light leading-none">
-                            한 주를 채우는 <br />
-                            <span className="italic text-slate-400">지적인 기록들</span>
+                            지적인 한 주를 위한 <br />
+                            <span className="italic text-slate-400">Archide Curation</span>
                         </h2>
                     </header>
 
