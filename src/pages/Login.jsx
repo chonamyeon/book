@@ -1,52 +1,83 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, googleProvider } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { auth, loginWithGoogle, loginWithGoogleRedirect, getRedirectResult } from '../firebase';
 import TopNavigation from '../components/TopNavigation';
 
 export default function Login() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Prevent premature rendering
+    const [isMobile, setIsMobile] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
+        // Simple Mobile Detection
+        const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        setIsMobile(mobile);
+
+        // 1. Initial Auth Check
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log("Auth State Changed: User Logged In", user.email);
+                console.log("Logged In User:", user.email);
+                setIsCheckingAuth(false);
                 navigate('/profile', { replace: true });
+            } else {
+                // If not logged in, wait for redirect result logic below (on mobile)
+                if (!mobile) setIsCheckingAuth(false);
             }
         });
+
+        // 2. Handle Redirect Result (Mobile Key Logic)
+        if (mobile) {
+            getRedirectResult(auth)
+                .then((result) => {
+                    if (result) {
+                        console.log("Redirect Success:", result.user.email);
+                        // onAuthStateChanged will handle navigation
+                    } else {
+                        // No redirect result found -> Show login screen
+                        setIsCheckingAuth(false);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Redirect Error:", error);
+                    setErrorMsg(error.message);
+                    setIsCheckingAuth(false);
+                });
+        }
+
         return () => unsubscribe();
     }, [navigate]);
 
     const handleGoogleLogin = async () => {
-        // [Key Strategy] Pre-open method doesn't work well with Firebase directly.
-        // Instead, we use synchronous call to signInWithPopup directly without await/wrappers before it.
-        // The most critical part for iOS Safari:
-        // signInWithPopup MUST be the direct result of a user gesture.
-
         setIsLoading(true);
         setErrorMsg('');
 
         try {
-            // DIRECT call without any async/await delay or wrapper function overhead
-            // This is the cleanest way to signal "User Gesture" to Safari
-            await signInWithPopup(auth, googleProvider);
-            // Success handled by onAuthStateChanged
-        } catch (error) {
-            console.error("Popup Login Failed:", error);
-            setIsLoading(false);
-
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                setErrorMsg("팝업이 차단되었습니다. 아이폰 설정 > Safari > 팝업 차단(Pop-up Block)을 '해제'하고 다시 시도해주세요.");
-                alert("로그인을 위해 팝업 창을 허용해주세요.");
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                setErrorMsg("로그인 창이 닫혔습니다. 다시 시도해주세요.");
+            if (isMobile) {
+                // Mobile: Redirect (Robust, survives page navigation)
+                // Now that authDomain is fixed to firebaseapp.com, this should work perfectly.
+                await loginWithGoogleRedirect();
             } else {
-                setErrorMsg("로그인 오류: " + error.message);
+                // PC: Popup (Better UX)
+                await loginWithGoogle();
             }
+        } catch (error) {
+            console.error("Login Error:", error);
+            setErrorMsg(error.message);
+            setIsLoading(false);
         }
     };
+
+    // Loading screen while checking auth/redirect result
+    if (isCheckingAuth) {
+        return (
+            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center text-white">
+                <div className="size-8 border-4 border-slate-700 border-t-gold rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 text-sm">로그인 확인 중...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -65,7 +96,7 @@ export default function Login() {
 
                     {/* Error Message */}
                     {errorMsg && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center animate-pulse">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center">
                             <p className="text-red-400 text-sm font-bold leading-relaxed break-keep">
                                 {errorMsg}
                             </p>
@@ -83,7 +114,7 @@ export default function Login() {
                         ) : (
                             <>
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="size-5" />
-                                <span>Google로 계속하기</span>
+                                <span>Google로 {isMobile ? "이동하여" : ""} 계속하기</span>
                             </>
                         )}
                     </button>
