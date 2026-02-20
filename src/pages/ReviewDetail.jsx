@@ -87,8 +87,9 @@ export default function ReviewDetail() {
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    // Aiming for ~500 chars per page to get around 10 pages for a long review
-    const chunks = reviewText.match(/.{1,500}/g) || [reviewText];
+    // Ensuring a long enough text is split into ~500 chars to get 10+ pages
+    // Using [\s\S] to match newlines as well
+    const chunks = reviewText.match(/[\s\S]{1,500}/g) || [reviewText];
 
     return (
         <div className="bg-[#0a0a0c] h-screen font-display flex flex-col overflow-hidden relative">

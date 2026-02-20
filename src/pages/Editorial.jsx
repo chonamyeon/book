@@ -69,7 +69,7 @@ export default function Editorial() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation title="에디토리얼" type="sub" />
 
-                <main className="px-6 pt-16 pb-24 space-y-12">
+                <main className="px-6 pt-10 pb-24 space-y-10">
                     {/* Header Section */}
                     <header className="space-y-2">
                         <span className="text-gold text-[9px] font-black uppercase tracking-[0.2em] block">Editorial Picks</span>

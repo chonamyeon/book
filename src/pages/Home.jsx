@@ -83,9 +83,9 @@ export default function Home() {
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
                 <TopNavigation type="main" />
 
-                <main className="pb-24 space-y-16">
+                <main className="pb-24 space-y-12">
                     {/* Hero Slider Section - Immersive */}
-                    <section className="relative overflow-visible pt-4">
+                    <section className="relative overflow-visible pt-0">
                         <div
                             className="flex transition-transform duration-700 cubic-bezier(0.4, 0, 0.2, 1)"
                             style={{ transform: `translateX(calc(-${currentSlide * 100}%))` }}
