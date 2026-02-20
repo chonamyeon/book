@@ -146,7 +146,7 @@ export default function Home() {
                         </div>
                     </section>
 
-                    {/* Celebrity List - Minimal */}
+                    {/* Celebrity List - Expanded to 8 */}
                     <section className="px-6">
                         <div className="flex items-end justify-between mb-8 border-b border-white/10 pb-4">
                             <div>
@@ -157,7 +157,7 @@ export default function Home() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                            {celebrities.slice(0, 4).map((celeb) => (
+                            {celebrities.slice(0, 8).map((celeb) => (
                                 <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="group relative block">
                                     <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 relative shadow-lg">
                                         <img src={celeb.image} alt={celeb.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
@@ -189,28 +189,32 @@ export default function Home() {
                         </div>
                     </section>
 
-                    {/* Bestsellers / Recommended */}
+                    {/* Bestsellers / Recommended - 3x3 Grid */}
                     <section className="px-6">
                         <div className="flex items-end justify-between mb-6">
                             <h2 className="serif-title text-xl text-white italic">Essential Reading</h2>
                         </div>
 
-                        <div className="flex overflow-x-auto gap-4 pb-4 hide-scrollbar snap-x">
+                        <div className="grid grid-cols-3 gap-3">
                             {[
                                 { title: "Sapiens", author: "Yuval Noah Harari", cover: "/images/covers/sapiens.jpg" },
                                 { title: "1984", author: "George Orwell", cover: "/images/covers/1984.jpg" },
                                 { title: "Demian", author: "Hermann Hesse", cover: "/images/covers/demian.jpg" },
                                 { title: "Cosmos", author: "Carl Sagan", cover: "/images/covers/c_01.jpg" },
-                                { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/gatsby.jpg" }
+                                { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "/images/covers/gatsby.jpg" },
+                                { title: "Steve Jobs", author: "Walter Isaacson", cover: "/images/covers/s_01.jpg" },
+                                { title: "Shoe Dog", author: "Phil Knight", cover: "/images/covers/c_02.jpg" },
+                                { title: "Factfulness", author: "Hans Rosling", cover: "/images/covers/factfulness.jpg" },
+                                { title: "Almond", author: "Sohn Won-pyung", cover: "/images/covers/almond.jpg" }
                             ].map((book, idx) => (
-                                <Link key={idx} to="#" className="snap-start shrink-0 w-32 group block">
-                                    <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 mb-3 border border-white/10 shadow-lg relative">
+                                <Link key={idx} to="#" className="group block">
+                                    <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 mb-2 border border-white/10 shadow-lg relative">
                                         <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                                             onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}
                                         />
                                     </div>
-                                    <h4 className="text-white text-sm font-bold truncate">{book.title}</h4>
-                                    <p className="text-slate-500 text-[10px] uppercase tracking-wide truncate">{book.author}</p>
+                                    <h4 className="text-white text-[10px] font-bold truncate leading-tight">{book.title}</h4>
+                                    <p className="text-slate-500 text-[9px] uppercase tracking-wide truncate">{book.author}</p>
                                 </Link>
                             ))}
                         </div>
