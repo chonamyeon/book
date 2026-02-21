@@ -16,6 +16,76 @@ export default function Editorial() {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }, []);
 
+    const podcastScript = [
+        { role: 'A', text: "안녕하세요, 아카이드 에디터 에이입니다. 오늘은 유발 하라리의 메가 스테디셀러죠, <사피엔스>를 아주 깊게, 탈탈 털어보려고 합니다. 옆에는 우리들의 공감 요정, 에디터 비님 나오셨어요." },
+        { role: 'B', text: "네, 안녕하세요! 에디터 비입니다. 아, 오늘 드디어 <사피엔스>를 다루는군요? 저 사실 이 책요, 처음엔 그 방대한 양에 압도당해서 며칠 동안 책장만 넘겼었거든요." },
+        { role: 'A', text: "하하, 충분히 이해합니다. 하지만 이 책은 일단 읽기 시작하면, 우리가 당연하게 믿어왔던 세상의 모든 상식이 깨지는 경험을 하게 되죠. " },
+        { role: 'B', text: "맞아요! 특히 그 '인지 혁명' 부분요. 우리 인간이 지구의 주인공이 된 게, 똑똑해서가 아니라 '가짜 이야기'를 잘 믿어서라는 대목! 진짜 충격적이지 않나요?" },
+        { role: 'A', text: "정확히 짚으셨어요. 국가, 법, 그리고 우리가 매일 쓰는 '돈'까지, 사실 이건 다 우리 머릿속에만 있는 가공의 산물이라는 거죠. 만약 우리가 오늘부터, 이 돈은 종이 쪼가리일 뿐이야, 라고 약속을 어기면, 경제 시스템은 바로 그 자리에서 붕괴하거든요." },
+        { role: 'B', text: "와, 듣고 보니 정말 그래요. 우리가 보이지 않는 약속으로 거대한 문명을 세운 셈이네요. 그런데 에디터 에이님, 하라리가 농업 혁명을 '역사상 최대의 사기'라고 불렀잖아요? 이 부분, 독자분들이 되게 궁금해하시더라고요." },
+        { role: 'A', text: "그렇죠. 농경을 시작하면서 식량은 많아졌지만, 정작 인간 개개인의 삶은 더 고달파졌다는 거예요. 수렵 채집 시절엔 하루 몇 시간만 일하면 충분했는데, 농부가 되면서 하루 종일 뙤약볕 아래에서 밭을 매야 했으니까요. 결국, 밀이 인간을 길들였다는 게 하라리의 날카로운 통찰입니다." },
+        { role: 'B', text: "음... 그 비유를 들으니까 요즘 우리 모습이 생각나요. 스마트폰 덕분에 편해졌다고들 하지만, 사실은 24시간 내내 업무 연락에 시달리는 그 느낌이랑 비슷하지 않나요?" },
+        { role: 'A', text: "아주 훌륭한 비유입니다. 하라리도 바로 그 점을 경고하고 싶었던 거예요. 인류가 신의 영역에 도전할 만큼 강력해졌지만, 정작, 우리가 무엇을 원하는가, 에 대한 근본적인 질문은 놓치고 있다는 거죠." },
+        { role: 'B', text: "결국, 우리가 어디로 가고 있는지를 멈춰서 생각해보게 만드는 책인 것 같아요. 한 줄 평을 남기자면, 사피엔스는 우리 인생의 내비게이션을 다시 설정하게 만드는 가장 지적인 지도, 라고 하고 싶네요!" },
+        { role: 'A', text: "네, 오늘 대화 즐거웠습니다. 인류의 과거와 미래가 궁금한 분들이라면, 사피엔스라는 이 지적인 도끼를 꼭 직접 경험해보시길 바랍니다." }
+    ];
+
+    const playPodcast = async () => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        setIsSpeaking(true);
+
+        const playLine = (index) => {
+            if (index >= podcastScript.length || !window.speechSynthesis) {
+                setIsSpeaking(false);
+                return;
+            }
+
+            const item = podcastScript[index];
+            const utterance = new SpeechSynthesisUtterance(item.text);
+
+            const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
+
+            // Gender-based voice selection
+            // A (Male/Analyst): Try to find names often associated with male voices or 'Standard-C'
+            // B (Female/Listener): Try to find names like 'Heami', 'Sun-Hi', 'Yuna', or 'Standard-A'
+            let selectedVoice;
+            if (item.role === 'A') {
+                selectedVoice = preferredVoices.find(v =>
+                    v.name.includes('Neural2-C') || v.name.includes('Standard-C') || v.name.includes('Minho') || v.name.includes('Kildong')
+                ) || preferredVoices[Math.min(1, preferredVoices.length - 1)]; // Fallback to second voice if available
+
+                utterance.pitch = 0.9; // Lower pitch for male tone
+                utterance.rate = 0.88;
+            } else {
+                selectedVoice = preferredVoices.find(v =>
+                    v.name.includes('Neural2-A') || v.name.includes('Standard-A') || v.name.includes('Heami') || v.name.includes('Sun-Hi') || v.name.includes('Yuna')
+                ) || preferredVoices[0];
+
+                utterance.pitch = 1.2; // Higher pitch for female/excited tone
+                utterance.rate = 0.95;
+            }
+
+            utterance.voice = selectedVoice;
+
+            // Pacing
+            const waitTime = item.text.includes('?') ? 1000 : 500;
+
+            utterance.onend = () => {
+                setTimeout(() => playLine(index + 1), waitTime);
+            };
+
+            utterance.onerror = () => setIsSpeaking(false);
+            window.speechSynthesis.speak(utterance);
+        };
+
+        playLine(0);
+    };
+
     const speakReview = (text) => {
         if (isSpeaking) {
             window.speechSynthesis.cancel();
@@ -23,24 +93,14 @@ export default function Editorial() {
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Try to find a premium female Korean voice
+        const utterance = new SpeechSynthesisUtterance(text.replace(/[`*#]/g, ''));
         const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
-        const femaleVoice = preferredVoices.find(v =>
-            v.name.includes('Google') || v.name.includes('Yuna') || v.name.includes('Heami')
-        ) || preferredVoices[0];
+        const femaleVoice = preferredVoices.find(v => v.name.includes('Natural') || v.name.includes('Online')) || preferredVoices[0];
 
-        if (femaleVoice) {
-            utterance.voice = femaleVoice;
-        }
-
-        utterance.pitch = 1.05;
-        utterance.rate = 0.95;
-
+        utterance.voice = femaleVoice;
+        utterance.pitch = 1.02;
+        utterance.rate = 0.88;
         utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-
         setIsSpeaking(true);
         window.speechSynthesis.speak(utterance);
     };
@@ -205,7 +265,7 @@ export default function Editorial() {
                                 </Link>
 
                                 <button
-                                    onClick={() => speakReview(getReviewText('sapiens'))}
+                                    onClick={playPodcast}
                                     className={`flex-none px-6 py-5 rounded-2xl border flex items-center justify-center gap-3 transition-all duration-500 ${isSpeaking ? 'bg-gold border-gold text-primary shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-transparent border-white/10 text-white hover:border-gold/50'}`}
                                 >
                                     <span className="material-symbols-outlined text-xl">

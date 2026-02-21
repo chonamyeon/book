@@ -83,15 +83,23 @@ export default function ReviewDetail() {
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        const intro = "아카이드 오디오 가이드와 함께하는 독서 시간입니다. 이 책의 깊은 사유 속으로 함께 들어가 보시죠. ";
+        const cleanText = text.replace(/[`*#]/g, '');
+        const utterance = new SpeechSynthesisUtterance(intro + cleanText);
+
         const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
-        const femaleVoice = preferredVoices.find(v =>
+        const naturalVoice = preferredVoices.find(v =>
+            v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Neural')
+        );
+
+        const femaleVoice = naturalVoice || preferredVoices.find(v =>
             v.name.includes('Google') || v.name.includes('Yuna') || v.name.includes('Heami')
         ) || preferredVoices[0];
 
         if (femaleVoice) utterance.voice = femaleVoice;
-        utterance.pitch = 1.05;
-        utterance.rate = 0.95;
+        utterance.pitch = 1.02;
+        utterance.rate = 0.88;
+        utterance.volume = 1;
 
         utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => setIsSpeaking(false);
