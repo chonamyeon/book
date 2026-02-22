@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
+import Footer from '../components/Footer';
 
 export default function Celebrity() {
     const { id } = useParams();
@@ -24,14 +25,19 @@ export default function Celebrity() {
                         <div className="relative w-full h-[70vh] md:h-[80vh] flex flex-col justify-end overflow-hidden rounded-2xl shadow-xl">
                             {/* Background Portrait */}
                             <div className="absolute inset-0 z-0">
-                                <img className="w-full h-full object-cover grayscale brightness-90 contrast-[1.15]" src={celeb.image} alt={celeb.name} />
+                                <img
+                                    className="w-full h-full object-cover grayscale brightness-90 contrast-[1.15]"
+                                    src={celeb.image}
+                                    alt={celeb.name}
+                                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544275039-35ed06764574?q=80&w=2000'; }}
+                                />
                                 <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/30 to-transparent"></div>
                             </div>
 
                             {/* Hero Text Overlay Case */}
                             <div className="relative z-20 p-6 md:p-12 mb-4 max-w-full">
                                 <span className="inline-block px-3 py-1.5 bg-gold text-primary text-[10px] font-black uppercase tracking-tighter mb-4 rounded-sm">이달의 인물</span>
-                                <h1 className="text-[32px] md:text-[56px] font-light tracking-tighter text-white mb-4 leading-none whitespace-nowrap overflow-hidden text-ellipsis">
+                                <h1 className="text-[32px] md:text-[56px] font-light tracking-tighter text-white mb-4 leading-tight">
                                     {celeb.name}
                                 </h1>
                                 <p className="text-slate-300 text-lg md:text-xl leading-relaxed font-light italic opacity-90">
@@ -111,15 +117,23 @@ export default function Celebrity() {
                                 {celeb.books.map((book, index) => (
                                     <div key={index} className="flex flex-col gap-6 group">
                                         <div className="flex gap-6">
-                                            <div className="w-1/3 shrink-0">
-                                                <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5">
+                                            <a
+                                                href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-1/3 shrink-0 active:scale-95 transition-transform"
+                                            >
+                                                <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5 relative group/cover">
                                                     <img
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110"
                                                         src={book.cover}
                                                         alt={book.title}
                                                     />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover/cover:bg-black/20 transition-colors flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-white opacity-0 group-hover/cover:opacity-100 transition-opacity">shopping_cart</span>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </a>
                                             <div className="flex flex-col justify-between py-1 w-full">
                                                 <div>
                                                     <h5 className="text-xl font-bold leading-tight mb-1 text-white">{book.title}</h5>
@@ -207,6 +221,7 @@ export default function Celebrity() {
                             ))}
                         </div>
                     </section>
+                    <Footer />
                 </main>
                 <BottomNavigation />
             </div>

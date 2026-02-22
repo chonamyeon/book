@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
+import Footer from '../components/Footer';
 import { resultData } from '../data/resultData';
 import { recommendations } from '../data/recommendations';
 import { useAuth } from '../hooks/useAuth';
@@ -13,6 +14,7 @@ export default function Library() {
     const [quizResult, setQuizResult] = useState(null);
     const [hiddenRecs, setHiddenRecs] = useState([]);
     const [savedBooks, setSavedBooks] = useState([]);
+    const [finderRecs, setFinderRecs] = useState([]);
     const navigate = useNavigate();
 
     const loadSavedBooks = () => {
@@ -34,9 +36,14 @@ export default function Library() {
         setUnlocked(isUnlocked);
         setMyResultType(type);
         setQuizResult(qResult);
-        loadSavedBooks();
+        const fRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
+        setFinderRecs(fRecs);
 
-        const handleStorage = () => loadSavedBooks();
+        const handleStorage = () => {
+            loadSavedBooks();
+            const updatedFRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
+            setFinderRecs(updatedFRecs);
+        };
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
@@ -54,7 +61,7 @@ export default function Library() {
                 <main className="px-6 pt-8 pb-24 space-y-12 animate-fade-in">
                     {/* Personal Collection Header */}
                     <div className="text-center space-y-2 border-b border-white/5 pb-8">
-                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em]">Personal Archive</span>
+                        <span className="text-gold text-xs font-bold uppercase tracking-[0.2em]">Personal archiview</span>
                         <h2 className="serif-title text-3xl text-white font-medium leading-tight">
                             당신의 기록
                         </h2>
@@ -118,12 +125,30 @@ export default function Library() {
                     )}
 
                     {/* Recommendations (if any) */}
-                    {myResultType && myRecs.length > 0 && (
+                    {((myResultType && myRecs.length > 0) || finderRecs.length > 0) && (
                         <div className="pt-8 border-t border-white/10">
                             <h3 className="serif-title text-xl text-white mb-6 italic">Recommended for You</h3>
                             <div className="space-y-4">
+                                {/* Finder Results */}
+                                {finderRecs.length > 0 && finderRecs.map((book, idx) => (
+                                    <div key={`finder-${idx}`} className="flex gap-4 p-4 bg-gold/5 rounded-xl border border-gold/20 hover:bg-gold/10 transition-colors relative group">
+                                        <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-60">
+                                            <span className="text-gold text-[8px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full border border-gold/20">FOUND</span>
+                                        </div>
+                                        <div className="w-16 h-24 shrink-0 bg-slate-800 rounded border border-white/10 overflow-hidden shadow-lg">
+                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 min-w-0 py-1">
+                                            <h4 className="text-white text-sm font-bold truncate mb-1">{book.title}</h4>
+                                            <p className="text-slate-400 text-xs mb-2">{book.author}</p>
+                                            <p className="text-slate-500 text-[10px] line-clamp-2 leading-relaxed">"{book.desc || '당신을 위해 특별히 찾아낸 도서입니다.'}"</p>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Persona Results */}
                                 {myRecs.map((book, idx) => (
-                                    <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                                    <div key={`persona-${idx}`} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
                                         <div className="w-16 h-24 shrink-0 bg-slate-800 rounded border border-white/10 overflow-hidden">
                                             <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
                                         </div>
@@ -181,14 +206,7 @@ export default function Library() {
                             </div>
                         )}
                     </div>
-                    {/* Brand Message Section */}
-                    <section className="px-8 py-16 text-center border-t border-white/5">
-                        <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light">
-                            "책을 기록하는 '아카이드'의 공간에서,<br />
-                            오롯이 나만의 '생각의 시간'을 갖는다"
-                        </p>
-                    </section>
+                    <Footer />
                 </main>
                 <BottomNavigation />
             </div>

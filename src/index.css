@@ -12,6 +12,24 @@
         scrollbar-width: none;
     }
 
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.3);
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(212, 175, 55, 0.5);
+    }
+
     .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
     }
@@ -53,5 +71,23 @@
         border: 1px solid rgba(255, 215, 0, 0.15);
         border-radius: 0.6rem;
         pointer-events: none;
+    }
+
+    @keyframes premium-glow {
+
+        0%,
+        100% {
+            filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3));
+            transform: scale(1);
+        }
+
+        50% {
+            filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.6));
+            transform: scale(1.02);
+        }
+    }
+
+    .anim-pulse {
+        animation: premium-glow 2s ease-in-out infinite;
     }
 }

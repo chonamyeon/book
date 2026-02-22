@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "book-site-123"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

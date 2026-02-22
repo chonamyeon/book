@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import Footer from '../components/Footer';
 
 export default function Contact() {
     const [status, setStatus] = useState('');
@@ -28,7 +29,7 @@ export default function Contact() {
                     <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Get in touch</span>
                     <h2 className="serif-title text-3xl text-slate-900 dark:text-white mb-6">운영진에게 <br />문의하기</h2>
                     <p className="text-sm text-slate-500 leading-relaxed font-light">
-                        서비스 이용 중 궁금하신 점이나 개선 제안이 있다면 언제든 편하게 메시지를 남겨주세요. 아카이드 팀이 정성껏 답변해 드리겠습니다.
+                        서비스 이용 중 궁금하신 점이나 개선 제안이 있다면 언제든 편하게 메시지를 남겨주세요. 아카이뷰 팀이 정성껏 답변해 드리겠습니다.
                     </p>
                 </section>
 
@@ -39,7 +40,7 @@ export default function Contact() {
                         </div>
                         <div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official Email</p>
-                            <a href="mailto:support@archide.co.kr" className="text-sm font-bold text-slate-900 dark:text-white hover:text-gold transition-colors">support@archide.co.kr</a>
+                            <a href="mailto:support@archiview.co.kr" className="text-sm font-bold text-slate-900 dark:text-white hover:text-gold transition-colors">support@archiview.co.kr</a>
                         </div>
                     </div>
 
@@ -66,8 +67,8 @@ export default function Contact() {
                         <button
                             disabled={status === 'sending' || status === 'success'}
                             className={`w-full py-4 rounded-2xl font-bold text-sm tracking-widest shadow-xl transition-all active:scale-95 ${status === 'success'
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-gold hover:text-slate-900'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-gold hover:text-slate-900'
                                 }`}
                         >
                             {status === 'sending' ? '보내는 중...' : status === 'success' ? '전송 완료!' : '문의 보내기'}
@@ -78,6 +79,7 @@ export default function Contact() {
                 <p className="text-[10px] text-center text-slate-400 font-medium">제안하신 내용은 서비스 운영 및 발전에 큰 도움이 됩니다. 감사합니다.</p>
             </main>
 
+            <Footer />
             <BottomNavigation />
         </div>
     );

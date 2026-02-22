@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import Footer from '../components/Footer';
 
 export default function About() {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function About() {
                 <section className="mb-12 animate-fade-in">
                     <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block mb-4">The Vision</span>
                     <h2 className="serif-title text-3xl text-slate-900 dark:text-white mb-6 leading-tight">
-                        아카이드: <br />
+                        아카이뷰: <br />
                         생각의 시간
                     </h2>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
@@ -26,7 +27,7 @@ export default function About() {
                         하지만 정작 '나 자신'의 생각을 정리하고 마주할 시간은 점점 줄어들고 있습니다.
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                        <strong>아카이드(Archide)</strong>는 'Archive'와 'Ideation'의 합성어로,
+                        <strong>아카이뷰(Archiview)</strong>는 'archiview'와 'Review'의 합성어로,
                         단순히 책을 읽는 행위를 넘어 그 과정에서 발생하는 '생각의 조각'들을 기록하고
                         나만의 철학을 구축하는 공간을 지향합니다.
                     </p>
@@ -35,7 +36,7 @@ export default function About() {
                 <div className="h-px bg-slate-100 dark:bg-white/5 mb-12"></div>
 
                 <section className="mb-12 animate-fade-in delay-200">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">왜 아카이드인가요?</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">왜 아카이뷰인가요?</h3>
                     <div className="space-y-6">
                         <div className="flex gap-4">
                             <span className="material-symbols-outlined text-gold">auto_stories</span>
@@ -63,7 +64,7 @@ export default function About() {
 
                 <section className="bg-slate-50 dark:bg-white/5 p-8 rounded-[2rem] text-center border border-slate-100 dark:border-white/5 animate-fade-in delay-300">
                     <p className="text-sm font-serif italic text-slate-600 dark:text-slate-300 mb-4">
-                        "책을 기록하는 '아카이드'의 공간에서,<br />
+                        "책을 기록하는 '아카이뷰'의 공간에서,<br />
                         오롯이 나만의 '생각의 시간'을 갖는다"
                     </p>
                     <button
@@ -75,6 +76,7 @@ export default function About() {
                 </section>
             </main>
 
+            <Footer />
             <BottomNavigation />
         </div>
     );

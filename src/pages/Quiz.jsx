@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { questions } from '../data/questions';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
+import Footer from '../components/Footer';
 
 export default function Quiz() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -163,6 +164,7 @@ export default function Quiz() {
                     </div>
 
                 </main>
+                <Footer />
                 <BottomNavigation />
             </div>
         </div>

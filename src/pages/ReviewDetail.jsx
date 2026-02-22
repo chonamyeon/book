@@ -5,23 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { celebrities } from '../data/celebrities';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import { useAudio } from '../contexts/AudioContext';
+import Footer from '../components/Footer';
 
 // Page components for the flipbook
 const PageCover = React.forwardRef((props, ref) => {
     return (
-        <div className="bg-[#1a1c20] w-full h-full shadow-2xl relative overflow-hidden flex flex-col items-center justify-center p-8 border-l-4 border-gold/20" ref={ref} data-density="hard">
+        <div className="bg-[#1a1c20] w-full h-full shadow-2xl relative overflow-hidden flex flex-col items-center justify-center p-6 border-l-4 border-gold/20" ref={ref} data-density="hard">
             <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/leather.png')" }}></div>
-            <div className="z-10 text-center space-y-6">
-                <div className="w-48 aspect-[2/3] mx-auto shadow-[0_20px_40px_rgba(0,0,0,0.8)] rounded-md overflow-hidden border border-white/10">
+            <div className="z-10 text-center space-y-4">
+                <div className="w-32 md:w-48 aspect-[2/3] mx-auto shadow-[0_20px_40px_rgba(0,0,0,0.8)] rounded-md overflow-hidden border border-white/10">
                     <img src={props.cover} alt="Cover" className="w-full h-full object-cover" />
                 </div>
-                <div className="space-y-2">
-                    <h2 className="serif-title text-3xl text-white font-bold tracking-tight">{props.title}</h2>
-                    <p className="text-gold text-sm font-light uppercase tracking-[0.3em]">{props.author}</p>
+                <div className="space-y-1">
+                    <h2 className="serif-title text-xl md:text-3xl text-white font-bold tracking-tight">{props.title}</h2>
+                    <p className="text-gold text-[10px] md:text-sm font-light uppercase tracking-[0.3em]">{props.author}</p>
                 </div>
-                <div className="pt-8 flex flex-col items-center gap-2">
-                    <span className="material-symbols-outlined text-gold/50 animate-bounce">swipe_left</span>
-                    <p className="text-[10px] text-white/30 uppercase tracking-widest leading-none">Open to Read</p>
+                <div className="pt-4 flex flex-col items-center gap-2">
+                    <span className="material-symbols-outlined text-gold/50 animate-bounce text-sm">swipe_left</span>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest leading-none">Open to Read</p>
                 </div>
             </div>
             <div className="absolute top-0 bottom-0 left-0 w-8 bg-gradient-to-r from-black/40 to-transparent"></div>
@@ -31,31 +33,28 @@ const PageCover = React.forwardRef((props, ref) => {
 
 const Page = React.forwardRef((props, ref) => {
     return (
-        <div className="bg-[#fcfaf2] w-full h-full p-10 flex flex-col shadow-inner relative" ref={ref}>
-            {/* Subtle paper texture */}
+        <div className="bg-[#fcfaf2] w-full h-full p-6 md:p-10 flex flex-col shadow-inner relative" ref={ref}>
             <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/paper-fibers.png')" }}></div>
 
             <div className="z-10 flex flex-col h-full">
-                <div className="flex justify-between items-center mb-10 border-b border-black/5 pb-2">
-                    <span className="text-[9px] text-black/40 font-bold uppercase tracking-widest">The Archive Editorial</span>
-                    <span className="text-[9px] text-black/40 font-bold">{props.number}</span>
+                <div className="flex justify-between items-center mb-6 md:mb-10 border-b border-black/5 pb-2">
+                    <span className="text-[8px] text-black/40 font-bold uppercase tracking-widest">The archiview</span>
+                    <span className="text-[8px] text-black/40 font-bold">{props.number}</span>
                 </div>
 
-                <div className="flex-1">
-                    <div className="prose prose-sm max-w-none">
-                        <p className="text-[#2a2a2a] text-base leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
+                <div className="flex-1 overflow-hidden">
+                    <div className="prose prose-xs md:prose-sm max-w-none">
+                        <p className="text-[#2a2a2a] text-sm md:text-base leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
                             {props.children}
                         </p>
                     </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-black/5 flex justify-center italic text-[10px] text-black/20">
-                    Archide Book Curation
+                <div className="mt-4 pt-4 border-t border-black/5 flex justify-center italic text-[9px] text-black/20">
+                    Archiview Book Curation
                 </div>
             </div>
-
-            {/* Page fold effect */}
-            <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-black/[0.03] to-transparent"></div>
+            <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/[0.02] to-transparent"></div>
         </div>
     );
 });
@@ -64,49 +63,29 @@ export default function ReviewDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const bookRef = useRef(null);
-    const [isSpeaking, setIsSpeaking] = useState(false);
-    const [voices, setVoices] = useState([]);
+    const { isSpeaking, speakReview, stopAll } = useAudio();
+    const [dimensions, setDimensions] = useState({ width: 340, height: 500 });
 
     useEffect(() => {
-        const loadVoices = () => {
-            setVoices(window.speechSynthesis.getVoices());
+        const updateDimensions = () => {
+            const w = window.innerWidth;
+            if (w < 480) {
+                setDimensions({ width: 320, height: 480 });
+            } else {
+                setDimensions({ width: 380, height: 580 });
+            }
         };
-        loadVoices();
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        return () => window.speechSynthesis.cancel(); // Stop on unmount
+        updateDimensions();
+        window.addEventListener('resize', updateDimensions);
+
+        // Prevent body scroll when in reading mode
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            window.removeEventListener('resize', updateDimensions);
+            document.body.style.overflow = 'auto';
+        };
     }, []);
-
-    const speakReview = (text) => {
-        if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-            return;
-        }
-
-        const intro = "아카이드 오디오 가이드와 함께하는 독서 시간입니다. 이 책의 깊은 사유 속으로 함께 들어가 보시죠. ";
-        const cleanText = text.replace(/[`*#]/g, '');
-        const utterance = new SpeechSynthesisUtterance(intro + cleanText);
-
-        const preferredVoices = voices.filter(v => v.lang === 'ko-KR');
-        const naturalVoice = preferredVoices.find(v =>
-            v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Neural')
-        );
-
-        const femaleVoice = naturalVoice || preferredVoices.find(v =>
-            v.name.includes('Google') || v.name.includes('Yuna') || v.name.includes('Heami')
-        ) || preferredVoices[0];
-
-        if (femaleVoice) utterance.voice = femaleVoice;
-        utterance.pitch = 1.02;
-        utterance.rate = 0.88;
-        utterance.volume = 1;
-
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-
-        setIsSpeaking(true);
-        window.speechSynthesis.speak(utterance);
-    };
 
     const bookMap = {
         "sapiens": "사피엔스",
@@ -116,7 +95,10 @@ export default function ReviewDetail() {
         "factfulness": "팩트풀니스",
         "almond": "아몬드",
         "leverage": "레버리지",
-        "one-thing": "원씽"
+        "one-thing": "원씽",
+        "ubermensch": "위버멘쉬",
+        "sayno": "세이노의 가르침",
+        "psychology": "돈의 심리학"
     };
 
     const bookTitle = bookMap[id] || "사피엔스";
@@ -126,117 +108,117 @@ export default function ReviewDetail() {
         const found = celeb.books.find(b => b.title === bookTitle);
         if (found) {
             targetBook = found;
-            // If we found one with a review, we stop immediately.
-            // If it doesn't have a review, we keep looking just in case another celeb has a better entry.
             if (found.review) break;
         }
     }
 
     if (!targetBook) {
-        return <div className="p-20 text-white text-center">리뷰를 찾을 수 없습니다.</div>;
+        return <div className="p-20 text-white text-center bg-background-dark min-h-screen">리뷰를 찾을 수 없습니다.</div>;
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    // Reducing chunk size to ~350 characters to ensure it fits perfectly within the page height (580px)
-    const chunks = reviewText.match(/[\s\S]{1,350}/g) || [reviewText];
+    // Chunk size optimized for smaller pages
+    const chunks = reviewText.match(/[\s\S]{1,330}/g) || [reviewText];
+
+    const handleClose = () => {
+        stopAll();
+        navigate('/editorial');
+    };
 
     return (
-        <div className="bg-[#0f1115] min-h-screen w-full font-display flex flex-col overflow-x-hidden relative z-[9999]">
-            {/* Full screen floating close button */}
-            <div className="fixed top-6 right-6 z-[10000] flex gap-3">
+        <div className="bg-[#0b0d0f] min-h-screen w-full font-display flex flex-col overflow-hidden relative z-[9999]">
+            {/* Control Bar - Mobile Optimized */}
+            <div className="fixed top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent z-[10000] px-4 flex items-center justify-between">
                 <button
-                    onClick={() => speakReview(reviewText)}
-                    className={`size-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-2xl backdrop-blur-md border ${isSpeaking ? 'bg-gold border-gold text-primary' : 'bg-black/60 border-white/20 text-white'}`}
-                    title="음성으로 듣기"
+                    onClick={handleClose}
+                    className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
                 >
-                    <span className="material-symbols-outlined text-2xl">
-                        {isSpeaking ? 'pause' : 'record_voice_over'}
-                    </span>
+                    <span className="material-symbols-outlined">arrow_back</span>
                 </button>
-                <button
-                    onClick={() => {
-                        window.speechSynthesis.cancel();
-                        document.body.style.overflow = 'auto';
-                        navigate('/editorial');
-                    }}
-                    className="size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white hover:text-black transition-all active:scale-90 shadow-2xl backdrop-blur-md"
-                >
-                    <span className="material-symbols-outlined text-2xl font-bold">close</span>
-                </button>
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => speakReview(reviewText)}
+                        className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all active:scale-90 shadow-lg border ${isSpeaking ? 'bg-gold border-gold text-primary font-bold' : 'bg-white/5 border-white/20 text-white/80'}`}
+                    >
+                        <span className="material-symbols-outlined text-sm">
+                            {isSpeaking ? 'pause' : 'record_voice_over'}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-widest">{isSpeaking ? 'Listening' : 'Listen'}</span>
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
+                    >
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+                </div>
             </div>
 
-            <main className="flex-1 min-h-screen w-full flex flex-col items-center justify-center relative py-12">
-                {/* FlipBook Area - Full Screen Scale */}
-                <div className="relative w-full flex-1 flex items-center justify-center">
+            <main className="flex-1 w-full flex items-center justify-center relative touch-none pt-12">
+                <div className="relative w-full flex items-center justify-center">
 
-                    {/* Left Flip Control - Enhanced */}
+                    {/* Desktop Arrows */}
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        className="absolute left-8 z-50 size-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 hover:text-gold hover:border-gold/40 hover:bg-white/10 transition-all active:scale-95 hidden md:flex"
+                        className="absolute left-12 z-50 size-16 rounded-full bg-white/5 border border-white/10 hidden md:flex items-center justify-center text-white/20 hover:text-gold transition-all"
                     >
-                        <span className="material-symbols-outlined text-5xl">chevron_left</span>
+                        <span className="material-symbols-outlined text-4xl">chevron_left</span>
                     </button>
 
-                    <div className="relative w-full max-w-[440px] flex justify-center items-center scale-110 md:scale-125">
+                    <div className="relative flex justify-center items-center scale-95 sm:scale-100 md:scale-110">
                         <HTMLFlipBook
-                            width={380}
-                            height={580}
+                            width={dimensions.width}
+                            height={dimensions.height}
                             size="fixed"
-                            minWidth={320}
+                            minWidth={280}
                             maxWidth={420}
-                            minHeight={500}
+                            minHeight={400}
                             maxHeight={650}
-                            maxShadowOpacity={0.4}
+                            maxShadowOpacity={0.3}
                             showCover={true}
                             mobileScrollSupport={true}
                             clickEventForward={true}
                             usePortrait={true}
                             startPage={0}
                             drawShadow={true}
-                            flippingTime={800}
+                            flippingTime={600}
                             useMouseEvents={true}
                             ref={bookRef}
-                            className="editorial-book shadow-[0_60px_150px_rgba(0,0,0,0.95)]"
+                            className="editorial-book shadow-[0_40px_100px_rgba(0,0,0,0.8)]"
                         >
-                            {/* Cover */}
                             <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
 
-                            {/* Summary / Intro Page */}
                             <Page number="1">
-                                <div className="space-y-6">
-                                    <div className="h-1 w-16 bg-gold"></div>
-                                    <h3 className="text-3xl font-serif text-[#1a1a1a] font-bold tracking-tight">Synopsis</h3>
-                                    <p className="italic text-black/80 leading-relaxed font-serif text-lg">"{targetBook.desc}"</p>
-                                    <div className="pt-12 border-t border-black/5">
-                                        <p className="text-sm font-serif text-black/60 leading-relaxed">
+                                <div className="space-y-4">
+                                    <div className="h-1 w-12 bg-gold"></div>
+                                    <h3 className="text-2xl font-serif text-[#1a1a1a] font-bold">Synopsis</h3>
+                                    <p className="italic text-black/70 leading-relaxed font-serif text-base">"{targetBook.desc}"</p>
+                                    <div className="pt-8 border-t border-black/5">
+                                        <p className="text-[11px] font-serif text-black/40 leading-relaxed">
                                             세상의 모든 위대한 사유는 한 권의 책에서 시작됩니다.
-                                            아카이드 에디터가 포착한 문장의 빛을 따라
+                                            아카이뷰 에디터가 포착한 문장의 빛을 따라
                                             당신만의 아카이브를 완성해보세요.
                                         </p>
                                     </div>
                                 </div>
                             </Page>
 
-                            {/* Content Pages */}
                             {chunks.map((chunk, idx) => (
                                 <Page key={idx} number={idx + 2}>
-                                    <div className="font-serif leading-relaxed text-[#2a2a2a] text-base">
-                                        {chunk}
-                                    </div>
+                                    {chunk}
                                 </Page>
                             ))}
 
-                            {/* Back Cover */}
-                            <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-12 text-center" data-density="hard">
-                                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/leather.png')" }}></div>
-                                <div className="z-10 space-y-6 font-serif">
-                                    <div className="text-gold/40 text-5xl italic mb-6">Fin.</div>
-                                    <p className="text-white/30 text-sm leading-relaxed italic">
-                                        "우리가 읽는 책이 우리 머리를 주먹으로 <br />한 대 쳐서 우리를 깨우지 않는다면, <br />왜 그 책을 읽는가?" <br />
+                            <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-8 text-center" data-density="hard">
+                                <div className="z-10 space-y-4 font-serif">
+                                    <div className="text-gold/40 text-4xl italic mb-4">Fin.</div>
+                                    <p className="text-white/20 text-[10px] leading-relaxed italic">
+                                        "우리가 읽는 책이 우리 머리를 주먹으로 한 대 쳐서 깨우지 않는다면, <br />왜 그 책을 읽는가?" <br />
                                         - 프란츠 카프카
                                     </p>
-                                    <div className="pt-12 text-xs text-white/10 tracking-[0.5em] uppercase">
-                                        Archide Archive 2024
+                                    <div className="pt-6 text-[8px] text-white/5 tracking-[0.4em] uppercase">
+                                        Archiview archiview
                                     </div>
                                 </div>
                                 <div className="absolute top-0 bottom-0 right-0 w-8 bg-gradient-to-l from-black/40 to-transparent"></div>
@@ -244,41 +226,29 @@ export default function ReviewDetail() {
                         </HTMLFlipBook>
                     </div>
 
-                    {/* Right Flip Control - Enhanced */}
                     <button
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        className="absolute right-8 z-50 size-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 hover:text-gold hover:border-gold/40 hover:bg-white/10 transition-all active:scale-95 hidden md:flex"
+                        className="absolute right-12 z-50 size-16 rounded-full bg-white/5 border border-white/10 hidden md:flex items-center justify-center text-white/20 hover:text-gold transition-all"
                     >
-                        <span className="material-symbols-outlined text-5xl">chevron_right</span>
+                        <span className="material-symbols-outlined text-4xl">chevron_right</span>
                     </button>
 
-                    {/* Mobile Controls Overlay */}
-                    <div className="absolute inset-x-0 bottom-12 flex justify-between px-6 md:hidden z-50">
-                        <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="size-16 rounded-full bg-black/60 border border-white/10 text-white flex items-center justify-center shadow-2xl backdrop-blur-md">
-                            <span className="material-symbols-outlined text-3xl">chevron_left</span>
-                        </button>
-                        <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="size-16 rounded-full bg-black/60 border border-white/10 text-white flex items-center justify-center shadow-2xl backdrop-blur-md">
-                            <span className="material-symbols-outlined text-3xl">chevron_right</span>
-                        </button>
+                    {/* Mobile Tap Hints */}
+                    <div className="absolute inset-x-0 bottom-4 flex justify-center md:hidden pointer-events-none">
+                        <span className="text-[9px] text-white/20 uppercase tracking-[0.3em] font-bold animate-pulse">Tap edges to flip</span>
                     </div>
                 </div>
             </main>
 
             <style>{`
-                .editorial-book {
-                   border-radius: 4px;
-                   overflow: visible !important;
-                }
-                .stf__parent {
-                   background-color: transparent !important;
-                }
-                .stf__block {
-                   background-color: transparent !important;
-                }
-                canvas {
-                   display: none !important;
-                }
+                .editorial-book { border-radius: 4px; overflow: visible !important; }
+                .stf__parent { background-color: transparent !important; }
+                .stf__block { background-color: transparent !important; }
+                canvas { display: none !important; }
             `}</style>
+            <div className="w-full bg-black">
+                <Footer />
+            </div>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import Footer from '../components/Footer';
 
 export default function PrivacyPolicy() {
     useEffect(() => {
@@ -19,7 +20,7 @@ export default function PrivacyPolicy() {
                             본 방침은 2026년 2월 20일부터 시행됩니다.
                         </p>
                         <p className="text-sm leading-relaxed mb-4">
-                            '아카이드: 생각의 시간'은(이하 '회사'는) 고객님의 개인정보를 중요시하며, "개인정보 보호법" 및 "정보통신망 이용촉진 및 정보보호 등에 관한 법률"을 준수하고 있습니다.
+                            '아카이뷰: 생각의 시간'은(이하 '회사'는) 고객님의 개인정보를 중요시하며, "개인정보 보호법" 및 "정보통신망 이용촉진 및 정보보호 등에 관한 법률"을 준수하고 있습니다.
                         </p>
                     </section>
 
@@ -62,13 +63,14 @@ export default function PrivacyPolicy() {
                     <section className="mb-8">
                         <h3 className="text-sm font-bold border-l-4 border-gold pl-2 mb-3">5. 개인정보 보호책임자</h3>
                         <p className="text-xs leading-relaxed opacity-80">
-                            - 성명: 운영자 (Archide Team)<br />
-                            - 이메일: support@archide.co.kr
+                            - 성명: 운영자 (Archiview Team)<br />
+                            - 이메일: support@archiview.co.kr
                         </p>
                     </section>
                 </article>
             </main>
 
+            <Footer />
             <BottomNavigation />
         </div>
     );

@@ -4,6 +4,7 @@ import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { logout } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
+import Footer from '../components/Footer';
 
 export default function Profile() {
     const { user, loading } = useAuth();
@@ -61,7 +62,7 @@ export default function Profile() {
                         <div className="absolute inset-0 p-6 flex flex-col justify-between">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="serif-title text-gold text-lg italic tracking-wider">The Archive</h3>
+                                    <h3 className="serif-title text-gold text-lg italic tracking-wider">The Archiview</h3>
                                     <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] block mt-1">Private Membership</span>
                                 </div>
                                 <div className="size-8 rounded-full border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-sm">
@@ -111,7 +112,7 @@ export default function Profile() {
 
                     {/* Menu Links */}
                     <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My Archive</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My archiview</h4>
 
                         <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
                             <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
@@ -123,7 +124,7 @@ export default function Profile() {
                                 </div>
                                 <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
                             </button>
-                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                            <button onClick={() => navigate('/reading-notes')} className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
                                     <div className="size-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
                                         <span className="material-symbols-outlined text-lg">edit_note</span>
@@ -165,17 +166,10 @@ export default function Profile() {
                     </div>
 
                     <p className="text-center text-[10px] text-slate-600 font-mono pt-8">
-                        The Archive ID: {user.uid.slice(0, 8).toUpperCase()}<br />
+                        The Archiview ID: {user.uid.slice(0, 8).toUpperCase()}<br />
                         Version 1.4.0 (Build 2024.05)
                     </p>
-                    {/* Brand Message Section */}
-                    <section className="px-8 py-16 text-center border-t border-white/5 opacity-60">
-                        <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light">
-                            "책을 기록하는 '아카이드'의 공간에서,<br />
-                            오롯이 나만의 '생각의 시간'을 갖는다"
-                        </p>
-                    </section>
+                    <Footer />
                 </main>
 
                 <BottomNavigation />

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { recommendations } from '../data/recommendations';
 import { resultData } from '../data/resultData';
 import BottomNavigation from '../components/BottomNavigation';
+import Footer from '../components/Footer';
 
 export default function Result() {
     const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
@@ -48,7 +49,7 @@ export default function Result() {
     const handleShare = () => {
         if (navigator.share) {
             navigator.share({
-                title: 'The Archive - 인지 분석 결과',
+                title: 'The Archiview - 인지 분석 결과',
                 text: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
                 url: window.location.href,
             }).catch(console.error);
@@ -64,8 +65,8 @@ export default function Result() {
         // so we prompt for share sheet (where Instagram can be selected) or give instructions.
         if (navigator.share) {
             navigator.share({
-                title: 'The Archive',
-                text: `${data.persona} - 나의 인지 분석 결과! #TheArchive #독서테스트`,
+                title: 'The Archiview',
+                text: `${data.persona} - 나의 인지 분석 결과! #TheArchiview #독서테스트`,
                 url: window.location.href,
             }).catch(console.error);
         } else {
@@ -473,14 +474,7 @@ export default function Result() {
                     </div>
                 </section>
 
-                {/* Brand Message Section */}
-                <section className="px-8 py-16 text-center border-t border-white/5 opacity-80 mb-8">
-                    <h2 className="serif-title text-2xl text-white mb-4 tracking-tight">아카이드: 생각의 시간</h2>
-                    <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto font-light">
-                        "책을 기록하는 '아카이드'의 공간에서,<br />
-                        오롯이 나만의 '생각의 시간'을 갖는다"
-                    </p>
-                </section>
+                <Footer />
             </main>
 
             {/* Bottom Navigation */}

@@ -5,6 +5,7 @@ import { auth, loginWithGoogleRedirect } from '../firebase';
 import { GoogleAuthProvider, signInWithCredential, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
+import Footer from '../components/Footer';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -87,7 +88,7 @@ export default function Login() {
                         <div className="size-20 bg-white/5 rounded-2xl mx-auto flex items-center justify-center border border-white/10 mb-6">
                             <span className="material-symbols-outlined text-4xl text-gold">menu_book</span>
                         </div>
-                        <h1 className="serif-title text-3xl mb-2">The Archive</h1>
+                        <h1 className="serif-title text-3xl mb-2">The Archiview</h1>
                         <p className="text-slate-400 text-sm">당신의 지적 여정을 기록하는 프리미엄 아카이브</p>
                     </div>
 
@@ -120,12 +121,13 @@ export default function Login() {
 
                     <div className="mt-12 p-5 bg-white/5 rounded-2xl border border-white/10 text-center">
                         <p className="text-[10px] text-slate-500 leading-relaxed">
-                            The Archive는 당신의 독서 취향을 분석하여<br />
+                            The Archiview는 당신의 독서 취향을 분석하여<br />
                             최고의 지적 경험을 선사합니다.
                         </p>
                     </div>
                 </div>
             </main>
+            <Footer />
             <BottomNavigation />
         </div>
     );

@@ -16,7 +16,7 @@ export default function Membership() {
                         Invest in <br /><span className="italic text-gold">Your Mind</span>
                     </h1>
                     <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto">
-                        Unlock the full potential of The Archive. Access deep-dive analysis and exclusive curated lists from world leaders.
+                        Unlock the full potential of The archiview. Access deep-dive analysis and exclusive curated lists from world leaders.
                     </p>
                 </div>
 

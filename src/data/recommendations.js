@@ -37,6 +37,41 @@ export const recommendations = {
                 cover: "/images/covers/ju_01.jpg",
                 desc: "국가의 성패를 가르는 결정적 요인에 대한 심도 있는 분석.",
                 link: "https://www.coupang.com/np/search?component=&q=국가는%20왜%20실패하는가"
+            },
+            {
+                title: "세이노의 가르침",
+                author: "세이노",
+                cover: "/images/covers/say_01.jpg",
+                desc: "수만 명의 인생을 바꾼 자본주의의 정석. 가난의 사슬을 끊는 법.",
+                link: "https://www.coupang.com/np/search?component=&q=세이노의%20가르침"
+            },
+            {
+                title: "돈의 심리학",
+                author: "모건 하우절",
+                cover: "/images/covers/don_01.jpg",
+                desc: "부의 축적을 결정하는 20가지 투자 철학. 부자가 되기 위한 심리적 무기.",
+                link: "https://www.coupang.com/np/search?component=&q=돈의%20심리학"
+            },
+            {
+                title: "팩트풀니스",
+                author: "한스 로슬링",
+                cover: "/images/covers/factfulness.jpg",
+                desc: "막연한 두려움을 이기는 데이터의 힘. 세상을 올바르게 바라보는 법.",
+                link: "https://www.coupang.com/np/search?component=&q=팩트풀니스"
+            },
+            {
+                title: "레버리지",
+                author: "롭 무어",
+                cover: "/images/covers/rm_01.jpg",
+                desc: "최소의 노력으로 최대의 결과를 얻는 법. 자본주의적 사고방식의 대전환.",
+                link: "https://www.coupang.com/np/search?component=&q=레버리지"
+            },
+            {
+                title: "원씽",
+                author: "게리 켈러",
+                cover: "/images/covers/one_01.jpg",
+                desc: "복잡한 세상을 이기는 단 하나의 원칙. 성공의 핵심을 관통하는 통찰.",
+                link: "https://www.coupang.com/np/search?component=&q=원씽"
             }
         ],
         travelTitle: "영감을 깨우는 혁신의 도시 (Travel Curation)",
@@ -262,6 +297,13 @@ export const recommendations = {
                 cover: "/images/covers/i_02.jpg",
                 desc: "인간의 본성과 신념, 죄와 벌에 대한 거대한 질문.",
                 link: "https://www.coupang.com/np/search?component=&q=카라마조프%20가의%20형제들"
+            },
+            {
+                title: "위버멘쉬",
+                author: "프리드리히 니체",
+                cover: "/images/covers/wm_01.jpg",
+                desc: "누구의 시선도 아닌 내 의지대로의 삶. 스스로의 주인이 되는 자의 선택.",
+                link: "https://www.coupang.com/np/search?component=&q=위버멘쉬"
             }
         ],
         travelTitle: "영혼을 맑게 하는 침묵의 성지 (Travel Curation)",
