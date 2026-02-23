@@ -269,17 +269,17 @@ export default function Home() {
 
                         <div className="grid grid-cols-3 gap-x-3 gap-y-6">
                             {[
-                                { title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg", celebId: "bill-gates" },
-                                { title: "세이노의 가르침", author: "세이노", cover: "/images/covers/say_01.jpg", celebId: "archide-editors" },
-                                { title: "돈의 심리학", author: "모건 하우절", cover: "/images/covers/don_01.jpg", celebId: "archide-editors" },
-                                { title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg", celebId: "rm-bts" },
-                                { title: "채식주의자", author: "한강", cover: "/images/covers/vegetarian.jpg", celebId: "han-kang" },
-                                { title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg", celebId: "rm-bts" },
-                                { title: "팩트풀니스", author: "한스 로슬링", cover: "/images/covers/factfulness.jpg", celebId: "bill-gates" },
-                                { title: "아몬드", author: "손원평", cover: "/images/covers/almond.jpg", celebId: "rm-bts" },
-                                { title: "소년이 온다", author: "한강", cover: "/images/covers/human_acts.jpg", celebId: "han-kang" }
+                                { id: "sapiens", title: "사피엔스", author: "유발 하라리", cover: "/images/covers/sapiens.jpg", celebId: "bill-gates" },
+                                { id: "sayno", title: "세이노의 가르침", author: "세이노", cover: "/images/covers/say_01.jpg", celebId: "archide-editors" },
+                                { id: "psychology", title: "돈의 심리학", author: "모건 하우절", cover: "/images/covers/don_01.jpg", celebId: "archide-editors" },
+                                { id: "demian", title: "데미안", author: "헤르만 헤세", cover: "/images/covers/demian.jpg", celebId: "rm-bts" },
+                                { id: "vegetarian", title: "채식주의자", author: "한강", cover: "/images/covers/vegetarian.jpg", celebId: "han-kang" },
+                                { id: "1984", title: "1984", author: "조지 오웰", cover: "/images/covers/1984.jpg", celebId: "rm-bts" },
+                                { id: "factfulness", title: "팩트풀니스", author: "한스 로슬링", cover: "/images/covers/factfulness.jpg", celebId: "bill-gates" },
+                                { id: "almond", title: "아몬드", author: "손원평", cover: "/images/covers/almond.jpg", celebId: "rm-bts" },
+                                { id: "small-things", title: "이처럼 사소한 것들", author: "클레어 키건", cover: "/images/covers/small_things.jpg", celebId: "gurus-choice" }
                             ].map((book, idx) => (
-                                <Link key={idx} to={`/celebrity/${book.celebId}`} className="group block cursor-pointer">
+                                <Link key={idx} to={book.id ? `/review/${book.id}` : `/celebrity/${book.celebId}`} className="group block cursor-pointer">
                                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 mb-3 border border-white/10 shadow-2xl relative">
                                         <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                                             onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}

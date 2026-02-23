@@ -39,13 +39,21 @@ export default function Library() {
         const fRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
         setFinderRecs(fRecs);
 
+        // 초기 로드
+        loadSavedBooks();
+
         const handleStorage = () => {
             loadSavedBooks();
             const updatedFRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
             setFinderRecs(updatedFRecs);
         };
+        // 같은 탭 내 커스텀 이벤트 + 다른 탭 storage 이벤트 모두 수신
         window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
+        window.addEventListener('savedBooksUpdated', handleStorage);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('savedBooksUpdated', handleStorage);
+        };
     }, []);
 
     const result = myResultType ? resultData[myResultType] : null;

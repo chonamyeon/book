@@ -7,6 +7,7 @@ import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { useAudio } from '../contexts/AudioContext';
 import Footer from '../components/Footer';
+import { bookScripts } from '../data/bookScripts';
 
 // Page components for the flipbook
 const PageCover = React.forwardRef((props, ref) => {
@@ -43,7 +44,7 @@ const Page = React.forwardRef((props, ref) => {
                 </div>
 
                 <div className="flex-1 overflow-hidden">
-                    <div className="prose prose-xs md:prose-sm max-w-none">
+                    <div className="prose prose-xs md:prose-sm max-w-none pb-4">
                         <p className="text-[#2a2a2a] text-sm md:text-base leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
                             {props.children}
                         </p>
@@ -63,7 +64,7 @@ export default function ReviewDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const bookRef = useRef(null);
-    const { isSpeaking, speakReview, stopAll } = useAudio();
+    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll } = useAudio();
     const [dimensions, setDimensions] = useState({ width: 340, height: 500 });
 
     useEffect(() => {
@@ -98,7 +99,11 @@ export default function ReviewDetail() {
         "one-thing": "원씽",
         "ubermensch": "위버멘쉬",
         "sayno": "세이노의 가르침",
-        "psychology": "돈의 심리학"
+        "psychology": "돈의 심리학",
+        "your-name": "너의 이름은",
+        "property-money": "돈의 속성",
+        "stoner": "스토너",
+        "small-things": "이처럼 사소한 것들"
     };
 
     const bookTitle = bookMap[id] || "사피엔스";
@@ -117,13 +122,22 @@ export default function ReviewDetail() {
     }
 
     const reviewText = targetBook.review || targetBook.desc;
-    // Chunk size optimized for smaller pages
-    const chunks = reviewText.match(/[\s\S]{1,330}/g) || [reviewText];
+
+    // Improved chunking: split by paragraphs or approximately 320 characters to fit without scroll
+    const chunks = reviewText.split('\n\n').reduce((acc, para) => {
+        if (para.length > 320) {
+            const subChunks = para.match(/[\s\S]{1,320}/g) || [para];
+            return [...acc, ...subChunks];
+        }
+        return [...acc, para];
+    }, []) || [reviewText];
 
     const handleClose = () => {
         stopAll();
         navigate('/editorial');
     };
+
+    const hasPodcast = !!bookScripts[id];
 
     return (
         <div className="bg-[#0b0d0f] min-h-screen w-full font-display flex flex-col overflow-hidden relative z-[9999]">
@@ -138,13 +152,25 @@ export default function ReviewDetail() {
 
                 <div className="flex gap-2">
                     <button
-                        onClick={() => speakReview(reviewText)}
-                        className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all active:scale-90 shadow-lg border ${isSpeaking ? 'bg-gold border-gold text-primary font-bold' : 'bg-white/5 border-white/20 text-white/80'}`}
+                        onClick={() => {
+                            if (activeAudioId === `review-${id}`) {
+                                stopAll();
+                            } else {
+                                if (hasPodcast) {
+                                    playPodcast(bookScripts[id], `review-${id}`);
+                                } else {
+                                    speakReview(reviewText, id);
+                                }
+                            }
+                        }}
+                        className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all active:scale-90 shadow-lg border ${(isSpeaking && activeAudioId === `review-${id}`) ? 'bg-gold border-gold text-primary font-bold' : 'bg-white/5 border-white/20 text-white/80'}`}
                     >
                         <span className="material-symbols-outlined text-sm">
-                            {isSpeaking ? 'pause' : 'record_voice_over'}
+                            {(isSpeaking && activeAudioId === `review-${id}`) ? 'stop' : (hasPodcast ? 'podcasts' : 'record_voice_over')}
                         </span>
-                        <span className="text-[10px] uppercase tracking-widest">{isSpeaking ? 'Listening' : 'Listen'}</span>
+                        <span className="text-[10px] uppercase tracking-widest">
+                            {(isSpeaking && activeAudioId === `review-${id}`) ? 'Listening' : (hasPodcast ? 'Podcast' : 'Listen')}
+                        </span>
                     </button>
                     <button
                         onClick={handleClose}
@@ -245,6 +271,9 @@ export default function ReviewDetail() {
                 .stf__parent { background-color: transparent !important; }
                 .stf__block { background-color: transparent !important; }
                 canvas { display: none !important; }
+                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
             `}</style>
             <div className="w-full bg-black">
                 <Footer />

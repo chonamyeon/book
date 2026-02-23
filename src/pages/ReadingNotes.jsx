@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
+import { celebrities } from '../data/celebrities';
 import { db } from '../firebase';
 import {
     collection, addDoc, getDocs, deleteDoc,
@@ -152,14 +153,16 @@ export default function ReadingNotes() {
         if (!title.trim() && !body.trim() && !bookTitle.trim()) return;
         setSaving(true);
         try {
+            const bookCover = uniqueBooks.find(b => b.title === bookTitle)?.cover || null;
             const data = {
                 title: title.trim(),
                 body: body.trim(),
                 mood: selectedMood,
                 tags,
                 type: noteType,
-                bookTitle: noteType === 'review' ? bookTitle.trim() : null,
-                rating: noteType === 'review' ? rating : null,
+                bookTitle: noteType !== '#메모' ? bookTitle.trim() : null,
+                bookCover: noteType !== '#메모' ? bookCover : null,
+                rating: noteType === '#서평' ? rating : null,
                 updatedAt: serverTimestamp()
             };
             if (editingId) await updateDoc(doc(db, 'users', user.uid, 'readingNotes', editingId), data);
@@ -195,12 +198,34 @@ export default function ReadingNotes() {
         return m && s;
     });
 
-    const totalBooks = new Set(notes.filter(n => n.type === 'review').map(n => n.bookTitle)).size;
+    const today = new Date();
+    const todayNotes = notes.filter(n => {
+        if (!n.createdAt) return false;
+        const d = n.createdAt instanceof Date ? n.createdAt : n.createdAt.toDate?.() || new Date(n.createdAt);
+        return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+    }).length;
     const totalThoughts = notes.length;
     const dailyQuote = getDailyQuote();
 
     const [activeFilter, setActiveFilter] = useState('전체보기');
-    const FILTERS = ['전체보기', '#서평', '#필사', '#메모'];
+    const FILTERS = ['전체보기', '#서평', '#메모'];
+
+    // 사이트 등록 도서 목록 (celebrities.js에서 추출)
+    const allBooks = celebrities.flatMap(celeb => celeb.books.map(b => ({
+        title: b.title,
+        author: b.author,
+        cover: b.cover
+    })));
+    const uniqueBooks = Array.from(new Map(allBooks.map(b => [b.title, b])).values());
+
+    const [customBookInput, setCustomBookInput] = useState(false);
+    const [bookSearch, setBookSearch] = useState('');
+    const [showBookDropdown, setShowBookDropdown] = useState(false);
+
+    const filteredBooks = uniqueBooks.filter(b =>
+        b.title.includes(bookSearch) || b.author.includes(bookSearch)
+    );
+
 
     if (loading) return (
         <div className="bg-background-dark min-h-screen flex items-center justify-center">
@@ -249,8 +274,8 @@ export default function ReadingNotes() {
                         </div>
                         <div className="flex gap-12 relative items-end">
                             <div className="space-y-1">
-                                <span className="text-[12px] text-white/40 block">읽은 책</span>
-                                <span className="text-2xl font-bold text-white tracking-tighter">{totalBooks}권</span>
+                                <span className="text-[12px] text-white/40 block">오늘 생각</span>
+                                <span className="text-2xl font-bold text-white tracking-tighter">{todayNotes}개</span>
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[12px] text-white/40 block">남긴 생각</span>
@@ -310,26 +335,38 @@ export default function ReadingNotes() {
                                             className={`p-5 rounded-[1.5rem] border transition-all duration-500 relative bg-[#121826]/40 border-white/[0.03] hover:border-white/10 hover:bg-[#121826]/60 cursor-pointer ${isExp ? 'ring-1 ring-gold/20' : ''}`}
                                         >
                                             <div className="flex gap-5">
-                                                {/* Left: Book Cover or Icon */}
+                                                {/* Left: Book Cover or Memo Character */}
                                                 <div className="w-[84px] h-[112px] shrink-0 rounded-lg overflow-hidden bg-slate-800 shadow-xl border border-white/5 flex items-center justify-center relative group-hover/item:scale-105 transition-transform">
                                                     {isReview ? (
-                                                        <div className="absolute inset-0 bg-gradient-to-br from-green-900/40 to-slate-900 flex flex-col items-center justify-center p-2 text-center">
-                                                            <span className="text-[9px] text-white/40 serif-title font-bold leading-tight break-all">{note.bookTitle}</span>
-                                                            <div className="absolute inset-0 bg-black/20" />
-                                                        </div>
+                                                        <>
+                                                            {note.bookCover && (
+                                                                <img
+                                                                    src={note.bookCover}
+                                                                    alt={note.bookTitle}
+                                                                    className="absolute inset-0 w-full h-full object-cover z-10"
+                                                                    onError={e => { e.target.style.display = 'none'; }}
+                                                                />
+                                                            )}
+                                                            <div className="absolute inset-0 bg-gradient-to-br from-[#1a2235] to-[#0d1117] flex flex-col items-center justify-center p-2 text-center">
+                                                                <span className="text-[9px] text-white/40 font-bold leading-tight break-all">{note.bookTitle}</span>
+                                                            </div>
+                                                        </>
                                                     ) : (
-                                                        <div className="flex flex-col items-center justify-center gap-2 opacity-40">
-                                                            <span className="material-symbols-outlined text-2xl">description</span>
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+                                                            style={{ background: 'linear-gradient(135deg, #1e1b3a 0%, #2d1b4e 50%, #1a2040 100%)' }}>
+                                                            <span style={{ fontSize: '38px', lineHeight: 1 }}>🐱</span>
+                                                            <span className="text-[8px] text-white/20 font-bold tracking-wider">MEMO</span>
                                                         </div>
                                                     )}
                                                 </div>
+
 
                                                 {/* Right: Content */}
                                                 <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between items-start">
                                                             <h3 className="text-[17px] font-bold text-white leading-tight truncate pr-4">
-                                                                {note.bookTitle || note.title || '오늘의 단상'}
+                                                                {note.bookTitle || note.title || '오늘의 기록'}
                                                             </h3>
                                                             <span className="text-[10px] text-white/20 tabular-nums pt-1">
                                                                 {note.createdAt?.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.')}
@@ -391,39 +428,124 @@ export default function ReadingNotes() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12 pb-32">
-                            {/* Book Selection */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-[14px] font-bold text-gold flex items-center gap-2">
-                                        도서 선택 (선택 사항)
-                                        <span className="material-symbols-outlined text-lg">auto_stories</span>
-                                    </h4>
+                            {/* Book Selection - #메모 시 숨김 */}
+                            {noteType !== '#메모' && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[14px] font-bold text-gold flex items-center gap-2">
+                                            도서 선택 (선택 사항)
+                                            <span className="material-symbols-outlined text-lg">auto_stories</span>
+                                        </h4>
+                                        {bookTitle && (
+                                            <button
+                                                onClick={() => { setBookTitle(''); setBookSearch(''); setCustomBookInput(false); setShowBookDropdown(false); }}
+                                                className="text-[11px] text-white/30 hover:text-red-400 transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">close</span>
+                                                선택 해제
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* 선택된 도서 표시 */}
+                                    {bookTitle && !customBookInput && (
+                                        <div className="flex items-center gap-3 px-4 py-3 bg-gold/10 border border-gold/30 rounded-2xl">
+                                            <span className="material-symbols-outlined text-gold text-lg">menu_book</span>
+                                            <span className="text-[14px] text-gold font-bold truncate">{bookTitle}</span>
+                                        </div>
+                                    )}
+
+                                    {/* 검색 입력 */}
+                                    {!customBookInput && (
+                                        <div className="relative">
+                                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-lg pointer-events-none">search</span>
+                                            <input
+                                                type="text"
+                                                placeholder="책 제목이나 저자로 검색..."
+                                                value={bookSearch}
+                                                onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); }}
+                                                onFocus={() => setShowBookDropdown(true)}
+                                                className="w-full bg-[#121826] border border-white/[0.05] rounded-2xl pl-11 pr-10 py-4 text-[14px] text-white/80 outline-none focus:border-gold/30 transition-all placeholder-white/20"
+                                            />
+                                            {bookSearch && (
+                                                <button onClick={() => { setBookSearch(''); setShowBookDropdown(false); }} className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                    <span className="material-symbols-outlined text-white/30 text-lg">close</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* 검색 결과 드롭다운 */}
+                                    {showBookDropdown && !customBookInput && (
+                                        <div className="bg-[#0e1420] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+                                            <div className="max-h-56 overflow-y-auto">
+                                                {filteredBooks.length === 0 && bookSearch ? (
+                                                    <div className="px-5 py-5 text-[13px] text-white/30 text-center">
+                                                        해당 도서를 찾을 수 없습니다.
+                                                    </div>
+                                                ) : (
+                                                    filteredBooks.map(book => (
+                                                        <button
+                                                            key={book.title}
+                                                            onClick={() => {
+                                                                setBookTitle(book.title);
+                                                                setBookSearch('');
+                                                                setShowBookDropdown(false);
+                                                                setNoteType('#서평');
+                                                            }}
+                                                            className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-white/5 active:bg-white/10 transition-colors border-b border-white/[0.03] last:border-0"
+                                                        >
+                                                            <span className="material-symbols-outlined text-white/20 text-base shrink-0">menu_book</span>
+                                                            <div className="min-w-0">
+                                                                <p className="text-[13px] text-white/80 font-bold truncate">{book.title}</p>
+                                                                <p className="text-[11px] text-white/30 truncate">{book.author}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => { setCustomBookInput(true); setShowBookDropdown(false); setBookSearch(''); }}
+                                                className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-white/5 transition-colors border-t border-white/[0.06]"
+                                            >
+                                                <span className="material-symbols-outlined text-gold/50 text-base shrink-0">edit</span>
+                                                <span className="text-[13px] text-gold/70 font-bold">직접 입력...</span>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* 직접 입력 모드 */}
+                                    {customBookInput && (
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                placeholder="책 제목을 직접 입력하세요"
+                                                value={bookTitle}
+                                                onChange={e => {
+                                                    setBookTitle(e.target.value);
+                                                    setNoteType(e.target.value ? '#서평' : '#메모');
+                                                }}
+                                                className="w-full bg-[#121826] border border-gold/20 rounded-2xl px-5 py-4 text-[14px] text-white/80 outline-none focus:border-gold/50 transition-all placeholder-white/20"
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={() => { setCustomBookInput(false); setBookTitle(''); }}
+                                                className="text-[11px] text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                                목록에서 선택하기
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="relative">
-                                    <select
-                                        className="w-full bg-[#121826] border border-white/[0.05] rounded-2xl px-5 py-4 text-[14px] text-white/80 appearance-none outline-none focus:border-gold/30 transition-all"
-                                        value={bookTitle}
-                                        onChange={e => {
-                                            setBookTitle(e.target.value);
-                                            setNoteType(e.target.value ? '#서평' : '#메모');
-                                        }}
-                                    >
-                                        <option value="">기록할 책을 검색하거나 선택하세요</option>
-                                        <option value="데미안">데미안</option>
-                                        <option value="불편한 편의점">불편한 편의점</option>
-                                        <option value="참을 수 없는 존재의 가벼움">참을 수 없는 존재의 가벼움</option>
-                                        <option value="오늘의 단상">오늘의 단상</option>
-                                        <option value="직접 입력">직접 입력...</option>
-                                    </select>
-                                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none">expand_more</span>
-                                </div>
-                            </div>
+                            )}
+
 
                             {/* Category Selection */}
                             <div className="space-y-4">
                                 <h4 className="text-[14px] font-bold text-gold">카테고리 선택</h4>
                                 <div className="flex gap-2">
-                                    {['#서평', '#메모', '#문장채집'].map(type => (
+                                    {['#서평', '#메모'].map(type => (
                                         <button
                                             key={type}
                                             onClick={() => setNoteType(type)}
@@ -433,7 +555,7 @@ export default function ReadingNotes() {
                                                     : 'bg-[#121826] border-white/5 text-white/40 hover:text-white'}`}
                                         >
                                             <span className="material-symbols-outlined text-lg">
-                                                {type === '#서평' ? 'rate_review' : type === '#메모' ? 'sticky_note_2' : 'format_quote'}
+                                                {type === '#서평' ? 'rate_review' : 'sticky_note_2'}
                                             </span>
                                             {type}
                                         </button>

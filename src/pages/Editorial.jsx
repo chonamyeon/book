@@ -23,7 +23,8 @@ export default function Editorial() {
             cover: book.cover
         }];
         localStorage.setItem('savedBooks', JSON.stringify(updated));
-        alert('서재에 보관되었습니다.');
+        window.dispatchEvent(new Event('savedBooksUpdated'));
+        alert('서재에 보관되었습니다. ✅');
     };
 
     const getReviewText = (id) => {
@@ -125,7 +126,7 @@ export default function Editorial() {
                                         : 'bg-white/5 border-white/10 text-white hover:border-gold/50 hover:bg-gold/5'
                                         }`}
                                 >
-                                    <span className="material-symbols-outlined text-[20px]">{(isSpeaking && activeAudioId === 'weekly-sapiens') ? 'stop' : 'play_circle'}</span>
+                                    <span className="material-symbols-outlined text-[20px]">{(isSpeaking && activeAudioId === 'weekly-sapiens') ? 'stop' : 'podcasts'}</span>
                                     <span className="text-[10px] font-black uppercase tracking-[0.1em]">{(isSpeaking && activeAudioId === 'weekly-sapiens') ? '정지' : '팟캐스트'}</span>
                                 </button>
                                 <button
@@ -134,6 +135,14 @@ export default function Editorial() {
                                 >
                                     <span className="material-symbols-outlined text-[20px]">bookmark</span>
                                 </button>
+                                <a
+                                    href={`/audio/sapiens.mp3?v=16.0`}
+                                    download="사피엔스_podcast.mp3"
+                                    className="flex-none px-4 h-14 rounded-2xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center shadow-2xl"
+                                    title="MP3 다운로드"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -199,6 +208,14 @@ export default function Editorial() {
                                 >
                                     <span className="material-symbols-outlined text-[20px]">bookmark</span>
                                 </button>
+                                <a
+                                    href={`/audio/ubermensch.mp3?v=16.0`}
+                                    download="위버멘쉬_podcast.mp3"
+                                    className="flex-none px-4 h-14 rounded-2xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center shadow-2xl"
+                                    title="MP3 다운로드"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -259,6 +276,16 @@ export default function Editorial() {
                                                 <span className="material-symbols-outlined text-[18px]">{(isSpeaking && activeAudioId === `pick-${item.id}`) ? 'stop' : (item.isPodcast ? 'podcasts' : 'play_circle')}</span>
                                                 <span className="text-[9px] font-black uppercase tracking-widest">{(isSpeaking && activeAudioId === `pick-${item.id}`) ? '정지' : (item.isPodcast ? '팟캐스트' : '보이스리뷰')}</span>
                                             </button>
+                                            {item.isPodcast && (
+                                                <a
+                                                    href={`/audio/${item.id}.mp3?v=16.0`}
+                                                    download={`${item.title}_podcast.mp3`}
+                                                    className="h-10 rounded-xl bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                                    <span>MP3 다운</span>
+                                                </a>
+                                            )}
                                             <a
                                                 href={`https://www.coupang.com/np/search?q=${encodeURIComponent(item.title)}`}
                                                 target="_blank"
@@ -269,7 +296,7 @@ export default function Editorial() {
                                                 <span>구매하기</span>
                                             </a>
                                             <button
-                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                className={`h-10 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2 ${item.isPodcast ? 'col-span-2' : ''}`}
                                                 onClick={() => addToLibrary(item)}
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">bookmark</span>
@@ -282,10 +309,97 @@ export default function Editorial() {
                         </div>
                     </section>
 
+                    {/* Guru's Choice */}
+                    <section className="space-y-8">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-gold text-xl">workspace_premium</span>
+                                <span className="text-white text-xl font-bold serif-title italic">Guru's Choice</span>
+                            </div>
+                            <span className="text-[8px] text-gold font-black uppercase tracking-widest bg-gold/10 px-2 py-1 rounded-full border border-gold/20">Expert Curation</span>
+                        </div>
+                        <div className="space-y-6">
+                            {[
+                                { id: "your-name", title: "너의 이름은", subtitle: "시공간을 초월한 인연과 그리움의 서사", author: "신카이 마코토", cover: "/images/covers/yourname.jpg", tag: "NOVEL", isPodcast: true, script: bookScripts["your-name"] },
+                                { id: "property-money", title: "돈의 속성", subtitle: "부의 본질을 꿰뚫는 100가지 가르침", author: "김승호", cover: "/images/covers/don_01.jpg", tag: "ECONOMY", isPodcast: true, script: bookScripts["property-money"] },
+                                { id: "stoner", title: "스토너", subtitle: "실패한 것처럼 보이는 한 남자의 숭고한 성실함", author: "존 윌리엄스", cover: "/images/covers/stoner.jpg", tag: "NOVEL", isPodcast: true, script: bookScripts["stoner"] },
+                                { id: "small-things", title: "이처럼 사소한 것들", subtitle: "겨울밤 한 남자의 용기가 빚어낸 기적", author: "클레어 키건", cover: "/images/covers/small_things.jpg", tag: "NOVEL", isPodcast: true, script: bookScripts["small-things"] }
+                            ].map((item) => (
+                                <div key={item.id} className="flex gap-5 group">
+                                    <div className="w-24 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 border border-gold/20 relative shadow-xl">
+                                        <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
+                                        <div className="absolute top-2 left-2 bg-gold text-primary text-[7px] font-black px-1.5 py-0.5 rounded uppercase">Expert</div>
+                                    </div>
+                                    <div className="flex-1 flex flex-col justify-between py-1">
+                                        <div>
+                                            <span className="text-[8px] text-gold font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full mb-2 inline-block border border-gold/20">{item.tag}</span>
+                                            <h4 className="text-white font-bold text-lg leading-tight mb-1">{item.title}</h4>
+                                            <p className="text-slate-400 text-xs font-light italic mb-1">{item.author}</p>
+                                            <p className="text-slate-500 text-xs font-light">{item.subtitle}</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                                            <Link
+                                                to={`/review/${item.id}`}
+                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                                                <span>리뷰 디테일</span>
+                                            </Link>
+                                            <button
+                                                onClick={() => {
+                                                    if (activeAudioId === `guru-${item.id}`) {
+                                                        stopAll();
+                                                    } else {
+                                                        if (item.isPodcast && item.script) {
+                                                            playPodcast(item.script, `guru-${item.id}`);
+                                                        } else {
+                                                            speakReview(getReviewText(item.id), `guru-${item.id}`);
+                                                        }
+                                                    }
+                                                }}
+                                                className={`h-10 rounded-xl border flex items-center justify-center gap-2 transition-all ${(isSpeaking && activeAudioId === `guru-${item.id}`)
+                                                    ? 'bg-gold border-gold text-primary shadow-lg shadow-gold/20'
+                                                    : 'bg-white/5 border-white/10 text-white hover:border-gold/50 hover:text-gold'
+                                                    }`}
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">{(isSpeaking && activeAudioId === `guru-${item.id}`) ? 'stop' : 'podcasts'}</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest">{(isSpeaking && activeAudioId === `guru-${item.id}`) ? '정지' : '팟캐스트'}</span>
+                                            </button>
+                                            <a
+                                                href={`/audio/${item.id}.mp3?v=16.0`}
+                                                download={`${item.title}_podcast.mp3`}
+                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">download</span>
+                                                <span>MP3 다운</span>
+                                            </a>
+                                            <a
+                                                href={`https://www.coupang.com/np/search?q=${encodeURIComponent(item.title)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="h-10 rounded-xl bg-gold/5 border border-gold/20 text-gold text-[9px] font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2 hover:bg-gold hover:text-primary transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">shopping_cart</span>
+                                                <span>구매하기</span>
+                                            </a>
+                                            <button
+                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2 col-span-2"
+                                                onClick={() => addToLibrary(item)}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">bookmark</span>
+                                                <span>서재에 저장하여 나중에 읽기</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
                     <Footer />
-                </main>
+                </main >
                 <BottomNavigation />
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

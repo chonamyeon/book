@@ -4,9 +4,12 @@ import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
 import Footer from '../components/Footer';
+import { useAudio } from '../contexts/AudioContext';
+import { bookScripts } from '../data/bookScripts';
 
 export default function Celebrity() {
     const { id } = useParams();
+    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll } = useAudio();
     const celeb = celebrities.find(c => c.id === id) || celebrities[0]; // Default to first if not found
 
     useEffect(() => {
@@ -167,30 +170,63 @@ export default function Celebrity() {
                                         )}
 
                                         <div className="flex gap-3">
-                                            <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-gold hover:bg-gold-light text-primary flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-gold/10 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                                <span>쿠팡 최저가 구매</span>
-                                                <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                                            {book.id && bookScripts[book.id] ? (
+                                                <button
+                                                    onClick={() => activeAudioId === `celeb-${book.id}` ? stopAll() : playPodcast(bookScripts[book.id], `celeb-${book.id}`)}
+                                                    className={`hover:bg-gold-light flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${activeAudioId === `celeb-${book.id}` ? 'bg-gold text-primary shadow-gold/20' : 'bg-white/5 text-white/80 border border-white/10'}`}
+                                                >
+                                                    <span>{activeAudioId === `celeb-${book.id}` ? '정지' : '팟캐스트'}</span>
+                                                    <span className="material-symbols-outlined text-sm">{activeAudioId === `celeb-${book.id}` ? 'stop' : 'podcasts'}</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => activeAudioId === `celeb-${book.id || index}` ? stopAll() : speakReview(book.review || book.desc, `celeb-${book.id || index}`)}
+                                                    className={`hover:bg-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${activeAudioId === `celeb-${book.id || index}` ? 'bg-gold text-primary' : 'bg-white/5 text-white/50 border border-white/10'}`}
+                                                >
+                                                    <span>{activeAudioId === `celeb-${book.id || index}` ? '정지' : '리뷰듣기'}</span>
+                                                    <span className="material-symbols-outlined text-sm">{activeAudioId === `celeb-${book.id || index}` ? 'stop' : 'record_voice_over'}</span>
+                                                </button>
+                                            )}
+
+                                            {book.id ? (
+                                                <Link
+                                                    to={`/review/${book.id}`}
+                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <span>리뷰 디테일</span>
+                                                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                                                </Link>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
+                                                        const isSaved = saved.some(b => b.title === book.title);
+                                                        if (isSaved) {
+                                                            const filtered = saved.filter(b => b.title !== book.title);
+                                                            localStorage.setItem('savedBooks', JSON.stringify(filtered));
+                                                            window.dispatchEvent(new Event('savedBooksUpdated'));
+                                                            alert('서재에서 삭제되었습니다.');
+                                                        } else {
+                                                            saved.push(book);
+                                                            localStorage.setItem('savedBooks', JSON.stringify(saved));
+                                                            window.dispatchEvent(new Event('savedBooksUpdated'));
+                                                            alert('서재에 추가되었습니다. ✅');
+                                                        }
+                                                    }}
+                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <span>서재에 담기</span>
+                                                    <span className="material-symbols-outlined text-sm">bookmark</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Coupang Link Button (Full width) */}
+                                        <div className="mt-3">
+                                            <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 w-full text-center py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
+                                                <span>쿠팡 최저가 확인하기</span>
+                                                <span className="material-symbols-outlined text-xs">open_in_new</span>
                                             </a>
-                                            <button
-                                                onClick={() => {
-                                                    const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-                                                    const isSaved = saved.some(b => b.title === book.title);
-                                                    if (isSaved) {
-                                                        const filtered = saved.filter(b => b.title !== book.title);
-                                                        localStorage.setItem('savedBooks', JSON.stringify(filtered));
-                                                        alert('서재에서 삭제되었습니다.');
-                                                    } else {
-                                                        saved.push(book);
-                                                        localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                        alert('서재에 추가되었습니다.');
-                                                    }
-                                                    window.dispatchEvent(new Event('storage'));
-                                                }}
-                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                            >
-                                                <span>서재에 담기</span>
-                                                <span className="material-symbols-outlined text-sm">bookmark</span>
-                                            </button>
                                         </div>
                                     </div>
                                 ))}

@@ -359,13 +359,14 @@ export default function Result() {
                                                             if (isSaved) {
                                                                 const filtered = saved.filter(b => b.title !== book.title);
                                                                 localStorage.setItem('savedBooks', JSON.stringify(filtered));
+                                                                window.dispatchEvent(new Event('savedBooksUpdated'));
                                                                 alert('서재에서 삭제되었습니다.');
                                                             } else {
                                                                 saved.push(book);
                                                                 localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                                alert('서재에 추가되었습니다.');
+                                                                window.dispatchEvent(new Event('savedBooksUpdated'));
+                                                                alert('서재에 추가되었습니다. ✅');
                                                             }
-                                                            window.dispatchEvent(new Event('storage'));
                                                         }}
                                                         className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-95"
                                                     >

@@ -72,7 +72,8 @@ export default function BottomNavigation() {
             cover: book.cover
         }];
         localStorage.setItem('savedBooks', JSON.stringify(updated));
-        alert('서재에 보관되었습니다.');
+        window.dispatchEvent(new Event('savedBooksUpdated'));
+        alert('서재에 보관되었습니다. ✅');
     };
 
     const saveResults = () => {
