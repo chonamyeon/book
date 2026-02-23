@@ -220,6 +220,46 @@ export default function Editorial() {
                         </div>
                     </div>
 
+                    {/* Deep Dive Archives - New Section for 5000+ Character Reviews */}
+                    <section className="space-y-8 bg-gold/5 -mx-4 px-4 py-10 border-y border-gold/10">
+                        <div className="flex flex-col items-center text-center space-y-2 mb-8">
+                            <span className="text-gold text-[9px] font-black uppercase tracking-[0.4em]">Archiview Special</span>
+                            <h2 className="serif-title text-2xl text-white font-bold italic">5,000+ Characters Deep Dive</h2>
+                            <p className="text-slate-400 text-[10px] font-light max-w-xs mx-auto">
+                                단순한 요약을 넘어 선구자들의 깊은 사유와 <br />철학적 통찰을 담은 프리미엄 E-Book 컬렉션
+                            </p>
+                        </div>
+
+                        <div className="flex overflow-x-auto gap-6 pb-6 no-scrollbar snap-x scroll-px-6">
+                            {[
+                                { id: "homo-deus", title: "호모 데우스", author: "유발 하라리", celeb: "Bill Gates", cover: "/images/covers/homodeus.jpg" },
+                                { id: "lightness-of-being", title: "참을 수 없는 존재의 가벼움", author: "밀란 쿤데라", celeb: "RM", cover: "/images/covers/m_02.jpg" },
+                                { id: "we-do-not-part", title: "작별하지 않는다", author: "한강", celeb: "Han Kang", cover: "/images/covers/son_square_ok.jpg" },
+                                { id: "21-lessons", title: "21세기를 위한 21가지 제언", author: "유발 하라리", celeb: "Bill Gates", cover: "/images/covers/b_04.jpg" },
+                                { id: "human-acts", title: "소년이 온다", author: "한강", celeb: "RM (Namjoon)", cover: "/images/covers/son_square_ok.jpg" }
+                            ].map((book) => (
+                                <Link key={book.id} to={`/review/${book.id}`} className="shrink-0 w-64 snap-center group">
+                                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-4 border border-gold/20 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 group-hover:opacity-40 transition-opacity"></div>
+                                        <div className="absolute top-4 right-4 bg-gold/90 text-primary text-[8px] font-black px-2 py-1 rounded-md shadow-lg shadow-gold/20 uppercase tracking-widest">Premium</div>
+                                        <div className="absolute bottom-4 left-4 right-4">
+                                            <p className="text-gold text-[8px] font-bold uppercase tracking-widest mb-1 opacity-70">{book.celeb}</p>
+                                            <h4 className="text-white font-bold text-lg leading-tight truncate">{book.title}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-gold text-sm">auto_stories</span>
+                                            <span className="text-white/40 text-[9px] font-bold uppercase tracking-widest">80+ Pages</span>
+                                        </div>
+                                        <div className="text-gold text-[9px] font-black uppercase tracking-widest border-b border-gold/40 pb-0.5 group-hover:text-white group-hover:border-white transition-all">Read E-Book</div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+
                     {/* Editors' Picks */}
                     <section className="space-y-8">
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -251,10 +291,10 @@ export default function Editorial() {
                                         <div className="grid grid-cols-2 gap-2 mt-auto">
                                             <Link
                                                 to={`/review/${item.id}`}
-                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                                className="h-10 rounded-xl bg-gold/10 border border-gold/30 text-gold text-[9px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-2"
                                             >
-                                                <span className="material-symbols-outlined text-[16px]">menu_book</span>
-                                                <span>리뷰 디테일</span>
+                                                <span className="material-symbols-outlined text-[16px]">auto_stories</span>
+                                                <span>E-Book으로 읽기</span>
                                             </Link>
                                             <button
                                                 onClick={() => {

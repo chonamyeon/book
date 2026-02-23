@@ -88,48 +88,58 @@ export default function ReviewDetail() {
         };
     }, []);
 
-    const bookMap = {
-        "sapiens": "사피엔스",
-        "1984": "1984",
-        "demian": "데미안",
-        "vegetarian": "채식주의자",
-        "factfulness": "팩트풀니스",
-        "almond": "아몬드",
-        "leverage": "레버리지",
-        "one-thing": "원씽",
-        "ubermensch": "위버멘쉬",
-        "sayno": "세이노의 가르침",
-        "psychology": "돈의 심리학",
-        "your-name": "너의 이름은",
-        "property-money": "돈의 속성",
-        "stoner": "스토너",
-        "small-things": "이처럼 사소한 것들"
-    };
-
-    const bookTitle = bookMap[id] || "사피엔스";
-
+    // Find the book by its ID across all celebrities
     let targetBook = null;
+    let foundCeleb = null;
     for (const celeb of celebrities) {
-        const found = celeb.books.find(b => b.title === bookTitle);
+        const found = celeb.books.find(b => b.id === id);
         if (found) {
             targetBook = found;
-            if (found.review) break;
+            foundCeleb = celeb;
+            break;
+        }
+    }
+
+    // Fallback: search by title if id search fails (for legacy links)
+    if (!targetBook) {
+        for (const celeb of celebrities) {
+            const found = celeb.books.find(b => b.title.includes(id) || id.includes(b.id));
+            if (found) {
+                targetBook = found;
+                foundCeleb = celeb;
+                break;
+            }
         }
     }
 
     if (!targetBook) {
-        return <div className="p-20 text-white text-center bg-background-dark min-h-screen">리뷰를 찾을 수 없습니다.</div>;
+        return <div className="p-20 text-white text-center bg-[#0b0d0f] min-h-screen flex items-center justify-center">
+            <div className="space-y-4">
+                <p className="text-xl font-serif">리뷰를 찾을 수 없습니다.</p>
+                <button onClick={() => navigate('/editorial')} className="px-6 py-2 border border-white/20 rounded-full text-white/60 hover:text-white transition-colors">목록으로 돌아가기</button>
+            </div>
+        </div>;
     }
 
     const reviewText = targetBook.review || targetBook.desc;
 
-    // Improved chunking: split by paragraphs or approximately 320 characters to fit without scroll
-    const chunks = reviewText.split('\n\n').reduce((acc, para) => {
-        if (para.length > 320) {
-            const subChunks = para.match(/[\s\S]{1,320}/g) || [para];
-            return [...acc, ...subChunks];
+    // Improved chunking for e-book experience: 
+    // We aim for approx 400-500 characters per page in Korean to fill the space without overflow.
+    const chunks = reviewText.split('\n').filter(p => p.trim() !== '').reduce((acc, para) => {
+        const lastChunk = acc[acc.length - 1];
+        const maxLength = 450; // Ideal characters per page for Korean font size/height
+
+        if (!lastChunk || lastChunk.length + para.length > maxLength) {
+            // If the paragraph itself is too long, split it
+            if (para.length > maxLength) {
+                const subChunks = para.match(new RegExp(`[\\s\\S]{1,${maxLength}}`, 'g')) || [para];
+                return [...acc, ...subChunks];
+            }
+            return [...acc, para];
+        } else {
+            acc[acc.length - 1] = lastChunk + '\n\n' + para;
+            return acc;
         }
-        return [...acc, para];
     }, []) || [reviewText];
 
     const handleClose = () => {
@@ -216,15 +226,27 @@ export default function ReviewDetail() {
                             <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
 
                             <Page number="1">
-                                <div className="space-y-4">
-                                    <div className="h-1 w-12 bg-gold"></div>
-                                    <h3 className="text-2xl font-serif text-[#1a1a1a] font-bold">Synopsis</h3>
-                                    <p className="italic text-black/70 leading-relaxed font-serif text-base">"{targetBook.desc}"</p>
-                                    <div className="pt-8 border-t border-black/5">
-                                        <p className="text-[11px] font-serif text-black/40 leading-relaxed">
-                                            세상의 모든 위대한 사유는 한 권의 책에서 시작됩니다.
-                                            아카이뷰 에디터가 포착한 문장의 빛을 따라
-                                            당신만의 아카이브를 완성해보세요.
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-0.5 w-8 bg-gold"></div>
+                                        <span className="text-[10px] text-gold font-bold uppercase tracking-[0.3em]">Prologue</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-3xl font-serif text-[#1a1a1a] font-black leading-tight">Synopsis</h3>
+                                        <p className="text-black/40 text-[10px] uppercase tracking-widest font-bold">Curated for {foundCeleb?.name || 'Archiview'}</p>
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute -left-4 -top-2 text-6xl text-gold/20 font-serif leading-none">"</span>
+                                        <p className="italic text-black/80 leading-relaxed font-serif text-lg pl-2">
+                                            {targetBook.desc}
+                                        </p>
+                                    </div>
+                                    <div className="pt-10 border-t border-black/5 space-y-4">
+                                        <h4 className="text-[11px] font-bold text-black/60 uppercase tracking-widest">Author's Insight</h4>
+                                        <p className="text-[12px] font-serif text-black/50 leading-relaxed">
+                                            이 5,000자의 여정은 단순히 텍스트를 읽는 행위를 넘어,
+                                            동시대를 대표하는 선구자의 영혼과 대면하는 의식입니다.
+                                            한 페이지 한 페이지 넘길 때마다 당신의 사유가 깊어지길 소망합니다.
                                         </p>
                                     </div>
                                 </div>
@@ -236,18 +258,28 @@ export default function ReviewDetail() {
                                 </Page>
                             ))}
 
-                            <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-8 text-center" data-density="hard">
-                                <div className="z-10 space-y-4 font-serif">
-                                    <div className="text-gold/40 text-4xl italic mb-4">Fin.</div>
-                                    <p className="text-white/20 text-[10px] leading-relaxed italic">
-                                        "우리가 읽는 책이 우리 머리를 주먹으로 한 대 쳐서 깨우지 않는다면, <br />왜 그 책을 읽는가?" <br />
-                                        - 프란츠 카프카
-                                    </p>
-                                    <div className="pt-6 text-[8px] text-white/5 tracking-[0.4em] uppercase">
-                                        Archiview archiview
+                            <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-8 text-center relative overflow-hidden" data-density="hard">
+                                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-linen.png')" }}></div>
+                                <div className="z-10 space-y-6 font-serif flex flex-col items-center">
+                                    <div className="size-16 rounded-full border border-gold/30 flex items-center justify-center mb-4">
+                                        <span className="material-symbols-outlined text-gold text-2xl">book_4</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-gold text-4xl italic font-light tracking-tighter">Fin.</div>
+                                        <div className="h-0.5 w-12 bg-gold/20 mx-auto"></div>
+                                    </div>
+                                    <div className="max-w-[200px] space-y-4">
+                                        <p className="text-white/40 text-[11px] leading-relaxed italic">
+                                            "우리가 읽는 책이 우리 머리를 주먹으로 한 대 쳐서 깨우지 않는다면, 왜 그 책을 읽는가?"
+                                        </p>
+                                        <p className="text-gold/60 text-[9px] uppercase tracking-widest font-bold">- Franz Kafka -</p>
+                                    </div>
+                                    <div className="pt-12 text-[8px] text-white/5 tracking-[0.5em] uppercase font-black">
+                                        Archiview Curation Archive
                                     </div>
                                 </div>
-                                <div className="absolute top-0 bottom-0 right-0 w-8 bg-gradient-to-l from-black/40 to-transparent"></div>
+                                <div className="absolute top-0 bottom-0 right-0 w-8 bg-gradient-to-l from-black/60 to-transparent"></div>
+                                <div className="absolute top-0 bottom-0 left-0 w-[1px] bg-white/5"></div>
                             </div>
                         </HTMLFlipBook>
                     </div>
