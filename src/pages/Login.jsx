@@ -45,8 +45,22 @@ export default function Login() {
             }
         };
 
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Save/Update user profile in Firestore
+                try {
+                    const { db } = await import('../firebase');
+                    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+                    await setDoc(doc(db, "users", user.uid), {
+                        displayName: user.displayName,
+                        email: user.email,
+                        photoURL: user.photoURL,
+                        lastLogin: serverTimestamp(),
+                        status: '활동중' // Default status
+                    }, { merge: true });
+                } catch (error) {
+                    console.error("Error updating user profile:", error);
+                }
                 navigate('/profile', { replace: true });
             } else {
                 initGoogle();
@@ -60,7 +74,19 @@ export default function Login() {
         setIsLoading(true);
         try {
             const credential = GoogleAuthProvider.credential(response.credential);
-            await signInWithCredential(auth, credential);
+            const userCredential = await signInWithCredential(auth, credential);
+            const user = userCredential.user;
+
+            // Sync with Firestore
+            const { db } = await import('../firebase');
+            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+            await setDoc(doc(db, "users", user.uid), {
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastLogin: serverTimestamp(),
+            }, { merge: true });
+
             navigate('/profile', { replace: true });
         } catch (error) {
             console.error("Auth Fail:", error);
@@ -76,6 +102,24 @@ export default function Login() {
             console.error("Redirect start fail:", error);
             setIsLoading(false);
         }
+    };
+
+    const handleKakaoLogin = () => {
+        if (!window.Kakao) return;
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+        }
+        window.Kakao.Auth.login({
+            success: function(authObj) {
+                console.log("Kakao login success", authObj);
+                // In a real app, you'd send the authObj.access_token to your server/Firebase
+                // Here we'll simulate a login for demo purposes
+                navigate('/profile', { replace: true });
+            },
+            fail: function(err) {
+                console.error("Kakao login fail", err);
+            },
+        });
     };
 
     return (
@@ -98,10 +142,20 @@ export default function Login() {
                                 <div className="size-8 border-3 border-gold/20 border-t-gold rounded-full animate-spin"></div>
                             </div>
                         )}
+                        
                         {/* PC: Show Google Button, Hide Mobile Button */}
                         <div ref={googleBtnRef} className="hidden md:flex w-full justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
 
-                        {/* Mobile: Show Mobile Button, Hide Google Button */}
+                        {/* Kakao Login Button */}
+                        <button
+                            onClick={handleKakaoLogin}
+                            className="w-full py-3.5 px-6 bg-[#FEE500] text-[#3c1e1e] font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3"
+                        >
+                            <span className="material-symbols-outlined">chat_bubble</span>
+                            카카오톡으로 로그인
+                        </button>
+
+                        {/* Mobile Google Button */}
                         <button
                             onClick={async (e) => {
                                 setIsLoading(true);
@@ -111,11 +165,11 @@ export default function Login() {
                                     setIsLoading(false);
                                 }
                             }}
-                            className="md:hidden w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 mt-4"
+                            className="md:hidden w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3"
                             style={{ zIndex: 50, position: 'relative' }}
                         >
                             <span className="material-symbols-outlined">touch_app</span>
-                            여기를 눌러 로그인하세요
+                            구글 계정으로 로그인
                         </button>
                     </div>
 

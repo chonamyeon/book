@@ -179,7 +179,7 @@ export default function Home() {
                             {celebrities.slice(0, showAllCelebrities ? celebrities.length : 6).map((celeb) => (
                                 <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="group relative block">
                                     <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 relative shadow-lg">
-                                        <img src={celeb.image} alt={celeb.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                                        <img src={celeb.image} alt={celeb.name} loading="lazy" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                                         <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
                                     </div>
                                     <h3 className="text-white font-medium text-lg leading-none group-hover:text-gold transition-colors">{celeb.name}</h3>
@@ -210,7 +210,7 @@ export default function Home() {
                                 <div className="relative bg-background-dark/40 backdrop-blur-xl rounded-[22px] p-6 flex items-center gap-6">
                                     <div className="relative size-24 shrink-0">
                                         <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full"></div>
-                                        <img src={result.image} alt={result.persona} className="relative w-full h-full object-cover rounded-2xl shadow-xl border border-gold/30" />
+                                        <img src={result.image} alt={result.persona} loading="lazy" className="relative w-full h-full object-cover rounded-2xl shadow-xl border border-gold/30" />
                                     </div>
                                     <div className="flex-1 min-w-0 text-left">
                                         <span className="text-gold text-[10px] font-bold uppercase tracking-widest block mb-1">My Persona</span>
@@ -281,13 +281,13 @@ export default function Home() {
                             ].map((book, idx) => (
                                 <Link key={idx} to={book.id ? `/review/${book.id}` : `/celebrity/${book.celebId}`} className="group block cursor-pointer">
                                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 mb-3 border border-white/10 shadow-2xl relative">
-                                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                                        <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                                             onError={(e) => { e.target.src = 'https://via.placeholder.com/150x225?text=No+Cover'; }}
                                         />
                                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
                                             <div className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                                                 <span className="bg-gold text-primary text-[9px] font-black px-3 py-1.5 rounded-full shadow-xl flex items-center gap-1 uppercase tracking-tighter">
-                                                    Read Review <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
+                                                    <span className="leading-tight text-center">REVIEW<br />DETAIL</span> <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
                                                 </span>
                                             </div>
                                         </div>

@@ -1,315 +1,530 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import HTMLFlipBook from 'react-pageflip';
-import { motion, AnimatePresence } from 'framer-motion';
 import { celebrities } from '../data/celebrities';
-import TopNavigation from '../components/TopNavigation';
-import BottomNavigation from '../components/BottomNavigation';
 import { useAudio } from '../contexts/AudioContext';
-import Footer from '../components/Footer';
 import { bookScripts } from '../data/bookScripts';
+import { db } from '../firebase';
+import { getDoc, doc } from 'firebase/firestore';
+import './ReviewDetail.css';
 
-// Page components for the flipbook
-const PageCover = React.forwardRef((props, ref) => {
-    return (
-        <div className="bg-[#1a1c20] w-full h-full shadow-2xl relative overflow-hidden flex flex-col items-center justify-center p-6 border-l-4 border-gold/20" ref={ref} data-density="hard">
-            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/leather.png')" }}></div>
-            <div className="z-10 text-center space-y-4">
-                <div className="w-32 md:w-48 aspect-[2/3] mx-auto shadow-[0_20px_40px_rgba(0,0,0,0.8)] rounded-md overflow-hidden border border-white/10">
-                    <img src={props.cover} alt="Cover" className="w-full h-full object-cover" />
-                </div>
-                <div className="space-y-1">
-                    <h2 className="serif-title text-xl md:text-3xl text-white font-bold tracking-tight">{props.title}</h2>
-                    <p className="text-gold text-[10px] md:text-sm font-light uppercase tracking-[0.3em]">{props.author}</p>
-                </div>
-                <div className="pt-4 flex flex-col items-center gap-2">
-                    <span className="material-symbols-outlined text-gold/50 animate-bounce text-sm">swipe_left</span>
-                    <p className="text-[8px] text-white/30 uppercase tracking-widest leading-none">Open to Read</p>
-                </div>
-            </div>
-            <div className="absolute top-0 bottom-0 left-0 w-8 bg-gradient-to-r from-black/40 to-transparent"></div>
-        </div>
-    );
-});
+const CHARS_PER_PAGE = 280;
+
+function buildPages(book) {
+    if (!book || !book.review) return [];
+    const review = book.review;
+
+    const clean = (t) =>
+        t.replace(/---/g, '').replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
+
+    const raw = review.split('---');
+    const main = raw[0] || '';
+    const summary = raw[1] || '';
+
+    const pages = [];
+
+    const sections = clean(main).split('■').filter((s) => s.trim());
+    sections.forEach((sec) => {
+        const lines = sec.split('\n').filter((l) => l.trim());
+        if (!lines.length) return;
+        const header = lines[0].trim();
+        const body = lines.slice(1).join('\n').trim();
+        if (!body) return;
+
+        if (body.length <= CHARS_PER_PAGE) {
+            pages.push({ header, body });
+        } else {
+            const paras = body.split(/\n+/);
+            let chunk = '';
+            paras.forEach((p) => {
+                if (chunk.length + p.length > CHARS_PER_PAGE && chunk) {
+                    pages.push({ header, body: chunk.trim() });
+                    chunk = p + '\n\n';
+                } else {
+                    chunk += p + '\n\n';
+                }
+            });
+            if (chunk.trim()) pages.push({ header, body: chunk.trim() });
+        }
+    });
+
+    if (summary.trim()) {
+        const cs = clean(summary).replace(/【지혜의 갈무리】/g, '');
+        const pick = (name) => {
+            const m = cs.match(new RegExp(`${name}:([\\s\\S]*?)(?=(책을 선택한 이유:|저자 소개:|추천 대상:|지혜의 요약:|$))`));
+            return m ? m[1].trim() : '';
+        };
+        const s1 = pick('책을 선택한 이유');
+        const s2 = pick('저자 소개');
+        const s3 = pick('추천 대상');
+        const s4Raw = pick('지혜의 요약');
+
+        if (s1 || s2) {
+            pages.push({
+                header: '지혜의 갈무리 I',
+                body: `책을 선택한 이유\n${s1}\n\n저자 소개\n${s2}`,
+                isSummary: true
+            });
+        }
+
+        if (s3) {
+            pages.push({
+                header: '지혜의 갈무리 II',
+                body: `추천 대상\n${s3}`,
+                isSummary: true
+            });
+        }
+
+        if (s4Raw) {
+            const lines = s4Raw.split('\n').map(l => l.trim()).filter(l => l);
+            // Bullet points are usually starting with numbers. 
+            // We want to group them so they fit on pages.
+            // Let's put point 1 on one page, and 2, 3 on another if there are many.
+            if (lines.length > 1) {
+                pages.push({
+                    header: '지혜의 요약 (1/2)',
+                    body: `포인트 1\n${lines[0]}`,
+                    isSummary: true
+                });
+                const rest = lines.slice(1).map((l, idx) => `포인트 ${idx + 2}\n${l}`).join('\n\n');
+                pages.push({
+                    header: '지혜의 요약 (2/2)',
+                    body: rest,
+                    isSummary: true
+                });
+            } else {
+                pages.push({
+                    header: '지혜의 요약',
+                    body: `포인트 1\n${lines[0]}`,
+                    isSummary: true
+                });
+            }
+        }
+    }
+
+    // -- Bibliography Page (Always include) --
+    let bibTitle = book.title;
+    let bibAuthor = book.author;
+    let bibPublisher = '아카이뷰 에디션';
+
+    const biblioMatch = main.match(/참고\s*도서:\s*([^,/\n]+)[,/]\s*저자:?\s*([^,/\n]+)[,/]\s*출판사:?\s*([^\n\r]+)/);
+    if (biblioMatch) {
+        bibTitle = biblioMatch[1].trim();
+        bibAuthor = biblioMatch[2].trim();
+        bibPublisher = biblioMatch[3].trim();
+    }
+
+    pages.push({
+        header: 'Reference Book',
+        body: {
+            title: bibTitle,
+            author: bibAuthor,
+            publisher: bibPublisher
+        },
+        isBiblio: true
+    });
+
+    return pages;
+}
 
 const Page = React.forwardRef((props, ref) => {
     return (
-        <div className="bg-[#fcfaf2] w-full h-full p-6 md:p-10 flex flex-col shadow-inner relative" ref={ref}>
-            <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/paper-fibers.png')" }}></div>
-
-            <div className="z-10 flex flex-col h-full">
-                <div className="flex justify-between items-center mb-6 md:mb-10 border-b border-black/5 pb-2">
-                    <span className="text-[8px] text-black/40 font-bold uppercase tracking-widest">The archiview</span>
-                    <span className="text-[8px] text-black/40 font-bold">{props.number}</span>
-                </div>
-
-                <div className="flex-1 overflow-hidden">
-                    <div className="prose prose-xs md:prose-sm max-w-none pb-4">
-                        <p className="text-[#2a2a2a] text-sm md:text-base leading-relaxed font-serif whitespace-pre-wrap selection:bg-gold/20">
-                            {props.children}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-black/5 flex justify-center italic text-[9px] text-black/20">
-                    Archiview Book Curation
-                </div>
+        <div className="rv-page-wrapper" ref={ref} data-density={props.density || 'soft'}>
+            <div className={`rv-sheet ${props.className || ''}`}>
+                {props.children}
             </div>
-            <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/[0.02] to-transparent"></div>
         </div>
     );
 });
+
+const Avatar = ({ role }) => {
+    const [error, setError] = useState(false);
+    const src = role === 'A' ? '/images/celebrities/james.jpg' : '/images/celebrities/stella.jpg';
+    const icon = role === 'A' ? 'person' : 'face';
+
+    if (error) {
+        return (
+            <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#666' }}>
+                {icon}
+            </span>
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt={role === 'A' ? 'James' : 'Stella'}
+            onError={() => setError(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+    );
+};
 
 export default function ReviewDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const bookRef = useRef(null);
-    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll } = useAudio();
-    const [dimensions, setDimensions] = useState({ width: 340, height: 500 });
+    const [searchParams] = useSearchParams();
+    const flipBook = useRef(null);
 
+    const [pageIdx, setPageIdx] = useState(0);
+    const [showUI, setShowUI] = useState(true);
+    const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3 } = useAudio();
+
+    const book = useMemo(() => {
+        if (!celebrities) return null;
+        for (const c of celebrities) {
+            const b = c.books?.find((b) => b.id === id);
+            if (b) return b;
+        }
+        return null;
+    }, [id]);
+
+    const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
+    const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
+    const [activeTab, setActiveTab] = useState('review');
+
+    // Firestore 상태 — podcastSrc보다 먼저 선언해야 함
+    const [firestoreScript, setFirestoreScript] = useState(null);
+    const [firestoreAudioUrl, setFirestoreAudioUrl] = useState(null);
+    const [firestoreIsPodcast, setFirestoreIsPodcast] = useState(false);
+
+    // 팟캐스트 소스 경로 미리 정의 (useEffect에서 사용하기 위함)
+    const podcastSrc = useMemo(() => {
+        if (!book) return '';
+        return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile || `/audio/${book.id}.mp3`;
+    }, [book, firestoreAudioUrl]);
+
+    // 탭 파라미터 감지 및 자동 재생 연동
     useEffect(() => {
-        const updateDimensions = () => {
-            const w = window.innerWidth;
-            if (w < 480) {
-                setDimensions({ width: 320, height: 480 });
-            } else {
-                setDimensions({ width: 380, height: 580 });
+        const tab = searchParams.get('tab');
+        if (tab === 'podcast' && isPodcast) {
+            setActiveTab('podcast');
+            // 자동 재생 시도 (이미 재생 중인 게 아닐 때만)
+            if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
+                setTimeout(() => {
+                    playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+                }, 500);
             }
-        };
-        updateDimensions();
-        window.addEventListener('resize', updateDimensions);
+        } else if (book && !hasReview && isPodcast) {
+            setActiveTab('podcast');
+        }
+    }, [book, hasReview, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3]);
 
-        // Prevent body scroll when in reading mode
-        document.body.style.overflow = 'hidden';
+    const total = pages.length + 2;
+    const chatEndRef = useRef(null);
 
-        return () => {
-            window.removeEventListener('resize', updateDimensions);
-            document.body.style.overflow = 'auto';
-        };
+    // Firestore에서 대본 + 오디오 URL + isPodcast 실시간 로드
+    useEffect(() => {
+        if (!id) return;
+        // 로컬에 없을 때만 Firestore 대본 조회
+        if (!bookScripts[id]) {
+            getDoc(doc(db, 'scripts', id)).then(snap => {
+                if (snap.exists()) {
+                    setFirestoreScript((snap.data().lines || []).map(l => ({
+                        role: l.speaker === '스텔라' ? 'B' : 'A',
+                        text: l.text
+                    })));
+                }
+            }).catch(() => {});
+        }
+        // 성우 MP3 / 오디오 URL / isPodcast Firestore 오버라이드 조회
+        getDoc(doc(db, 'book_overrides', id)).then(snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                setFirestoreAudioUrl(d.voiceAudioUrl || d.audioUrl || null);
+                if (d.isPodcast) setFirestoreIsPodcast(true);
+            }
+        }).catch(() => {});
+    }, [id]);
+
+    const script = useMemo(() => bookScripts[id] || firestoreScript || [], [id, firestoreScript]);
+    const hasScript = script.length > 0;
+    const isPodcast = book?.isPodcast || firestoreIsPodcast;
+
+    // 타이머 비활성화 (버튼 고정 요청)
+    const resetHideTimer = useCallback(() => {
+        setShowUI(true);
     }, []);
 
-    // Find the book by its ID across all celebrities
-    let targetBook = null;
-    let foundCeleb = null;
-    for (const celeb of celebrities) {
-        const found = celeb.books.find(b => b.id === id);
-        if (found) {
-            targetBook = found;
-            foundCeleb = celeb;
-            break;
-        }
-    }
+    useEffect(() => {
+        resetHideTimer();
+    }, [pageIdx, resetHideTimer]);
 
-    // Fallback: search by title if id search fails (for legacy links)
-    if (!targetBook) {
-        for (const celeb of celebrities) {
-            const found = celeb.books.find(b => b.title.includes(id) || id.includes(b.id));
-            if (found) {
-                targetBook = found;
-                foundCeleb = celeb;
-                break;
+    const onFlip = useCallback((e) => {
+        setPageIdx(e.data);
+    }, []);
+
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                flipBook.current?.pageFlip().flipNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                flipBook.current?.pageFlip().flipPrev();
+            } else if (e.key === 'Escape') {
+                navigate(-1);
             }
-        }
-    }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [navigate]);
 
-    if (!targetBook) {
-        return <div className="p-20 text-white text-center bg-[#0b0d0f] min-h-screen flex items-center justify-center">
-            <div className="space-y-4">
-                <p className="text-xl font-serif">리뷰를 찾을 수 없습니다.</p>
-                <button onClick={() => navigate('/editorial')} className="px-6 py-2 border border-white/20 rounded-full text-white/60 hover:text-white transition-colors">목록으로 돌아가기</button>
+    if (!book) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#f0ebe0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: '#888', fontSize: 16 }}>도서를 찾을 수 없습니다.</p>
             </div>
-        </div>;
+        );
     }
 
-    const reviewText = targetBook.review || targetBook.desc;
+    const progress = pageIdx / (total - 1);
+    const isThisPodcastActive = podcastInfo?.src === podcastSrc;
 
-    // Improved chunking for e-book experience: 
-    // We aim for approx 400-500 characters per page in Korean to fill the space without overflow.
-    const chunks = reviewText.split('\n').filter(p => p.trim() !== '').reduce((acc, para) => {
-        const lastChunk = acc[acc.length - 1];
-        const maxLength = 450; // Ideal characters per page for Korean font size/height
-
-        if (!lastChunk || lastChunk.length + para.length > maxLength) {
-            // If the paragraph itself is too long, split it
-            if (para.length > maxLength) {
-                const subChunks = para.match(new RegExp(`[\\s\\S]{1,${maxLength}}`, 'g')) || [para];
-                return [...acc, ...subChunks];
-            }
-            return [...acc, para];
-        } else {
-            acc[acc.length - 1] = lastChunk + '\n\n' + para;
-            return acc;
-        }
-    }, []) || [reviewText];
-
-    const handleClose = () => {
-        stopAll();
-        navigate('/editorial');
+    const handlePodcastClick = () => {
+        playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
     };
 
-    const hasPodcast = !!bookScripts[id];
+    const formatTime = (sec) => {
+        if (!sec || isNaN(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleKakaoShare = useCallback(() => {
+        if (!window.Kakao) return;
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+        }
+        window.Kakao.Link.sendDefault({
+            objectType: 'feed',
+            content: {
+                title: `[아카이뷰] ${book.title}`,
+                description: book.desc || '아카이뷰의 정밀 도서 리뷰',
+                imageUrl: `https://the-archive.web.app${book.cover}`,
+                link: {
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
+                },
+            },
+            buttons: [
+                {
+                    title: '리뷰 보기',
+                    link: {
+                        mobileWebUrl: window.location.href,
+                        webUrl: window.location.href,
+                    },
+                },
+            ],
+        });
+    }, [book]);
 
     return (
-        <div className="bg-[#0b0d0f] min-h-screen w-full font-display flex flex-col overflow-hidden relative z-[9999]">
-            {/* Control Bar - Mobile Optimized */}
-            <div className="fixed top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent z-[10000] px-4 flex items-center justify-between">
-                <button
-                    onClick={handleClose}
-                    className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
-                >
-                    <span className="material-symbols-outlined">arrow_back</span>
+        <div
+            className={`rv-root ${activeTab === 'podcast' ? 'podcast-view' : ''}`}
+            onClick={resetHideTimer}
+        >
+            {/* ── Top Bar ── */}
+            <div className={`rv-topbar ${showUI ? 'visible' : 'hidden'}`}>
+                <button className="rv-close-btn" onClick={() => navigate(-1)}>
+                    <span className="material-symbols-outlined">close</span>
                 </button>
-
-                <div className="flex gap-2">
+                <div className="rv-topbar-title-wrap">
+                    <span className="rv-topbar-title">{book.title}</span>
+                    <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
+                </div>
+                <div className="rv-topbar-right">
                     <button
-                        onClick={() => {
-                            if (activeAudioId === `review-${id}`) {
-                                stopAll();
-                            } else {
-                                if (hasPodcast) {
-                                    playPodcast(bookScripts[id], `review-${id}`);
-                                } else {
-                                    speakReview(reviewText, id);
-                                }
-                            }
-                        }}
-                        className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all active:scale-90 shadow-lg border ${(isSpeaking && activeAudioId === `review-${id}`) ? 'bg-gold border-gold text-primary font-bold' : 'bg-white/5 border-white/20 text-white/80'}`}
+                        onClick={handleKakaoShare}
+                        className="size-10 flex items-center justify-center rounded-xl bg-[#FEE500] text-[#3c1e1e] active:scale-95 transition-all shadow-lg"
                     >
-                        <span className="material-symbols-outlined text-sm">
-                            {(isSpeaking && activeAudioId === `review-${id}`) ? 'stop' : (hasPodcast ? 'podcasts' : 'record_voice_over')}
-                        </span>
-                        <span className="text-[10px] uppercase tracking-widest">
-                            {(isSpeaking && activeAudioId === `review-${id}`) ? 'Listening' : (hasPodcast ? 'Podcast' : 'Listen')}
-                        </span>
-                    </button>
-                    <button
-                        onClick={handleClose}
-                        className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
-                    >
-                        <span className="material-symbols-outlined">close</span>
+                        <span className="material-symbols-outlined text-xl font-bold">chat_bubble</span>
                     </button>
                 </div>
             </div>
 
-            <main className="flex-1 w-full flex items-center justify-center relative touch-none pt-12">
-                <div className="relative w-full flex items-center justify-center">
-
-                    {/* Desktop Arrows */}
+            {/* ── Tab Bar ── */}
+            <div className="rv-tab-bar">
+                <button
+                    className={`rv-tab ${activeTab === 'review' ? 'active' : ''} ${!hasReview ? 'disabled' : ''}`}
+                    onClick={() => hasReview && setActiveTab('review')}
+                    disabled={!hasReview}
+                >
+                    <span className="material-symbols-outlined">menu_book</span>
+                    <span>리뷰</span>
+                </button>
+                {hasScript && isPodcast && (
                     <button
-                        onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        className="absolute left-12 z-50 size-16 rounded-full bg-white/5 border border-white/10 hidden md:flex items-center justify-center text-white/20 hover:text-gold transition-all"
+                        className={`rv-tab ${activeTab === 'podcast' ? 'active' : ''}`}
+                        onClick={() => {
+                            setActiveTab('podcast');
+                            if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
+                                playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+                            }
+                        }}
                     >
-                        <span className="material-symbols-outlined text-4xl">chevron_left</span>
+                        <span className="material-symbols-outlined">podcasts</span>
+                        <span>팟캐스트</span>
                     </button>
+                )}
+            </div>
 
-                    <div className="relative flex justify-center items-center scale-95 sm:scale-100 md:scale-110">
+            {/* ── Stage (FlipBook Container) ── */}
+            {activeTab === 'review' ? (
+                <div className="rv-stage">
+                    <div className="rv-book-container">
                         <HTMLFlipBook
-                            width={dimensions.width}
-                            height={dimensions.height}
-                            size="fixed"
+                            width={520}
+                            height={740}
+                            size="stretch"
                             minWidth={280}
-                            maxWidth={420}
+                            maxWidth={520}
                             minHeight={400}
-                            maxHeight={650}
-                            maxShadowOpacity={0.3}
+                            maxHeight={740}
+                            maxShadowOpacity={0.4}
                             showCover={true}
-                            mobileScrollSupport={true}
-                            clickEventForward={true}
                             usePortrait={true}
                             startPage={0}
+                            mobileScrollSupport={true}
+                            onFlip={onFlip}
+                            className="rv-flipbook"
+                            ref={flipBook}
                             drawShadow={true}
-                            flippingTime={600}
-                            useMouseEvents={true}
-                            ref={bookRef}
-                            className="editorial-book shadow-[0_40px_100px_rgba(0,0,0,0.8)]"
+                            flippingTime={800}
                         >
-                            <PageCover title={targetBook.title} author={targetBook.author} cover={targetBook.cover} />
-
-                            <Page number="1">
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-0.5 w-8 bg-gold"></div>
-                                        <span className="text-[10px] text-gold font-bold uppercase tracking-[0.3em]">Prologue</span>
+                            {/* 1. Cover Page */}
+                            <Page density="hard" className="rv-cover-page">
+                                <div className="rv-cover">
+                                    {/* 액자 프레임 */}
+                                    <div className="rv-frame-outer">
+                                        <div className="rv-frame-inner">
+                                            <div className="rv-cover-img">
+                                                <img src={book.cover} alt={book.title} loading="lazy" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <h3 className="text-3xl font-serif text-[#1a1a1a] font-black leading-tight">Synopsis</h3>
-                                        <p className="text-black/40 text-[10px] uppercase tracking-widest font-bold">Curated for {foundCeleb?.name || 'Archiview'}</p>
-                                    </div>
-                                    <div className="relative">
-                                        <span className="absolute -left-4 -top-2 text-6xl text-gold/20 font-serif leading-none">"</span>
-                                        <p className="italic text-black/80 leading-relaxed font-serif text-lg pl-2">
-                                            {targetBook.desc}
-                                        </p>
-                                    </div>
-                                    <div className="pt-10 border-t border-black/5 space-y-4">
-                                        <h4 className="text-[11px] font-bold text-black/60 uppercase tracking-widest">Author's Insight</h4>
-                                        <p className="text-[12px] font-serif text-black/50 leading-relaxed">
-                                            이 5,000자의 여정은 단순히 텍스트를 읽는 행위를 넘어,
-                                            동시대를 대표하는 선구자의 영혼과 대면하는 의식입니다.
-                                            한 페이지 한 페이지 넘길 때마다 당신의 사유가 깊어지길 소망합니다.
-                                        </p>
-                                    </div>
+                                    <div className="rv-cover-divider" />
+                                    <h1 className="rv-cover-title">{book.title}</h1>
+                                    <p className="rv-cover-author">{book.author}</p>
+                                    <div className="rv-cover-divider" style={{ marginBottom: 0 }} />
+                                    <p className="rv-cover-edition">Premium Archiview Edition</p>
+                                    <p className="rv-cover-hint">스와이프하여 넘기기 →</p>
                                 </div>
                             </Page>
 
-                            {chunks.map((chunk, idx) => (
-                                <Page key={idx} number={idx + 2}>
-                                    {chunk}
+                            {/* 2. Content Pages */}
+                            {pages.map((p, i) => (
+                                <Page key={i}>
+                                    <div className="rv-content">
+                                        <div className="rv-section-label">The Archiview · Review</div>
+                                        <h2 className="rv-page-header">{p.header}</h2>
+                                        {p.isSummary ? (
+                                            <div className="rv-summary-body">
+                                                {p.body
+                                                    .split(/\n\n+/)
+                                                    .map((block, bi) => {
+                                                        const lines = block.split('\n').filter(l => l.trim());
+                                                        if (!lines.length) return null;
+                                                        const label = lines[0].trim();
+                                                        const text = lines.slice(1).join('\n').trim();
+                                                        if (text) {
+                                                            return (
+                                                                <div key={bi} className="rv-summary-card">
+                                                                    <div className="rv-summary-card-label">{label}</div>
+                                                                    <div className="rv-summary-card-text" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })}
+                                            </div>
+                                        ) : p.isBiblio ? (
+                                            <div className="rv-biblio-body">
+                                                <div className="rv-biblio-book-img">
+                                                    <img src={book.cover} alt={book.title} loading="lazy" />
+                                                </div>
+                                                <div className="rv-biblio-card">
+                                                    <div className="rv-biblio-item">
+                                                        <span className="rv-biblio-label">도서명</span>
+                                                        <span className="rv-biblio-value">{p.body.title}</span>
+                                                    </div>
+                                                    <div className="rv-biblio-item">
+                                                        <span className="rv-biblio-label">저자</span>
+                                                        <span className="rv-biblio-value">{p.body.author}</span>
+                                                    </div>
+                                                    <div className="rv-biblio-item">
+                                                        <span className="rv-biblio-label">출판사</span>
+                                                        <span className="rv-biblio-value">{p.body.publisher}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="rv-biblio-note">
+                                                    이 리뷰는 위 도서의 내용을 바탕으로 에디터의 주관적인 해석을 담아 작성되었습니다.
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="rv-page-body" spellCheck={false}>
+                                                {p.body}
+                                            </div>
+                                        )}
+                                        <div className="rv-footer">
+                                            <span className="rv-footer-brand">The Archiview</span>
+                                            <span className="rv-footer-page">— {i + 1} / {total - 1} —</span>
+                                        </div>
+                                    </div>
                                 </Page>
                             ))}
 
-                            <div className="bg-[#1a1c20] w-full h-full flex flex-col items-center justify-center p-8 text-center relative overflow-hidden" data-density="hard">
-                                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-linen.png')" }}></div>
-                                <div className="z-10 space-y-6 font-serif flex flex-col items-center">
-                                    <div className="size-16 rounded-full border border-gold/30 flex items-center justify-center mb-4">
-                                        <span className="material-symbols-outlined text-gold text-2xl">book_4</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="text-gold text-4xl italic font-light tracking-tighter">Fin.</div>
-                                        <div className="h-0.5 w-12 bg-gold/20 mx-auto"></div>
-                                    </div>
-                                    <div className="max-w-[200px] space-y-4">
-                                        <p className="text-white/40 text-[11px] leading-relaxed italic">
-                                            "우리가 읽는 책이 우리 머리를 주먹으로 한 대 쳐서 깨우지 않는다면, 왜 그 책을 읽는가?"
-                                        </p>
-                                        <p className="text-gold/60 text-[9px] uppercase tracking-widest font-bold">- Franz Kafka -</p>
-                                    </div>
-                                    <div className="pt-12 text-[8px] text-white/5 tracking-[0.5em] uppercase font-black">
-                                        Archiview Curation Archive
-                                    </div>
+                            {/* 3. Final Page */}
+                            <Page density="hard" className="rv-final-page">
+                                <div className="rv-final">
+                                    <div className="rv-final-logo-large">ARCHIVIEW</div>
+                                    <button
+                                        className="rv-final-btn"
+                                        onClick={(e) => { e.stopPropagation(); navigate('/library'); }}
+                                    >
+                                        서재로 돌아가기
+                                    </button>
                                 </div>
-                                <div className="absolute top-0 bottom-0 right-0 w-8 bg-gradient-to-l from-black/60 to-transparent"></div>
-                                <div className="absolute top-0 bottom-0 left-0 w-[1px] bg-white/5"></div>
-                            </div>
+                            </Page>
                         </HTMLFlipBook>
                     </div>
 
-                    <button
-                        onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        className="absolute right-12 z-50 size-16 rounded-full bg-white/5 border border-white/10 hidden md:flex items-center justify-center text-white/20 hover:text-gold transition-all"
-                    >
-                        <span className="material-symbols-outlined text-4xl">chevron_right</span>
-                    </button>
+                    {/* ── Progress Bar ── */}
+                    <div className="rv-progress-track">
+                        <div className="rv-progress-fill" style={{ width: `${progress * 100}%` }} />
+                    </div>
 
-                    {/* Mobile Tap Hints */}
-                    <div className="absolute inset-x-0 bottom-4 flex justify-center md:hidden pointer-events-none">
-                        <span className="text-[9px] text-white/20 uppercase tracking-[0.3em] font-bold animate-pulse">Tap edges to flip</span>
+                    {/* ── Nav Buttons ── */}
+                    <div className={`rv-nav ${showUI ? 'visible' : 'hidden'}`}>
+                        <button className="rv-nav-btn" onClick={() => flipBook.current?.pageFlip().flipPrev()} disabled={pageIdx === 0}>
+                            <span className="material-symbols-outlined">arrow_back_ios</span>
+                        </button>
+                        <button className="rv-nav-btn" onClick={() => flipBook.current?.pageFlip().flipNext()} disabled={pageIdx === total - 1}>
+                            <span className="material-symbols-outlined">arrow_forward_ios</span>
+                        </button>
                     </div>
                 </div>
-            </main>
-
-            <style>{`
-                .editorial-book { border-radius: 4px; overflow: visible !important; }
-                .stf__parent { background-color: transparent !important; }
-                .stf__block { background-color: transparent !important; }
-                canvas { display: none !important; }
-                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
-            `}</style>
-            <div className="w-full bg-black">
-                <Footer />
-            </div>
+            ) : (
+                <div className="rv-podcast-stage">
+                    {/* ── Chat View ── */}
+                    <div className="rv-chat-container">
+                        {script.map((turn, i) => (
+                            <div key={i} className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                                <div className={`rv-chat-avatar ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                                    <Avatar role={turn.role} />
+                                </div>
+                                <div className="rv-chat-bubble-wrap">
+                                    <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
+                                    <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                                        {turn.text}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

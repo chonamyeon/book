@@ -1,9 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 1. User level reading notes
     match /users/{userId}/readingNotes/{noteId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // 2. User profiles
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+      allow list: if request.auth != null;
+    }
+
+    // 3. Sales collection
+    match /sales/{saleId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 4. Book Overrides - 관리자 페이지에서 write (비인증 허용)
+    match /book_overrides/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 5. AI 대본 - 관리자 페이지에서 생성, 누구나 읽기
+    match /scripts/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }

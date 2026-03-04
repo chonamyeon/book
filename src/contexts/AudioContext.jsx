@@ -1,104 +1,179 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 
-const AudioContext = createContext();
+const AudioCtx = createContext();
 
-export const useAudio = () => useContext(AudioContext);
+export const useAudio = () => useContext(AudioCtx);
 
 export const AudioProvider = ({ children }) => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [activeAudioId, setActiveAudioId] = useState(null);
 
+    // Podcast Player states
+    const [podcastPlaying, setPodcastPlaying] = useState(false);
+    const [podcastInfo, setPodcastInfo] = useState(null);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+
     const speechAudio = useRef(null);
-    const musicAudio = useRef(null);
+    const musicAudio = useRef(null); // 사용하지 않지만 기존 구조 유지를 위해 유지
+    const podcastAudioRef = useRef(null);
     const stopSignal = useRef(false);
 
     useEffect(() => {
         speechAudio.current = new Audio();
         musicAudio.current = new Audio();
+        podcastAudioRef.current = new Audio();
 
+        const pa = podcastAudioRef.current;
+        const onTime = () => setCurrentTime(pa.currentTime);
+        const onMeta = () => setDuration(pa.duration);
+        const onEnded = () => { setPodcastPlaying(false); setCurrentTime(0); };
+        pa.addEventListener('timeupdate', onTime);
+        pa.addEventListener('loadedmetadata', onMeta);
+        pa.addEventListener('ended', onEnded);
+
+        // 터치/클릭 시 오디오 잠금 해제
         const unlock = () => {
-            if (speechAudio.current) { speechAudio.current.play().catch(() => { }); speechAudio.current.pause(); }
-            if (musicAudio.current) { musicAudio.current.play().catch(() => { }); musicAudio.current.pause(); }
+            [speechAudio.current, musicAudio.current, podcastAudioRef.current].forEach(a => {
+                if (a) { a.play().catch(() => { }); a.pause(); }
+            });
             document.removeEventListener('click', unlock);
+            document.removeEventListener('touchstart', unlock);
         };
         document.addEventListener('click', unlock);
+        document.addEventListener('touchstart', unlock, { passive: true });
+
+        return () => {
+            pa.removeEventListener('timeupdate', onTime);
+            pa.removeEventListener('loadedmetadata', onMeta);
+            pa.removeEventListener('ended', onEnded);
+        };
     }, []);
 
-    const playMusic = async (url) => {
-        if (!musicAudio.current) return;
-        musicAudio.current.src = url;
-        musicAudio.current.loop = true;
-        musicAudio.current.volume = 0.1;
-        try { await musicAudio.current.play(); } catch (e) { }
-    };
-
+    // ❌ 배경음악(carefree.mp3) 기능을 완전히 삭제했습니다.
     const stopAll = () => {
         stopSignal.current = true;
-        if (speechAudio.current) { speechAudio.current.pause(); speechAudio.current.src = ''; }
-        if (musicAudio.current) { musicAudio.current.pause(); musicAudio.current.src = ''; }
+        if (speechAudio.current) {
+            speechAudio.current.pause();
+            speechAudio.current.src = '';
+        }
+        if (musicAudio.current) {
+            musicAudio.current.pause();
+            musicAudio.current.src = '';
+        }
+        if (podcastAudioRef.current) {
+            podcastAudioRef.current.pause();
+            podcastAudioRef.current.src = '';
+        }
         setIsSpeaking(false);
         setActiveAudioId(null);
+        setPodcastPlaying(false);
         setTimeout(() => { stopSignal.current = false; }, 200);
     };
 
-    const playPodcast = async (script, id = "podcast") => {
-        if (isSpeaking) return stopAll();
+    const playPodcast = async (script, id = "podcast", audioUrl = null) => {
+        // 모든 소리 즉시 정지
+        stopAll();
+
         setIsSpeaking(true);
         setActiveAudioId(id);
         stopSignal.current = false;
 
-        // 배경음악만 깔아줌
-        await playMusic("/music/carefree.mp3");
+        // ID에서 불필요한 수식어 제거 및 파일명 결정
+        const baseId = id.toLowerCase().replace(/review|pick|weekly|guru/g, '').replace(/^-+/, '').replace(/[^a-z0-9-]/g, '');
+        const finalUrl = audioUrl || `/audio/${baseId}.mp3`;
 
-        // [핵심] ID에서 순수 영문 이름만 추출 (예: review-factfulness -> factfulness)
-        const baseId = id.toLowerCase().replace(/[^a-z0-9]/g, '').replace('review', '').replace('pick', '').replace('weekly', '');
-
-        // 유저님이 원하시는 단일 파일 경로 후보 (두 가지 다 체크)
-        const urls = [
-            `/audio/${baseId}.mp3?v=${Date.now()}`,
-            `/audio/fact.mp3?v=${Date.now()}` // 팩트풀니스 예외처리
-        ];
-
-        console.log("[AUDIO-SYS] Searching for MP3 for baseId:", baseId);
-
-        let finalUrl = null;
-        for (const url of urls) {
-            try {
-                const res = await fetch(url, { method: 'HEAD' });
-                if (res.ok) { finalUrl = url; break; }
-            } catch (e) { }
-        }
+        console.log("🔊 팟캐스트 목소리 재생 시작:", finalUrl);
 
         if (finalUrl) {
-            console.log("[AUDIO-SYS] Found local MP3! Playing:", finalUrl);
-            await new Promise((resolve) => {
-                speechAudio.current.src = finalUrl;
-                speechAudio.current.onended = () => resolve();
-                speechAudio.current.onerror = () => resolve();
-                speechAudio.current.play().catch(() => resolve());
+            try {
+                // 캐시 방지용 쿼리 추가
+                speechAudio.current.src = `${finalUrl}?v=${Date.now()}`;
 
-                const checkStop = setInterval(() => {
-                    if (stopSignal.current) {
-                        speechAudio.current.pause();
-                        clearInterval(checkStop);
+                await speechAudio.current.play();
+
+                await new Promise((resolve) => {
+                    speechAudio.current.onended = () => resolve();
+                    speechAudio.current.onerror = (e) => {
+                        console.error("❌ 오디오 파일 없음:", finalUrl);
                         resolve();
-                    }
-                }, 100);
-            });
-        } else {
-            console.error("[AUDIO-SYS] FATAL: No local MP3 found. TTS is DISABLED.");
-            // TTS는 이제 절대 나오지 않습니다.
+                    };
+
+                    const checkStop = setInterval(() => {
+                        if (stopSignal.current) {
+                            speechAudio.current.pause();
+                            clearInterval(checkStop);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            } catch (error) {
+                console.error("❌ 재생 오류:", error);
+            }
         }
 
         setIsSpeaking(false);
         setActiveAudioId(null);
     };
 
-    const speakReview = (text, id) => playPodcast([], id); // 보이스리뷰도 동일 로직 사용 (TTS 차단)
+    const speakReview = (text, id) => playPodcast([], id);
+
+    // 🆕 MP3 Player Controls (MiniPlayer용)
+    const playPodcastMP3 = useCallback((src, title, cover, id = null) => {
+        const pa = podcastAudioRef.current;
+        if (!pa) return;
+
+        // 동일한 소스인 경우 토글
+        if (podcastInfo?.src === src) {
+            if (podcastPlaying) {
+                pa.pause();
+                setPodcastPlaying(false);
+            } else {
+                pa.play().catch(() => { });
+                setPodcastPlaying(true);
+            }
+            return;
+        }
+
+        // 다른 소스인 경우 초기화 후 재생
+        if (src) {
+            stopAll();
+            pa.src = src;
+            pa.load(); // 메타데이터 로드 보장
+            pa.play().catch(() => { });
+            setPodcastPlaying(true);
+            setPodcastInfo({ src, title, cover, id });
+        }
+    }, [podcastInfo, podcastPlaying, stopAll]);
+
+    const pausePodcastMP3 = useCallback(() => {
+        podcastAudioRef.current?.pause();
+        setPodcastPlaying(false);
+    }, []);
+
+    const seekPodcastMP3 = useCallback((time) => {
+        if (podcastAudioRef.current) {
+            podcastAudioRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
+    }, []);
+
+    const closePodcastMP3 = useCallback(() => {
+        const pa = podcastAudioRef.current;
+        if (pa) { pa.pause(); pa.src = ''; }
+        setPodcastPlaying(false);
+        setPodcastInfo(null);
+        setCurrentTime(0);
+        setDuration(0);
+    }, []);
 
     return (
-        <AudioContext.Provider value={{ isSpeaking, activeAudioId, playPodcast, speakReview, stopAll }}>
+        <AudioCtx.Provider value={{
+            isSpeaking, activeAudioId, playPodcast, speakReview, stopAll,
+            podcastPlaying, podcastInfo, currentTime, duration,
+            playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3
+        }}>
             {children}
-        </AudioContext.Provider>
+        </AudioCtx.Provider>
     );
 };

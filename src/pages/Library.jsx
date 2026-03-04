@@ -87,7 +87,7 @@ export default function Library() {
                             <div className="relative bg-background-dark/40 backdrop-blur-xl rounded-[22px] p-6 flex items-center gap-6">
                                 <div className="relative size-24 shrink-0">
                                     <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full"></div>
-                                    <img src={result.image} alt={result.persona} className="relative w-full h-full object-cover rounded-2xl shadow-xl border border-gold/30" />
+                                    <img src={result.image} alt={result.persona} loading="lazy" className="relative w-full h-full object-cover rounded-2xl shadow-xl border border-gold/30" />
                                 </div>
                                 <div className="flex-1 min-w-0 text-left">
                                     <span className="text-gold text-[10px] font-bold uppercase tracking-widest block mb-1">My Persona</span>
@@ -144,7 +144,7 @@ export default function Library() {
                                             <span className="text-gold text-[8px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full border border-gold/20">FOUND</span>
                                         </div>
                                         <div className="w-16 h-24 shrink-0 bg-slate-800 rounded border border-white/10 overflow-hidden shadow-lg">
-                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex-1 min-w-0 py-1">
                                             <h4 className="text-white text-sm font-bold truncate mb-1">{book.title}</h4>
@@ -158,7 +158,7 @@ export default function Library() {
                                 {myRecs.map((book, idx) => (
                                     <div key={`persona-${idx}`} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
                                         <div className="w-16 h-24 shrink-0 bg-slate-800 rounded border border-white/10 overflow-hidden">
-                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex-1 min-w-0 py-1">
                                             <h4 className="text-white text-sm font-bold truncate mb-1">{book.title}</h4>
@@ -179,7 +179,7 @@ export default function Library() {
                                 {savedBooks.map((book, idx) => (
                                     <div key={idx} className="group relative">
                                         <div className="relative aspect-[2/3] bg-white/5 rounded-lg overflow-hidden border border-white/10 shadow-lg mb-3">
-                                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
 
                                             {/* Overlay Actions */}
                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">

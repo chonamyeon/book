@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
@@ -6,11 +6,31 @@ import TopNavigation from '../components/TopNavigation';
 import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
+import { useBookData } from '../hooks/useBookData';
 
 export default function Celebrity() {
     const { id } = useParams();
     const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll } = useAudio();
     const celeb = celebrities.find(c => c.id === id) || celebrities[0]; // Default to first if not found
+    const { getAllBooks, loading: booksLoading } = useBookData();
+
+    // Firestore 신규 등록 도서 (isPublic:true, 해당 셀럽 slug)
+    const firestoreBooks = useMemo(() => {
+        if (booksLoading) return [];
+        const staticIds = new Set((celeb.books || []).map(b => b.id));
+        return getAllBooks().filter(b =>
+            b.celebName === id &&
+            b.isPublic === true &&
+            !staticIds.has(b.id)
+        );
+    }, [getAllBooks, booksLoading, id, celeb.books]);
+
+    const allCelebBooks = useMemo(() => [...(celeb.books || []), ...firestoreBooks], [celeb.books, firestoreBooks]);
+
+    const [expandedReviews, setExpandedReviews] = useState({});
+    const toggleReview = (index) => {
+        setExpandedReviews(prev => ({ ...prev, [index]: !prev[index] }));
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -117,13 +137,13 @@ export default function Celebrity() {
                                 <span className="text-[10px] uppercase tracking-widest text-slate-500">추천 도서</span>
                             </div>
                             <div className="flex flex-col gap-12">
-                                {celeb.books.map((book, index) => (
+                                {allCelebBooks.map((book, index) => (
                                     <div key={index} className="flex flex-col gap-6 group">
                                         <div className="flex gap-6">
                                             <a
-                                                href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                                href={book.purchaseLink || `/review/${book.id || ''}`}
+                                                target={book.purchaseLink ? "_blank" : "_self"}
+                                                rel={book.purchaseLink ? "noopener noreferrer" : undefined}
                                                 className="w-1/3 shrink-0 active:scale-95 transition-transform"
                                             >
                                                 <div className="aspect-[2/3] bg-primary/20 rounded shadow-2xl overflow-hidden border border-white/5 relative group/cover">
@@ -133,7 +153,7 @@ export default function Celebrity() {
                                                         alt={book.title}
                                                     />
                                                     <div className="absolute inset-0 bg-black/0 group-hover/cover:bg-black/20 transition-colors flex items-center justify-center">
-                                                        <span className="material-symbols-outlined text-white opacity-0 group-hover/cover:opacity-100 transition-opacity">shopping_cart</span>
+                                                        <span className="material-symbols-outlined text-white opacity-0 group-hover/cover:opacity-100 transition-opacity">{book.purchaseLink ? 'shopping_cart' : 'menu_book'}</span>
                                                     </div>
                                                 </div>
                                             </a>
@@ -157,76 +177,83 @@ export default function Celebrity() {
 
                                         {/* Detailed Review Section for AdSense */}
                                         {book.review && (
-                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 relative overflow-hidden">
+                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 relative overflow-hidden transition-all duration-500">
                                                 <div className="absolute top-0 left-0 w-1 h-full bg-gold/50"></div>
-                                                <h6 className="text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-sm">edit_note</span>
-                                                    Insight & Review
-                                                </h6>
-                                                <p className="text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h6 className="text-gold text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-sm">edit_note</span>
+                                                        Insight & Review
+                                                    </h6>
+                                                    <button
+                                                        onClick={() => toggleReview(index)}
+                                                        className="px-4 py-2 rounded-full bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
+                                                    >
+                                                        {expandedReviews[index] ? '접기' : '전체보기'}
+                                                    </button>
+                                                </div>
+                                                <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-6'}`}>
                                                     {book.review}
                                                 </p>
                                             </div>
                                         )}
 
-                                        <div className="flex gap-3">
-                                            {book.id && bookScripts[book.id] ? (
-                                                <button
-                                                    onClick={() => activeAudioId === `celeb-${book.id}` ? stopAll() : playPodcast(bookScripts[book.id], `celeb-${book.id}`)}
-                                                    className={`hover:bg-gold-light flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${activeAudioId === `celeb-${book.id}` ? 'bg-gold text-primary shadow-gold/20' : 'bg-white/5 text-white/80 border border-white/10'}`}
-                                                >
-                                                    <span>{activeAudioId === `celeb-${book.id}` ? '정지' : '팟캐스트'}</span>
-                                                    <span className="material-symbols-outlined text-sm">{activeAudioId === `celeb-${book.id}` ? 'stop' : 'podcasts'}</span>
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => activeAudioId === `celeb-${book.id || index}` ? stopAll() : speakReview(book.review || book.desc, `celeb-${book.id || index}`)}
-                                                    className={`hover:bg-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${activeAudioId === `celeb-${book.id || index}` ? 'bg-gold text-primary' : 'bg-white/5 text-white/50 border border-white/10'}`}
-                                                >
-                                                    <span>{activeAudioId === `celeb-${book.id || index}` ? '정지' : '리뷰듣기'}</span>
-                                                    <span className="material-symbols-outlined text-sm">{activeAudioId === `celeb-${book.id || index}` ? 'stop' : 'record_voice_over'}</span>
-                                                </button>
-                                            )}
-
+                                        <div className="grid grid-cols-2 gap-3 mt-4">
+                                            {/* 1. REVIEW DETAIL */}
                                             {book.id ? (
                                                 <Link
                                                     to={`/review/${book.id}`}
-                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 >
-                                                    <span>리뷰 디테일</span>
+                                                    <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
                                                     <span className="material-symbols-outlined text-sm">menu_book</span>
                                                 </Link>
                                             ) : (
-                                                <button
-                                                    onClick={() => {
-                                                        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-                                                        const isSaved = saved.some(b => b.title === book.title);
-                                                        if (isSaved) {
-                                                            const filtered = saved.filter(b => b.title !== book.title);
-                                                            localStorage.setItem('savedBooks', JSON.stringify(filtered));
-                                                            window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                            alert('서재에서 삭제되었습니다.');
-                                                        } else {
-                                                            saved.push(book);
-                                                            localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                            window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                            alert('서재에 추가되었습니다. ✅');
-                                                        }
-                                                    }}
-                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                >
-                                                    <span>서재에 담기</span>
-                                                    <span className="material-symbols-outlined text-sm">bookmark</span>
-                                                </button>
+                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                    <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
+                                                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                                                </div>
                                             )}
-                                        </div>
 
-                                        {/* Coupang Link Button (Full width) */}
-                                        <div className="mt-3">
-                                            <a href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`} target="_blank" rel="noopener noreferrer" className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 w-full text-center py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
-                                                <span>쿠팡 최저가 확인하기</span>
-                                                <span className="material-symbols-outlined text-xs">open_in_new</span>
-                                            </a>
+                                            {/* 2. 서재 추가 */}
+                                            <button
+                                                onClick={() => {
+                                                    const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
+                                                    const isSaved = saved.some(b => b.title === book.title);
+                                                    if (isSaved) {
+                                                        const filtered = saved.filter(b => b.title !== book.title);
+                                                        localStorage.setItem('savedBooks', JSON.stringify(filtered));
+                                                        window.dispatchEvent(new Event('savedBooksUpdated'));
+                                                        alert('서재에서 삭제되었습니다.');
+                                                    } else {
+                                                        saved.push(book);
+                                                        localStorage.setItem('savedBooks', JSON.stringify(saved));
+                                                        window.dispatchEvent(new Event('savedBooksUpdated'));
+                                                        alert('서재에 추가되었습니다. ✅');
+                                                    }
+                                                }}
+                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <span>서재 추가</span>
+                                                <span className="material-symbols-outlined text-sm">bookmark</span>
+                                            </button>
+
+                                            {/* 3. 구매하기 */}
+                                            {book.purchaseLink ? (
+                                                <a
+                                                    href={book.purchaseLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="col-span-2 bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <span>구매하기</span>
+                                                    <span className="material-symbols-outlined text-xs">shopping_cart</span>
+                                                </a>
+                                            ) : (
+                                                <div className="col-span-2 bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                    <span>구매하기</span>
+                                                    <span className="material-symbols-outlined text-xs">shopping_cart</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -247,7 +274,7 @@ export default function Celebrity() {
                                     className={`flex flex-col items-center gap-3 transition-all duration-300 group ${c.id === celeb.id ? 'opacity-100 scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
                                 >
                                     <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 p-1 transition-colors duration-500 ${c.id === celeb.id ? 'border-accent shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'border-primary/30 group-hover:border-accent'}`}>
-                                        <img className={`w-full h-full object-cover rounded-full transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
+                                        <img loading="lazy" className={`w-full h-full object-cover rounded-full transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
                                     </div>
                                     <div className="text-center">
                                         <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-widest block transition-colors duration-300 ${c.id === celeb.id ? 'text-accent' : 'text-slate-500 group-hover:text-slate-200'}`}>{c.name}</span>

@@ -86,12 +86,12 @@ export default function BottomNavigation() {
         { path: '/', label: '홈', icon: 'home' },
         { path: '/editorial', label: '에디토리얼', icon: 'auto_awesome' },
         { path: '/library', label: '서재', icon: 'auto_stories' },
-        { path: '/reading-notes', label: '독서노트', icon: 'edit_note' },
+        { path: '/reading-notes', label: '기록노트', icon: 'edit_note' },
         { path: '/profile', label: '프로필', icon: 'person' },
     ];
 
     return (
-        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-gold/20 bg-[#090b10]/95 backdrop-blur-2xl transition-all duration-300 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-gold/20 bg-[#090b10]/95 backdrop-blur-2xl transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex justify-around items-center px-4 pt-4 pb-6 relative">
                 {/* Subtle gold line on top of active item */}
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-gold/10 to-transparent"></div>
@@ -126,22 +126,12 @@ export default function BottomNavigation() {
 
                 {/* Floating Finder Button and Modal */}
                 <div className="absolute -top-20 right-6">
-                    {currentPath === '/reading-notes' ? (
-                        <button
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-reading-note-form'))}
-                            className="h-14 pl-5 pr-7 rounded-full bg-gold text-primary shadow-[0_15px_35px_rgba(212,175,55,0.3)] flex items-center gap-3 active:scale-90 transition-all font-bold group/note animate-in zoom-in duration-500"
-                        >
-                            <span className="material-symbols-outlined text-xl group-hover/note:rotate-12 transition-transform">edit_note</span>
-                            <span className="text-[14px]">기록하기</span>
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => setIsFinderOpen(!isFinderOpen)}
-                            className={`size-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
-                        >
-                            <span className="material-symbols-outlined text-[32px] font-bold">add</span>
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setIsFinderOpen(!isFinderOpen)}
+                        className={`size-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
+                    >
+                        <span className="material-symbols-outlined text-[32px] font-bold">add</span>
+                    </button>
 
                     <AnimatePresence>
                         {isFinderOpen && (
@@ -171,7 +161,7 @@ export default function BottomNavigation() {
                                                         <button
                                                             key={g}
                                                             onClick={() => setFormData({ ...formData, gender: g })}
-                                                            className={`py-1.5 rounded-xl text-[13px] font-bold transition-all border ${formData.gender === g ? 'bg-gold border-gold text-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                                                            className={`h-10 rounded-xl text-[13px] font-bold transition-all border ${formData.gender === g ? 'bg-gold border-gold text-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
                                                         >
                                                             {g}
                                                         </button>
@@ -245,7 +235,7 @@ export default function BottomNavigation() {
                                             <button onClick={() => setFinderStep(1)} className="text-gold text-[10px] font-bold">다시 찾기</button>
                                         </div>
 
-                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 hide-scrollbar">
                                             {foundBooks.map((book, idx) => {
                                                 const pickId = editorsPicksMap[book.title];
                                                 const hasPodcast = pickId && bookScripts[pickId];
@@ -254,7 +244,7 @@ export default function BottomNavigation() {
                                                     <div key={idx} className="space-y-2">
                                                         <div className="flex gap-4 p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
                                                             <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-lg border border-white/5">
-                                                                <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                                <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                             </div>
                                                             <div className="flex flex-col justify-center overflow-hidden flex-1">
                                                                 <h4 className="text-white text-sm font-bold truncate">{book.title}</h4>

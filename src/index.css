@@ -2,14 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 모바일 전역 터치 최적화 */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+button, a, input, select, textarea {
+    touch-action: manipulation;
+}
+
 @layer utilities {
     .hide-scrollbar::-webkit-scrollbar {
         display: none;
     }
 
-    .hide-scrollbar {
+    .hide-scrollbar,
+    .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
     }
 
     .custom-scrollbar::-webkit-scrollbar {
@@ -32,6 +45,10 @@
 
     .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .font-ebook {
+        font-family: 'Nanum Square', 'Pretendard', sans-serif;
     }
 
     .serif-title {

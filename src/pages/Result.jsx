@@ -74,6 +74,34 @@ export default function Result() {
         }
     };
 
+    const handleKakaoShare = () => {
+        if (!window.Kakao) return;
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+        }
+        window.Kakao.Link.sendDefault({
+            objectType: 'feed',
+            content: {
+                title: '아카이뷰 인지 분석 결과',
+                description: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
+                imageUrl: `https://the-archive.web.app${data.image}`,
+                link: {
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
+                },
+            },
+            buttons: [
+                {
+                    title: '결과 보기',
+                    link: {
+                        mobileWebUrl: window.location.href,
+                        webUrl: window.location.href,
+                    },
+                },
+            ],
+        });
+    };
+
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
             {/* Header */}
@@ -82,9 +110,14 @@ export default function Result() {
                     <span className="material-symbols-outlined text-2xl">arrow_back</span>
                 </Link>
                 <h1 className="text-lg font-bold tracking-tight">테스트 결과</h1>
-                <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
-                    <span className="material-symbols-outlined text-2xl">share</span>
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={handleKakaoShare} className="flex size-10 items-center justify-center rounded-full bg-[#FEE500] text-[#3c1e1e] transition-colors">
+                        <span className="material-symbols-outlined text-2xl font-bold">chat_bubble</span>
+                    </button>
+                    <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
+                        <span className="material-symbols-outlined text-2xl">share</span>
+                    </button>
+                </div>
             </header>
 
             <main className="flex-1 pb-24">
