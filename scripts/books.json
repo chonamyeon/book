@@ -1,0 +1,72 @@
+[
+    {
+        "id": "sapiens",
+        "title": "사피엔스",
+        "author": "유발 하라리",
+        "publisher": "김영사",
+        "brief": "호모 사피엔스의 역사를 인지혁명, 농업혁명, 과학혁명의 관점에서 분석한 책"
+    },
+    {
+        "id": "factfulness",
+        "title": "팩트풀니스",
+        "author": "한스 로슬링",
+        "publisher": "김영사",
+        "brief": "세계에 대한 잘못된 편견을 데이터로 바로잡는 책"
+    },
+    {
+        "id": "demian",
+        "title": "데미안",
+        "author": "헤르만 헤세",
+        "publisher": "민음사",
+        "brief": "소년 에밀 싱클레어의 자아 발견과 성장을 다룬 성장소설"
+    },
+    {
+        "id": "almond",
+        "title": "아몬드",
+        "author": "손원평",
+        "publisher": "창비",
+        "brief": "감정을 느끼지 못하는 소년 윤재의 성장 이야기"
+    },
+    {
+        "id": "ubermensch",
+        "title": "위버멘쉬",
+        "author": "프리드리히 니체",
+        "publisher": "열린책들",
+        "brief": "차라투스트라는 이렇게 말했다의 핵심 개념을 담은 니체 철학"
+    },
+    {
+        "id": "sayno",
+        "title": "세이노의 가르침",
+        "author": "세이노",
+        "publisher": "데이원",
+        "brief": "자수성가한 사업가 세이노의 돈과 삶에 대한 직설적인 조언"
+    },
+    {
+        "id": "psychology",
+        "title": "돈의 심리학",
+        "author": "모건 하우절",
+        "publisher": "인플루엔셜",
+        "brief": "돈에 대한 인간의 심리와 행동 패턴을 분석한 책"
+    },
+    {
+        "id": "stoner",
+        "title": "스토너",
+        "author": "존 윌리엄스",
+        "publisher": "알에이치코리아",
+        "brief": "평범한 대학 교수 윌리엄 스토너의 조용하면서도 충만한 일생"
+    },
+    {
+        "id": "norwegian-wood",
+        "title": "상실의 시대",
+        "author": "무라카미 하루키",
+        "publisher": "문학사상사",
+        "brief": "청춘의 상실과 고독, 그리고 성장을 다룬 무라카미 하루키의 대표작"
+    },
+    {
+        "id": "intelligent-investor",
+        "title": "현명한 투자자",
+        "author": "벤저민 그레이엄",
+        "publisher": "국일증권경제연구소",
+        "brief": "가치투자의 아버지 벤저민 그레이엄이 제시하는 투자 철학의 성경"
+    }
+]

@@ -1,0 +1,7 @@
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_0.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_1.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_2.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_3.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_4.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_5.wav'
+file 'C:/Users/admin/Desktop/book/the-archive/temp_audio/intelligent-investor/normalized/norm_6.wav'

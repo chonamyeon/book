@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // audio 파일은 관리자 업로드용 (비인증 허용)
+    match /audio/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

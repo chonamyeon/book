@@ -1,0 +1,6 @@
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_0.wav'
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_1.wav'
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_2.wav'
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_3.wav'
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_4.wav'
+file 'C:\Users\admin\Desktop\book\the-archive\temp_audio\one-thing_multispeaker\norm_chunk_5.wav'

@@ -1,0 +1,6 @@
+@echo off
+echo Starting Backend...
+start /b node scripts/server.mjs > backend.log 2>&1
+echo Starting Frontend...
+start /b node scripts/serve_build.mjs > frontend.log 2>&1
+echo Servers started in background.
