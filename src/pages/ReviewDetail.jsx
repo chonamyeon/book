@@ -1,11 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import HTMLFlipBook from 'react-pageflip';
 import { celebrities } from '../data/celebrities';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
+import { availableAudio } from '../data/availableAudio';
 import { db } from '../firebase';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
 import './ReviewDetail.css';
 
 const CHARS_PER_PAGE = 280;
@@ -14,8 +17,14 @@ function buildPages(book) {
     if (!book || !book.review) return [];
     const review = book.review;
 
-    const clean = (t) =>
-        t.replace(/---/g, '').replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
+    const clean = (t) => {
+        if (!t) return "";
+        return t.replace(/\[GEMINI [\d.]+ ANALYSIS\]/gi, '')
+            .replace(/팟캐스트 대본 제작을 위한/g, '')
+            .replace(/[#*]/g, '')
+            .replace(/---/g, '')
+            .replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
+    };
 
     const raw = review.split('---');
     const main = raw[0] || '';
@@ -168,13 +177,44 @@ export default function ReviewDetail() {
 
     const [pageIdx, setPageIdx] = useState(0);
     const [showUI, setShowUI] = useState(true);
+    const { user } = useAuth();
     const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3 } = useAudio();
+
+    // ─── Action Integration ───
+    const [completedActions, setCompletedActions] = useState([]);
+
+    useEffect(() => {
+        if (!user || !book) return;
+
+        const q = query(
+            collection(db, 'users', user.uid, 'readingNotes'),
+            where('bookTitle', '==', book.title),
+            where('type', 'in', ['action', '#액션'])
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const actions = snapshot.docs.map(doc => doc.data().actionTitle).filter(Boolean);
+            setCompletedActions(actions);
+        });
+
+        return () => unsubscribe();
+    }, [user, book]);
 
     const book = useMemo(() => {
         if (!celebrities) return null;
         for (const c of celebrities) {
             const b = c.books?.find((b) => b.id === id);
-            if (b) return b;
+            if (b) {
+                // Auto-detect isPodcast and podcastFile based on availableAudio
+                const fileName = `${b.id}.mp3`;
+                const hasAudioFile = availableAudio.includes(fileName);
+
+                return {
+                    ...b,
+                    isPodcast: b.isPodcast || hasAudioFile,
+                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null)
+                };
+            }
         }
         return null;
     }, [id]);
@@ -183,12 +223,15 @@ export default function ReviewDetail() {
     const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
     const [activeTab, setActiveTab] = useState('review');
 
-    // Firestore 상태 — podcastSrc보다 먼저 선언해야 함
+    // Firestore / Script / Podcast States & Derivations
     const [firestoreScript, setFirestoreScript] = useState(null);
     const [firestoreAudioUrl, setFirestoreAudioUrl] = useState(null);
     const [firestoreIsPodcast, setFirestoreIsPodcast] = useState(false);
 
-    // 팟캐스트 소스 경로 미리 정의 (useEffect에서 사용하기 위함)
+    const script = useMemo(() => bookScripts[id] || firestoreScript || [], [id, firestoreScript]);
+    const hasScript = script.length > 0;
+    const isPodcast = book?.isPodcast || firestoreIsPodcast;
+
     const podcastSrc = useMemo(() => {
         if (!book) return '';
         return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile || `/audio/${book.id}.mp3`;
@@ -208,9 +251,12 @@ export default function ReviewDetail() {
         } else if (book && !hasReview && isPodcast) {
             setActiveTab('podcast');
         }
-    }, [book, hasReview, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3]);
+    }, [book, hasReview, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3, isPodcast]);
 
     const total = pages.length + 2;
+    const progress = (total > 1) ? pageIdx / (total - 1) : 0;
+    const isThisPodcastActive = podcastInfo?.src === podcastSrc;
+
     const chatEndRef = useRef(null);
 
     // Firestore에서 대본 + 오디오 URL + isPodcast 실시간 로드
@@ -225,7 +271,7 @@ export default function ReviewDetail() {
                         text: l.text
                     })));
                 }
-            }).catch(() => {});
+            }).catch(() => { });
         }
         // 성우 MP3 / 오디오 URL / isPodcast Firestore 오버라이드 조회
         getDoc(doc(db, 'book_overrides', id)).then(snap => {
@@ -234,12 +280,61 @@ export default function ReviewDetail() {
                 setFirestoreAudioUrl(d.voiceAudioUrl || d.audioUrl || null);
                 if (d.isPodcast) setFirestoreIsPodcast(true);
             }
-        }).catch(() => {});
+        }).catch(() => { });
     }, [id]);
 
-    const script = useMemo(() => bookScripts[id] || firestoreScript || [], [id, firestoreScript]);
-    const hasScript = script.length > 0;
-    const isPodcast = book?.isPodcast || firestoreIsPodcast;
+    // 오디오 싱크: public/timestamps/{id}.json 로드
+    const bubbleRefs = useRef([]);
+    const [timestampData, setTimestampData] = useState(null);
+
+    useEffect(() => {
+        if (!id) return;
+        fetch(`/timestamps/${id}.json`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => setTimestampData(data))
+            .catch(() => setTimestampData(null));
+    }, [id]);
+
+    // 각 턴의 시작 시간 계산 (timestamps JSON → 글자 수 비율 추정 순서로 fallback)
+    const turnStartTimes = useMemo(() => {
+        if (script.length === 0) return [];
+        // 1순위: public/timestamps/{id}.json
+        if (timestampData?.segments?.length > 0) {
+            return timestampData.segments.map(s => s.start ?? 0);
+        }
+        // 2순위: script turn에 time 필드
+        if (script[0]?.time !== undefined) {
+            return script.map(turn => turn.time);
+        }
+        // 3순위: 글자 수 비율 추정 (duration 필요)
+        if (!duration) return [];
+        const totalChars = script.reduce((sum, t) => sum + t.text.length, 0);
+        let acc = 0;
+        return script.map(turn => {
+            const start = (acc / totalChars) * duration;
+            acc += turn.text.length;
+            return start;
+        });
+    }, [script, duration, timestampData]);
+
+    const activeTurnIndex = useMemo(() => {
+        if (!duration || !isThisPodcastActive || turnStartTimes.length === 0) return -1;
+        let idx = 0;
+        for (let i = 0; i < turnStartTimes.length; i++) {
+            if (currentTime >= turnStartTimes[i]) idx = i;
+            else break;
+        }
+        return idx;
+    }, [currentTime, duration, turnStartTimes, isThisPodcastActive]);
+
+    useEffect(() => {
+        if (activeTurnIndex >= 0 && bubbleRefs.current[activeTurnIndex]) {
+            bubbleRefs.current[activeTurnIndex].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+        }
+    }, [activeTurnIndex]);
 
     // 타이머 비활성화 (버튼 고정 요청)
     const resetHideTimer = useCallback(() => {
@@ -275,9 +370,6 @@ export default function ReviewDetail() {
             </div>
         );
     }
-
-    const progress = pageIdx / (total - 1);
-    const isThisPodcastActive = podcastInfo?.src === podcastSrc;
 
     const handlePodcastClick = () => {
         playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
@@ -329,6 +421,16 @@ export default function ReviewDetail() {
                     <span className="material-symbols-outlined">close</span>
                 </button>
                 <div className="rv-topbar-title-wrap">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-end h-[14px] gap-[1.5px] mr-0.5 pb-[1px]">
+                            <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                            <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                            <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                            <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                            <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                        </div>
+                        <span className="text-[12px] font-black tracking-[-0.03em] uppercase text-white/50" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
+                    </div>
                     <span className="rv-topbar-title">{book.title}</span>
                     <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
                 </div>
@@ -362,8 +464,16 @@ export default function ReviewDetail() {
                             }
                         }}
                     >
-                        <span className="material-symbols-outlined">podcasts</span>
-                        <span>팟캐스트</span>
+                        <span>🎧 팟캐스트</span>
+                    </button>
+                )}
+                {book.actionGuide && book.actionGuide.length > 0 && (
+                    <button
+                        className={`rv-tab ${activeTab === 'action' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('action')}
+                    >
+                        <span className="material-symbols-outlined">rocket_launch</span>
+                        <span>액션 가이드</span>
                     </button>
                 )}
             </div>
@@ -503,24 +613,74 @@ export default function ReviewDetail() {
                         </button>
                     </div>
                 </div>
-            ) : (
+            ) : activeTab === 'podcast' ? (
                 <div className="rv-podcast-stage">
                     {/* ── Chat View ── */}
                     <div className="rv-chat-container">
                         {script.map((turn, i) => (
-                            <div key={i} className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                            <div
+                                key={i}
+                                ref={el => bubbleRefs.current[i] = el}
+                                className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}
+                            >
                                 <div className={`rv-chat-avatar ${turn.role === 'A' ? 'james' : 'stella'}`}>
                                     <Avatar role={turn.role} />
                                 </div>
                                 <div className="rv-chat-bubble-wrap">
                                     <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
-                                    <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                                    <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}>
                                         {turn.text}
                                     </div>
                                 </div>
                             </div>
                         ))}
                         <div ref={chatEndRef} />
+                    </div>
+                </div>
+            ) : (
+                <div className="rv-action-stage">
+                    <div className="rv-action-header">
+                        <div className="rv-action-badge">POPULAR FOCUS GUIDE</div>
+                        <h2 className="rv-action-title">오늘의 액션 가이드</h2>
+                        <p className="rv-action-subtitle">인사이트를 당신의 성장으로 바꾸는 실천 지침</p>
+                    </div>
+
+                    <div className="rv-action-list">
+                        {book.actionGuide?.map((item, idx) => {
+                            const isCompleted = completedActions.includes(item.title);
+                            return (
+                                <div key={idx} className={`rv-action-card group ${isCompleted ? 'completed' : ''}`}>
+                                    <div className="rv-action-card-number">{idx + 1}</div>
+                                    <div className="rv-action-card-content">
+                                        <h3 className="rv-action-card-title">{item.title}</h3>
+                                        <p className="rv-action-card-desc">{item.description}</p>
+                                        {!isCompleted && (
+                                            <button
+                                                className="rv-action-record-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/reading-notes?mode=action&bookId=${book.id}&actionTitle=${encodeURIComponent(item.title)}`);
+                                                }}
+                                            >
+                                                <span className="material-symbols-outlined text-sm">edit_note</span>
+                                                기록 남기기
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className={`rv-action-card-check ${isCompleted ? 'visible' : ''}`}>
+                                        <span className="material-symbols-outlined">{isCompleted ? 'check_circle' : 'pending'}</span>
+                                        {isCompleted && <span className="rv-action-done-label">완료</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="rv-action-footer">
+                        <p>작은 실천이 모여 당신의 커리어를 만듭니다.</p>
+                        <button className="rv-action-complete-btn" onClick={() => navigate('/library')}>
+                            실행 완료하고 서재로 가기
+                        </button>
                     </div>
                 </div>
             )}

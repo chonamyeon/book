@@ -37,7 +37,7 @@ export default function Result() {
 
     const handleUnlock = () => {
         // [Adari] Payment logic here
-        const confirmed = window.confirm("PG_LINK: [특별 할인가 9,900원] 결제를 진행하시겠습니까? (Toss/Kakao)");
+        const confirmed = window.confirm("PG_LINK: [특별 할인가 4,900원] 결제를 진행하시겠습니까? (Toss/Kakao)");
         if (confirmed) {
             setIsPremiumUnlocked(true);
             localStorage.setItem('premiumUnlocked', 'true');
@@ -477,7 +477,7 @@ export default function Result() {
                                     <div className="mb-6 flex flex-col items-center">
                                         <span className="text-slate-400 line-through text-sm font-bold opacity-75 mb-1">정가 ₩29,000</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-4xl font-black text-red-500">₩9,900</span>
+                                            <span className="text-4xl font-black text-red-500">₩4,900</span>
                                             <span className="text-xs font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded">66% OFF</span>
                                         </div>
                                     </div>

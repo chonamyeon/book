@@ -2,12 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 모바일 전역 터치 최적화 */
+/* ===== 모바일 전역 최적화 ===== */
+
+/* 탭 하이라이트 제거 */
 * {
     -webkit-tap-highlight-color: transparent;
 }
-button, a, input, select, textarea {
+
+/* 터치 딜레이 제거 (300ms 탭 지연 방지) */
+button,
+a,
+input,
+select,
+textarea {
     touch-action: manipulation;
+}
+
+/* iOS Safari 자동 줌 방지: 폼 요소 font-size가 16px 미만이면 자동 줌됨 */
+input,
+select,
+textarea {
+    font-size: max(16px, 1em);
+}
+
+/* 스크롤 체이닝 방지 및 풀-투-리프레시 제거 */
+html {
+    overscroll-behavior-y: none;
+    scroll-behavior: smooth;
+}
+
+body {
+    overscroll-behavior-y: none;
+    /* 가로 스크롤 방지 */
+    overflow-x: hidden;
+}
+
+/* 이미지 최대 너비 보장 */
+img {
+    max-width: 100%;
+}
+
+/* iOS에서 input 스타일 초기화 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0;
 }
 
 @layer utilities {
@@ -44,6 +86,7 @@ button, a, input, select, textarea {
     }
 
     .material-symbols-outlined {
+        font-family: 'Material Symbols Outlined';
         font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
     }
 

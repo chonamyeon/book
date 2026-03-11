@@ -20,7 +20,7 @@ const TEMP_AUDIO = path.join(ROOT, 'temp_audio');
 const OUTPUT_DIR = path.join(ROOT, 'public/timestamps');
 
 const PROJECT_ID = 'book-site-123';
-const API_KEY = 'AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s';
+const API_KEY = process.env.VITE_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
 
 const targetBook = process.argv[2] || null;
 

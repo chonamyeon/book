@@ -104,20 +104,20 @@ export default function BottomNavigation() {
                             to={item.path}
                             className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-500 active:scale-95 ${isActive
                                 ? 'text-gold'
-                                : 'text-slate-600 hover:text-slate-400'
+                                : 'text-white/40 hover:text-white/70'
                                 }`}
                         >
                             <div className="relative group/nav">
                                 {isActive && (
-                                    <div className="absolute inset-0 bg-gold/10 blur-xl rounded-full scale-150 animate-pulse"></div>
+                                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
                                 )}
-                                <div className={`flex size-11 items-center justify-center rounded-2xl transition-all duration-500 relative z-10 ${isActive ? 'bg-gold/10 border border-gold/20 shadow-[inset_0_0_15px_rgba(212,175,55,0.2)]' : ''}`}>
-                                    <span className={`material-symbols-outlined text-[24px] transition-all duration-500 ${isActive ? 'fill-1 scale-110' : 'scale-100'}`}>
+                                <div className="flex items-center justify-center transition-all duration-500 relative z-10 mb-1">
+                                    <span className={`material-symbols-outlined text-[26px] transition-all duration-500 ${isActive ? 'fill-1 scale-110 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)] text-gold' : 'scale-90 opacity-80 text-white/50 group-hover/nav:text-white/80'}`}>
                                         {item.icon}
                                     </span>
                                 </div>
                             </div>
-                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 -translate-y-0.5 ${isActive ? 'opacity-100' : 'opacity-30'}`}>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-500 -translate-y-0.5 ${isActive ? 'opacity-100 scale-105' : 'opacity-60 group-hover/nav:opacity-100'}`}>
                                 {item.label}
                             </p>
                         </Link>
@@ -128,7 +128,7 @@ export default function BottomNavigation() {
                 <div className="absolute -top-20 right-6">
                     <button
                         onClick={() => setIsFinderOpen(!isFinderOpen)}
-                        className={`size-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
+                        className={`size-14 rounded-sm flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
                     >
                         <span className="material-symbols-outlined text-[32px] font-bold">add</span>
                     </button>
@@ -139,7 +139,7 @@ export default function BottomNavigation() {
                                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                                className="absolute bottom-20 right-0 w-[280px] bg-[#1a1c23]/95 backdrop-blur-3xl border border-white/10 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[60]"
+                                className="absolute bottom-20 right-0 w-[calc(100vw-48px)] max-w-[280px] bg-[#1a1c23]/95 backdrop-blur-3xl border border-white/10 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[60]"
                             >
                                 {/* Triangle arrow for speech bubble effect */}
                                 <div className="absolute -bottom-2 right-10 w-4 h-4 bg-[#1a1c23] border-r border-b border-white/10 rotate-45 translate-x-1/2"></div>
@@ -252,7 +252,7 @@ export default function BottomNavigation() {
                                                             </div>
                                                             {pickId && (
                                                                 <div className="flex items-center">
-                                                                    <span className="text-gold text-[8px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full border border-gold/20">PICK</span>
+                                                                    <span className="text-gold text-[10px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full border border-gold/20">PICK</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -262,7 +262,7 @@ export default function BottomNavigation() {
                                                                 <Link
                                                                     to={`/review/${pickId}`}
                                                                     onClick={() => setIsFinderOpen(false)}
-                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[8px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">menu_book</span>
                                                                     <span>리뷰</span>
@@ -282,12 +282,12 @@ export default function BottomNavigation() {
                                                                             }`}
                                                                     >
                                                                         <span className="material-symbols-outlined text-[16px]">{activeAudioId === `finder-${pickId}` ? 'stop' : 'podcasts'}</span>
-                                                                        <span className="text-[8px] font-black uppercase tracking-widest">{activeAudioId === `finder-${pickId}` ? '정지' : '팟캐스트'}</span>
+                                                                        <span className="text-[10px] font-black uppercase tracking-widest">{activeAudioId === `finder-${pickId}` ? '정지' : '팟캐스트'}</span>
                                                                     </button>
                                                                 )}
                                                                 <button
                                                                     onClick={() => addToLibrary(book)}
-                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[8px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">bookmark</span>
                                                                     <span>서재 추가</span>
@@ -296,7 +296,7 @@ export default function BottomNavigation() {
                                                                     href={`https://www.coupang.com/np/search?q=${encodeURIComponent(book.title)}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="h-9 rounded-xl bg-gold/5 border border-gold/20 text-gold text-[8px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-xl bg-gold/5 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
                                                                     <span>구매</span>

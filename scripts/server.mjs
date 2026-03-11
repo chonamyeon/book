@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import * as cheerio from 'cheerio';
 // auto_podcast_pipeline.mjs 내부에서 dotenv를 이미 처리하지만, 
 // 명시적으로 한 번 더 처리하여 환경변수 로드 보장
 import 'dotenv/config';
@@ -504,7 +505,7 @@ app.post('/api/voice/merge', voiceUpload.single('voiceFile'), async (req, res) =
         try {
             fs.unlinkSync(listFilePath);
             fs.unlinkSync(voiceFilePath);
-        } catch (_) {}
+        } catch (_) { }
 
         vprog(100);
         vlog(`✨ '${bookId}' 성우 병합 완료! Firestore 자동 저장 중...`);
@@ -529,8 +530,8 @@ app.post('/api/voice/merge', voiceUpload.single('voiceFile'), async (req, res) =
 app.post('/api/script/generate', async (req, res) => {
     const {
         bookId, title, author, themes,
-        targetMin = 2800, targetMax = 3200,
-        turnLimit = 50,
+        targetMin = 2300, targetMax = 2500,
+        turnLimit = 45,
         speakerA = '제임스', speakerB = '스텔라'
     } = req.body;
 
@@ -553,29 +554,41 @@ app.post('/api/script/generate', async (req, res) => {
         ? `- 핵심 주제 / 반드시 다룰 내용:\n${themes.split('\n').filter(Boolean).map(t => `  ${t}`).join('\n')}`
         : '';
 
-    const prompt = `당신은 한국어 팟캐스트 대본 전문 작가입니다.
-아래 책을 주제로 팟캐스트 대본을 작성해주세요.
+    const prompt = `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
+이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
 
 [책 정보]
 - 제목: ${title}
 - 저자: ${author}
 ${themesBlock}
 
-[화자]
-- ${speakerA} (남성): 책을 읽은 쪽, 유머러스하고 공감 능력 뛰어난 직장인
-- ${speakerB} (여성): 처음 접하는 쪽, 현실적인 직장인 감성으로 반응하고 질문
+[❗️중요: 작성 지침 - 반드시 준수❗️]
+1) **상황 몰입 중심 (Scenario-First)**: 책의 챕터나 내용을 나열하는 설명적 비중은 대폭 줄이세요. 그 대신, 책의 인사이트를 우리의 실제 삶(일상, 직장)에 어떻게 '대입'할 수 있는지에 대한 구체적인 상황극과 대화의 비중을 80% 이상으로 구성하세요.
+2) **내용의 사실성 (Fact-Only)**: 책의 핵심 지식은 반드시 제공된 팩트에 기반해야 합니다. 다만 그것을 설명하기보다 "이거 딱 우리 부장님 이야기 아니야?" 혹은 "어제 카페에서 본 그 상황이랑 똑같네" 식의 연결고리로 활용하세요.
+3) **위트와 유머**: 직장인들이 무릎을 칠만한 위트와 유머를 섞어주세요. 딱딱한 교양 정보가 아니라, 무조건 재미있어야 합니다.
+4) **생활 밀착형 상황**: 지하철, 마트, 운동, 친구 모임 등 일상 전반의 다채로운 상황을 에피소드로 활용하세요.
 
-[🔴 절대 준수 사항]
-- 총 턴 수: 정확히 ${turnLimit}턴 이하
-- 총 대사 글자 수 (공백·줄바꿈 제외): 반드시 ${targetMin}자 ~ ${targetMax}자
-- 각 대사: 반드시 2~5문장 구성, 단독 1문장 대사 금지
-- ⚠️ 인트로 금지: "안녕하세요, 저는 ${speakerA}입니다" 같은 소개 절대 금지
-- 첫 대사: 출근길/커피/야근 등 자연스러운 일상 대화로 바로 시작
-- 직장인 현실 공감 가득 (상사 눈치, 야근, 멀티태스킹, 메신저 알람 등)
-- 유머, 자기반성, 깨달음이 섞인 생생한 대화체
-- 마지막 3턴: 실천 다짐 + 유쾌한 마무리
+[화자 정보]
+- **제임스 (${speakerA}, 남성)**: 책의 지혜를 위트 있게 현실로 끌어오는 가이드.
+- **스텔라 (${speakerB}, 여성)**: 현실적인 관점에서 뼈 때리는 질문을 던지는 리액터.
 
-[출력 형식 - JSON 배열만 출력, 다른 텍스트 절대 금지]
+【대본 작성 규칙 - ❗️인사이트 농도 극대화 (직장인 맞춤형)❗️】
+- **정확한 45턴**: 대본은 반드시 **정확히 45턴**(제임스 23회, 스텔라 22회)으로 구성하며, 마지막 턴에서 완결성 있게 마무리하세요.
+- **인사이트 밀도**: 서점의 뻔한 줄거리 요약은 5% 이하로 줄이세요. 대신 책 속에 숨겨진 **'실행 가능한 인사이트'**를 추출하여 직장인의 실무(성과급, 보고, 회의, 사내 정치, 번아웃)와 1:1로 매칭시키세요.
+- **분량 및 농도**: 45턴 안에 2300~2500자를 채울 때, 같은 말을 반복하지 마세요. 매 턴마다 새로운 시각이나 구체적인 실천 팁을 제시하여 대사의 농도를 높이세요.
+- **생활 밀착형 상황극**: "책에서 ~라고 합니다"가 아니라, "이건 딱 김대리님이 보고서 쓸 때 겪는 상황이랑 똑같네" 식의 생생한 에피소드 비중을 85% 이상으로 하세요. 
+- **턴 번호 표시**: 작성 시 [1/45], [2/45]... 번호를 매겨 스스로 체크하며 작성하세요. (JSON 출력 시 text 필드에는 번호 제외)
+- 각 대사: 반드시 2~4문장 구성, 위트 있는 '뼈 때리는' 통찰 포함
+- ⚠️ 인드로 금지: "안녕하세요" 같은 인사는 절대 금지, 바로 1단계(일상/공감 질문)로 시작
+- 톤앤매너: 친한 친구와 수다 떠는 톤을 유지하되 [웃음] 등 지시문 금지
+- 마지막 턴: 실천 다짐 + 유쾌한 마무리 (일상적인 인사로 마무리)
+
+[출력 형식 - 반드시 준수]
+- **순수 JSON 배열만 출력**하세요. (Markdown 코드 블록 \` \` \` json 등을 절대 사용하지 마세요.)
+- 인사말이나 중간 설명 없이 오직 \`[\`으로 시작해서 \`]\`으로 끝나는 JSON 형식만 출력하세요.
+- 전체 분량(약 2500자)이 총 출력 토큰 제한(8192토큰) 내에 충분히 들어오도록 45턴 분량을 압축하여 작성하세요.
+- 모든 따옴표는 표준 " (쌍따옴표)를 사용하고, 줄바꿈이 필요한 경우 \\n 을 사용하세요.
+
 [
   {"speaker": "${speakerA}", "text": "..."},
   {"speaker": "${speakerB}", "text": "..."}
@@ -609,10 +622,31 @@ ${themesBlock}
 
         const data = await response.json();
         const rawText = data.content[0].text.trim();
-        const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) throw new Error('JSON 배열을 찾을 수 없습니다. 응답 형식 오류.');
 
-        const script = JSON.parse(jsonMatch[0]);
+        let jsonStr = rawText;
+        const firstBracket = jsonStr.indexOf('[');
+        const lastBracket = jsonStr.lastIndexOf(']');
+
+        if (firstBracket !== -1 && lastBracket !== -1) {
+            jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
+        } else {
+            throw new Error('응답에서 JSON 배열 형식을 찾을 수 없습니다.');
+        }
+
+        let script;
+        try {
+            script = JSON.parse(jsonStr);
+        } catch (e) {
+            slog(`❌ JSON 파싱 에러 발생: ${e.message}`);
+            // 특수문자나 줄바꿈으로 인한 문제일 경우를 위해 한 번 더 정제 시도
+            try {
+                const cleanedJson = jsonStr.replace(/[\u0000-\u001F\u007F-\u009F]/g, " ");
+                script = JSON.parse(cleanedJson);
+            } catch (e2) {
+                throw new Error(`대본 파싱에 실패했습니다: ${e.message}`);
+            }
+        }
+
         const charCount = script.reduce((sum, t) => sum + t.text.replace(/[\s\uFEFF\xA0]/g, '').length, 0);
         slog(`📊 ${script.length}턴, ${charCount}자 생성 완료`);
         sprog(85);
@@ -679,6 +713,180 @@ app.post('/api/tts/run', async (req, res) => {
     } catch (err) {
         log(`❌ TTS 오류: ${err.message}`);
         prog(0);
+    }
+});
+// ── 도서 정보 크롤링 (교보/예스24) ─────────────────────────────────
+app.post('/api/book/crawl', async (req, res) => {
+    const { title, author } = req.body;
+    if (!title) return res.status(400).json({ error: '제목은 필수입니다.' });
+
+    try {
+        console.log(`[CRAWL] 도서 정보 크롤링 시작: ${title} / ${author || ''}`);
+
+        // 텍스트 정제 함수
+        const cleanText = (raw) => {
+            if (!raw) return "";
+            return raw
+                .replace(/&lt;br\s*\/?&gt;/gi, '\n') // &lt;br/&gt; 처리
+                .replace(/<br\s*\/?>/gi, '\n')      // <br> 처리
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/<[^>]*>?/gm, '')         // 나머지 HTML 태그 제거
+                .replace(/_\d{2,4}/g, '')          // _007 등 페이지 번호 패턴 제거
+                .replace(/펼쳐보기|접어보기/g, '')      // 불필요한 UI 텍스트 제거
+                .replace(/\d+$/, '')               // 줄 끝의 숫자 제거
+                .replace(/\s*&lt;br\s*\/?&gt;\s*/gi, '\n') // 중복 방지 한 번 더
+                .replace(/\n\s*\n/g, '\n\n')       // 공백 라인 정리
+                .trim();
+        };
+
+        // 1. 교보문고 시도
+        let description = "";
+        let finalUrl = "";
+        let coverUrl = "";
+
+        try {
+            const searchUrl = `https://search.kyobobook.co.kr/search?keyword=${encodeURIComponent(title + ' ' + (author || ''))}`;
+            const searchRes = await fetch(searchUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+            });
+            const searchHtml = await searchRes.text();
+            const $search = cheerio.load(searchHtml);
+            const detailLink = $search('.prod_link').first().attr('href');
+
+            if (detailLink) {
+                console.log(`[CRAWL] 교보 상세 페이지 발견: ${detailLink}`);
+                const detailRes = await fetch(detailLink, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                });
+                const detailHtml = await detailRes.text();
+                const $ = cheerio.load(detailHtml);
+
+                const kyoboExtract = (id) => {
+                    const html = $(id).find('.intro_bottom').html() || $(id).find('.info_text').html() || "";
+                    return cleanText(html);
+                };
+
+                const resObj = {
+                    intro: kyoboExtract('#scroll_01'),
+                    toc: kyoboExtract('#scroll_03'),
+                    inside: kyoboExtract('#scroll_04'),
+                    review: kyoboExtract('#scroll_05')
+                };
+
+                // 표지 이미지 추출 (Kyobo)
+                const coverImg = $('.portrait_img_box img').attr('src') || $('.prod_img_box img').attr('src');
+                if (coverImg) coverUrl = coverImg;
+
+                if (resObj.intro) {
+                    description += `■ 책소개\n${resObj.intro}\n\n`;
+                    if (resObj.toc) description += `■ 목차\n${resObj.toc}\n\n`;
+                    if (resObj.inside) description += `■ 책속으로\n${resObj.inside}\n\n`;
+                    if (resObj.review) description += `■ 출판사 서평\n${resObj.review}\n\n`;
+                    finalUrl = detailLink;
+                    console.log(`[CRAWL] 교보문고 데이터 획득 성공`);
+                }
+            }
+        } catch (e) { console.error('[KYOB O CRAWL ERROR]', e.message); }
+
+        // 2. YES24 시도 (결과가 없거나 부족할 때 보완)
+        if (!description || description.length < 200) {
+            console.log(`[CRAWL] YES24 검색 시작...`);
+            try {
+                const yesSearchUrl = `https://www.yes24.com/Product/Search?domain=ALL&query=${encodeURIComponent(title + ' ' + (author || ''))}`;
+                const yesSearchRes = await fetch(yesSearchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+                const yesSearchHtml = await yesSearchRes.text();
+                const $yesSearch = cheerio.load(yesSearchHtml);
+                const yesDetailPath = $yesSearch('.gd_name').first().attr('href');
+
+                if (yesDetailPath) {
+                    const yesDetailUrl = yesDetailPath.startsWith('http') ? yesDetailPath : `https://www.yes24.com${yesDetailPath}`;
+                    console.log(`[CRAWL] YES24 상세 페이지 발견: ${yesDetailUrl}`);
+                    const yesDetailRes = await fetch(yesDetailUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+                    const yesDetailHtml = await yesDetailRes.text();
+                    const $y = cheerio.load(yesDetailHtml);
+
+                    const yExtract = (id) => cleanText($y(id).find('.infoSetCont_wrap').html() || "");
+                    const yRes = {
+                        intro: yExtract('#infoset_introduce'),
+                        toc: yExtract('#infoset_toc'),
+                        inside: yExtract('#infoset_inBook'),
+                        review: yExtract('#infoset_pubReview')
+                    };
+
+                    // 표지 이미지 추출 (YES24)
+                    const yCoverImg = $y('.gd_img img').first().attr('src');
+                    if (yCoverImg && !coverUrl) coverUrl = yCoverImg;
+
+                    if (yRes.intro) {
+                        description += `■ 책소개 (YES24)\n${yRes.intro}\n\n`;
+                        if (yRes.toc && !description.includes('■ 목차')) description += `■ 목차\n${yRes.toc}\n\n`;
+                        if (yRes.inside && !description.includes('■ 책속으로')) description += `■ 책속으로\n${yRes.inside}\n\n`;
+                        if (yRes.review && !description.includes('■ 출판사 서평')) description += `■ 출판사 서평\n${yRes.review}\n\n`;
+                        if (!finalUrl) finalUrl = yesDetailUrl;
+                        console.log(`[CRAWL] YES24 데이터 획득 성공`);
+                    }
+                }
+            } catch (e) { console.error('[YES24 CRAWL ERROR]', e.message); }
+        }
+
+        if (!description) {
+            return res.status(404).json({ error: '교보문고 및 YES24에서 도서 정보를 찾을 수 없습니다.' });
+        }
+
+        res.json({
+            success: true,
+            description: description.trim(),
+            url: finalUrl,
+            coverUrl: coverUrl
+        });
+    } catch (error) {
+        console.error('[CRAWL FATAL ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ── 도서 심층 분석 (Gemini 2.0) ─────────────────────────────────
+app.post('/api/book/analyze', async (req, res) => {
+    const { title, author, description } = req.body;
+    if (!description) return res.status(400).json({ error: '분석할 도서 정보가 없습니다.' });
+
+    try {
+        console.log(`[ANALYZE] Gemini 2.0 도서 분석 시작: ${title}`);
+        const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
+        const { model } = await getRobustModel(genAI);
+
+        const prompt = `
+당신은 도서 분석 및 콘텐츠 기획 전문가입니다. 제공된 도서 정보(설명, 목차, 서평 등)를 바탕으로, 팟캐스트 대본 제작을 위한 '심층 인사이트 리포트'를 작성해주세요.
+
+도서명: ${title}
+저자: ${author || '알 수 없음'}
+도서 정보:
+${description}
+
+작성 가이드라인:
+1. **도서 구조 추론**: 책의 전체적인 흐름과 각 장(Chapter)이 갖는 의미를 논리적으로 분석해주세요.
+2. **핵심 통찰(Key Insights)**: 이 책이 독자에게 전달하려는 가장 중요한 메시지 3~5가지를 깊이 있게 추출해주세요.
+3. **사실적 스토리 및 에피소드**: 책에 언급된 구체적인 사례나, 주제와 연관된 전반적인 사실적 배경 정보를 풍성하게 정리해주세요.
+4. **문체**: 지적이면서도 통찰력이 느껴지는 톤으로 작성해주세요. (한국어로 작성)
+
+이 리포트는 나중에 팟캐스트 대본의 기초 자료로 사용될 것입니다.
+`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        res.json({
+            success: true,
+            analysis: text,
+        });
+    } catch (error) {
+        console.error('[ANALYZE ERROR]', error);
+        res.status(500).json({ error: error.message });
     }
 });
 // ─────────────────────────────────────────────────────────────

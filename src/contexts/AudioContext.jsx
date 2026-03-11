@@ -14,6 +14,10 @@ export const AudioProvider = ({ children }) => {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
+    // Script Modal states
+    const [scriptModalOpen, setScriptModalOpen] = useState(false);
+    const [scriptModalBookId, setScriptModalBookId] = useState(null);
+
     const speechAudio = useRef(null);
     const musicAudio = useRef(null); // 사용하지 않지만 기존 구조 유지를 위해 유지
     const podcastAudioRef = useRef(null);
@@ -167,11 +171,22 @@ export const AudioProvider = ({ children }) => {
         setDuration(0);
     }, []);
 
+    const openScriptModal = useCallback((bookId, src, title, cover) => {
+        setScriptModalBookId(bookId);
+        setScriptModalOpen(true);
+        playPodcastMP3(src, title, cover, bookId);
+    }, [playPodcastMP3]);
+
+    const closeScriptModal = useCallback(() => {
+        setScriptModalOpen(false);
+    }, []);
+
     return (
         <AudioCtx.Provider value={{
             isSpeaking, activeAudioId, playPodcast, speakReview, stopAll,
             podcastPlaying, podcastInfo, currentTime, duration,
-            playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3
+            playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3,
+            scriptModalOpen, scriptModalBookId, openScriptModal, closeScriptModal
         }}>
             {children}
         </AudioCtx.Provider>

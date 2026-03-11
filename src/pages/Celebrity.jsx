@@ -10,26 +10,43 @@ import { useBookData } from '../hooks/useBookData';
 
 export default function Celebrity() {
     const { id } = useParams();
-    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll } = useAudio();
+    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll, openScriptModal } = useAudio();
     const celeb = celebrities.find(c => c.id === id) || celebrities[0]; // Default to first if not found
     const { getAllBooks, loading: booksLoading } = useBookData();
 
-    // Firestore 신규 등록 도서 (isPublic:true, 해당 셀럽 slug)
-    const firestoreBooks = useMemo(() => {
-        if (booksLoading) return [];
-        const staticIds = new Set((celeb.books || []).map(b => b.id));
-        return getAllBooks().filter(b =>
-            b.celebName === id &&
+    const allCelebBooks = useMemo(() => {
+        if (booksLoading) return celeb.books || [];
+        const all = getAllBooks();
+
+        // 1. 기존 celebrities.js 에 있던 도서들에 Firestore 덮어쓰기 적용
+        const staticBooksWithOverrides = (celeb.books || []).map(staticBook => {
+            const overrideBook = all.find(b => b.id === staticBook.id);
+            return overrideBook || staticBook;
+        });
+
+        // 2. 이 셀럽을 위해 새로 추가된 완전 신규 도서
+        const staticIds = new Set(staticBooksWithOverrides.map(b => b.id));
+        const firestoreBooks = all.filter(b =>
+            (b.celebName === id || b.celebritySlug === id || b.celebId === id) &&
             b.isPublic === true &&
             !staticIds.has(b.id)
         );
-    }, [getAllBooks, booksLoading, id, celeb.books]);
 
-    const allCelebBooks = useMemo(() => [...(celeb.books || []), ...firestoreBooks], [celeb.books, firestoreBooks]);
+        return [...staticBooksWithOverrides, ...firestoreBooks];
+    }, [getAllBooks, booksLoading, id, celeb.books]);
 
     const [expandedReviews, setExpandedReviews] = useState({});
     const toggleReview = (index) => {
         setExpandedReviews(prev => ({ ...prev, [index]: !prev[index] }));
+    };
+
+    const cleanText = (t) => {
+        if (!t) return "";
+        return t.replace(/\[GEMINI [\d.]+ ANALYSIS\]/gi, '')
+            .replace(/팟캐스트 대본 제작을 위한/g, '')
+            .replace(/[#*]/g, '')
+            .replace(/---/g, '')
+            .replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
     };
 
     useEffect(() => {
@@ -83,21 +100,7 @@ export default function Celebrity() {
                                 </p>
                             </div>
 
-                            {/* Bottom Stats Grid: Forced 3-column layout to prevent overflow */}
-                            <div className="grid grid-cols-3 gap-4 md:gap-24 pb-4">
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.books}</span>
-                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">보유 도서</span>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.categories}</span>
-                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">카테고리</span>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-gold text-2xl md:text-3xl font-bold tracking-tight">{celeb.stats.time}</span>
-                                    <span className="text-[11px] md:text-base text-slate-400 font-medium whitespace-nowrap">평균독서시간</span>
-                                </div>
-                            </div>
+
                         </div>
                     </section>
 
@@ -116,7 +119,7 @@ export default function Celebrity() {
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
                                     <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
-                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이브를 완성하세요.
+                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이뷰를 완성하세요.
                                     </p>
                                     <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
                                         <span>테스트 시작하기</span>
@@ -161,7 +164,7 @@ export default function Celebrity() {
                                                 <div>
                                                     <h5 className="text-xl font-bold leading-tight mb-1 text-white">{book.title}</h5>
                                                     <p className="text-xs text-slate-500 mb-3 italic">{book.author}</p>
-                                                    <p className="text-sm text-slate-400 font-light leading-snug line-clamp-3">{book.desc}</p>
+                                                    <p className="text-sm text-slate-400 font-light leading-snug line-clamp-3">{cleanText(book.desc)}</p>
                                                     {book.source && (
                                                         <p className="text-[10px] text-gold/80 mt-3 flex items-center gap-1 font-bold tracking-wider uppercase">
                                                             <span className="material-symbols-outlined text-[12px]">campaign</span>
@@ -192,7 +195,7 @@ export default function Celebrity() {
                                                     </button>
                                                 </div>
                                                 <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-6'}`}>
-                                                    {book.review}
+                                                    {cleanText(book.review)}
                                                 </p>
                                             </div>
                                         )}
@@ -214,7 +217,21 @@ export default function Celebrity() {
                                                 </div>
                                             )}
 
-                                            {/* 2. 서재 추가 */}
+                                            {/* 2. PODCAST */}
+                                            {book.id ? (
+                                                <button
+                                                    onClick={() => { const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`; openScriptModal(book.id, audioUrl, book.title, book.cover); }}
+                                                    className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="leading-[1.1]">🎧 팟캐스트</span>
+                                                </button>
+                                            ) : (
+                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                    <span className="leading-[1.1]">🎧 팟캐스트</span>
+                                                </div>
+                                            )}
+
+                                            {/* 3. 서재 추가 */}
                                             <button
                                                 onClick={() => {
                                                     const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -237,19 +254,19 @@ export default function Celebrity() {
                                                 <span className="material-symbols-outlined text-sm">bookmark</span>
                                             </button>
 
-                                            {/* 3. 구매하기 */}
+                                            {/* 4. 구매하기 */}
                                             {book.purchaseLink ? (
                                                 <a
                                                     href={book.purchaseLink}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="col-span-2 bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 >
                                                     <span>구매하기</span>
                                                     <span className="material-symbols-outlined text-xs">shopping_cart</span>
                                                 </a>
                                             ) : (
-                                                <div className="col-span-2 bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                <div className="bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
                                                     <span>구매하기</span>
                                                     <span className="material-symbols-outlined text-xs">shopping_cart</span>
                                                 </div>

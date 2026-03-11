@@ -29,6 +29,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // 6. Site Config (인기 아카이뷰 등 사이트 설정)
+    match /site_config/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

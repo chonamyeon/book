@@ -1,475 +1,365 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
-import { celebrities } from '../data/celebrities';
-import { useAudio } from '../contexts/AudioContext';
 import { useBookData } from '../hooks/useBookData';
+import { useAudio } from '../contexts/AudioContext';
 
-import { bookScripts } from '../data/bookScripts';
+const categoriesInfo = [
+    {
+        label: "자기계발",
+        id: 'SELF_DEV',
+        title: "Growth & Success",
+        sub: "내 성장을 가속화하고 싶을 때. 삶의 질을 높이는 강력한 도구들.",
+        img: '/images/photo_selfdev.png',
+        readTime: "12 MIN READ",
+        author: "TEAM ARCHIVIEW"
+    },
+    {
+        label: "경제",
+        id: 'ECONOMY',
+        title: "Wealth & Finance",
+        sub: "부의 본질과 경제 흐름을 알고 싶을 때. 시장의 맥락을 짚는 통찰.",
+        img: '/images/photo_economy.png',
+        readTime: "15 MIN READ",
+        author: "TEAM ARCHIVIEW"
+    },
+    {
+        label: "경영",
+        id: 'MANAGEMENT',
+        title: "Business & Leader",
+        sub: "압도적인 성과와 경영의 지혜. 조직과 개인을 이끄는 힘.",
+        img: '/images/photo_management.png',
+        readTime: "10 MIN READ",
+        author: "TEAM ARCHIVIEW"
+    },
+    {
+        label: "인문",
+        id: 'HUMANITIES',
+        title: "Insight & History",
+        sub: "시대를 관통하는 통찰과 지혜. 오래된 것에서 발견하는 미래.",
+        img: '/images/photo_humanities.png',
+        readTime: "14 MIN READ",
+        author: "TEAM ARCHIVIEW"
+    },
+    {
+        label: "심리",
+        id: 'PSYCHOLOGY',
+        title: "Mind & Healing",
+        sub: "내 마음을 돌보고 위로가 필요할 때. 멈춰 서서 나를 들여다보는 시간.",
+        img: '/images/photo_psychology.png',
+        readTime: "9 MIN READ",
+        author: "TEAM ARCHIVIEW"
+    }
+];
+
+const sliderItems = [
+    { label: "일이 손에 안 잡히고 지칠 때", sub: "번아웃 솔루션", id: 'BURNOUT', img: '/images/cat_burnout_v10.png' },
+    { label: "내 가치를 증명하고 부를 쌓고 싶을 때", sub: "경제/자유", id: 'ECONOMY', img: '/images/cat_wealth_v11.png' },
+    { label: "마음이 답답하고 위로가 필요한 때", sub: "치유/명상", id: 'PSYCHOLOGY', img: '/images/cat_healing_v8.png' },
+    { label: "어떻게 살아야 할지 막막할 때", sub: "철학/인생", id: 'HUMANITIES', img: '/images/cat_philosophy_v8.png' }
+];
 
 export default function Editorial() {
     const navigate = useNavigate();
-    const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll, playPodcastMP3, podcastPlaying, podcastInfo } = useAudio();
-    const scrollRef = useRef(null);
+    const scrollContainerRef = useRef(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(categoriesInfo[0].id);
+    const { getAllBooks, loading: booksLoading } = useBookData();
+    const { openScriptModal } = useAudio();
 
-    const deepDiveBooks = [
-        { id: "homo-deus", title: "호모 데우스", author: "유발 하라리", celeb: "Bill Gates", cover: "/images/covers/homo-deus.jpg" },
-        { id: "lightness-of-being", title: "참을 수 없는 존재의 가벼움", author: "밀란 쿤데라", celeb: "RM", cover: "/images/covers/lightness-of-being.jpg" },
-        { id: "we-do-not-part", title: "작별하지 않는다", author: "한강", celeb: "Han Kang", cover: "/images/covers/we-do-not-part.jpg" },
-        { id: "21-lessons", title: "21세기를 위한 21가지 제언", author: "유발 하라리", celeb: "Bill Gates", cover: "/images/covers/21-lessons.jpg" },
-        { id: "human-acts", title: "소년이 온다", author: "한강", celeb: "RM (Namjoon)", cover: "/images/covers/human-acts.jpg" }
-    ];
+    const allBooks = useMemo(() => {
+        return getAllBooks();
+    }, [getAllBooks]);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (scrollRef.current) {
-                const container = scrollRef.current;
-                const children = container.children;
-                if (children.length > 0) {
-                    const itemWidth = children[0].offsetWidth + 24; // w-64 (256px) + gap-6 (24px)
-                    const currentScroll = container.scrollLeft;
-                    const maxScroll = container.scrollWidth - container.clientWidth;
-
-                    // If we're at the end, jump back to start, otherwise move to next
-                    const nextScroll = (currentScroll + itemWidth) > maxScroll ? 0 : currentScroll + itemWidth;
-
-                    container.scrollTo({
-                        left: nextScroll,
-                        behavior: 'smooth'
-                    });
+            if (scrollContainerRef.current) {
+                const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+                if (scrollLeft + clientWidth >= scrollWidth - 10) {
+                    scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' });
                 }
             }
-        }, 3000);
+        }, 3500);
         return () => clearInterval(interval);
     }, []);
+
+    const filterBooksByCategory = (catId) => {
+        return allBooks
+            .filter(book => {
+                const bCat = (book.category || '').toLowerCase();
+                const bSec = (book.section || '').toUpperCase();
+                if (catId === 'SELF_DEV') return bCat.includes('자기계발') || bSec === 'WEALTH';
+                if (catId === 'ECONOMY') return bCat.includes('경제') || bSec === 'WEALTH';
+                if (catId === 'MANAGEMENT') return bCat.includes('경영');
+                if (catId === 'HUMANITIES') return bCat.includes('인문') || bCat.includes('역사') || bSec === 'PHILOSOPHY';
+                if (catId === 'PSYCHOLOGY') return bCat.includes('심리') || bSec === 'HEALING';
+                return false;
+            })
+            .slice(0, 5);
+    };
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
         if (saved.some(b => b.title === book.title)) {
-            alert('이미 서재에 보관된 도서입니다.');
-            return;
+            alert('이미 서재에 보관된 도서입니다.'); return;
         }
-        const updated = [...saved, {
-            title: book.title,
-            author: book.author,
-            cover: book.cover
-        }];
-        localStorage.setItem('savedBooks', JSON.stringify(updated));
+        localStorage.setItem('savedBooks', JSON.stringify([...saved, { title: book.title, author: book.author, cover: book.cover }]));
         window.dispatchEvent(new Event('savedBooksUpdated'));
         alert('서재에 보관되었습니다. ✅');
     };
 
-    const getReviewText = (id) => {
-        const idMap = {
-            "sapiens": "사피엔스",
-            "1984": "1984",
-            "demian": "데미안",
-            "vegetarian": "채식주의자",
-            "factfulness": "팩트풀니스",
-            "almond": "아몬드",
-            "leverage": "레버리지",
-            "one-thing": "원씽",
-            "ubermensch": "위버멘쉬",
-            "sayno": "세이노의 가르침",
-            "psychology": "돈의 심리학"
-        };
-        const title = idMap[id] || id;
-
-        for (const celeb of celebrities) {
-            const book = celeb.books.find(b => b.title === title);
-            if (book?.review) return book.review;
-            if (book?.desc) return book.desc;
-        }
-        return "";
-    };
-
-    const { getAllBooks, loading: booksLoading } = useBookData();
-
-    // celebrities.js 데이터와 Firestore의 오버라이드 데이터를 결합
-    const allBooks = useMemo(() => {
-        if (booksLoading) return [];
-        const mergedBooks = getAllBooks();
-        return mergedBooks.map(book => ({
-            id: book.id || '',
-            title: book.title,
-            subtitle: book.desc || '',
-            author: book.author,
-            cover: book.cover,
-            tag: book.category || 'BOOK',
-            section: book.section || 'EDITORS_PICK',
-            isPodcast: book.isPodcast || false,
-            hasReview: !!(book.review && book.review.trim().length > 200),
-            purchaseLink: book.purchaseLink || '', // Firestore 연동 링크
-            podcastUrl: book.audioUrl || book.voiceAudioUrl || null,
-            script: book.id ? (bookScripts[book.id] || null) : null,
-            celebName: book.celebName || ''
-        }));
-    }, [getAllBooks, booksLoading]);
-
-    // 중복 제거 (같은 title)
-    const uniqueBooks = useMemo(() => {
-        return allBooks.filter((book, i, arr) => arr.findIndex(b => b.title === book.title) === i);
-    }, [allBooks]);
-
-    // 섹션별 필터링
-    const weeklyFocusBook = useMemo(() => {
-        const book = uniqueBooks.find(b => b.section === 'WEEKLY_FOCUS') || uniqueBooks[0];
-        console.log("DEBUG: weeklyFocusBook", book);
-        return book;
-    }, [uniqueBooks]);
-    const editorsPicks = useMemo(() => uniqueBooks.filter(b => b.section === 'EDITORS_PICK'), [uniqueBooks]);
-    const guruChoice = useMemo(() => uniqueBooks.filter(b => b.section === 'GURU_CHOICE'), [uniqueBooks]);
-
-    // 오리지널 콘텐츠 필터링 (id가 archiview-original이거나 특정 패턴인 경우)
-    const originalContents = useMemo(() => {
-        return uniqueBooks.filter(b => b.id.includes('framework') || b.id.includes('original'));
-    }, [uniqueBooks]);
-
-    if (booksLoading || !weeklyFocusBook) {
+    if (booksLoading) {
         return (
-            <div className="bg-background-dark min-h-screen flex items-center justify-center">
-                <div className="text-gold animate-pulse font-black tracking-widest text-xs">ARCHIVIEW LOADING...</div>
+            <div className="bg-[#0e1015] min-h-screen flex items-center justify-center font-display">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                    <span className="text-orange-500 text-[10px] font-bold tracking-widest uppercase">Archiview</span>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white text-slate-900 dark:text-white min-h-[100dvh] pb-24 font-display flex justify-center">
-            <div className="w-full max-w-[430px] relative bg-background-dark shadow-2xl min-h-[100dvh] overflow-x-hidden border-t border-white/5">
-                <TopNavigation title="에디토리얼" type="sub" />
+        <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
+            <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
+                <TopNavigation type="sub" />
 
-                <main className="px-4 md:px-6 pt-10 pb-24 space-y-10">
-                    <header className="space-y-2">
-                        <span className="text-gold text-[9px] font-black uppercase tracking-[0.2em] block">Editorial Picks</span>
-                        <h2 className="serif-title text-2xl md:text-3xl text-white font-light leading-snug">
-                            지적인 한 주를 위한 <br />
-                            <span className="italic text-slate-400">Archiview Curation</span>
-                            <span className="text-[8px] text-white/20 ml-2">v9.1-DynamicFocus</span>
-                        </h2>
-                    </header>
-
-                    {/* Archiview Originals Premium Section */}
-                    {originalContents.length > 0 && (
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <div className="size-8 bg-gold flex items-center justify-center rounded-lg shadow-lg shadow-gold/20">
-                                    <span className="material-symbols-outlined text-primary text-xl font-bold">verified</span>
+                <main className="flex-grow">
+                    {/* 🚀 1. Weekly Insight Section */}
+                    <section className="relative h-[480px] w-full overflow-hidden mb-12">
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0e1015] via-[#0e1015]/40 to-transparent z-10"></div>
+                        <img
+                            src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1600&auto=format&fit=crop"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            alt="Weekly Insight Background"
+                        />
+                        <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex items-end gap-[2px] h-4">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="w-[3px] bg-orange-500"
+                                            animate={{ height: ["30%", "100%", "30%"] }}
+                                            transition={{
+                                                repeat: Infinity,
+                                                duration: 0.8 + (i % 3) * 0.2,
+                                                ease: "easeInOut",
+                                            }}
+                                        />
+                                    ))}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-gold text-[8px] font-black uppercase tracking-[0.2em]">Exclusively Produced</span>
-                                    <h3 className="serif-title text-xl text-white font-bold italic">Archiview Originals</h3>
-                                </div>
+                                <motion.span
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="text-orange-500 font-bold text-xs tracking-[0.3em] uppercase"
+                                >
+                                    Weekly Insight
+                                </motion.span>
                             </div>
+                            <motion.h2
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="text-5xl font-light leading-tight tracking-tighter mb-4"
+                            >
+                                시간의 흔적,<br />
+                                <span className="font-bold">기록의 가치</span>
+                            </motion.h2>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-white/60 text-sm max-w-xs leading-relaxed"
+                            >
+                                변하지 않는 본질을 찾는 성공한 사람들의 시선과 기록에 대한 깊은 사유.
+                            </motion.p>
+                        </div>
+                    </section>
 
-                            <div className="flex overflow-x-auto gap-5 pb-4 hide-scrollbar -mx-4 px-4 snap-x">
-                                {originalContents.map((content) => (
-                                    <Link 
-                                        key={content.id} 
-                                        to={`/review/${content.id}`} 
-                                        className="shrink-0 w-[280px] snap-center group relative"
+                    {/* 🚀 2. Trending Now Horizontal Scroll */}
+                    <section className="relative">
+                        <div className="px-6 mb-6 flex justify-between items-end">
+                            <h3 className="text-xl font-bold tracking-tighter">직장인이 가장 많이 듣는 아카이뷰</h3>
+                            <button className="text-orange-500 text-xs font-bold tracking-widest uppercase mt-2 block text-right" style={{ width: "auto" }}>VIEW ALL</button>
+                        </div>
+                        <div className="relative group/slider">
+                            {/* Left Scroll Button */}
+                            <button
+                                onClick={() => {
+                                    if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' })
+                                }}
+                                className="absolute left-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-full text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
+                            >
+                                <span className="material-symbols-outlined text-[32px] font-light">chevron_left</span>
+                            </button>
+
+                            {/* Right Scroll Button */}
+                            <button
+                                onClick={() => {
+                                    if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' })
+                                }}
+                                className="absolute right-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-full text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
+                            >
+                                <span className="material-symbols-outlined text-[32px] font-light">chevron_right</span>
+                            </button>
+
+                            <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pb-2">
+                                {sliderItems.map((item, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => navigate(`/category/${item.id}`)}
+                                        className="flex-none w-[200px] group cursor-pointer"
                                     >
-                                        <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl group-hover:border-gold/50 transition-all duration-500">
-                                            <img src={content.cover} alt={content.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-                                            
-                                            {/* Original Badge */}
-                                            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-gold/30">
-                                                <div className="size-1.5 rounded-full bg-gold animate-pulse"></div>
-                                                <span className="text-gold text-[8px] font-black uppercase tracking-widest">Original</span>
+                                        <div className="relative aspect-[3/4] rounded-sm overflow-hidden mb-3 border border-white/5 shadow-2xl">
+                                            <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-sm flex items-center justify-center font-black text-xs">
+                                                0{idx + 1}
                                             </div>
-
-                                            <div className="absolute bottom-4 left-4 right-4 space-y-1">
-                                                <h4 className="text-white font-bold text-lg leading-tight group-hover:text-gold transition-colors">{content.title}</h4>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-white/40 text-[9px] font-medium tracking-tight">Archiview Editors</span>
-                                                    <span className="text-white/20 text-[9px]">•</span>
-                                                    <span className="text-gold text-[9px] font-bold uppercase tracking-tighter">40+ Turns Tiki-Taka</span>
-                                                </div>
-                                            </div>
+                                            <img src={item.img} alt={item.label} className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
-                                        
-                                        {/* Quick Play Info */}
-                                        <div className="mt-3 flex items-center justify-between px-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-gold text-sm">mic_external_on</span>
-                                                <span className="text-white/60 text-[10px] font-medium tracking-tight truncate w-32">{content.subtitle}</span>
-                                            </div>
-                                            <span className="text-white/30 text-[9px] font-black uppercase tracking-widest">Watch Now</span>
-                                        </div>
-                                    </Link>
+                                        <h4 className="font-black text-[15px] tracking-tighter truncate leading-snug">{item.label}</h4>
+                                        <p className="text-white/40 text-[11px] font-medium tracking-tight mt-0.5">{item.sub}</p>
+                                    </motion.div>
                                 ))}
                             </div>
-                        </section>
-                    )}
-
-                    {/* Dynamic Weekly Focus */}
-                    <div className="relative w-full rounded-[32px] overflow-hidden bg-[#0f1115] border border-white/5 shadow-2xl group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold/10 blur-[100px] rounded-full -mr-20 -mt-20"></div>
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 blur-[80px] rounded-full -ml-10 -mb-10"></div>
-                        <div className="relative p-6 md:p-8 flex flex-col items-center">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="h-[1px] w-4 bg-gold/50"></span>
-                                <span className="text-gold text-[10px] font-black uppercase tracking-[0.4em]">Weekly Focus</span>
-                                <span className="h-[1px] w-4 bg-gold/50"></span>
-                            </div>
-                            <div className="mb-6 flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20">
-                                <span className="material-symbols-outlined text-[12px] text-gold">neurology</span>
-                                <span className="text-[8px] text-gold font-bold uppercase tracking-widest">NotebookLM Audio Experience</span>
-                            </div>
-                            <div className="w-full flex flex-col md:flex-row gap-8 items-center mb-10">
-                                <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-700">
-                                    <div className="absolute -inset-4 bg-black/40 blur-2xl rounded-full opacity-60"></div>
-                                    <div className="relative w-40 aspect-[2/3] rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
-                                        <img src={weeklyFocusBook.cover} alt={weeklyFocusBook.title} loading="lazy" className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 size-12 bg-gold flex items-center justify-center rounded-full shadow-lg border-4 border-[#0f1115]">
-                                        <span className="material-symbols-outlined text-primary text-xl font-bold">star_rate</span>
-                                    </div>
-                                </div>
-                                <div className="flex-1 text-center md:text-left space-y-4">
-                                    <div className="space-y-1">
-                                        <h3 className="serif-title text-2xl md:text-3xl text-white font-medium leading-tight">{weeklyFocusBook.title}</h3>
-                                        <p className="text-slate-500 text-sm font-light uppercase tracking-widest italic">{weeklyFocusBook.author}</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <p className="text-slate-400 text-xs font-light leading-relaxed">
-                                            "{weeklyFocusBook.subtitle || '변화하는 인류의 운명을 결정짓는 거대한 질문들을 던지다'}"
-                                        </p>
-                                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                                            <span className="text-[9px] text-white/40 border border-white/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">{weeklyFocusBook.tag}</span>
-                                            <span className="text-[9px] text-white/40 border border-white/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">{weeklyFocusBook.celebName}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full flex gap-3">
-                                <Link to={`/review/${weeklyFocusBook.id}`} className="flex-1 group/btn relative h-14 bg-white/5 backdrop-blur-xl overflow-hidden rounded-2xl border border-white/10 flex items-center justify-center transition-all duration-500 hover:border-white/30 hover:bg-white/10 hover:-translate-y-1 shadow-2xl">
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>
-                                    <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] relative z-10 transition-colors group-hover/btn:text-white leading-tight text-center">REVIEW<br />DETAIL</span>
-                                </Link>
-                                {weeklyFocusBook.isPodcast && (
-                                    <button
-                                        onClick={() => playPodcastMP3(weeklyFocusBook.podcastUrl, weeklyFocusBook.title, weeklyFocusBook.cover, weeklyFocusBook.id)}
-                                        className={`flex-none px-6 h-14 rounded-2xl border backdrop-blur-xl flex items-center justify-center gap-2 transition-all duration-500 hover:-translate-y-1 ${(podcastPlaying && podcastInfo?.id === weeklyFocusBook.id)
-                                            ? 'bg-gold border-gold text-primary shadow-[0_10px_30px_rgba(212,175,55,0.4)] anim-pulse'
-                                            : 'bg-white/5 border-white/10 text-white hover:border-gold/50 hover:bg-gold/5'
-                                            }`}
-                                    >
-                                        <span className="material-symbols-outlined text-[20px]">{(podcastPlaying && podcastInfo?.id === weeklyFocusBook.id) ? 'stop' : 'podcasts'}</span>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.1em]">{(podcastPlaying && podcastInfo?.id === weeklyFocusBook.id) ? '정지' : '팟캐스트'}</span>
-                                    </button>
-                                )}
-                                {weeklyFocusBook.purchaseLink && (
-                                    <a href={weeklyFocusBook.purchaseLink} target="_blank" rel="noopener noreferrer" className="flex-1 h-14 rounded-2xl border border-gold/30 bg-gold/10 text-gold hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-2 shadow-2xl uppercase text-[10px] font-black tracking-widest">
-                                        <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
-                                        <span>BUY</span>
-                                    </a>
-                                )}
-                            </div>
                         </div>
+                    </section>
+
+                    {/* 🚀 3. Category Anchor Tabs */}
+                    <div className="px-6 my-[28px]">
+                        <div className="h-[1px] bg-white/5 w-full"></div>
                     </div>
-
-                    {/* Deep Dive Archives - New Section for 5000+ Character Reviews */}
-                    <section className="space-y-8 bg-gold/5 -mx-4 px-4 py-10 border-y border-gold/10">
-                        <div className="flex flex-col items-center text-center space-y-2 mb-8">
-                            <span className="text-gold text-[9px] font-black uppercase tracking-[0.4em]">Archiview Special</span>
-                            <h2 className="serif-title text-2xl text-white font-bold italic">Characters Deep Dive</h2>
-                            <p className="text-slate-400 text-[10px] font-light max-w-xs mx-auto">
-                                단순한 요약을 넘어 선구자들의 깊은 사유와 <br />철학적 통찰을 담은 프리미엄 E-Book 컬렉션
-                            </p>
-                        </div>
-
-                        <div
-                            ref={scrollRef}
-                            className="flex overflow-x-auto gap-6 pb-6 hide-scrollbar snap-x scroll-px-6"
-                        >
-                            {deepDiveBooks.map((book) => (
-                                <Link key={book.id} to={`/review/${book.id}`} className="shrink-0 w-64 snap-center group">
-                                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-4 border border-gold/20 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
-                                        <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 group-hover:opacity-40 transition-opacity"></div>
-                                        <div className="absolute top-4 right-4 bg-gold/90 text-primary text-[8px] font-black px-2 py-1 rounded-md shadow-lg shadow-gold/20 uppercase tracking-widest">Premium</div>
-                                        <div className="absolute bottom-4 left-4 right-4">
-                                            <p className="text-gold text-[8px] font-bold uppercase tracking-widest mb-1 opacity-70">{book.celeb}</p>
-                                            <h4 className="text-white font-bold text-lg leading-tight truncate">{book.title}</h4>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-gold text-sm">auto_stories</span>
-                                            <span className="text-white/40 text-[9px] font-bold uppercase tracking-widest">80+ Pages</span>
-                                        </div>
-                                        <div className="text-gold text-[9px] font-black uppercase tracking-widest border-b border-gold/40 pb-0.5 group-hover:text-white group-hover:border-white transition-all leading-tight text-right">REVIEW<br />DETAIL</div>
-                                    </div>
-                                </Link>
+                    <section className="px-6 mb-12 sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
+                        <div className="flex overflow-x-auto no-scrollbar gap-3">
+                            {categoriesInfo.map((cat) => (
+                                <button
+                                    key={`tab-${cat.id}`}
+                                    onClick={() => setSelectedCategoryId(cat.id)}
+                                    className={`px-5 py-2.5 rounded-sm border flex-none text-[13px] font-black tracking-tight whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-orange-600/50'}`}
+                                >
+                                    {cat.label}
+                                </button>
                             ))}
                         </div>
                     </section>
 
-                    {/* Editors' Picks */}
-                    <section className="space-y-8">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                            <span className="text-white text-xl font-bold serif-title italic">Editors' Picks</span>
-                        </div>
-                        <div className="space-y-6">
-                            {editorsPicks.map((item) => (
-                                <div key={item.id} className="flex gap-5 group">
-                                    <div className="w-24 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 border border-white/10 relative shadow-xl">
-                                        <img src={item.cover} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between py-1">
-                                        <div>
-                                            <span className="text-[8px] text-gold font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full mb-2 inline-block border border-gold/20">{item.tag}</span>
-                                            <h4 className="text-white font-bold text-lg leading-tight mb-1">{item.title}</h4>
-                                            <p className="text-slate-500 text-xs font-light">{item.subtitle}</p>
+                    {/* 🚀 4. Active Category Section */}
+                    <section className="px-6 space-y-20 mb-20 animate-fade-in">
+                        {(() => {
+                            const cat = categoriesInfo.find(c => c.id === selectedCategoryId);
+                            const books = filterBooksByCategory(cat.id);
+                            return (
+                                <article key={cat.id} id={`section-${cat.id}`} className="flex flex-col space-y-8 scroll-mt-36">
+                                    {/* Category Header (Article Style) */}
+                                    <div className="space-y-6">
+                                        <div className="relative w-full aspect-[16/9] rounded-sm overflow-hidden group shadow-2xl border border-white/5 cursor-pointer" onClick={() => navigate(`/category/${cat.id}`)}>
+                                            <img src={cat.img} alt={cat.label} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                                            <div className="absolute top-4 right-4 bg-[#0e1015]/80 backdrop-blur-md px-4 py-1.5 rounded-sm border border-white/10 shadow-lg">
+                                                <span className="text-[10px] text-orange-500 font-black tracking-widest uppercase">{cat.label}</span>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 mt-auto">
-                                            {/* 1. 리뷰 상세 */}
-                                            {item.hasReview ? (
-                                                <Link
-                                                    to={`/review/${item.id}`}
-                                                    className="h-10 rounded-xl bg-gold/10 border border-gold/30 text-gold text-[9px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-                                                    <span className="leading-tight text-center">REVIEW<br />DETAIL</span>
-                                                </Link>
-                                            ) : (
-                                                <div className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/20 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-                                                    <span className="leading-tight text-center">REVIEW<br />DETAIL</span>
+
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                <h3 className="text-2xl font-black leading-tight tracking-tight mb-3">『{cat.label}』 {cat.title}</h3>
+                                                <p className="text-white/40 text-[13px] leading-relaxed line-clamp-2 mb-4">{cat.sub}</p>
+                                                <div className="flex items-center gap-4 text-[10px] font-black text-white/20 uppercase tracking-[0.1em]">
+                                                    <span>{cat.readTime}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-orange-500/40"></span>
+                                                    <span>BY {cat.author}</span>
                                                 </div>
-                                            )}
-
-                                            {/* 2. 팟캐스트 */}
+                                            </div>
                                             <button
-                                                disabled={!item.isPodcast}
-                                                onClick={() => item.isPodcast && playPodcastMP3(item.podcastUrl, item.title, item.cover, item.id)}
-                                                className={`h-10 rounded-xl border flex items-center justify-center gap-2 transition-all ${
-                                                    !item.isPodcast
-                                                        ? 'bg-white/5 border-white/5 text-white/20 cursor-not-allowed'
-                                                        : (podcastPlaying && podcastInfo?.id === item.id)
-                                                            ? 'bg-gold border-gold text-primary shadow-lg shadow-gold/20'
-                                                            : 'bg-white/5 border-white/10 text-white hover:border-gold/50 hover:text-gold'
-                                                }`}
+                                                onClick={() => navigate(`/category/${cat.id}`)}
+                                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-3 rounded-sm flex items-center gap-2 shadow-xl shadow-orange-600/20 active:scale-95 transition-all shrink-0"
                                             >
-                                                <span className="material-symbols-outlined text-[18px]">{(podcastPlaying && podcastInfo?.id === item.id) ? 'stop' : 'podcasts'}</span>
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{(podcastPlaying && podcastInfo?.id === item.id) ? '정지' : '팟캐스트'}</span>
+                                                <span className="material-symbols-outlined !text-xl fill-1">play_arrow</span>
+                                                <span className="font-bold text-sm tracking-tight">Listen</span>
                                             </button>
+                                        </div>
+                                    </div>
 
-                                            {/* 3. 서재 추가 */}
-                                            <button
-                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2"
-                                                onClick={() => addToLibrary(item)}
+                                    {/* Embedded Book List (Vertical 5 books) */}
+                                    <div className="bg-white/5 rounded-sm p-6 space-y-10 border border-white/5">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="text-xs font-black text-orange-500 uppercase tracking-widest">Recommended Books</h4>
+                                            <span className="text-[10px] text-white/30 font-bold uppercase">5 Picked</span>
+                                        </div>
+                                        {books.map((item, idx) => (
+                                            <motion.div
+                                                key={item.id}
+                                                className="space-y-6"
+                                                initial={{ opacity: 0, y: 10 }}
+                                                whileInView={{ opacity: 1, y: 0 }}
+                                                viewport={{ once: true }}
+                                                transition={{ delay: idx * 0.05 }}
                                             >
-                                                <span className="material-symbols-outlined text-[16px]">bookmark</span>
-                                                <span>서재 추가</span>
-                                            </button>
+                                                <div className="flex gap-4 group items-start">
+                                                    <div className="w-[100px] aspect-[3/4.2] rounded-sm overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id}`)}>
+                                                        <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                        {item.isPodcast && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col justify-start py-1 h-full max-w-[calc(100%-116px)]">
+                                                        <div className="cursor-pointer mb-4" onClick={() => navigate(`/review/${item.id}`)}>
+                                                            <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mb-1 opacity-60 block">INSIGHT 0{idx + 1}</span>
+                                                            <h5 className="text-white font-black text-[15px] leading-tight mb-1.5 truncate">『{item.title}』</h5>
+                                                            <p className="text-white/40 text-[11px] font-medium italic line-clamp-1 opacity-80">{item.desc || item.author}</p>
+                                                        </div>
 
-                                            {/* 4. 구매하기 */}
-                                            {item.purchaseLink ? (
-                                                <a
-                                                    href={item.purchaseLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">shopping_cart</span>
-                                                    <span className="leading-tight text-center">BUY<br />BOOK</span>
-                                                </a>
-                                            ) : (
-                                                <div className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/10 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="material-symbols-outlined text-[16px]">shopping_cart</span>
-                                                    <span className="leading-tight text-center">BUY<br />BOOK</span>
+                                                        {/* Listen / Read Time Indicators */}
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className="flex gap-1 bg-orange-500/10 px-2 py-0.5 rounded-sm items-center">
+                                                                <span className="text-[10px]">🎧</span>
+                                                                <span className="text-orange-500 text-[10px] font-black">15분</span>
+                                                            </div>
+                                                            <div className="flex gap-1 bg-white/5 px-2 py-0.5 rounded-sm items-center">
+                                                                <span className="text-[10px]">📖</span>
+                                                                <span className="text-white/60 text-[10px] font-black">5분</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 4 buttons in 2x2 grid (Home page style) */}
+                                                        <div className="grid grid-cols-2 gap-1.5 mt-auto">
+                                                            <button onClick={() => navigate(`/review/${item.id}`)} className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white font-bold text-[11px] flex items-center justify-center">
+                                                                리뷰
+                                                            </button>
+                                                            <button onClick={() => { if (!item.isPodcast) return; const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className={`h-9 rounded-sm border transition-all font-bold text-[11px] flex items-center justify-center gap-1 ${!item.isPodcast ? 'opacity-20 cursor-not-allowed border-[#333] text-white/40' : 'bg-transparent border-orange-500/50 text-orange-500 hover:bg-orange-500/10'}`} disabled={!item.isPodcast}>
+                                                                <span>▶</span> 재생하기
+                                                            </button>
+                                                            <button onClick={() => addToLibrary(item)} className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
+                                                                서재추가
+                                                            </button>
+                                                            <a href={item.purchaseLink || `https://search.kyobobook.co.kr/search?keyword=${item.title}`} target="_blank" rel="noopener noreferrer" className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
+                                                                구매하기
+                                                            </a>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
+                                                {idx < books.length - 1 && <div className="h-[1px] w-full bg-white/5 mt-2"></div>}
+                                            </motion.div>
+                                        ))}
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Guru's Choice */}
-                    <section className="space-y-8">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-gold text-xl">workspace_premium</span>
-                                <span className="text-white text-xl font-bold serif-title italic">Guru's Choice</span>
-                            </div>
-                            <span className="text-[8px] text-gold font-black uppercase tracking-widest bg-gold/10 px-2 py-1 rounded-full border border-gold/20">Expert Curation</span>
-                        </div>
-                        <div className="space-y-6">
-                            {guruChoice.length > 0 ? guruChoice.map((item) => (
-                                <div key={item.id} className="flex gap-5 group">
-                                    <div className="w-24 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 border border-gold/20 relative shadow-xl">
-                                        <img src={item.cover} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
-                                        <div className="absolute top-2 left-2 bg-gold text-primary text-[7px] font-black px-1.5 py-0.5 rounded uppercase">Expert</div>
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between py-1">
-                                        <div>
-                                            <span className="text-[8px] text-gold font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full mb-2 inline-block border border-gold/20">{item.tag}</span>
-                                            <h4 className="text-white font-bold text-lg leading-tight mb-1">{item.title}</h4>
-                                            <p className="text-slate-400 text-xs font-light italic mb-1">{item.author}</p>
-                                            <p className="text-slate-500 text-xs font-light">{item.subtitle}</p>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 mt-auto">
-                                            <Link
-                                                to={`/review/${item.id}`}
-                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]">menu_book</span>
-                                                <span className="leading-tight text-center">REVIEW<br />DETAIL</span>
-                                            </Link>
-                                            <button
-                                                disabled={!item.isPodcast}
-                                                onClick={() => item.isPodcast && playPodcastMP3(item.podcastUrl, item.title, item.cover, item.id)}
-                                                className={`h-10 rounded-xl border flex items-center justify-center gap-2 transition-all ${
-                                                    !item.isPodcast
-                                                        ? 'bg-white/5 border-white/5 text-white/20 cursor-not-allowed'
-                                                        : (podcastPlaying && podcastInfo?.id === item.id)
-                                                            ? 'bg-gold border-gold text-primary shadow-lg shadow-gold/20'
-                                                            : 'bg-white/5 border-white/10 text-white hover:border-gold/50 hover:text-gold'
-                                                }`}
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">{(podcastPlaying && podcastInfo?.id === item.id) ? 'stop' : 'podcasts'}</span>
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{(podcastPlaying && podcastInfo?.id === item.id) ? '정지' : '팟캐스트'}</span>
-                                            </button>
-                                            <button
-                                                className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/8 hover:text-white transition-all flex items-center justify-center gap-2"
-                                                onClick={() => addToLibrary(item)}
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]">bookmark</span>
-                                                <span>서재 추가</span>
-                                            </button>
-                                            {item.purchaseLink ? (
-                                                <a
-                                                    href={item.purchaseLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">shopping_cart</span>
-                                                    <span className="leading-tight text-center">BUY<br />BOOK</span>
-                                                </a>
-                                            ) : (
-                                                <div className="h-10 rounded-xl bg-white/5 border border-white/10 text-white/10 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="material-symbols-outlined text-[16px]">shopping_cart</span>
-                                                    <span className="leading-tight text-center">BUY<br />BOOK</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )) : null}
-                        </div>
+                                </article>
+                            );
+                        })()}
                     </section>
 
                     <Footer />
-                </main >
+                </main>
+
                 <BottomNavigation />
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

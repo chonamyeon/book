@@ -924,7 +924,8 @@
     display: flex;
     flex-direction: column;
     padding: 94px 0 0;
-    background: #191919; /* 카톡 다크모드 배경색 */
+    background: #191919;
+    /* 카톡 다크모드 배경색 */
     overflow: hidden;
 }
 
@@ -1279,15 +1280,41 @@
 }
 
 .rv-chat-bubble.james {
-    background: #333; /* 제임스: 다크 회색 말풍선 */
+    background: #333;
+    /* 제임스: 다크 회색 말풍선 */
     color: #fff;
     border-top-left-radius: 2px;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
 }
 
 .rv-chat-bubble.stella {
-    background: #ffeb33; /* 스텔라: 카톡 노란 말풍선 (텍스트는 검정) */
+    background: #ffeb33;
+    /* 스텔라: 카톡 노란 말풍선 (텍스트는 검정) */
     color: #000;
     border-top-right-radius: 2px;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+}
+
+/* 현재 재생 중인 말풍선 하이라이트 */
+.rv-chat-bubble.james.active {
+    background: #5a5aff;
+    box-shadow: 0 0 0 2px rgba(90, 90, 255, 0.4), 0 4px 16px rgba(90, 90, 255, 0.3);
+    transform: scale(1.02);
+}
+
+.rv-chat-bubble.stella.active {
+    background: #ffe500;
+    box-shadow: 0 0 0 2px rgba(255, 229, 0, 0.5), 0 4px 16px rgba(255, 180, 0, 0.35);
+    transform: scale(1.02);
+}
+
+/* 비활성 말풍선은 살짝 흐리게 */
+.rv-chat-row:not(.active) .rv-chat-bubble {
+    opacity: 0.55;
+}
+
+.rv-chat-row.active .rv-chat-bubble {
+    opacity: 1;
 }
 
 /* ── Mobile Chat Adjustments ── */
@@ -1346,5 +1373,222 @@
 
     .rv-tab .material-symbols-outlined {
         font-size: 16px;
+    }
+}
+
+/* ── Action Guide Stage ───────────────────────────────── */
+.rv-action-stage {
+    position: absolute;
+    inset: 0;
+    padding-top: 100px;
+    padding-bottom: 40px;
+    padding-left: 24px;
+    padding-right: 24px;
+    background: #ffffff;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.rv-action-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.rv-action-badge {
+    display: inline-block;
+    background: #FF5C00;
+    color: white;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.rv-action-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: #1a160e;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.rv-action-subtitle {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+}
+
+.rv-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.rv-action-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fcfcfc;
+    border: 1px solid #f0f0f0;
+    padding: 24px;
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    position: relative;
+    cursor: default;
+}
+
+.rv-action-card:hover {
+    border-color: #FF5C00;
+    background: white;
+    box-shadow: 0 10px 30px rgba(255, 92, 0, 0.08);
+}
+
+.rv-action-card-number {
+    width: 32px;
+    height: 32px;
+    background: #1a160e;
+    color: white;
+    font-size: 16px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.rv-action-card-content {
+    flex: 1;
+}
+
+.rv-action-card-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #1a160e;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+}
+
+.rv-action-card-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #555;
+    word-break: keep-all;
+}
+
+.rv-action-card-check {
+    color: #e0e0e0;
+    transition: color 0.3s;
+}
+
+.rv-action-card:hover .rv-action-card-check {
+    color: #FF5C00;
+}
+
+.rv-action-card.completed {
+    border-color: #22c55e;
+    background: #f0fdf4;
+}
+
+.rv-action-card.completed .rv-action-card-number {
+    background: #22c55e;
+}
+
+.rv-action-card.completed .rv-action-card-check {
+    color: #22c55e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.rv-action-done-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.rv-action-record-btn {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #FF5C00;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(255, 92, 0, 0.2);
+}
+
+.rv-action-record-btn:hover {
+    background: #e65300;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 92, 0, 0.3);
+}
+
+.rv-action-record-btn:active {
+    transform: translateY(0);
+}
+
+.rv-action-footer {
+    text-align: center;
+    margin-top: auto;
+    padding-bottom: 40px;
+}
+
+.rv-action-footer p {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 20px;
+}
+
+.rv-action-complete-btn {
+    width: 100%;
+    background: #1a160e;
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 800;
+    transition: all 0.2s;
+}
+
+.rv-action-complete-btn:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 600px) {
+    .rv-action-stage {
+        padding-top: 100px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .rv-action-title {
+        font-size: 22px;
+    }
+
+    .rv-action-card {
+        padding: 20px;
+    }
+
+    .rv-action-card-title {
+        font-size: 16px;
+    }
+
+    .rv-action-card-desc {
+        font-size: 13px;
     }
 }

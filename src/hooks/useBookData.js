@@ -2,10 +2,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { celebrities } from '../data/celebrities';
+import { availableAudio } from '../data/availableAudio';
+
+const CACHE_KEY = 'archiview_book_overrides_cache';
+
+const loadCache = () => {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
+};
+
+const saveCache = (data) => {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch {
+        // localStorage 용량 초과 등 무시
+    }
+};
 
 export const useBookData = () => {
-    const [overrides, setOverrides] = useState({});
-    const [loading, setLoading] = useState(true);
+    // 캐시에서 즉시 초기값 로드 → Weekly Focus 등이 첫 렌더에서 바로 표시됨
+    const [overrides, setOverrides] = useState(() => loadCache());
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -16,6 +37,7 @@ export const useBookData = () => {
                 data[doc.id] = doc.data();
             });
             setOverrides(data);
+            saveCache(data);  // 다음 방문을 위해 캐시 갱신
             setLoading(false);
         }, (err) => {
             console.error("Firestore error:", err);
@@ -29,13 +51,16 @@ export const useBookData = () => {
     const getBook = useCallback((bookId) => {
         const localBook = (celebrities || []).flatMap(c => c.books || []).find(b => b.id === bookId);
         const override = overrides[bookId];
-        
+
         if (!localBook && !override) return null;
+
+        const fileName = `${bookId}.mp3`;
+        const hasAudioFile = availableAudio.includes(fileName);
 
         return {
             ...(localBook || {}),
             ...(override || {}),
-            // 강제 오버라이드 제거: Firestore 데이터(override)가 있으면 그것을 사용하고, 없으면 로컬 사용
+            isPodcast: override?.isPodcast || localBook?.isPodcast || hasAudioFile,
             cover: override?.cover || localBook?.cover,
             audioPath: override?.audioPath || localBook?.audioPath || `/audio/${bookId}.mp3`,
             podcastScript: override?.podcastScript || ''
@@ -44,33 +69,39 @@ export const useBookData = () => {
 
     // 모든 도서 목록 안전하게 가져오기 (adminMode=true 시 비공개 도서도 포함)
     const getAllBooks = useCallback((adminMode = false) => {
-        const allLocalBooks = (celebrities || []).flatMap(celeb => 
+        const allLocalBooks = (celebrities || []).flatMap(celeb =>
             (celeb.books || []).map(book => ({
                 ...book,
                 celebName: celeb.name
             }))
         );
-        
+
         const bookMap = new Map();
         allLocalBooks.forEach(book => {
-            // 관리자 페이지와 동일한 ID 생성 규칙 적용
             const id = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
             const override = overrides[id];
 
+            // 삭제된 도서 필터링 (오버라이드에 isDeleted가 있으면 제외)
+            if (override?.isDeleted) return;
+
+            const fileName = `${id}.mp3`;
+            const hasAudioFile = availableAudio.includes(fileName);
+
             bookMap.set(id, {
                 ...book,
-                id: id, // ID 보장
+                id: id,
                 ...(override || {}),
-                // 강제 오버라이드 제거: 관리자 수정 내역이 최우선입니다.
+                isPodcast: override?.isPodcast || book.isPodcast || hasAudioFile,
                 cover: override?.cover || book.cover,
                 purchaseLink: override?.purchaseLink || book.purchaseLink || '',
-                // 기존 celebrities.js 도서는 isPublic 미설정 시 공개 처리
                 isPublic: override?.isPublic !== undefined ? override.isPublic : true,
             });
         });
 
-        // Firestore에만 존재하는 신규 도서 추가 — adminMode면 전체, 아니면 isPublic:true 만 노출
+        // Firestore에만 존재하는 신규 도서 추가
         Object.entries(overrides).forEach(([id, data]) => {
+            if (data.isDeleted) return; // 삭제된 도서 제외
+
             if (!bookMap.has(id) && data.title && (adminMode || data.isPublic === true)) {
                 bookMap.set(id, {
                     id,
@@ -93,5 +124,5 @@ export const useBookData = () => {
         return Array.from(bookMap.values());
     }, [overrides]);
 
-    return { getBook, getAllBooks, loading };
+    return { getBook, getAllBooks, loading, overrides };
 };

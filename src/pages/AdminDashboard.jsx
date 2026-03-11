@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // IndexedDB 헬퍼 — TTS 배치 버퍼 영구 저장
 const TTS_DB = 'tts-cache';
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
     });
     const [password, setPassword] = useState('');
     const [activeTab, setActiveTab] = useState('dashboard');
-    const { getAllBooks, loading: booksLoading } = useBookData();
+    const { getAllBooks, loading: booksLoading, overrides } = useBookData();
 
     // 🆕 Password Check
     const handleAuth = (e) => {
@@ -118,12 +118,21 @@ export default function AdminDashboard() {
     // Real-time Data States (기존 로직 유지)
     const [realUsers, setRealUsers] = useState([]);
     const [realSales, setRealSales] = useState([]);
-    const [realBooks, setRealBooks] = useState([]);
+    const realBooks = useMemo(() => {
+        // useBookData의 overrides가 변경될 때마다 getAllBooks가 새로 생성되므로 
+        // 여기서 자동으로 최신 데이터를 가져옵니다.
+        return getAllBooks(true) || [];
+    }, [getAllBooks]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Book Management State
     const [isAddingBook, setIsAddingBook] = useState(false);
-    const [newBook, setNewBook] = useState({ title: '', author: '', price: '', stock: 0 });
+    const [newBook, setNewBook] = useState({ title: '', author: '', price: '', stock: 0, description: '' });
+
+    // Popular Archives Management State
+    const [popularList, setPopularList] = useState([]);
+    const [popularSearch, setPopularSearch] = useState('');
+    const [popularSaving, setPopularSaving] = useState(false);
 
 
     // 1. Listen for Users
@@ -158,16 +167,17 @@ export default function AdminDashboard() {
         return () => unsubscribe();
     }, []);
 
-    // 3. Sync Books from useBookData or Listen to book_overrides
+    // 3. Books synchronization is now handled automatically via useMemo above.
+
+    // 4. Listen for Popular Archives
     useEffect(() => {
-        if (!booksLoading) {
-            try {
-                setRealBooks(getAllBooks(true) || []);
-            } catch (e) {
-                console.error("Error fetching books:", e);
+        const unsub = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
+            if (snap.exists() && snap.data().books?.length) {
+                setPopularList(snap.data().books);
             }
-        }
-    }, [booksLoading, getAllBooks]);
+        });
+        return () => unsub();
+    }, []);
 
     // Toss Payments Init
     const handlePayment = async () => {
@@ -194,6 +204,8 @@ export default function AdminDashboard() {
             const bookId = newBook.title.toLowerCase().replace(/\s+/g, '-');
             await setDoc(doc(db, "book_overrides", bookId), {
                 ...newBook,
+                isDeleted: false, // 삭제된 적이 있다면 복구
+                isPublic: true,  // 초기 공개 상태
                 updatedAt: serverTimestamp()
             });
             setIsAddingBook(false);
@@ -205,12 +217,17 @@ export default function AdminDashboard() {
     };
 
     const handleDeleteBook = async (bookId) => {
-        if (window.confirm('정말 삭제하시겠습니까? (로컬 데이터는 유지되고 오버라이드만 삭제됩니다)')) {
+        if (window.confirm('정말 삭제하시겠습니까? 이 도서는 시스템에서 즉시 숨겨지며 나중에 복구할 수 없습니다.')) {
             try {
-                await deleteDoc(doc(db, "book_overrides", bookId));
+                // 오버라이드에 isDeleted: true를 설정하여 물리 삭제 대신 필터링 처리 (로컬 파일 보호)
+                await setDoc(doc(db, "book_overrides", bookId), {
+                    isDeleted: true,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
                 alert('삭제되었습니다.');
             } catch (error) {
                 console.error("Error deleting book:", error);
+                alert('삭제 중 오류가 발생했습니다.');
             }
         }
     };
@@ -230,7 +247,6 @@ export default function AdminDashboard() {
                 updatedAt: serverTimestamp()
             }, { merge: true });
             alert('표지 경로가 업데이트되었습니다.');
-            setRealBooks(getAllBooks(true) || []);
         } catch (error) {
             console.error("Error updating cover path:", error);
             alert('업데이트 중 오류가 발생했습니다.');
@@ -244,7 +260,6 @@ export default function AdminDashboard() {
                 updatedAt: serverTimestamp()
             }, { merge: true });
             alert('구매 링크가 저장되었습니다.');
-            setRealBooks(getAllBooks(true) || []);
         } catch (error) {
             console.error("Error updating link:", error);
             alert('링크 저장 중 오류가 발생했습니다.');
@@ -257,7 +272,7 @@ export default function AdminDashboard() {
                 isPublic: !currentValue,
                 updatedAt: serverTimestamp()
             }, { merge: true });
-            setRealBooks(getAllBooks(true) || []);
+            // realBooks는 useMemo와 useBookData의 snapshot에 의해 자동 업데이트됩니다.
         } catch (error) {
             console.error("Error toggling public:", error);
         }
@@ -270,7 +285,6 @@ export default function AdminDashboard() {
                 updatedAt: serverTimestamp()
             }, { merge: true });
             alert(`${field} 정보가 저장되었습니다.`);
-            setRealBooks(getAllBooks(true) || []);
         } catch (error) {
             console.error(`Error updating ${field}:`, error);
             alert('저장 중 오류가 발생했습니다.');
@@ -307,12 +321,19 @@ export default function AdminDashboard() {
     const [filterSection, setFilterSection] = useState('');
     const [filterCeleb, setFilterCeleb] = useState('');
 
+    // 🆕 External Book Search State
+    const [externalSearchQuery, setExternalSearchQuery] = useState('');
+    const [externalSearchResults, setExternalSearchResults] = useState([]);
+    const [isSearchingExternal, setIsSearchingExternal] = useState(false);
+    const [isCrawling, setIsCrawling] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
     // ── AI 대본 생성 탭 상태 ─────────────────────────────────
     const [scriptForm, setScriptForm] = useState({
         bookId: '', title: '', author: '',
         themes: '',
-        targetMin: 2800, targetMax: 3200,
-        turnLimit: 50,
+        targetMin: 2300, targetMax: 2500,
+        turnLimit: 45,
         speakerA: '제임스', speakerB: '스텔라'
     });
     const [scriptApiKey, setScriptApiKey] = useState(() => localStorage.getItem('scriptApiKey') || '');
@@ -330,6 +351,7 @@ export default function AdminDashboard() {
     const [isCheckingQuota, setIsCheckingQuota] = useState(false);
     const [existingScript, setExistingScript] = useState(null); // Firestore 기존 대본
     const [isLoadingScript, setIsLoadingScript] = useState(false);
+    const [isScriptEditorOpen, setIsScriptEditorOpen] = useState(false);
     // 이어받기: 배치별 PCM 버퍼 저장 (null = 미완료)
     const [savedPcmBuffers, setSavedPcmBuffers] = useState([]);
     const [failedBatches, setFailedBatches] = useState([]);
@@ -344,6 +366,142 @@ export default function AdminDashboard() {
     const [merging, setMerging] = useState(false);
     const [mergeLog, setMergeLog] = useState('');
     const ffmpegRef = React.useRef(new FFmpeg());
+
+    // 🆕 Google Books API 검색
+    const handleGoogleBooksSearch = async () => {
+        const queryTerm = externalSearchQuery || scriptForm.title || newBook.title;
+        if (!queryTerm.trim()) return alert('검색어를 입력해 주세요.');
+
+        setIsSearchingExternal(true);
+        try {
+            const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryTerm)}&maxResults=10`);
+            const data = await response.json();
+            setExternalSearchResults(data.items || []);
+            if (!data.items?.length) alert('검색 결과가 없습니다.');
+        } catch (error) {
+            console.error('Google Books API Error:', error);
+            alert('검색 중 오류가 발생했습니다.');
+        } finally {
+            setIsSearchingExternal(false);
+        }
+    };
+
+    const openExternalSearch = (site) => {
+        const queryTerm = externalSearchQuery || scriptForm.title || newBook.title;
+        if (!queryTerm.trim()) return alert('검색어를 입력하세요.');
+        let url = '';
+        if (site === 'kyobo') {
+            url = `https://search.kyobobook.co.kr/search?keyword=${encodeURIComponent(queryTerm)}`;
+        } else if (site === 'yes24') {
+            url = `https://www.yes24.com/Product/Search?domain=ALL&query=${encodeURIComponent(queryTerm)}`;
+        }
+        window.open(url, '_blank');
+    };
+
+    const handleCrawlBookInfo = async (title, author, targetBookId = null) => {
+        if (!title) return alert('도서 제목이 필요합니다.');
+        setIsCrawling(true);
+        try {
+            const response = await fetch('http://127.0.0.1:3001/api/book/crawl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, author }),
+            });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || '크롤링 실패');
+            }
+            const data = await response.json();
+
+            if (data.description || data.coverUrl) {
+                if (targetBookId) {
+                    let msg = '';
+                    if (data.description) {
+                        const textarea = document.getElementById(`desc-${targetBookId}`);
+                        if (textarea) {
+                            textarea.value = data.description;
+                            msg += ' 상세 정보';
+                        }
+                    }
+                    if (data.coverUrl) {
+                        const coverInput = document.getElementById(`cover-${targetBookId}`);
+                        if (coverInput) {
+                            coverInput.value = data.coverUrl;
+                            msg += (msg ? ' 및' : '') + ' 표지 이미지';
+                        }
+                    }
+                    alert(`${msg}를 가져왔습니다. 하단의 "설정 저장"을 눌러 최종 반영하세요.`);
+                } else {
+                    setNewBook(prev => ({
+                        ...prev,
+                        description: data.description || prev.description,
+                        cover: data.coverUrl || prev.cover
+                    }));
+                    alert('신규 도서 등록 폼에 상세 정보와 표지가 입력되었습니다.');
+                }
+            } else {
+                alert('가져올 수 있는 정보가 없습니다.');
+            }
+        } catch (error) {
+            console.error('Crawling error:', error);
+            alert(`정보를 가져오는 중 오류가 발생했습니다: ${error.message}`);
+        } finally {
+            setIsCrawling(false);
+        }
+    };
+
+    const handleAnalyzeBook = async (title, author, targetBookId) => {
+        const textarea = document.getElementById(`desc-${targetBookId}`);
+        const currentDesc = textarea ? textarea.value : null;
+        if (!currentDesc || currentDesc.length < 50) return alert('분석을 위해 먼저 교보 정보를 가져오거나 도서 설명을 입력해주세요.');
+
+        setIsAnalyzing(true);
+        try {
+            const response = await fetch('http://127.0.0.1:3001/api/book/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, author, description: currentDesc }),
+            });
+            if (!response.ok) throw new Error('분석 실패');
+            const data = await response.json();
+            if (data.analysis) {
+                textarea.value = `[GEMINI 2.0 ANALYSIS]\n${data.analysis}\n\n[ORIGINAL INFO]\n${currentDesc}`;
+                alert('Gemini 2.0이 도서 분석을 완료했습니다. 하단의 "설정 저장"을 눌러 반영하세요.');
+            }
+        } catch (e) {
+            console.error('Analysis Error:', e);
+            alert('분석 중 오류 발생: ' + e.message);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const applyBookInfo = (item, targetBookId = null) => {
+        const info = item.volumeInfo;
+        const title = info.title || '';
+        const author = info.authors ? info.authors.join(', ') : '';
+        const desc = info.description || '';
+
+        if (targetBookId) {
+            const textArea = document.getElementById(`desc-${targetBookId}`);
+            if (textArea) {
+                const currentVal = textArea.value;
+                textArea.value = currentVal ? `${currentVal}\n\n${desc}` : desc;
+                alert('설명이 텍스트 영역에 추가되었습니다. "설명 저장" 버튼을 눌러 저장하세요.');
+            } else {
+                handleUpdateBookField(targetBookId, 'description', desc);
+            }
+        } else {
+            setNewBook(prev => ({
+                ...prev,
+                title: title,
+                author: author,
+                description: desc
+            }));
+            setIsAddingBook(true);
+            alert('도서 정보가 등록 폼에 입력되었습니다.');
+        }
+    };
 
     const handleMerge = async () => {
         if (!mergeMainFile) return alert('메인 WAV 파일을 선택하세요.');
@@ -443,10 +601,14 @@ export default function AdminDashboard() {
         const checkOne = async (key, modelId) => {
             const isFlash = modelId.includes('flash');
             const speechConfig = isFlash
-                ? { multiSpeakerVoiceConfig: { speakerVoiceConfigs: [
-                    { speaker: '제임스', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-                    { speaker: '스텔라', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-                  ] } }
+                ? {
+                    multiSpeakerVoiceConfig: {
+                        speakerVoiceConfigs: [
+                            { speaker: '제임스', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+                            { speaker: '스텔라', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+                        ]
+                    }
+                }
                 : { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } };
             try {
                 const res = await fetch(
@@ -499,7 +661,7 @@ export default function AdminDashboard() {
             import.meta.env.VITE_GEMINI_API_KEY8,
         ].filter(Boolean);
 
-        const BATCH = 10;
+        const BATCH = 100;
         const batches = [];
         for (let i = 0; i < generatedScript.length; i += BATCH) batches.push(generatedScript.slice(i, i + BATCH));
 
@@ -541,7 +703,7 @@ export default function AdminDashboard() {
 
             const multiText = batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
-            const fetchTimeout = ttsModel === 'pro' ? 90000 : 60000; // Pro: 90초, Flash: 60초
+            const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000; // Pro: 900s, Flash: 600s (for BATCH 100)
             const expectedSec = fetchTimeout / 1000;
             let success = false;
             let attempts = 0;
@@ -578,7 +740,7 @@ export default function AdminDashboard() {
                                     speechConfig: {
                                         multiSpeakerVoiceConfig: {
                                             speakerVoiceConfigs: [
-                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } },
                                                 { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
                                             ]
                                         }
@@ -651,9 +813,9 @@ export default function AdminDashboard() {
 
         const successBuffers = pcmBuffers.filter(Boolean);
         setTtsLogs(prev => [...prev.filter(l => !l.startsWith('⏳')),
-            newFailed.length > 0
-                ? `⚠️ ${newFailed.length}개 배치 실패 (배치 ${newFailed.join(', ')}). 내일 다시 접속해도 이어받기 가능합니다.`
-                : '🎵 WAV 파일 생성 중...'
+        newFailed.length > 0
+            ? `⚠️ ${newFailed.length}개 배치 실패 (배치 ${newFailed.join(', ')}). 내일 다시 접속해도 이어받기 가능합니다.`
+            : '🎵 WAV 파일 생성 중...'
         ]);
         const wavBuffer = createWavFromPcm(successBuffers);
         const blob = new Blob([wavBuffer], { type: 'audio/wav' });
@@ -694,29 +856,39 @@ export default function AdminDashboard() {
             ? `- 핵심 주제 / 반드시 다룰 내용:\n${themes.split('\n').filter(Boolean).map(t => `  ${t}`).join('\n')}`
             : '';
 
-        const prompt = `당신은 한국어 팟캐스트 대본 전문 작가입니다.
-아래 책을 주제로 팟캐스트 대본을 작성해주세요.
+        const prompt = `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
+이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
 
 [책 정보]
 - 제목: ${title}
 - 저자: ${author}
 ${themesBlock}
 
-[화자]
-- ${speakerA} (남성): 책을 읽은 쪽, 유머러스하고 공감 능력 뛰어난 직장인
-- ${speakerB} (여성): 처음 접하는 쪽, 현실적인 직장인 감성으로 반응하고 질문
+[❗️중요: 작성 지침 - 반드시 준수❗️]
+1) **상황 몰입 중심 (Scenario-First)**: 책의 챕터나 내용을 나열하는 설명적 비중은 대폭 줄이세요. 그 대신, 책의 인사이트를 우리의 실제 삶(일상, 직장)에 어떻게 '대입'할 수 있는지에 대한 구체적인 상황극과 대화의 비중을 80% 이상으로 구성하세요.
+2) **내용의 사실성 (Fact-Only)**: 책의 핵심 지식은 반드시 제공된 팩트에 기반해야 합니다. 다만 그것을 설명하기보다 "이거 딱 우리 부장님 이야기 아니야?" 혹은 "어제 카페에서 본 그 상황이랑 똑같네" 식의 연결고리로 활용하세요.
+3) **위트와 유머**: 직장인들이 무릎을 칠만한 위트와 유머를 섞어주세요. 딱딱한 교양 정보가 아니라, 무조건 재미있어야 합니다.
+4) **생활 밀착형 상황**: 지하철, 마트, 운동, 친구 모임 등 일상 전반의 다채로운 상황을 에피소드로 활용하세요.
 
-[🔴 절대 준수 사항]
-- 총 턴 수: 정확히 ${turnLimit}턴 이하
-- 총 대사 글자 수 (공백·줄바꿈 제외): 반드시 ${targetMin}자 ~ ${targetMax}자
-- 각 대사: 반드시 2~5문장 구성, 단독 1문장 대사 금지
-- 인트로 금지: "안녕하세요, 저는 ${speakerA}입니다" 같은 소개 절대 금지
-- 첫 대사: 출근길/커피/야근 등 자연스러운 일상 대화로 바로 시작
-- 직장인 현실 공감 가득 (상사 눈치, 야근, 멀티태스킹, 메신저 알람 등)
-- 유머, 자기반성, 깨달음이 섞인 생생한 대화체
-- 마지막 3턴: 실천 다짐 + 유쾌한 마무리
+[화자 정보]
+- **제임스 (${speakerA}, 남성)**: 책의 지혜를 위트 있게 현실로 끌어오는 가이드.
+- **스텔라 (${speakerB}, 여성)**: 현실적인 관점에서 뼈 때리는 질문을 던지는 리액터.
 
-[출력 형식 - JSON 배열만 출력, 다른 텍스트 절대 금지]
+【대본의 6단계 구조 - 반드시 순서대로 준수】
+1. 공감 질문: 일상의 아주 구체적인 상황 속 의문으로 시작
+2. 책 소개: 핵심 메시지를 현실의 결핍과 연결해 짧고 강렬하게 소개
+3. 인사이트 대입: 책의 개념을 설명하는 것이 아니라, 실제 상황에 '적용'하는 대화 중심
+4. 현실 공감 수다: 해당 인사이트가 필요한 일상/직장 에피소드로 위트 있게 티키타카
+5. 갈등 및 토론: 현실적 적용의 어려움이나 다른 시각을 나누며 깊이 있는 대화
+6. 작은 실천 제안: 오늘 당장 일상에서 써먹을 수 있는 아주 작은 행동 하나 제안 후 위트 있게 마무리
+
+【핵심 작성 규칙】
+1) **설명 최소화**: "이 책의 다음 챕터는~" 또는 "~라고 설명합니다" 식의 강의형 말투는 10% 이하로 줄이세요.
+2) **상황 최대화**: "어제 내가 이랬는데 말이야" 식의 경험 공유와 에피소드 중심으로 구성하세요.
+3) **절대 분량 엄수**: 전체 대화는 무조건 **50턴(제임스와 스텔라가 각 25번씩 발화) 이상**으로 구성하세요. 각 턴의 대사 길이를 길게 작성하여 전체 글자 수가 무조건 **최소 ${targetMin}자 이상 (권장 ${targetMax}자)**이 되도록 알차게 채우세요. 분량이 부족하게 나오는 것은 치명적인 오류입니다.
+4) 톤앤매너: 인사 생략, 바로 1단계 시작. [웃음] 등 지시문 금지.
+
+[출력 형식 - JSON 배열만 출력]
 [
   {"speaker": "${speakerA}", "text": "..."},
   {"speaker": "${speakerB}", "text": "..."}
@@ -724,7 +896,7 @@ ${themesBlock}
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120초 타임아웃
+            const timeoutId = setTimeout(() => controller.abort(), 180000); // 180초 타임아웃
 
             const res = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
@@ -735,9 +907,13 @@ ${themesBlock}
                     'anthropic-dangerous-direct-browser-access': 'true',
                 },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-6',
+                    model: 'claude-sonnet-4-5',
                     max_tokens: 8192,
-                    messages: [{ role: 'user', content: prompt }]
+                    system: "You are an assistant that outputs ONLY a valid JSON array. No conversational text whatsoever. Do not use markdown tags.",
+                    messages: [
+                        { role: 'user', content: prompt },
+                        { role: 'assistant', content: "[" }
+                    ]
                 }),
                 signal: controller.signal,
             });
@@ -752,12 +928,30 @@ ${themesBlock}
             setScriptLogs(prev => [...prev, '✅ 응답 수신, 파싱 중...']);
 
             const data = await res.json();
-            const rawText = data.content[0].text.trim();
-            const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-            if (!jsonMatch) throw new Error('JSON 배열을 찾을 수 없습니다.');
+            let rawText = data.content?.[0]?.text?.trim() || "";
 
-            const script = JSON.parse(jsonMatch[0]);
-            const charCount = script.reduce((s, t) => s + t.text.replace(/[\s\uFEFF\xA0]/g, '').length, 0);
+            // 프리필(pre-fill)을 위해 '['로 시작하게 만들었으므로 앞에 붙여줍니다.
+            if (!rawText.startsWith('[')) {
+                rawText = '[' + rawText;
+            }
+
+            // 가끔 끝나는 부분을 제대로 안 닫았을 때 대비
+            if (!rawText.endsWith(']')) {
+                // 약간의 휴리스틱: 마지막이 ]가 아니면 ]를 붙임
+                rawText = rawText + ']';
+            }
+
+            let script = [];
+            try {
+                // \n이나 특수문자 등에 대한 예외를 막기 위해
+                const pureJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                script = JSON.parse(pureJson);
+            } catch (err) {
+                console.error("Claude JSON Parse Error:", err, "Raw Output:", rawText);
+                throw new Error('파싱 에러: ' + err.message + ' (일부 응답: ' + rawText.slice(0, 50) + '...)');
+            }
+
+            const charCount = script.reduce((s, t) => s + (t.text ? t.text.replace(/[\s\uFEFF\xA0]/g, '').length : 0), 0);
 
             setScriptProgress(100);
             setScriptLogs(prev => [...prev, `✨ 완료! ${script.length}턴 · ${charCount.toLocaleString()}자`]);
@@ -786,6 +980,73 @@ ${themesBlock}
         } finally {
             clearInterval(timerInterval);
             setIsGeneratingScript(false);
+        }
+    };
+
+    const handleSaveScript = async () => {
+        if (!generatedScript.length) return;
+        const bookId = scriptForm.bookId;
+        if (!bookId) return alert('Book ID가 없습니다.');
+
+        setIsLoadingScript(true);
+        try {
+            await setDoc(doc(db, 'scripts', bookId), {
+                lines: generatedScript,
+                title: scriptForm.title,
+                author: scriptForm.author,
+                updatedAt: serverTimestamp()
+            });
+            setScriptLogs(prev => [...prev, `✅ 대본 수정사항 Firestore 저장 완료`]);
+            alert('성공적으로 저장되었습니다.');
+        } catch (e) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setIsLoadingScript(false);
+        }
+    };
+
+    const handleDeleteScript = async () => {
+        const bookId = scriptForm.bookId;
+        if (!bookId) return alert('Book ID가 없습니다.');
+
+        if (!window.confirm('기존에 생성된 대본을 영구적으로 삭제하시겠습니까? (Firestore 데이터 삭제)')) return;
+
+        setIsLoadingScript(true);
+        try {
+            await deleteDoc(doc(db, 'scripts', bookId));
+
+            // isPodcast 플래그도 끔
+            await setDoc(doc(db, 'book_overrides', bookId), {
+                isPodcast: false,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            setExistingScript(null);
+            setGeneratedScript([]);
+            setScriptLogs(prev => [...prev, `🗑️ '${bookId}' 대본이 삭제되었습니다.`]);
+            alert('대본이 삭제되었습니다.');
+        } catch (e) {
+            alert('삭제 실패: ' + e.message);
+        } finally {
+            setIsLoadingScript(false);
+        }
+    };
+
+    const handleClearTtsCache = async () => {
+        if (!scriptForm.bookId) return;
+        if (!window.confirm('기존에 생성된 TTS 오디오 캐시를 모두 삭제하시겠습니까? 대본을 수정했다면 캐시를 삭제해야 수정된 내용으로 다시 생성됩니다.')) return;
+
+        try {
+            // 배치 수 계산 (BATCH=100)
+            const totalBatches = Math.ceil(generatedScript.length / 100) || 10;
+            await clearBatchBuffers(scriptForm.bookId, totalBatches + 5); // 넉넉하게 삭제
+            setTtsLogs(prev => [...prev, `🗑️ '${scriptForm.bookId}' TTS 캐시가 초기화되었습니다.`]);
+            setSavedPcmBuffers([]);
+            setFailedBatches([]);
+            setTtsProgress(0);
+            alert('캐시가 삭제되었습니다. 다시 TTS 변환을 클릭하면 처음부터 새로 생성합니다.');
+        } catch (e) {
+            alert('캐시 삭제 실패: ' + e.message);
         }
     };
 
@@ -840,7 +1101,7 @@ ${themesBlock}
                         speaker: l.speaker
                     })));
                 }
-            }).catch(() => {});
+            }).catch(() => { });
         });
     }, [voiceBook]);
     const voiceScript = voiceBook
@@ -958,25 +1219,31 @@ ${themesBlock}
         { slug: 'mark-zuckerberg', name: '마크 저커버그' }, { slug: 'brene-brown', name: '브레네 브라운' },
         { slug: 'jeff-bezos', name: '제프 베이조스' }, { slug: 'tim-cook', name: '팀 쿡' },
         { slug: 'michelle-obama', name: '미셸 오바마' }, { slug: 'iu', name: '아이유' },
+        { slug: 'archiview-editor', name: '아카이뷰 에디터' },
     ];
     const CATEGORIES = ['NOVEL', 'ECONOMY', 'PHILOSOPHY', 'PSYCHOLOGY', 'SCIENCE', 'SELF_HELP', 'HISTORY', 'ESSAY', 'BIOGRAPHY', 'POLITICS'];
     const SECTIONS = [
         { id: 'WEEKLY_FOCUS', name: '위클리 포커스' },
         { id: 'EDITORS_PICK', name: '에디터 픽' },
-        { id: 'GURU_CHOICE', name: '구루 초이스' }
+        { id: 'GURU_CHOICE', name: '구루 초이스' },
+        { id: 'BURNOUT', name: '번아웃 & 커리어 슬럼프' },
+        { id: 'WEALTH', name: '연봉협상 & 경제적 자유' },
+        { id: 'HEALING', name: '우울 & 고독 & 치유' },
+        { id: 'PHILOSOPHY', name: '자아성찰 & 인생철학' },
+        { id: 'ARCHIVIEW_ORIGINAL', name: '아카이뷰 오리지널' }
     ];
 
     // 한글 → 로마자 변환
     const romanizeKorean = (str) => {
-        const INITIALS = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
-        const VOWELS   = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
-        const FINALS   = ['','k','k','k','n','n','n','t','l','k','m','p','l','t','p','l','m','p','p','t','t','ng','t','t','k','t','p','t'];
+        const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+        const VOWELS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+        const FINALS = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'p', 'l', 't', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
         return str.split('').map(char => {
             const code = char.charCodeAt(0);
             if (code >= 0xAC00 && code <= 0xD7A3) {
                 const offset = code - 0xAC00;
-                const final  = offset % 28;
-                const vowel  = Math.floor(offset / 28) % 21;
+                const final = offset % 28;
+                const vowel = Math.floor(offset / 28) % 21;
                 const initial = Math.floor(offset / 28 / 21);
                 return INITIALS[initial] + VOWELS[vowel] + FINALS[final];
             }
@@ -1296,6 +1563,7 @@ ${themesBlock}
         'dashboard': '대시보드',
         'members': '회원 관리',
         'books': '도서 관리',
+        'popular': '인기 아카이뷰',
         'script': 'AI 대본 생성',
         'podcast': 'AI 팟캐스트',
         'voice': '성우 다이렉트',
@@ -1389,7 +1657,7 @@ ${themesBlock}
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-xl">
-                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'script' ? 'draw' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : 'settings'}
+                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : 'settings'}
                                 </span>
                                 {tabNames[tab].toUpperCase()}
                             </button>
@@ -1546,6 +1814,81 @@ ${themesBlock}
                                 </button>
                             </div>
 
+                            {/* 🆕 External Metadata Search Panel */}
+                            <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-6 mb-10">
+                                <div className="flex items-center justify-between gap-4">
+                                    <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-blue-400">explore</span>
+                                        글로벌 도서 정보 검색
+                                    </h4>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => openExternalSearch('kyobo')} className="px-4 py-2 bg-[#5cb85c]/20 text-[#5cb85c] text-[10px] font-black rounded-xl border border-[#5cb85c]/30 hover:bg-[#5cb85c]/30 transition-all">KYOBObook</button>
+                                        <button onClick={() => openExternalSearch('yes24')} className="px-4 py-2 bg-[#2478c1]/20 text-[#2478c1] text-[10px] font-black rounded-xl border border-[#2478c1]/30 hover:bg-[#2478c1]/30 transition-all">YES24</button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-blue-400 transition-colors shadow-inner flex items-center px-4">
+                                        <span className="material-symbols-outlined text-slate-500 mr-2">public</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Google Books API로 도서 검색 (제목/작가)..."
+                                            value={externalSearchQuery}
+                                            onChange={(e) => setExternalSearchQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleGoogleBooksSearch()}
+                                            className="flex-1 bg-transparent border-none text-white text-base py-4 outline-none font-bold"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleGoogleBooksSearch}
+                                        disabled={isSearchingExternal}
+                                        className="px-8 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <span className={`material-symbols-outlined ${isSearchingExternal ? 'animate-spin' : ''}`}>
+                                            {isSearchingExternal ? 'sync' : 'search'}
+                                        </span>
+                                        검색
+                                    </button>
+                                </div>
+
+                                {externalSearchResults.length > 0 && (
+                                    <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                                        {externalSearchResults.map((item, idx) => (
+                                            <div key={idx} className="flex-shrink-0 w-80 bg-black/40 rounded-3xl p-6 border border-white/5 snap-center space-y-4 hover:border-blue-400/50 transition-all group">
+                                                <div className="flex gap-4">
+                                                    <div className="w-20 aspect-[3/4] bg-slate-800 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                                                        <img src={item.volumeInfo.imageLinks?.thumbnail} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h5 className="text-white font-black text-sm truncate uppercase">{item.volumeInfo.title}</h5>
+                                                        <p className="text-blue-400 text-[10px] font-bold mt-1 truncate">{item.volumeInfo.authors?.join(', ')}</p>
+                                                        <p className="text-slate-500 text-[9px] mt-2 line-clamp-2 leading-relaxed">{item.volumeInfo.description}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setNewBook(prev => ({
+                                                                ...prev,
+                                                                title: item.volumeInfo.title,
+                                                                author: item.volumeInfo.authors?.join(', ') || '',
+                                                                description: item.volumeInfo.description || ''
+                                                            }));
+                                                            setIsAddingBook(true);
+                                                            alert('도서 정보가 하단 "새 도서 등록" 폼에 입력되었습니다.');
+                                                            window.scrollTo({ top: document.querySelector('form')?.offsetTop || 1000, behavior: 'smooth' });
+                                                        }}
+                                                        className="flex-1 py-2.5 bg-blue-600/20 text-blue-400 text-[10px] font-black rounded-xl border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all"
+                                                    >
+                                                        신규 등록 적용
+                                                    </button>
+                                                    <a href={item.volumeInfo.infoLink} target="_blank" rel="noreferrer" className="px-4 py-2.5 bg-white/5 text-slate-500 text-[10px] font-black rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center">상세보기</a>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="space-y-4 mb-8">
                                 <div className="flex bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors shadow-inner">
                                     <span className="material-symbols-outlined text-slate-500 font-extralight text-3xl p-4">search</span>
@@ -1604,6 +1947,28 @@ ${themesBlock}
                                             <label className="text-xs text-slate-400 font-black uppercase tracking-[0.2em] ml-2">Current Stock</label>
                                             <input type="number" value={newBook.stock} onChange={e => setNewBook({ ...newBook, stock: parseInt(e.target.value) || 0 })} className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-gold outline-none transition-all" />
                                         </div>
+                                        <div className="space-y-3 md:col-span-4">
+                                            <div className="flex justify-between items-center ml-2">
+                                                <label className="text-xs text-slate-400 font-black uppercase tracking-[0.2em]">Description / Introduction</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCrawlBookInfo(newBook.title, newBook.author)}
+                                                    disabled={isCrawling}
+                                                    className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-3 py-1 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/40 transition-all flex items-center gap-2"
+                                                >
+                                                    <span className={`material-symbols-outlined text-xs ${isCrawling ? 'animate-spin' : ''}`}>
+                                                        {isCrawling ? 'sync' : 'language'}
+                                                    </span>
+                                                    {isCrawling ? '크롤링 중...' : '교보문고 상세 정보 가져오기'}
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={newBook.description}
+                                                onChange={e => setNewBook({ ...newBook, description: e.target.value })}
+                                                className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-gold outline-none transition-all h-32 resize-none"
+                                                placeholder="도서에 대한 상세 설명을 입력하세요 (구글 검색 결과 또는 교보문고 크롤링 자동 입력 가능)"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="flex gap-6 pt-6">
                                         <button type="submit" className="flex-1 bg-gold text-primary font-black py-6 rounded-2xl shadow-2xl hover:brightness-110 active:scale-95 transition-all text-lg tracking-widest">PUSH TO PRODUCTION</button>
@@ -1652,6 +2017,23 @@ ${themesBlock}
                                                         <p className="text-gold font-black italic text-base">{book.author}</p>
                                                         <div className="flex flex-wrap gap-2 pt-2">
                                                             <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black text-slate-400 uppercase border border-white/5">{book.category || 'GENERAL'}</span>
+                                                            {book.section && (
+                                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${book.section === 'BURNOUT' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                                                    book.section === 'WEALTH' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                                                        book.section === 'HEALING' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                                                            book.section === 'PHILOSOPHY' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                                                                'bg-gold/20 text-gold border-gold/40'
+                                                                    }`}>
+                                                                    <span className="material-symbols-outlined text-[10px]">
+                                                                        {book.section === 'BURNOUT' ? 'battery_alert' :
+                                                                            book.section === 'WEALTH' ? 'payments' :
+                                                                                book.section === 'HEALING' ? 'favorite' :
+                                                                                    book.section === 'PHILOSOPHY' ? 'psychology' :
+                                                                                        'stars'}
+                                                                    </span>
+                                                                    {(SECTIONS.find(s => s.id === book.section)?.name || book.section)}
+                                                                </span>
+                                                            )}
                                                             <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${book.stock > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                                                                 {book.stock > 0 ? `Stock: ${book.stock}` : 'OUT OF STOCK'}
                                                             </span>
@@ -1692,99 +2074,138 @@ ${themesBlock}
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2">
                                                         <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">노출 섹션 (Select/Input)</label>
-                                                        <select
-                                                            onChange={(e) => {
-                                                                if (e.target.value) document.getElementById(`section-${bookKey}`).value = e.target.value;
-                                                            }}
-                                                            className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner mb-2"
-                                                        >
-                                                            <option value="">▼ 빠른 선택 ▼</option>
-                                                            {SECTIONS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                        </select>
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 items-center">
+                                                            <select
+                                                                onChange={(e) => {
+                                                                    if (e.target.value) document.getElementById(`section-${bookKey}`).value = e.target.value;
+                                                                }}
+                                                                className="w-28 bg-black/60 border border-white/10 rounded-xl px-2 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner shrink-0"
+                                                            >
+                                                                <option value="">▼ 선택 ▼</option>
+                                                                {SECTIONS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                            </select>
                                                             <input
                                                                 id={`section-${bookKey}`}
                                                                 type="text"
                                                                 defaultValue={book.section || ''}
-                                                                placeholder="섹션 선택 또는 직접 입력"
-                                                                className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
+                                                                placeholder="직접 입력"
+                                                                className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
                                                             />
                                                             <button onClick={() => {
                                                                 const val = document.getElementById(`section-${bookKey}`).value;
                                                                 handleUpdateBookField(bookKey, 'section', val);
-                                                            }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
+                                                            }} className="px-4 py-2 bg-gold text-primary font-black rounded-xl hover:bg-white transition-colors text-[10px] shrink-0">수정</button>
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2">
                                                         <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">카테고리 (Select/Input)</label>
-                                                        <select
-                                                            onChange={(e) => {
-                                                                if (e.target.value) document.getElementById(`category-${bookKey}`).value = e.target.value;
-                                                            }}
-                                                            className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner mb-2"
-                                                        >
-                                                            <option value="">▼ 빠른 선택 ▼</option>
-                                                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                                        </select>
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 items-center">
+                                                            <select
+                                                                onChange={(e) => {
+                                                                    if (e.target.value) document.getElementById(`category-${bookKey}`).value = e.target.value;
+                                                                }}
+                                                                className="w-28 bg-black/60 border border-white/10 rounded-xl px-2 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner shrink-0"
+                                                            >
+                                                                <option value="">▼ 선택 ▼</option>
+                                                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                                            </select>
                                                             <input
                                                                 id={`category-${bookKey}`}
                                                                 type="text"
                                                                 defaultValue={book.category || ''}
-                                                                placeholder="카테고리 선택 또는 직접 입력"
-                                                                className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
+                                                                placeholder="직접 입력"
+                                                                className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
                                                             />
                                                             <button onClick={() => {
                                                                 const val = document.getElementById(`category-${bookKey}`).value;
                                                                 handleUpdateBookField(bookKey, 'category', val);
-                                                            }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
+                                                            }} className="px-4 py-2 bg-gold text-primary font-black rounded-xl hover:bg-white transition-colors text-[10px] shrink-0">수정</button>
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2">
                                                         <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">유명인사 셀럽 (Select/Input)</label>
-                                                        <select
-                                                            onChange={(e) => {
-                                                                if (e.target.value) document.getElementById(`celeb-${bookKey}`).value = e.target.value;
-                                                            }}
-                                                            className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner mb-2"
-                                                        >
-                                                            <option value="">▼ 빠른 선택 ▼</option>
-                                                            {CELEB_LIST.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-                                                        </select>
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 items-center">
+                                                            <select
+                                                                onChange={(e) => {
+                                                                    if (e.target.value) document.getElementById(`celeb-${bookKey}`).value = e.target.value;
+                                                                }}
+                                                                className="w-28 bg-black/60 border border-white/10 rounded-xl px-2 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner shrink-0"
+                                                            >
+                                                                <option value="">▼ 선택 ▼</option>
+                                                                {CELEB_LIST.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                                                            </select>
                                                             <input
                                                                 id={`celeb-${bookKey}`}
                                                                 type="text"
                                                                 defaultValue={book.celebName || book.celebrity || ''}
-                                                                placeholder="셀럽 선택 또는 직접 입력"
-                                                                className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
+                                                                placeholder="직접 입력"
+                                                                className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
                                                             />
                                                             <button onClick={() => {
                                                                 const val = document.getElementById(`celeb-${bookKey}`).value;
                                                                 handleUpdateBookField(bookKey, 'celebrity', val);
-                                                            }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
+                                                            }} className="px-4 py-2 bg-gold text-primary font-black rounded-xl hover:bg-white transition-colors text-[10px] shrink-0">수정</button>
                                                         </div>
                                                     </div>
 
-                                                    {/* 팟캐스트 오디오 경로 */}
+
+                                                    {/* 도서 상세 설명 (구글 검색 연동) */}
                                                     <div className="space-y-3">
-                                                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">팟캐스트 오디오 경로 (MP3/WAV)</label>
+                                                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">Description / Info</label>
+                                                        <div className="relative group/desc">
+                                                            <textarea
+                                                                id={`desc-${bookKey}`}
+                                                                defaultValue={book.description || ''}
+                                                                placeholder="구글 북 검색을 통해 정보를 가져올 수 있습니다."
+                                                                className="w-full h-32 bg-black/60 border border-white/10 rounded-2xl px-4 py-4 text-xs text-slate-300 focus:border-gold outline-none shadow-inner leading-relaxed resize-none"
+                                                            ></textarea>
+                                                        </div>
                                                         <div className="flex gap-2">
-                                                            <input
-                                                                id={`audio-${bookKey}`}
-                                                                type="text"
-                                                                defaultValue={book.audioUrl || ''}
-                                                                placeholder="audio/bookname.mp3"
-                                                                className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none font-mono shadow-inner min-w-0"
-                                                            />
-                                                            <button onClick={() => {
-                                                                const val = document.getElementById(`audio-${bookKey}`).value;
-                                                                handleBookPodcastPath(bookKey, val);
-                                                            }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
+                                                            <button
+                                                                onClick={() => handleCrawlBookInfo(book.title, book.author, bookKey)}
+                                                                disabled={isCrawling}
+                                                                className="flex-[1.5] bg-emerald-500/20 border border-emerald-500/30 py-2.5 rounded-xl text-[10px] font-black text-emerald-400 hover:bg-emerald-500/40 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <span className={`material-symbols-outlined text-sm ${isCrawling ? 'animate-spin' : ''}`}>
+                                                                    {isCrawling ? 'sync' : 'language'}
+                                                                </span>
+                                                                {isCrawling ? '크롤링 중...' : '교보 정보 가져오기'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setExternalSearchQuery(book.title);
+                                                                    handleGoogleBooksSearch();
+                                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                    alert('페이지 상단의 글로벌 검색 결과를 확인하세요.');
+                                                                }}
+                                                                className="flex-1 bg-white/5 border border-white/10 py-2.5 rounded-xl text-[10px] font-black text-slate-400 hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">search</span>
+                                                                구글 검색
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAnalyzeBook(book.title, book.author, bookKey)}
+                                                                disabled={isAnalyzing}
+                                                                className="flex-1 bg-violet-500/20 border border-violet-500/30 py-2.5 rounded-xl text-[10px] font-black text-violet-400 hover:bg-violet-500/40 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <span className={`material-symbols-outlined text-sm ${isAnalyzing ? 'animate-spin' : ''}`}>
+                                                                    {isAnalyzing ? 'sync' : 'psychology'}
+                                                                </span>
+                                                                {isAnalyzing ? '분석 중...' : '제미나이 심층 분석'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const val = document.getElementById(`desc-${bookKey}`).value;
+                                                                    handleUpdateBookField(bookKey, 'description', val);
+                                                                }}
+                                                                className="px-5 bg-gold text-primary font-black rounded-xl hover:bg-white transition-colors text-xs shrink-0"
+                                                            >
+                                                                설정 저장
+                                                            </button>
                                                         </div>
                                                     </div>
 
@@ -1796,13 +2217,15 @@ ${themesBlock}
                                                                 bookId: bookKey,
                                                                 title: book.title || '',
                                                                 author: book.author || '',
+                                                                themes: book.description || '',
                                                             }));
                                                             setActiveTab('script');
+                                                            window.scrollTo({ top: 0, behavior: 'smooth' });
                                                         }}
                                                         className="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-xs uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2"
                                                     >
                                                         <span className="material-symbols-outlined text-base">draw</span>
-                                                        AI 대본 생성
+                                                        AI 대본 생성 (자동 설명 참조)
                                                     </button>
                                                 </div>
                                             </div>
@@ -1822,8 +2245,31 @@ ${themesBlock}
                                         <span className="material-symbols-outlined text-emerald-400 text-3xl">draw</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-white font-black text-4xl italic tracking-tighter uppercase">AI 대본 생성</h3>
-                                        <p className="text-slate-400 text-sm font-medium mt-1">Claude가 팟캐스트 대본을 작성 · 성우에게 전달할 TXT/JSON으로 다운로드</p>
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-3">
+                                                <h3 className="text-white font-black text-4xl italic tracking-tighter uppercase flex items-center gap-4">
+                                                    AI 대본 생성
+                                                    <span className="bg-red-500 text-white text-[10px] px-3 py-1 rounded-full not-italic animate-pulse">LATEST VERSION v2.5</span>
+                                                </h3>
+                                                <p className="text-slate-500 text-xl font-medium italic">Claude Sonnet 4.5를 이용해 매끄럽고 유쾌한 팟캐스트 시나리오를 자동 생성합니다.</p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button
+                                                    onClick={handleDeleteScript}
+                                                    className="px-10 py-5 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black text-sm flex items-center gap-3 hover:bg-red-500 hover:text-white transition-all shadow-xl"
+                                                >
+                                                    <span className="material-symbols-outlined font-black">delete_sweep</span>
+                                                    기존 대본 삭제 (Delete)
+                                                </button>
+                                                <button
+                                                    onClick={handleSaveScript}
+                                                    className="px-10 py-5 rounded-2xl bg-gold text-primary font-black text-sm flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)]"
+                                                >
+                                                    <span className="material-symbols-outlined font-black">save</span>
+                                                    수정 내용 저장 (Save Script)
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1864,7 +2310,7 @@ ${themesBlock}
                                                             bookId: selected.id,
                                                             title: selected.title || '',
                                                             author: selected.author || '',
-                                                            themes,
+                                                            themes: selected.description || themes,
                                                         }));
                                                         // 로컬 bookScripts 먼저 확인
                                                         if (bookScripts[selected.id] && bookScripts[selected.id].length > 0) {
@@ -1898,21 +2344,29 @@ ${themesBlock}
                                                         <span className="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
                                                         <span className="text-emerald-400 text-xs font-bold">기존 대본 있음 ({existingScript.length}턴)</span>
                                                     </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            const sA = scriptForm.speakerA || '제임스';
-                                                            const sB = scriptForm.speakerB || '스텔라';
-                                                            const converted = existingScript.map(line => ({
-                                                                speaker: line.speaker || (line.role === 'A' ? sA : sB),
-                                                                text: line.text,
-                                                            }));
-                                                            setGeneratedScript(converted);
-                                                            setScriptLogs([`📂 기존 대본 불러옴 (${converted.length}턴)`]);
-                                                        }}
-                                                        className="text-xs font-black text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-all"
-                                                    >
-                                                        불러오기
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={handleDeleteScript}
+                                                            className="text-xs font-black text-red-300 bg-red-500/20 hover:bg-red-500/30 px-3 py-1.5 rounded-lg transition-all"
+                                                        >
+                                                            삭제
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const sA = scriptForm.speakerA || '제임스';
+                                                                const sB = scriptForm.speakerB || '스텔라';
+                                                                const converted = existingScript.map(line => ({
+                                                                    speaker: line.speaker || (line.role === 'A' ? sA : sB),
+                                                                    text: line.text,
+                                                                }));
+                                                                setGeneratedScript(converted);
+                                                                setScriptLogs([`📂 기존 대본 불러옴 (${converted.length}턴)`]);
+                                                            }}
+                                                            className="text-xs font-black text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-all"
+                                                        >
+                                                            불러오기
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
                                             <p className="text-slate-600 text-xs">선택하면 아래 항목이 자동 입력됩니다.</p>
@@ -2052,18 +2506,138 @@ ${themesBlock}
                                                 대본을 생성하면 여기에 미리보기가 표시됩니다.
                                             </div>
                                         ) : (
-                                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                                                {generatedScript.map((line, i) => (
-                                                    <div key={i} className={`flex gap-3 ${line.speaker === scriptForm.speakerA ? '' : 'flex-row-reverse'}`}>
-                                                        <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${line.speaker === scriptForm.speakerA ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'}`}>
-                                                            {line.speaker?.[0] ?? '?'}
-                                                        </div>
-                                                        <div className={`flex-1 rounded-2xl px-4 py-3 text-sm text-slate-300 leading-relaxed ${line.speaker === scriptForm.speakerA ? 'bg-white/5 rounded-tl-none' : 'bg-white/5 rounded-tr-none'}`}>
-                                                            <span className={`text-xs font-bold block mb-1 ${line.speaker === scriptForm.speakerA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker}</span>
-                                                            {line.text}
-                                                        </div>
+                                            <div className="space-y-6 max-h-[650px] overflow-y-auto px-1 relative">
+                                                {/* Edit Controls Toolbar */}
+                                                <div className="sticky top-0 z-[110] flex gap-3 justify-end pb-4 bg-slate-950 px-2 pt-2 mb-2 border-b-2 border-emerald-500/30">
+                                                    <div className="mr-auto flex items-center gap-3">
+                                                        <div className="size-3 rounded-full bg-red-500 animate-ping"></div>
+                                                        <span className="text-[11px] text-white font-black tracking-widest uppercase">System: Editor Active v2.5</span>
                                                     </div>
-                                                ))}
+                                                    <button
+                                                        onClick={() => setIsScriptEditorOpen(true)}
+                                                        className="flex items-center gap-2 px-6 py-3 bg-emerald-600/20 text-emerald-400 border-2 border-emerald-500/30 text-[11px] font-black rounded-xl hover:bg-emerald-500 hover:text-white transition-all uppercase"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">edit_note</span>
+                                                        전체 대사 대량 편집 (Modal)
+                                                    </button>
+                                                    <button
+                                                        onClick={handleSaveScript}
+                                                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-gold to-yellow-500 text-primary text-[11px] font-black rounded-xl shadow-[0_10px_40px_rgba(212,175,55,0.3)] hover:scale-105 active:scale-95 transition-all uppercase"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm font-black">done_all</span>
+                                                        수정 완료 및 저장 (APPLY)
+                                                    </button>
+                                                </div>
+
+                                                <div className="p-5 bg-emerald-500/10 rounded-2xl border-2 border-emerald-500/20 mb-8 flex items-center gap-5 animate-bounce-slow">
+                                                    <div className="size-12 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 animate-pulse">
+                                                        <span className="material-symbols-outlined text-white text-2xl">touch_app</span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h5 className="text-emerald-400 font-black text-sm uppercase tracking-tight">수정하시려면 대사를 바로 클릭하세요!</h5>
+                                                        <p className="text-emerald-500/70 text-[10px] font-medium leading-relaxed uppercase tracking-widest">말풍선 안의 글자를 클릭하면 입력창으로 바뀝니다. 수정 후 상단의 '수정 완료'를 눌러주세요.</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Script Bubble List */}
+                                                <div className="space-y-4">
+                                                    {generatedScript.map((line, i) => (
+                                                        <div key={i} className={`flex gap-3 ${line.speaker === (scriptForm.speakerA || 'James') ? '' : 'flex-row-reverse'}`}>
+                                                            <div className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black flex-shrink-0 shadow-lg ${line.speaker === (scriptForm.speakerA || 'James') ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20' : 'bg-pink-600/20 text-pink-400 border border-pink-500/20'}`}>
+                                                                {line.speaker?.[0] ?? '?'}
+                                                            </div>
+                                                            <div className={`flex-1 overflow-hidden rounded-3xl border border-white/5 hover:border-emerald-500/30 transition-all shadow-xl bg-[#1e2228] ${line.speaker === (scriptForm.speakerA || 'James') ? 'rounded-tl-none' : 'rounded-tr-none'}`}>
+                                                                <div className={`px-4 py-2 flex justify-between items-center border-b border-white/5 ${line.speaker === (scriptForm.speakerA || 'James') ? 'bg-blue-500/5' : 'bg-pink-500/5'}`}>
+                                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${line.speaker === (scriptForm.speakerA || 'James') ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker}</span>
+                                                                    <span className="text-[9px] text-slate-700 font-mono">STEP {i + 1}</span>
+                                                                </div>
+                                                                <textarea
+                                                                    className="w-full bg-transparent text-slate-200 text-sm leading-relaxed outline-none resize-none p-5 transition-all min-h-[5.5em] block focus:bg-white/5"
+                                                                    value={line.text}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setGeneratedScript(prev => {
+                                                                            const next = [...prev];
+                                                                            next[i] = { ...next[i], text: val };
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                    onFocus={(e) => {
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
+                                                                    onInput={(e) => {
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
+                                                                    rows={1}
+                                                                    placeholder="수정할 대사를 입력하세요..."
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── [🆕 대본 전체 편집 모달] ────────────────────────── */}
+                                        {isScriptEditorOpen && (
+                                            <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fade-in">
+                                                <div className="bg-[#1a1d23] border border-white/10 w-full max-w-4xl h-[85vh] rounded-[48px] flex flex-col overflow-hidden shadow-2xl">
+                                                    <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                                                        <div>
+                                                            <h4 className="text-white font-black text-2xl uppercase tracking-tight">Script Master Editor</h4>
+                                                            <p className="text-slate-500 text-xs font-bold mt-1">각 대사의 텍스트를 자유롭게 수정하세요. (턴 수: {generatedScript.length})</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setIsScriptEditorOpen(false)}
+                                                            className="size-12 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined">close</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-black/20">
+                                                        {generatedScript.map((line, idx) => (
+                                                            <div key={idx} className="flex gap-4 group">
+                                                                <div className="w-20 shrink-0 text-right space-y-1 pt-3">
+                                                                    <p className={`text-[10px] font-black uppercase ${line.speaker === scriptForm.speakerA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker}</p>
+                                                                    <p className="text-[9px] text-slate-700 font-mono italic">LINE #{idx + 1}</p>
+                                                                </div>
+                                                                <textarea
+                                                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-slate-200 text-sm leading-relaxed focus:border-emerald-500 focus:bg-white/10 outline-none transition-all min-h-[80px]"
+                                                                    value={line.text}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setGeneratedScript(prev => {
+                                                                            const next = [...prev];
+                                                                            next[idx] = { ...next[idx], text: val };
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="p-8 border-t border-white/5 bg-[#1a1d23] flex justify-end gap-4">
+                                                        <button
+                                                            onClick={() => setIsScriptEditorOpen(false)}
+                                                            className="px-8 py-4 rounded-xl text-slate-400 font-black text-sm hover:text-white transition-all"
+                                                        >
+                                                            닫기
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsScriptEditorOpen(false);
+                                                                alert('편집 내용이 반영되었습니다. [Firestore 저장]을 눌러 영구 저장하세요.');
+                                                            }}
+                                                            className="px-8 py-4 bg-emerald-500 text-white font-black text-sm rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                                        >
+                                                            편집 완료
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -2080,11 +2654,12 @@ ${themesBlock}
                                                     TXT 다운로드
                                                 </button>
                                                 <button
-                                                    onClick={handleScriptDownloadJSON}
+                                                    onClick={handleSaveScript}
+                                                    disabled={isLoadingScript}
                                                     className="py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-sm uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2"
                                                 >
-                                                    <span className="material-symbols-outlined text-xl">data_object</span>
-                                                    JSON 다운로드
+                                                    <span className="material-symbols-outlined text-xl">{isLoadingScript ? 'sync' : 'save'}</span>
+                                                    {isLoadingScript ? '저장 중...' : 'Firestore 저장'}
                                                 </button>
                                             </div>
 
@@ -2103,14 +2678,23 @@ ${themesBlock}
                                                     2.5 Flash
                                                 </button>
                                             </div>
-                                            <button
-                                                onClick={handleRunTts}
-                                                disabled={isTtsRunning}
-                                                className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isTtsRunning ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : ttsModel === 'pro' ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30' : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30'}`}
-                                            >
-                                                <span className="material-symbols-outlined text-xl">{isTtsRunning ? 'sync' : 'record_voice_over'}</span>
-                                                {isTtsRunning ? `TTS 변환 중... (${ttsProgress}%)` : `🎙️ TTS 변환 → WAV (${ttsModel === 'pro' ? 'Pro' : 'Flash'})`}
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleRunTts}
+                                                    disabled={isTtsRunning}
+                                                    className={`flex-1 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isTtsRunning ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : ttsModel === 'pro' ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30' : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30'}`}
+                                                >
+                                                    <span className="material-symbols-outlined text-xl">{isTtsRunning ? 'sync' : 'record_voice_over'}</span>
+                                                    {isTtsRunning ? `TTS 변환 중... (${ttsProgress}%)` : `🎙️ TTS 변환 → WAV`}
+                                                </button>
+                                                <button
+                                                    onClick={handleClearTtsCache}
+                                                    className="px-6 py-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 hover:bg-red-500/20 transition-all flex items-center justify-center"
+                                                    title="TTS 캐시 초기화"
+                                                >
+                                                    <span className="material-symbols-outlined text-xl">delete_sweep</span>
+                                                </button>
+                                            </div>
 
                                             {/* 이어받기 버튼 */}
                                             {failedBatches.length > 0 && !isTtsRunning && (
@@ -2471,7 +3055,7 @@ ${themesBlock}
                                                         파일 선택
                                                         <input type="file" accept="audio/mpeg,audio/mp3,.mp3" className="hidden" onChange={e => {
                                                             const f = e.target.files[0];
-                                                            if (f) { setVoiceFile(f); setVoiceLogs(prev => [...prev, `[FILE] ${f.name} (${(f.size/1024/1024).toFixed(1)}MB) 로드됨`]); }
+                                                            if (f) { setVoiceFile(f); setVoiceLogs(prev => [...prev, `[FILE] ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB) 로드됨`]); }
                                                         }} />
                                                     </label>
                                                     <p className="text-slate-700 text-[10px]">MP3 형식만 가능</p>
@@ -2515,7 +3099,7 @@ ${themesBlock}
                                         className={`w-full py-7 rounded-[32px] font-black text-xl flex items-center justify-center gap-5 transition-all shadow-2xl ${voiceMerging || !voiceBook || !voiceFile
                                             ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                             : 'bg-violet-600 text-white hover:bg-violet-500 hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(139,92,246,0.3)]'
-                                        }`}
+                                            }`}
                                     >
                                         {voiceMerging ? (
                                             <>
@@ -2591,6 +3175,127 @@ ${themesBlock}
                         </div>
                     )}
                     {/* ─────────────────────────────────────────────────────── */}
+
+                    {/* 인기 아카이뷰 관리 */}
+                    {activeTab === 'popular' && (() => {
+                        const filteredBooks = popularSearch.trim()
+                            ? realBooks.filter(b => b.title?.includes(popularSearch) || b.author?.includes(popularSearch))
+                            : [];
+                        const savePopular = async () => {
+                            if (popularList.length === 0) { alert('등록된 도서가 없습니다.'); return; }
+                            setPopularSaving(true);
+                            try {
+                                await setDoc(doc(db, 'site_config', 'popular_archives'), { books: popularList.slice(0, 5) });
+                                alert('저장 완료! 메인 화면에 반영되었습니다. ✅');
+                            } catch (e) { alert('저장 실패: ' + e.message); }
+                            setPopularSaving(false);
+                        };
+                        const addToPopular = (book) => {
+                            if (popularList.length >= 5) { alert('최대 5개까지 등록 가능합니다.'); return; }
+                            if (popularList.some(b => b.id === book.id)) { alert('이미 등록된 도서입니다.'); return; }
+                            setPopularList(prev => [...prev, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '' }]);
+                            setPopularSearch('');
+                        };
+                        const removeFromPopular = (id) => setPopularList(prev => prev.filter(b => b.id !== id));
+                        const moveUp = (i) => { if (i === 0) return; const arr = [...popularList];[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; setPopularList(arr); };
+                        const moveDown = (i) => { if (i === popularList.length - 1) return; const arr = [...popularList];[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]; setPopularList(arr); };
+                        return (
+                            <div className="space-y-10">
+                                <div className="flex justify-between items-center">
+                                    <div className="space-y-3">
+                                        <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">Popular Archives</h3>
+                                        <p className="text-slate-500 text-xl font-medium italic">메인 화면에 표시될 인기 아카이뷰 5개를 설정합니다.</p>
+                                    </div>
+                                    <button onClick={savePopular} disabled={popularSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
+                                        <span className="material-symbols-outlined text-2xl">{popularSaving ? 'sync' : 'save'}</span>
+                                        {popularSaving ? '저장 중...' : '메인에 저장'}
+                                    </button>
+                                </div>
+
+                                {/* 현재 등록된 목록 */}
+                                <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
+                                    <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-gold">format_list_numbered</span>
+                                        현재 등록 목록 ({popularList.length}/5)
+                                    </h4>
+                                    {popularList.length === 0 && (
+                                        <p className="text-slate-500 text-sm text-center py-8">아직 등록된 도서가 없습니다. 아래에서 도서를 검색해 추가하세요.</p>
+                                    )}
+                                    <div className="space-y-3">
+                                        {popularList.map((book, i) => (
+                                            <div key={book.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5">
+                                                <span className="text-2xl font-black text-gold/50 w-8 text-center">{i + 1}</span>
+                                                <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
+                                                    {book.cover ? <img src={book.cover} alt={book.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20">menu_book</span></div>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-white font-black text-sm truncate">{book.title}</p>
+                                                    <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
+                                                    <div className="mt-1.5 flex items-center gap-2">
+                                                        <span className="text-slate-600 text-[10px] font-mono">{book.id}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={() => moveUp(i)} disabled={i === 0} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
+                                                        <span className="material-symbols-outlined text-sm text-white">arrow_upward</span>
+                                                    </button>
+                                                    <button onClick={() => moveDown(i)} disabled={i === popularList.length - 1} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
+                                                        <span className="material-symbols-outlined text-sm text-white">arrow_downward</span>
+                                                    </button>
+                                                    <button onClick={() => removeFromPopular(book.id)} className="size-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
+                                                        <span className="material-symbols-outlined text-sm text-red-400">delete</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 도서 검색 & 추가 */}
+                                <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-6">
+                                    <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-blue-400">search</span>
+                                        도서 검색 & 추가
+                                    </h4>
+                                    <div className="flex gap-3">
+                                        <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors flex items-center px-4">
+                                            <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
+                                            <input
+                                                type="text"
+                                                placeholder="도서 제목 또는 저자 검색..."
+                                                value={popularSearch}
+                                                onChange={(e) => setPopularSearch(e.target.value)}
+                                                className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                    {popularSearch.trim() && (
+                                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                                            {filteredBooks.length === 0 && <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>}
+                                            {filteredBooks.slice(0, 20).map((book) => (
+                                                <div key={book.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
+                                                    <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
+                                                        {book.cover ? <img src={book.cover} alt={book.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20">menu_book</span></div>}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white font-black text-sm truncate">{book.title}</p>
+                                                        <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => addToPopular(book)}
+                                                        disabled={popularList.some(b => b.id === book.id) || popularList.length >= 5}
+                                                        className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
+                                                    >
+                                                        {popularList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Sales & Payment View - Same Wide Style... (중략) */}
                     {activeTab === 'sales' && (

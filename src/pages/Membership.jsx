@@ -23,10 +23,10 @@ export default function Membership() {
                     </div>
                     <h1 className="text-3xl md:text-4xl text-white font-black leading-tight tracking-tight break-keep">
                         "성공한 사람들의 성공 비결, <br />
-                        이제 <span className="text-gold">출퇴근 시간</span>에 <br/> 쉽고 편하게 들어보세요!"
+                        이제 <span className="text-gold">출퇴근 시간</span>에 <br /> 쉽고 편하게 들어보세요!"
                     </h1>
                     <p className="text-slate-400 text-base leading-relaxed font-light break-keep">
-                        무거운 책 대신 핸드폰 속에 담긴 한 권의 도서가 <br/>
+                        무거운 책 대신 핸드폰 속에 담긴 한 권의 도서가 <br />
                         <span className="text-white font-medium italic underline underline-offset-4 decoration-gold/50">당신의 인생을 바꿀 시작점</span>이 됩니다.
                     </p>
                 </div>
@@ -34,7 +34,7 @@ export default function Membership() {
                 {/* 💼 Why Archiview? (Pain Point Solution) */}
                 <section className="px-6 mb-20 space-y-4">
                     <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-8">Why Archiview Premium?</h2>
-                    
+
                     <div className="grid gap-4">
                         {/* Point 1: For Commuters */}
                         <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] space-y-3 relative overflow-hidden">
@@ -91,10 +91,10 @@ export default function Membership() {
 
                             <div className="flex flex-col items-center gap-1">
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-5xl font-black text-white">9,900</span>
+                                    <span className="text-5xl font-black text-white">4,900</span>
                                     <span className="text-gold font-bold">원</span>
                                 </div>
-                                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest">Coffee 2 Cups / Monthly</p>
+                                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest">Coffee 1 Cup / Monthly</p>
                             </div>
 
                             <ul className="space-y-4 py-6 border-y border-white/5">
@@ -111,28 +111,28 @@ export default function Membership() {
                                 ))}
                             </ul>
 
-                            <button 
+                            <button
                                 onClick={handleSubscribe}
                                 className="w-full py-5 bg-gold text-primary font-black rounded-2xl shadow-xl hover:brightness-110 active:scale-[0.98] transition-all text-sm"
                             >
                                 지금 바로 시작하기
                             </button>
-                            <p className="text-center text-[9px] text-slate-600 uppercase tracking-widest font-bold">커피 두 잔 값으로 당신의 인생을 투자하세요</p>
+                            <p className="text-center text-[9px] text-slate-600 uppercase tracking-widest font-bold">커피 한 잔 값으로 당신의 인생을 투자하세요</p>
                         </div>
                     </div>
                 </section>
 
                 <div className="px-10 text-center space-y-6">
                     <p className="text-slate-500 text-xs font-light leading-relaxed break-keep italic">
-                        "당신의 가방은 가볍게, <br/> 당신의 머릿속은 선구자들의 지혜로 묵직하게."
+                        "당신의 가방은 가볍게, <br /> 당신의 머릿속은 선구자들의 지혜로 묵직하게."
                     </p>
-                    
+
                     {/* ⚖️ Legal & Service Scope Notice */}
                     <div className="pt-8 border-t border-white/5 space-y-3">
                         <p className="text-[10px] text-slate-600 leading-relaxed break-keep text-left">
-                            <span className="text-slate-400 font-bold">[안내 및 주의사항]</span><br/>
-                            본 서비스는 도서의 원문을 그대로 낭독하거나 전문을 제공하는 '오디오북' 또는 '전자책 대여' 서비스가 아닙니다. 
-                            아카이뷰는 각 도서가 담고 있는 핵심 철학과 성공 원칙을 분석하여, 인공지능 제임스와 스텔라의 대담 형식을 빌려 **독창적인 2차 창작물(인사이트 리포트 및 팟캐스트)**을 제공합니다. 
+                            <span className="text-slate-400 font-bold">[안내 및 주의사항]</span><br />
+                            본 서비스는 도서의 원문을 그대로 낭독하거나 전문을 제공하는 '오디오북' 또는 '전자책 대여' 서비스가 아닙니다.
+                            아카이뷰는 각 도서가 담고 있는 핵심 철학과 성공 원칙을 분석하여, 인공지능 제임스와 스텔라의 대담 형식을 빌려 **독창적인 2차 창작물(인사이트 리포트 및 팟캐스트)**을 제공합니다.
                             도서의 원문 및 상세 내용이 궁금하신 분들은 반드시 서점 또는 도서관을 통해 정식 출판물을 이용해 주시기 바랍니다. 모든 통찰의 저작권은 아카이뷰에 있으며, 무단 복제 및 배포를 금합니다.
                         </p>
                     </div>

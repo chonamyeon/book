@@ -32,9 +32,14 @@ async function syncAudioData() {
         'one-thing': 'one-thing',
         'onething': 'one-thing',
         'vegetarian-hk': 'vegetarian-hk',
-        'vegetarian-rm': 'vegetarian',
+        'vegetarian-rm': 'vegetarian-rm',
         'human-acts-hk': 'human-acts',
-        '1984-rm': '1984'
+        '1984-rm': '1984',
+        '비커밍': 'becoming',
+        '위대한-개츠비': 'great-gatsby',
+        '성공하는-기업들의-8가지-습관': 'built-to-last',
+        '슈독': 'shoe-dog',
+        '현명한-투자자': 'intelligent-investor'
     };
 
     for (const file of audioFiles) {
@@ -46,8 +51,8 @@ async function syncAudioData() {
 
         // id: "id" 블록을 찾아서 isPodcast와 podcastFile 필드를 업데이트하거나 추가
         // 정규식 설명: id: "entryId" 이후 다음 중괄호 } 또는 다음 id: 가 나오기 전까지의 블록을 매칭
-        const blockRegex = new RegExp(`({[^{}]*?id:\s*["']${entryId}["'][^{}]*?})`, 'g');
-        
+        const blockRegex = new RegExp(`({[^{}]*?id:\\s*["']${entryId}["'][^{}]*?})`, 'g');
+
         let match;
         let blockMatches = [];
         while ((match = blockRegex.exec(content)) !== null) {
@@ -61,7 +66,7 @@ async function syncAudioData() {
 
                 // 이미 데이터가 있는지 확인
                 if (block.includes('isPodcast: true') && block.includes(`podcastFile: "${audioUrl}"`)) {
-                    continue; 
+                    continue;
                 }
 
                 // 기존 필드가 있으면 교체, 없으면 추가

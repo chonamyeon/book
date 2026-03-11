@@ -1,8 +1,10 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import { AudioProvider } from './contexts/AudioContext';
 import MiniPlayer from './components/MiniPlayer';
+import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // 코드 스플리팅: 각 페이지를 별도 청크로 분리 (초기 번들 크기 대폭 감소)
@@ -21,6 +23,7 @@ const Contact = lazy(() => import('./pages/Contact'));
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail'));
 const ReadingNotes = lazy(() => import('./pages/ReadingNotes'));
 const Membership = lazy(() => import('./pages/Membership'));
+const CategoryBooks = lazy(() => import('./pages/CategoryBooks'));
 
 // 페이지 로딩 중 스켈레톤 (레이아웃 깨짐 방지)
 const PageLoader = () => (
@@ -39,10 +42,22 @@ const MobileLayout = ({ children }) => (
   </div>
 );
 
+// 페이지 이동 시 최상단으로 스크롤 이동
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 export default function App() {
   return (
     <AudioProvider>
       <Router>
+        <ScrollToTop />
         <div className="min-h-screen bg-slate-950">
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -60,6 +75,7 @@ export default function App() {
                 </ProtectedRoute>
               } />
               <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
+              <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
 
               {/* 관리자 페이지는 MobileLayout으로 감싸지 않아 가로가 무제한으로 확장됨 */}
               <Route path="/admin" element={<AdminDashboard />} />
@@ -73,6 +89,7 @@ export default function App() {
             </Routes>
           </Suspense>
           <MiniPlayer />
+          <PodcastScriptModal />
         </div>
       </Router>
     </AudioProvider>
