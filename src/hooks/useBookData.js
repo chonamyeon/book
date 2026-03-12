@@ -32,15 +32,19 @@ export const useBookData = () => {
         let isMounted = true;
         const unsubscribe = onSnapshot(collection(db, "book_overrides"), (snapshot) => {
             if (!isMounted) return;
-            const data = {};
-            snapshot.forEach(doc => {
-                data[doc.id] = doc.data();
-            });
-            setOverrides(data);
-            saveCache(data);  // 다음 방문을 위해 캐시 갱신
-            setLoading(false);
+            try {
+                const data = {};
+                snapshot.forEach(doc => { data[doc.id] = doc.data(); });
+                setOverrides(data);
+                saveCache(data);
+            } catch (e) {
+                console.error("Firestore parse error:", e);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
         }, (err) => {
-            console.error("Firestore error:", err);
+            console.warn("Firestore offline — using cached data:", err.code);
+            // 캐시된 데이터로 계속 동작 (네트워크 없어도 흰화면 방지)
             if (isMounted) setLoading(false);
         });
 
