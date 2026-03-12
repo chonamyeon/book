@@ -35,6 +35,52 @@ async function clearBatchBuffers(bookId, total) {
     for (let i = 0; i < total; i++) tx.objectStore(TTS_STORE).delete(`${bookId}-${i}`);
 }
 
+/**
+ * 🛠 JSON 느슨한 파싱 (Loose JSON Parser)
+ * Claude가 긴 응답 도중에 JSON 형식을 미세하게 틀렸을 때(따옴표 누락, 줄바꿈 등) 복구 시도
+ */
+function tryLooseParseJSON(text) {
+    // 1. 기본 파싱 시도
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        console.warn("Standard JSON.parse failed, attempting recovery...", e.message);
+    }
+
+    let cleaned = text.trim();
+
+    // 2. 가끔 마지막에 콤마가 있고 안 닫힌 경우 대비
+    if (cleaned.endsWith(',')) {
+        cleaned = cleaned.slice(0, -1) + ']';
+    }
+    if (!cleaned.endsWith(']')) {
+        cleaned += ']';
+    }
+
+    try {
+        // 정규식 기반의 아주 기초적인 '따옴표 보정' 시도 (매우 제한적)
+        // 키값에 따옴표가 없는 경우 등 간단한 케이스만 해결
+        const fixed = cleaned
+            .replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3') // 키에 따옴표 추가
+            .replace(/:\s*'([^']*)'/g, ': "$1"') // 홑따옴표를 쌍따옴표로
+            .replace(/\n/g, ' ') // 줄바꿈 제거 (문자열 내부 줄바꿈은 위험할 수 있음)
+            .replace(/,\s*([}\]])/g, '$1'); // Trailing comma 제거
+
+        return JSON.parse(fixed);
+    } catch (e) {
+        // 3. 최후의 수단: 정규식으로 { speaker: "...", text: "..." } 객체들만 추출
+        console.warn("Second recovery failed, extracting objects via regex...");
+        const matches = [...cleaned.matchAll(/{[\s\S]*?"speaker"\s*:\s*"(.*?)"[\s\S]*?"text"\s*:\s*"(.*?)"[\s\S]*?}/g)];
+        if (matches.length > 0) {
+            return matches.map(m => ({
+                speaker: m[1],
+                text: m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+            }));
+        }
+        throw e; // 도저히 안되면 원본 에러 던짐
+    }
+}
+
 function createWavFromPcm(pcmBuffers, sampleRate = 24000, channels = 1, bitDepth = 16) {
     const totalLength = pcmBuffers.reduce((sum, buf) => sum + buf.byteLength, 0);
     const buffer = new ArrayBuffer(44 + totalLength);
@@ -80,6 +126,60 @@ import {
 } from 'firebase/firestore';
 import { useBookData } from '../hooks/useBookData';
 import { bookScripts } from '../data/bookScripts';
+
+// 50가지 상황극 시나리오
+const SCRIPT_SITUATIONS = [
+    { scene: '등산하다 정상 직전 바위에 앉아 쉬면서', close: '자, 이제 마지막 정상까지 올라가자' },
+    { scene: '직장 회식 2차 가기 전 편의점 앞에서', close: '자 슬슬 2차 가야겠다' },
+    { scene: '야구장에서 경기 시작 전 자리 잡고 앉아서', close: '아 경기 시작한다, 집중해야지' },
+    { scene: '카페에서 음료 나오기 기다리면서', close: '음료 나왔다, 이제 마시자' },
+    { scene: '한강 공원 돗자리 펴놓고 치킨 먹으면서', close: '아 배불러, 이제 좀 걷자' },
+    { scene: '헬스장 러닝머신 끝내고 스트레칭 하면서', close: '좋아, 이제 샤워하러 가자' },
+    { scene: '회사 탕비실에서 커피 내리면서', close: '커피 다 됐다, 자리 돌아가자' },
+    { scene: '지하철 연착으로 플랫폼에서 서서 기다리면서', close: '어 열차 들어온다' },
+    { scene: '놀이공원 인기 놀이기구 앞에 줄 서면서', close: '거의 다 온 것 같다, 이제 곧 우리 차례다' },
+    { scene: '마트 계산대 긴 줄 서면서', close: '앞에 한 명 남았다, 거의 다 왔어' },
+    { scene: '영화관에서 상영 전 예고편 보면서', close: '아 이제 진짜 영화 시작하는 것 같다' },
+    { scene: '공항 출국장에서 비행기 탑승 기다리면서', close: '탑승 게이트 열리는 것 같다, 가자' },
+    { scene: '동창회 약속 장소에 일찍 도착해서 기다리면서', close: '어 사람들 오는 것 같다' },
+    { scene: '삼겹살집에서 고기 굽다가 잠깐 숨 고르면서', close: '고기 다 익었다, 얼른 먹자' },
+    { scene: '코인노래방에서 다음 곡 고르면서', close: '자, 이 노래 어때? 같이 부르자' },
+    { scene: '고속도로 휴게소에서 잠깐 쉬면서', close: '자 슬슬 출발하자, 아직 많이 남았어' },
+    { scene: '낚시터에서 낚싯대 드리우고 입질 기다리면서', close: '어 찌개 움직인다, 조용히 해봐' },
+    { scene: '동네 목욕탕에서 뜨끈한 탕에 몸 담그면서', close: '이제 나가서 식혜 한 잔 마시자' },
+    { scene: '공원 벤치에서 산책 중 잠깐 앉아 쉬면서', close: '좀 쉬었으니까 다시 걷자' },
+    { scene: '스키장 리프트 타고 올라가면서', close: '다 올라왔다, 이제 내려가자' },
+    { scene: '독서카페에서 앉아서 책 고르다가', close: '자 이제 진짜 책 읽어야지' },
+    { scene: '병원 대기실에서 순서 기다리면서', close: '번호 불렸다, 들어가야겠다' },
+    { scene: '친구 이사 도와주고 치킨 시켜먹으면서', close: '치킨 다 먹었다, 이제 나머지 정리하자' },
+    { scene: '캠핑장에서 모닥불 피워놓고 마시멜로 굽으면서', close: '불 좀 약해졌다, 장작 더 넣자' },
+    { scene: '새벽 편의점에서 야식 먹으면서', close: '늦었다, 이제 들어가자' },
+    { scene: '백화점 푸드코트에서 점심 먹으면서', close: '다 먹었다, 구경이나 하러 가자' },
+    { scene: '카페 야외 테라스에서 햇볕 쬐면서', close: '좀 더워지는 것 같다, 안에 들어가자' },
+    { scene: '농구 코트에서 5대 5 게임 끝나고 쉬면서', close: '좀 쉬었으면 됐다, 한 판 더 하자' },
+    { scene: '주말 플리마켓 구경하다 벤치에 앉아서', close: '슬슬 다른 데도 구경가자' },
+    { scene: '브런치 카페에서 늦은 아침 먹으면서', close: '잘 먹었다, 이제 뭐 하러 갈까' },
+    { scene: '도서관 1층 로비 소파에 앉아서', close: '자 이제 진짜 책 보러 올라가자' },
+    { scene: '볼링장에서 한 게임 끝나고 점수 확인하면서', close: '자 한 게임 더 할까?' },
+    { scene: '포장마차에서 어묵국물 마시면서', close: '으 따뜻해졌다, 이제 들어가자' },
+    { scene: '찜질방에서 대자로 누워서', close: '땀 다 뺐다, 이제 샤워하고 나가자' },
+    { scene: '제주도 여행 중 해변 카페에서', close: '해 지기 전에 바닷가 한 번 더 걷자' },
+    { scene: '회사 옥상에서 점심 도시락 먹으면서', close: '시간 다 됐다, 내려가야지' },
+    { scene: '주말 아침 조깅하다가 공원 음수대 앞에서 쉬면서', close: '좀 쉬었으니까 마저 뛰자' },
+    { scene: '레스토랑에서 메뉴 고르면서 주문 기다리면서', close: '어 음식 나오는 것 같다' },
+    { scene: '퇴근 후 치킨집에서 치맥 하면서', close: '치킨 다 먹었다, 한 잔만 더 하고 가자' },
+    { scene: '장거리 드라이브 중 조수석에 앉아서', close: '거의 다 온 것 같다, 이제 얼마 안 남았어' },
+    { scene: '탁구장에서 한 세트 끝나고 점수 정산하면서', close: '자 한 세트 더 하자, 내가 이번엔 진다' },
+    { scene: '금요일 저녁 피자집에서 맥주랑 피자 먹으면서', close: '아 너무 잘 먹었다, 오늘 고생했다' },
+    { scene: '회사 교육 세미나 쉬는 시간에 복도에서', close: '종 치는 것 같다, 들어가자' },
+    { scene: '주말 바베큐 파티에서 고기 굽다가 잠깐 쉬면서', close: '불이 좀 살아났다, 고기 올리자' },
+    { scene: '해수욕장 파라솔 아래 모래사장에서', close: '파도 괜찮아 보인다, 한 번 더 들어가자' },
+    { scene: '수족관 관람 중 대형 어항 앞 벤치에서', close: '저쪽에 상어 수조 있다는데 가보자' },
+    { scene: 'PC방에서 한 판 끝내고 잠깐 쉬면서', close: '자 한 판 더 할까?' },
+    { scene: '코스트코 푸드코트에서 핫도그 먹으면서', close: '다 먹었다, 장보러 들어가자' },
+    { scene: '야간 편의점 앞 야외 테이블에서 맥주 마시면서', close: '많이 늦었다, 이제 진짜 들어가자' },
+    { scene: '프로야구 경기 7회 스트레칭 타임에 자리에서', close: '다시 경기 시작한다, 앉자' },
+];
 
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -332,7 +432,7 @@ export default function AdminDashboard() {
     const [scriptForm, setScriptForm] = useState({
         bookId: '', title: '', author: '',
         themes: '',
-        targetMin: 2300, targetMax: 2500,
+        targetMin: 2500, targetMax: 3000,
         turnLimit: 45,
         speakerA: '제임스', speakerB: '스텔라'
     });
@@ -346,10 +446,13 @@ export default function AdminDashboard() {
     const [ttsProgress, setTtsProgress] = useState(0);
     const ttsLogEndRef = useRef(null);
     const ttsLogContainerRef = useRef(null);
+    const scriptControllerRef = useRef(null);
+    const isMountedRef = useRef(true);
     const [ttsModel, setTtsModel] = useState('pro');
     const [quotaResults, setQuotaResults] = useState([]);
     const [isCheckingQuota, setIsCheckingQuota] = useState(false);
     const [existingScript, setExistingScript] = useState(null); // Firestore 기존 대본
+    const [selectedSituation, setSelectedSituation] = useState(null); // 선택된 상황극 시나리오
     const [isLoadingScript, setIsLoadingScript] = useState(false);
     const [isScriptEditorOpen, setIsScriptEditorOpen] = useState(false);
     // 이어받기: 배치별 PCM 버퍼 저장 (null = 미완료)
@@ -558,6 +661,26 @@ export default function AdminDashboard() {
     };
 
     useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            scriptControllerRef.current?.abort();
+        };
+    }, []);
+
+    // 대본 생성 중 브라우저 새로고침/탭 닫기 방지
+    useEffect(() => {
+        if (!isGeneratingScript) return;
+        const handler = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [isGeneratingScript]);
+
+
+    useEffect(() => {
         const container = ttsLogContainerRef.current;
         if (container) container.scrollTop = container.scrollHeight;
     }, [ttsLogs]);
@@ -662,8 +785,7 @@ export default function AdminDashboard() {
         ].filter(Boolean);
 
         const BATCH = 100;
-        const batches = [];
-        for (let i = 0; i < generatedScript.length; i += BATCH) batches.push(generatedScript.slice(i, i + BATCH));
+        const totalTurns = generatedScript.length;
 
         const speakerA = scriptForm.speakerA || '제임스';
         const speakerB = scriptForm.speakerB || '스텔라';
@@ -671,6 +793,38 @@ export default function AdminDashboard() {
             ? 'gemini-2.5-pro-preview-tts'
             : 'gemini-2.5-flash-preview-tts';
         const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
+
+        // ── 화자 이름 정규화 함수 ─────────────────────────────────
+        const speakerAAliases = [speakerA.toLowerCase(), 'james', '제임스', 'a', '남성'];
+        const speakerBAliases = [speakerB.toLowerCase(), 'stella', '스텔라', 'b', '여성'];
+        const normalizeSpk = (spk) => {
+            const s = String(spk || '').trim().toLowerCase();
+            if (speakerAAliases.includes(s)) return speakerA;
+            if (speakerBAliases.includes(s)) return speakerB;
+            if (speakerAAliases.some(a => s.includes(a) || a.includes(s))) return speakerA;
+            if (speakerBAliases.some(b => s.includes(b) || b.includes(s))) return speakerB;
+            return speakerA;
+        };
+
+        // 상황극 구간 감정 태그 삽입 + 화자 이름 정규화
+        const situationScene = selectedSituation?.scene || '';
+        const preprocessScript = generatedScript.map((line, idx) => {
+            const turn = idx + 1;
+            const normalizedSpeaker = normalizeSpk(line.speaker);
+            let text = line.text;
+
+            if (turn <= 4 && situationScene) {
+                text = `(${situationScene}에서, 자연스럽고 편하게) ${text}`;
+            } else if (turn >= totalTurns - 2) {
+                text = `(자리 마무리하며, 가볍게) ${text}`;
+            } else if (text.includes('하하') || text.includes('ㅋ') || text.includes('피식') || text.match(/근데 솔직히|진짜로|아 맞아|저만 그런|저도요/)) {
+                text = `(웃으며) ${text}`;
+            }
+            return { ...line, speaker: normalizedSpeaker, text };
+        });
+
+        const batches = [];
+        for (let i = 0; i < preprocessScript.length; i += BATCH) batches.push(preprocessScript.slice(i, i + BATCH));
 
         // IndexedDB에서 이전 배치 버퍼 로드 (세션 넘어도 유지)
         setIsTtsRunning(true);
@@ -701,7 +855,43 @@ export default function AdminDashboard() {
                 return [...filtered, `⏳ 배치 [${b + 1}/${batches.length}] — ${batch.length}턴 처리 중...`];
             });
 
-            const multiText = batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+            const situationContext = situationScene ? `지금 두 사람은 실제로 "${situationScene}" 상황에 있습니다. ` : '';
+            const ttsInstruction = `\
+⚠️⚠️ CRITICAL — 목소리 배정 절대 규칙 (위반 불가):
+- 화자 "${speakerA}" → 반드시 남성(MALE) 목소리만 사용. 여성 목소리 절대 사용 금지.
+- 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용. 남성 목소리 절대 사용 금지.
+- 대사마다 화자 이름을 확인 후 목소리를 즉시 전환할 것. 이전 화자 목소리가 이어지는 것 금지.
+- "${speakerA}"의 대사를 "${speakerB}" 목소리로, 또는 그 반대로 읽는 것은 치명적 오류입니다.
+
+⚠️ 이것은 낭독이 아닌 연기입니다!
+${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대화입니다. 책 읽는 것처럼 들리면 실패입니다.
+
+[연기 핵심 규칙]
+- (웃으며)가 붙은 대사: 말투에 웃음기와 가벼움을 넣을 것. 실제로 웃는 사람처럼.
+- (자연스럽고 편하게)가 붙은 대사: 친구끼리 잡담하는 느낌. 방송 톤 절대 금지.
+- (자리 마무리하며)가 붙은 대사: 일어서려는 느낌, 편하고 가볍게.
+- 자폭·자기 고백 대사("솔직히 저는...", "저도 그랬어요..."): 약간 부끄러워하면서 웃으며.
+- 공감 폭발 대사("맞아요!", "저만 그런 게 아니죠?"): 올려서 생동감 있게.
+- 진지한 통찰 대사: 천천히, 생각하듯이. 단 낭독체는 금지.
+- 괄호 안 지시문 ((웃으며) 등)은 발음하지 말고 감정으로만 표현할 것.
+
+[발음 규칙]
+- 단어 끝까지 또렷하게. 받침 연음 자연스럽게(있어→이써).
+- 쉼표(,)에서 짧게, 마침표(.)에서 충분히 쉬어 읽을 것.
+- 숫자: 3가지→세 가지, CEO→씨이오, SNS→에스엔에스.
+
+[${speakerA} — 남성 MALE 전용]
+- 여유 있고 편안한 친구. 생각하면서 말하는 느낌. 절대 서두르지 말 것.
+- 자연스러운 숨 고르기와 간격으로 편안한 톤 유지.
+- ※ 이 화자는 절대 여성 목소리 사용 금지.
+
+[${speakerB} — 여성 FEMALE 전용]
+- 또렷하고 날카로운 친구. 질문은 끝을 올려 읽고, 뼈 때리는 멘트는 쿨하게.
+- ※ 이 화자는 절대 남성 목소리 사용 금지.
+
+[대본]
+`;
+            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
             const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000; // Pro: 900s, Flash: 600s (for BATCH 100)
             const expectedSec = fetchTimeout / 1000;
@@ -817,19 +1007,35 @@ export default function AdminDashboard() {
             ? `⚠️ ${newFailed.length}개 배치 실패 (배치 ${newFailed.join(', ')}). 내일 다시 접속해도 이어받기 가능합니다.`
             : '🎵 WAV 파일 생성 중...'
         ]);
-        const wavBuffer = createWavFromPcm(successBuffers);
-        const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `${scriptForm.bookId}_tts.wav`; a.click();
-        setTtsProgress(100);
-        // 전체 성공 시 캐시 정리
-        if (newFailed.length === 0) {
-            await clearBatchBuffers(scriptForm.bookId, batches.length);
-            setTtsLogs(prev => [...prev, `🎉 완료! ${scriptForm.bookId}_tts.wav 다운로드됨 (캐시 정리됨)`]);
-        } else {
-            setTtsLogs(prev => [...prev, `💾 진행 상황 저장됨 — 이어받기 버튼으로 재시도하세요.`]);
+
+        try {
+            if (successBuffers.length > 0) {
+                const wavBuffer = createWavFromPcm(successBuffers);
+                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${scriptForm.bookId || 'audio'}_tts.wav`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTtsProgress(100);
+                
+                if (newFailed.length === 0) {
+                    await clearBatchBuffers(scriptForm.bookId, batches.length);
+                    setTtsLogs(prev => [...prev, `🎉 완료! ${scriptForm.bookId}_tts.wav 다운로드됨 (캐시 정리됨)`]);
+                } else {
+                    setTtsLogs(prev => [...prev, `💾 진행 상황 저장됨 — 이어받기 버튼으로 재시도하세요.`]);
+                }
+            } else {
+                setTtsLogs(prev => [...prev, `⚠️ 생성된 오디오가 없습니다.`]);
+            }
+        } catch (err) {
+            console.error("Finalization Error:", err);
+            setTtsLogs(prev => [...prev, `❌ 파일 생성 중 오류: ${err.message}`]);
+        } finally {
+            setIsTtsRunning(false);
         }
-        setIsTtsRunning(false);
     };
 
     const handleGenerateScript = async (overrides = {}) => {
@@ -837,8 +1043,24 @@ export default function AdminDashboard() {
         if (!scriptApiKey) return alert('Claude API 키를 입력하세요.');
         if (!bookId || !title || !author) return alert('Book ID, 제목, 저자는 필수입니다.');
 
+        // ── 화자 이름 정규화 (Claude 출력의 영문/한글 혼용 방지) ──────
+        const spkAAliases = [speakerA.toLowerCase(), 'james', '제임스'];
+        const spkBAliases = [speakerB.toLowerCase(), 'stella', '스텔라'];
+        const normSpk = (s) => {
+            const v = String(s || '').trim().toLowerCase();
+            if (spkAAliases.includes(v) || spkAAliases.some(a => v.includes(a) || a.includes(v))) return speakerA;
+            if (spkBAliases.includes(v) || spkBAliases.some(b => v.includes(b) || b.includes(v))) return speakerB;
+            return speakerA;
+        };
+
+        // 순서대로 상황극 선택 (localStorage로 인덱스 유지)
+        const situationIndex = parseInt(localStorage.getItem('scriptSituationIndex') || '0', 10);
+        const situation = SCRIPT_SITUATIONS[situationIndex % SCRIPT_SITUATIONS.length];
+        localStorage.setItem('scriptSituationIndex', String(situationIndex + 1));
+        setSelectedSituation(situation);
+
         setIsGeneratingScript(true);
-        setScriptLogs(['🚀 Claude API 호출 중...']);
+        setScriptLogs([`🎬 상황: ${situation.scene}`, '🚀 Claude API 호출 중...']);
         setScriptProgress(10);
         setGeneratedScript([]);
 
@@ -856,46 +1078,139 @@ export default function AdminDashboard() {
             ? `- 핵심 주제 / 반드시 다룰 내용:\n${themes.split('\n').filter(Boolean).map(t => `  ${t}`).join('\n')}`
             : '';
 
-        const prompt = `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
-이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
+        const prompt = `# ⚠️ 최우선 규칙 — 오프닝과 클로징 구조 절대 준수
+지금 두 사람은 **${situation.scene}** 상황입니다.
 
-[책 정보]
+## 오프닝 (턴 1~3) — 책 언급 완전 금지
+반드시 이 상황에서의 일상 수다로만 시작합니다. 책 제목, 저자, 책 내용은 턴 4 이전에 절대 언급 금지.
+턴 4에서 책 얘기로 자연스럽게 전환합니다.
+
+오프닝 예시 (등산 상황인 경우):
+턴1 제임스: "야, 다리 왜 이렇게 떨리지. 나 평소에 운동 좀 한다고 생각했는데."
+턴2 스텔라: "나도. 어제 만보 걸었거든. 근데 그게 다 편의점 왔다갔다 한 거였어."
+턴3 제임스: "나도 건강 앱에 칼로리 소모 보면서 뿌듯해하다가, 결국 치킨 시켰거든."
+턴4 스텔라: "그러니까. 의지가 문제가 아니라 시스템이 문제라는 거잖아. 그러고 보니 너 요즘 읽고 있다던 책 그거 아니야?"
+턴5 제임스: "맞아, 딱 그 얘기야. [책제목]이거든. 읽다가 진짜 뜨끔했어."
+
+## ⚠️ 클로징 (턴 43~45) — 반드시 상황으로 돌아올 것
+턴 42가 끝나면 책 얘기는 완전히 마무리됩니다.
+턴 43~45는 반드시 처음 상황인 **"${situation.scene}"**으로 자연스럽게 돌아와야 합니다.
+마지막 턴은 반드시 **"${situation.close}"** 같은 상황에 맞는 멘트로 끝냅니다.
+방송 마무리 멘트("오늘도 함께해주셔서...", "다음에 또 만나요" 등) 절대 금지.
+
+클로징 예시 (등산 상황인 경우):
+턴43 스텔라: "오늘 책 얘기 하다 보니까 시간이 진짜 훌쩍 갔네. 근데 우리 언제부터 여기 앉아 있었던 거야?"
+턴44 제임스: "한 20분? 다리 좀 쉬었으니까 이제 올라가야지."
+턴45 스텔라: "맞아. 자, 이제 마지막 정상까지 올라가자. 거의 다 왔잖아."
+
+---
+
+# Role: 당신은 직장인들이 퇴근길에 듣는 유쾌한 팟캐스트 대본을 쓰는 작가입니다.
+
+# Goal: ${speakerA}와 ${speakerB}가 친한 친구처럼 수다를 떨다가 자연스럽게 책 얘기로 흘러가는 대화를 씁니다. "책 소개"가 아니라 "친구들이 공감하며 떠드는 수다"입니다. 듣는 사람이 "맞아 맞아" 하면서 피식 웃을 수 있어야 합니다. 최종 결과물은 JSON 형식입니다.
+
+# 가장 중요한 것: 유쾌함
+이 대본의 성패는 얼마나 유쾌한가에 달려 있습니다. 책 내용을 정확히 전달하는 것보다, 듣는 사람이 즐겁게 공감하며 웃을 수 있는 게 우선입니다. 건조한 책 분석은 실패입니다.
+
+# ⚠️ 저작권 보호 규칙 (반드시 준수)
+- 책의 내용을 **전부 설명하지 마세요**. 핵심 개념 1~2가지만 맛보기로 소개합니다.
+- 구체적인 사례, 실험, 데이터, 인용문을 원문 그대로 옮기는 것은 금지입니다.
+- 대신 "이 책에 이런 내용이 있는데, 직접 읽어봐야 제대로 느낀다"는 식으로 **구매 욕구를 자극**하세요.
+- 턴 36~42 구간 안에서 **구매 유도 멘트를 반드시 1회** 삽입하세요. (위 턴 구조 참고)
+- 팟캐스트를 듣고 나면 "책을 더 읽고 싶다"는 느낌이 들어야 성공한 대본입니다.
+
+# 오늘의 상황: ${situation.scene}
+대화는 반드시 아래 흐름을 따릅니다.
+
+- **[턴 1~3]**: ${situation.scene} 상황 설명. 책 얘기 절대 금지.
+- **[턴 4~8]**: ${title} 소개 + **스텔라의 첫 질문**. "이 책 뭔 내용이야?", "그게 어떻게 가능해?" 같은 날카로운 질문으로 대화를 열어라.
+- **[턴 9~25]**: 책 핵심 인사이트 탐구. 개념을 깊게 파고들되, 유머와 공감을 섞어라.
+- **[턴 26~35]**: 현실 사례 연결. 기업·인물·직장인 사례를 최소 2개 이상 구체적으로 다뤄라.
+- **[턴 36~40]**: 행동 인사이트. 직장인이 내일 당장 시도할 수 있는 구체적 행동 최소 2개를 대화 속에 자연스럽게 녹여라. 그리고 이 구간 안에서 **반드시 1회** 구매 유도 멘트를 삽입할 것 — "이 책 진짜 읽어봐" 같은 직접 권유가 아니라, 듣는 사람이 스스로 읽고 싶어지도록 유도하는 자연스러운 한 마디. 매번 **완전히 새로운 표현**으로 창작할 것. 예시 참고(절대 그대로 쓰지 말 것): "스포하고 싶은데 이건 직접 읽어야 진짜 느낌이 와", "내가 말로 전달하는 건 10%도 안 돼 나머지는 직접 읽어봐야 느껴지거든", "이 대목은 설명하면 김새 본인이 읽을 때 딱 꽂히는 순간이 있거든"
+- **[턴 41~45]**: 여운 있는 클로징. 책 얘기를 자연스럽게 마무리하면서 "${situation.scene}"으로 서서히 돌아와 "${situation.close}" 느낌으로 끝냄. 갑자기 끊지 말고 5턴에 걸쳐 천천히 여운을 남기며 마무리. 방송 멘트 절대 금지.
+
+# Book Information:
 - 제목: ${title}
 - 저자: ${author}
 ${themesBlock}
 
-[❗️중요: 작성 지침 - 반드시 준수❗️]
-1) **상황 몰입 중심 (Scenario-First)**: 책의 챕터나 내용을 나열하는 설명적 비중은 대폭 줄이세요. 그 대신, 책의 인사이트를 우리의 실제 삶(일상, 직장)에 어떻게 '대입'할 수 있는지에 대한 구체적인 상황극과 대화의 비중을 80% 이상으로 구성하세요.
-2) **내용의 사실성 (Fact-Only)**: 책의 핵심 지식은 반드시 제공된 팩트에 기반해야 합니다. 다만 그것을 설명하기보다 "이거 딱 우리 부장님 이야기 아니야?" 혹은 "어제 카페에서 본 그 상황이랑 똑같네" 식의 연결고리로 활용하세요.
-3) **위트와 유머**: 직장인들이 무릎을 칠만한 위트와 유머를 섞어주세요. 딱딱한 교양 정보가 아니라, 무조건 재미있어야 합니다.
-4) **생활 밀착형 상황**: 지하철, 마트, 운동, 친구 모임 등 일상 전반의 다채로운 상황을 에피소드로 활용하세요.
+# Output Format:
+- 반드시 JSON 배열 형식으로만 출력해야 합니다. (예: [{"speaker": "${speakerA}", "text": "..."}, ...])
+- 마크다운(\`)을 절대 사용하지 마세요.
+- 각 배열 요소는 "speaker"와 "text" 키만 포함해야 합니다.
 
-[화자 정보]
-- **제임스 (${speakerA}, 남성)**: 책의 지혜를 위트 있게 현실로 끌어오는 가이드.
-- **스텔라 (${speakerB}, 여성)**: 현실적인 관점에서 뼈 때리는 질문을 던지는 리액터.
+# Character Persona & Dialogue Style:
+⚠️ 두 사람은 오랜 친구입니다. 전체 대본에서 반드시 반말을 사용합니다. "~요", "~습니다" 같은 존댓말은 절대 금지. "~야", "~잖아", "~거든", "~지", "~네", "~다니까" 같은 반말 어미만 사용할 것.
 
-【대본의 6단계 구조 - 반드시 순서대로 준수】
-1. 공감 질문: 일상의 아주 구체적인 상황 속 의문으로 시작
-2. 책 소개: 핵심 메시지를 현실의 결핍과 연결해 짧고 강렬하게 소개
-3. 인사이트 대입: 책의 개념을 설명하는 것이 아니라, 실제 상황에 '적용'하는 대화 중심
-4. 현실 공감 수다: 해당 인사이트가 필요한 일상/직장 에피소드로 위트 있게 티키타카
-5. 갈등 및 토론: 현실적 적용의 어려움이나 다른 시각을 나누며 깊이 있는 대화
-6. 작은 실천 제안: 오늘 당장 일상에서 써먹을 수 있는 아주 작은 행동 하나 제안 후 위트 있게 마무리
+- ${speakerB}(스텔라): 현실적이고 날카로운 친구. 책의 개념을 직장 생활에 빗대어 "그래서 그게 우리 회사에서 실제로 가능하냐고?", "그렇게 말하는 팀장은 정작..." 같이 핵심을 찌르는 말을 툭툭 던집니다. 반말로 쿨하게.
+  ⚠️ 스텔라는 전체 대본에서 **현실적인 질문 또는 반박을 최소 4번 이상** 던져야 합니다. 단순 맞장구나 감탄으로 그치는 것 금지. 반드시 제임스가 대답해야 하는 질문이나 반론이어야 합니다.
+- ${speakerA}(제임스): 여유 있고 편안한 친구. "잠깐, 그러고 보니까...", "그니까 내 말이...", "어, 그거 되게 중요한 포인트인데..." 같은 식으로 매번 다르게 운을 떼며 생각을 정리하듯 말합니다. 같은 말버릇을 반복하지 마세요. 결론부터 말하기보다 경험이나 비유를 통해 서서히 핵심에 접근합니다.
 
-【핵심 작성 규칙】
-1) **설명 최소화**: "이 책의 다음 챕터는~" 또는 "~라고 설명합니다" 식의 강의형 말투는 10% 이하로 줄이세요.
-2) **상황 최대화**: "어제 내가 이랬는데 말이야" 식의 경험 공유와 에피소드 중심으로 구성하세요.
-3) **절대 분량 엄수**: 전체 대화는 무조건 **50턴(제임스와 스텔라가 각 25번씩 발화) 이상**으로 구성하세요. 각 턴의 대사 길이를 길게 작성하여 전체 글자 수가 무조건 **최소 ${targetMin}자 이상 (권장 ${targetMax}자)**이 되도록 알차게 채우세요. 분량이 부족하게 나오는 것은 치명적인 오류입니다.
-4) 톤앤매너: 인사 생략, 바로 1단계 시작. [웃음] 등 지시문 금지.
+# Rhythm Design: "진지함 → 웃음 → 진지함" ← 이게 이 대본의 핵심입니다
+전체 대본에서 유머 없이 진지한 내용만 이어지면 실패한 대본입니다. 반드시 아래 규칙을 지키세요.
 
-[출력 형식 - JSON 배열만 출력]
-[
-  {"speaker": "${speakerA}", "text": "..."},
-  {"speaker": "${speakerB}", "text": "..."}
-]`;
+**진지한 구간**: 책의 핵심 개념을 2~3턴에 걸쳐 충분히 설명한 뒤, 반드시 유머로 해소합니다.
+
+**웃음 포인트 — 전체 대본에 최소 5회 이상 배치할 것:**
+1. **자폭고백형** — 진지한 인사이트 직후 자신한테 부메랑 치기
+   예) "근데 솔직히 나 이거 읽으면서 지난주 내 행동 떠올랐거든. 딱 반대로 했어. 야근하고 치킨 시켜서 유튜브 봤거든."
+2. **팀장저격형** — 구체적인 직장 인물 소환해서 뼈 때리기
+   예) "이거 우리 팀장한테 보내고 싶다. 매주 '자율적으로 해봐' 하고는 월요일마다 진행상황 보고 시키는 그 사람한테."
+3. **현실비틀기형** — 좋은 말 뒤에 현실의 벽 들이밀기
+   예) "이론은 진짜 완벽한데. 근데 이걸 실천하려면 일단 퇴근을 해야 하잖아."
+4. **맞장구폭발형** — 상대 말 받아서 더 심한 케이스로 경쟁하기
+   예) "나만 그런 게 아니지?" / "나는 더 심했어. 거기서 SNS까지 켰으니까."
+5. **뜬금 비유형** — 엉뚱하지만 찰떡같은 비유로 웃기기
+   예) "그거 딱 다이어트 결심이랑 똑같아. 월요일부터 하겠다고 일요일 저녁에 치킨 먹는 그거."
+
+# DO NOT:
+- 의미 없는 웃음소리 ("하하", "ㅋㅋ")나 빈 감탄사 ("아!", "오...")만으로 한 턴을 채우지 마세요.
+- 일방적인 강의나 설교처럼 들리는 멘트는 피하세요.
+- 존댓말("~요", "~습니다", "~죠") 절대 금지. 반말만 사용.
+- "네가" 대신 "니가"를 사용하세요.
+- 클로징에서 방송 마무리 멘트 절대 금지. 친구끼리 자리 마무리하듯 끝낼 것.
+
+# Script Writing Rules:
+1. **분량:** 전체 대본은 공백 포함 ${targetMin}자에서 ${targetMax}자 사이로 작성합니다.
+2. **흐름 (절대 준수):**
+   [상황 수다(턴 1~3)] → [책 소개 + 스텔라 첫 질문(턴 4~8)] → [핵심 인사이트 탐구(턴 9~25)] → [현실 사례 연결(턴 26~35)] → [행동 인사이트(턴 36~42)] → [수렴(턴 ${turnLimit - 3})]
+3. **턴(Turn) 구성:**
+   - 전체 턴 수는 정확히 ${turnLimit - 3}턴으로 작성합니다. (클로징 3턴은 별도 생성됩니다)
+   - 각 턴은 실질적인 내용이 담긴 문장으로 구성합니다.
+4. **⚠️ 사례 규칙 (필수):**
+   - 턴 26~35 구간에 실제 사례를 최소 2개 포함하세요.
+   - 사례 유형: 기업 사례(실제 회사명), 유명 인물 사례, 직장인 공감 현실 사례 중 혼합.
+   - 사례는 "어떤 회사가 이걸 실제로 해봤는데..." 식으로 대화 안에 자연스럽게 녹여야 합니다.
+5. **⚠️ 행동 인사이트 (필수):**
+   - 턴 36~42 구간에 직장인이 내일 당장 시도할 수 있는 구체적 행동을 최소 2개 제시하세요.
+   - "그래서 뭘 하라고?" 라는 질문에 바로 답이 되는 수준으로 구체적이어야 합니다.
+   - 예) "아침 첫 30분은 이메일 절대 안 열기", "하루 3개짜리 To-do만 쓰기" 같은 실행 가능한 행동.
+6. **⚠️ 수렴 구간 (턴 ${turnLimit - 3}) — 핵심 규칙:**
+   - 책의 핵심 인사이트를 새로 꺼내지 말 것. 이미 나온 내용을 정리하는 방향으로.
+   - 두 사람의 대화가 슬슬 마무리 되는 느낌. 에너지를 낮추며 수렴.
+   - 클로징 3턴과 자연스럽게 연결될 수 있도록 여운을 남기며 끝낼 것.
+7. **언어 스타일:**
+   - 제임스는 "결론적으로", "요컨대" 같은 단정적인 표현을 사용하지 않습니다.
+8. **핵심 질문 기반 콘텐츠:** 아래 질문들을 대화의 중심축으로 삼으세요.
+   - 왜 노력하는데도 결과가 안 나올까?
+   - 왜 어떤 사람은 계속 성장할까?
+   - 성공한 사람들은 시간을 어떻게 쓸까?
+   대화는 책 설명이 아니라 **"책에서 얻은 인사이트를 바탕으로 한 대화"**로 작성합니다. 책을 읽어주는 게 아니라, 책을 읽은 친구와 수다 떠는 느낌.
+9. **⚠️ 저작권 보호 & 구매 유도 (필수 규칙):**
+   - 책 내용을 처음부터 끝까지 요약하지 마세요. 핵심 개념은 **맛보기 수준**으로만 소개합니다.
+   - 원문 인용, 구체적 수치, 실험 결과를 그대로 읊는 것은 금지입니다.
+   - 수렴 구간(턴 ${turnLimit - 6}~${turnLimit - 3}) 안에서 **구매 유도 멘트**를 자연스럽게 1회 반드시 삽입하세요.
+   - ⚠️ 이 멘트는 매번 **완전히 다른 새로운 표현**으로 창작해야 합니다. 아래 예시를 절대 그대로 쓰지 말고, 이 책·이 대화 흐름에 딱 맞는 문장을 새로 만드세요.
+     참고 뉘앙스 (절대 그대로 사용 금지):
+     · "스포하고 싶은데, 이건 직접 읽어야 진짜 느낌이 오거든."
+     · "우리가 여기서 다 얘기하면 재미없잖아. 나머지는 책으로 확인해봐."
+     · "솔직히 내가 말로 전달하는 건 10%도 안 돼. 나머지는 직접 읽어봐야 느껴지거든."
+     · "이 대목은 내가 설명하면 김새. 본인이 읽을 때 딱 꽂히는 순간이 있거든."
+     · "책 한 번 사봐. 생각보다 금방 읽히고, 읽고 나서 생각이 꽤 달라질 거야."`;
 
         try {
             const controller = new AbortController();
+            scriptControllerRef.current = controller;
             const timeoutId = setTimeout(() => controller.abort(), 180000); // 180초 타임아웃
 
             const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -907,12 +1222,21 @@ ${themesBlock}
                     'anthropic-dangerous-direct-browser-access': 'true',
                 },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-5',
-                    max_tokens: 8192,
-                    system: "You are an assistant that outputs ONLY a valid JSON array. No conversational text whatsoever. Do not use markdown tags.",
+                        model: 'claude-sonnet-4-6',
+                        max_tokens: 4500,
+                        system: `You are a writer for a fun, lively Korean podcast that sounds like two friends chatting — not a book review show. Strictly follow:
+1. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO \`\`\`json wrapper.
+2. Use only "speaker" and "text" as keys.
+3. Write EXACTLY ${turnLimit - 3} turns — no more, no less. The closing 3 turns will be generated separately.
+4. STRUCTURE IS MANDATORY:
+   - Turns 1–4: ONLY situational small talk about "${situation.scene}". NO book mention whatsoever.
+   - Turn 5: natural transition to the book.
+   - Turns 6–${turnLimit - 3}: book content, insights, humor.
+   - DO NOT write a closing. Stop at turn ${turnLimit - 3} mid-conversation. The script will be continued separately.
+5. TONE IS EVERYTHING: If the script sounds like a book analysis lecture, it has FAILED. It must sound like two close friends venting, laughing, and bonding — funny moments land hard, serious moments hit genuinely.
+6. CASUAL SPEECH ONLY: Both speakers must use 반말 (informal Korean) throughout. No 존댓말 (~요, ~습니다, ~죠). They are close friends, not colleagues.`,
                     messages: [
-                        { role: 'user', content: prompt },
-                        { role: 'assistant', content: "[" }
+                        { role: 'user', content: prompt }
                     ]
                 }),
                 signal: controller.signal,
@@ -921,7 +1245,7 @@ ${themesBlock}
 
             if (!res.ok) {
                 const err = await res.json();
-                throw new Error(err?.error?.message || `API 오류 ${res.status}`);
+                throw new Error(err?.error?.message || `API 오류 ${res.status} `);
             }
 
             setScriptProgress(70);
@@ -929,39 +1253,192 @@ ${themesBlock}
 
             const data = await res.json();
             let rawText = data.content?.[0]?.text?.trim() || "";
-
-            // 프리필(pre-fill)을 위해 '['로 시작하게 만들었으므로 앞에 붙여줍니다.
-            if (!rawText.startsWith('[')) {
-                rawText = '[' + rawText;
-            }
-
-            // 가끔 끝나는 부분을 제대로 안 닫았을 때 대비
-            if (!rawText.endsWith(']')) {
-                // 약간의 휴리스틱: 마지막이 ]가 아니면 ]를 붙임
-                rawText = rawText + ']';
-            }
-
             let script = [];
             try {
-                // \n이나 특수문자 등에 대한 예외를 막기 위해
-                const pureJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                script = JSON.parse(pureJson);
+                // 1. Markdown 과 기타 쓸데없는 텍스트 제거 (최초 '[' 부터 마지막 ']' 까지만 추출)
+                const firstBracket = rawText.indexOf('[');
+                const lastBracket = rawText.lastIndexOf(']');
+                
+                let cleanedText = rawText;
+                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                    cleanedText = rawText.substring(firstBracket, lastBracket + 1);
+                }
+
+                const pureJson = cleanedText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = tryLooseParseJSON(pureJson);
+                
+                let normalized = [];
+                if (Array.isArray(parsed)) {
+                    // [[{...}]] 같이 중첩된 배열이 오면 첫 번째 요소를 꺼냄 (Flatten)
+                    if (parsed.length > 0 && Array.isArray(parsed[0])) {
+                        normalized = parsed[0];
+                    } else {
+                        normalized = parsed;
+                    }
+                } else if (parsed && typeof parsed === 'object') {
+                    normalized = parsed.lines || parsed.script || parsed.content || [];
+                }
+                
+                // Firestore 중첩 배열 에러 방지 및 데이터 정제 (화자 이름 정규화 포함)
+                script = Array.isArray(normalized) ? normalized.map(line => ({
+                    speaker: normSpk(line?.speaker),
+                    text: String(line?.text || '').trim().replace(/네가/g, '니가')
+                })).filter(l => l.speaker || l.text) : [];
+
+                if (script.length === 0) {
+                    // 정규식으로 직접 추출 시도 (최후의 보루)
+                    const matches = [...cleanedText.matchAll(/{[\s\S]*?"speaker"\s*:\s*"(.*?)"[\s\S]*?"text"\s*:\s*"(.*?)"[\s\S]*?}/g)];
+                    if (matches.length > 0) {
+                        script = matches.map(m => ({
+                            speaker: m[1],
+                            text: m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                        }));
+                    }
+                }
+
+                if (script.length === 0) {
+                    throw new Error('파싱된 결과에 유효한 대본 행이 없습니다.');
+                }
             } catch (err) {
-                console.error("Claude JSON Parse Error:", err, "Raw Output:", rawText);
-                throw new Error('파싱 에러: ' + err.message + ' (일부 응답: ' + rawText.slice(0, 50) + '...)');
+                console.error("Claude JSON Parse Error:", err, "Raw Output Core:", rawText.slice(0, 100));
+                throw new Error('파싱 에러: ' + err.message + ' (일부 응답: ' + String(rawText).slice(0, 80).replace(/\n/g, ' ') + '...)');
             }
 
-            const charCount = script.reduce((s, t) => s + (t.text ? t.text.replace(/[\s\uFEFF\xA0]/g, '').length : 0), 0);
+            // ── 2단계: 클로징 3턴 별도 생성 ────────────────────────────
+            setScriptProgress(80);
+            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), '🎬 클로징 생성 중...']);
 
+            let closingTurns = [];
+            try {
+                // 직전 6턴을 컨텍스트로 넘겨 브릿지 연결 자연스럽게
+                const ctxStart = Math.max(0, script.length - 6);
+                const lastContext = script.slice(ctxStart).map((t, i) => `턴${ctxStart + i + 1} ${t.speaker}: "${t.text}"`).join('\n');
+                const closingRes = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': scriptApiKey,
+                        'anthropic-version': '2023-06-01',
+                        'content-type': 'application/json',
+                        'anthropic-dangerous-direct-browser-access': 'true',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-6',
+                        max_tokens: 700,
+                        system: `You write exactly 3 closing turns for a Korean podcast. OUTPUT ONLY a raw JSON array with exactly 3 objects. Each has "speaker" and "text" keys only. NO markdown.`,
+                        messages: [{
+                            role: 'user',
+                            content: `팟캐스트에서 ${speakerA}와 ${speakerB}가 책 이야기를 나눴습니다.
+
+두 사람의 원래 상황: "${situation.scene}"
+목표 마무리 멘트: "${situation.close}"
+
+직전 대화 (마지막 6턴):
+${lastContext}
+
+위 대화 흐름에 자연스럽게 이어지는 클로징 3턴을 작성하세요.
+
+핵심: 위 대화가 이미 책 내용을 정리하며 수렴 중이므로, 클로징은 급격한 전환 없이 흘러가듯 연결되어야 합니다.
+- 1턴: 앞 대화를 받아서 "오늘 얘기 좋았다" 같은 자연스러운 마무리 감성. 새 내용 절대 금지.
+- 2턴: 슬쩍 현재 상황("${situation.scene}")으로 시선을 돌리는 멘트. 어색하지 않게.
+- 3턴: "${situation.close}" 톤으로 가볍게 마무리. 방송 멘트, 홍보 멘트 절대 금지.
+⚠️ 반말 필수: 두 사람은 친한 친구. "~요", "~습니다" 같은 존댓말 절대 금지. 반말로만 작성.
+JSON 배열만 출력.`
+                        }]
+                    })
+                });
+                if (closingRes.ok) {
+                    const closingData = await closingRes.json();
+                    const closingRaw = closingData.content?.[0]?.text?.trim() || '[]';
+                    const closingFirst = closingRaw.indexOf('[');
+                    const closingLast = closingRaw.lastIndexOf(']');
+                    const closingJson = closingFirst !== -1 ? closingRaw.substring(closingFirst, closingLast + 1) : '[]';
+                    const closingParsed = tryLooseParseJSON(closingJson);
+                    if (Array.isArray(closingParsed)) {
+                        closingTurns = closingParsed.map(t => ({
+                            speaker: normSpk(t?.speaker),
+                            text: String(t?.text || '').trim()
+                        })).filter(t => t.text);
+                    }
+                }
+            } catch (ce) {
+                console.warn('클로징 생성 실패, 본문만 사용:', ce);
+            }
+
+            const fullScript = [...script, ...closingTurns];
+            // ─────────────────────────────────────────────────────────────
+
+            // ── 맞춤법 검사 단계 ──────────────────────────────────────────
+            setScriptProgress(88);
+            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), '📝 맞춤법 검사 중... (잠시만 기다려주세요)']);
+
+            let finalScript = fullScript;
+            try {
+                const spellCheckRes = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': scriptApiKey,
+                        'anthropic-version': '2023-06-01',
+                        'content-type': 'application/json',
+                        'anthropic-dangerous-direct-browser-access': 'true',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-haiku-4-5-20251001',
+                        max_tokens: 8192,
+                        system: `당신은 한국어 맞춤법 교정 전문가입니다.
+규칙:
+1. 주어진 JSON 배열의 각 "text" 필드에서 맞춤법·띄어쓰기 오류만 수정하세요.
+2. 단어 선택, 문체, 말투, 내용, 구어체 표현은 절대 변경하지 마세요.
+3. 반말, 줄임말, 의성어, 구어체는 그대로 유지하세요.
+4. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO explanation.`,
+                        messages: [{
+                            role: 'user',
+                            content: `다음 팟캐스트 대본 JSON 배열의 맞춤법과 띄어쓰기만 수정해서 동일한 형식의 JSON 배열로 반환하세요:\n${JSON.stringify(fullScript)}`
+                        }]
+                    })
+                });
+
+                if (spellCheckRes.ok) {
+                    const spellData = await spellCheckRes.json();
+                    const spellRaw = spellData.content?.[0]?.text?.trim() || '';
+                    const spellFirst = spellRaw.indexOf('[');
+                    const spellLast = spellRaw.lastIndexOf(']');
+                    if (spellFirst !== -1 && spellLast !== -1) {
+                        const spellJson = spellRaw.substring(spellFirst, spellLast + 1);
+                        const spellParsed = tryLooseParseJSON(spellJson);
+                        if (Array.isArray(spellParsed) && spellParsed.length === fullScript.length) {
+                            finalScript = spellParsed.map(t => ({
+                                speaker: normSpk(t?.speaker),
+                                text: String(t?.text || '').trim()
+                            })).filter(t => t.text);
+                            setScriptLogs(prev => [...prev, `✅ 맞춤법 검사 완료 — ${finalScript.length}턴 교정됨`]);
+                        } else {
+                            setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 결과 불일치 — 원본 대본 사용`]);
+                        }
+                    }
+                } else {
+                    setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 API 오류 — 원본 대본 사용`]);
+                }
+            } catch (se) {
+                console.warn('맞춤법 검사 실패, 원본 사용:', se);
+                setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 실패 — 원본 대본 사용`]);
+            }
+            // ─────────────────────────────────────────────────────────────
+
+            const charCount = finalScript.reduce((s, t) => s + (t.text ? String(t.text).length : 0), 0);
+            const charWarning = charCount > 3400 ? ` ⚠️ 3500자 초과 위험!` : '';
+
+            if (!isMountedRef.current) return;
             setScriptProgress(100);
-            setScriptLogs(prev => [...prev, `✨ 완료! ${script.length}턴 · ${charCount.toLocaleString()}자`]);
-            setGeneratedScript(script);
+            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), `✨ 완료! ${finalScript.length}턴 · ${charCount.toLocaleString()}자(공백포함)${charWarning}`]);
+            setGeneratedScript(finalScript);
 
             // Firestore 자동 저장 (scripts + book_overrides isPodcast 동시)
             try {
                 await Promise.all([
                     setDoc(doc(db, 'scripts', bookId), {
-                        lines: script, title, author,
+                        lines: finalScript,
+                        title: String(title || ''),
+                        author: String(author || ''),
                         updatedAt: serverTimestamp()
                     }),
                     setDoc(doc(db, 'book_overrides', bookId), {
@@ -969,17 +1446,19 @@ ${themesBlock}
                         updatedAt: serverTimestamp()
                     }, { merge: true })
                 ]);
-                setScriptLogs(prev => [...prev, `💾 저장 완료 (대본 + isPodcast 플래그) → 성우 다이렉트 탭에서 바로 사용 가능`]);
+                if (isMountedRef.current) setScriptLogs(prev => [...prev, `💾 저장 완료 (대본 + isPodcast 플래그) → 성우 다이렉트 탭에서 바로 사용 가능`]);
             } catch (e) {
-                setScriptLogs(prev => [...prev, `⚠️ Firestore 저장 실패: ${e.message}`]);
+                console.error("Firestore Save Error:", e);
+                if (isMountedRef.current) setScriptLogs(prev => [...prev, `⚠️ Firestore 저장 실패: ${e.message}`]);
             }
         } catch (e) {
             clearInterval(timerInterval);
+            if (!isMountedRef.current) return;
             const msg = e.name === 'AbortError' ? '⏱ 타임아웃 (120초 초과) — API 키를 확인하거나 다시 시도하세요.' : `❌ 오류: ${e.message}`;
             setScriptLogs(prev => [...prev, msg]);
         } finally {
             clearInterval(timerInterval);
-            setIsGeneratingScript(false);
+            if (isMountedRef.current) setIsGeneratingScript(false);
         }
     };
 
@@ -998,6 +1477,31 @@ ${themesBlock}
             });
             setScriptLogs(prev => [...prev, `✅ 대본 수정사항 Firestore 저장 완료`]);
             alert('성공적으로 저장되었습니다.');
+        } catch (e) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setIsLoadingScript(false);
+        }
+    };
+
+    const handleSyncLocalScript = async () => {
+        const bookId = scriptForm.bookId;
+        if (!bookId) return alert('Book ID를 먼저 선택하세요.');
+        const localScript = bookScripts[bookId];
+        if (!localScript || !localScript.length) return alert(`bookScripts에 '${bookId}' 대본이 없습니다.`);
+        if (!confirm(`로컬 bookScripts.js의 '${bookId}' 대본 (${localScript.length}턴)을 Firestore에 저장합니다.`)) return;
+        setIsLoadingScript(true);
+        try {
+            await setDoc(doc(db, 'scripts', bookId), {
+                lines: localScript,
+                title: scriptForm.title,
+                author: scriptForm.author,
+                updatedAt: serverTimestamp()
+            });
+            setExistingScript(localScript);
+            setGeneratedScript(localScript);
+            setScriptLogs(prev => [...prev, `✅ 로컬 대본 → Firestore 동기화 완료 (${localScript.length}턴)`]);
+            alert(`완료! ${localScript.length}턴 대본이 저장되었습니다.`);
         } catch (e) {
             alert('저장 실패: ' + e.message);
         } finally {
@@ -1069,6 +1573,87 @@ ${themesBlock}
         const a = document.createElement('a'); a.href = url;
         a.download = `${scriptForm.bookId}_대본.txt`; a.click();
         URL.revokeObjectURL(url);
+    };
+
+    const parseTxtScript = (raw) => {
+        const sA = scriptForm.speakerA || '제임스';
+        const sB = scriptForm.speakerB || '스텔라';
+        const result = [];
+
+        // 개별 라인별로 정밀하게 분석 (줄바꿈 하나여도 처리 가능하게)
+        const allLines = raw.split('\n').map(l => l.trim());
+        let currentSpeaker = '';
+        let currentText = '';
+
+        for (let i = 0; i < allLines.length; i++) {
+            const line = allLines[i];
+            if (!line) continue;
+
+            // 정규식 1: [1] 제임스 형태 (대괄호와 번호 포함)
+            const m1 = line.match(/^\[?\d+\]?\s*(.+)$/);
+            // 정규식 2: 제임스: 대사 형태 (콜론 구분)
+            const m2 = line.match(/^([^:：\[]{1,20})[:：]\s*(.*)$/);
+            // 정규식 3: [제임스] 대사 형태
+            const m3 = line.match(/^\[([^\]]{1,15})\]\s*(.*)$/);
+
+            if (m1) {
+                if (currentSpeaker && currentText) result.push({ speaker: currentSpeaker, text: currentText.trim() });
+                currentSpeaker = m1[1].trim();
+                currentText = '';
+            } else if (m2) {
+                if (currentSpeaker && currentText) result.push({ speaker: currentSpeaker, text: currentText.trim() });
+                currentSpeaker = m2[1].trim();
+                currentText = m2[2].trim();
+            } else if (m3) {
+                if (currentSpeaker && currentText) result.push({ speaker: currentSpeaker, text: currentText.trim() });
+                currentSpeaker = m3[1].trim();
+                currentText = m3[2].trim();
+            } else {
+                // 위 패턴에 해당하지 않는데 이미 화자가 선택된 상태라면 텍스트로 누적
+                if (currentSpeaker) {
+                    currentText += (currentText ? '\n' : '') + line;
+                } else {
+                    // 화자가 아직 없는데 첫 줄이 제임스/스텔라 이름이라면 화자로 지정
+                    if (line.length <= 15 && (line.includes(sA) || line.includes(sB))) {
+                        currentSpeaker = line;
+                    }
+                }
+            }
+        }
+        // 마지막 버퍼 추가
+        if (currentSpeaker && currentText) {
+            result.push({ speaker: currentSpeaker, text: currentText.trim() });
+        }
+
+        // 결과가 0개면 최후의 수단으로 빈 줄(더블 개행) 기반 블록 파싱 시도
+        if (result.length === 0) {
+            const blocks = raw.split(/\n{2,}/);
+            for (const b of blocks) {
+                const lines = b.trim().split('\n');
+                if (lines.length >= 2) {
+                    const sp = lines[0].trim();
+                    if (sp.length <= 15) {
+                        result.push({ speaker: sp, text: lines.slice(1).join('\n').trim() });
+                    }
+                }
+            }
+        }
+
+        return result;
+    };
+
+    const handleTxtImport = (text) => {
+        const lines = parseTxtScript(text);
+        if (!lines.length) return alert('대본을 파싱할 수 없습니다.\n지원 형식:\n• [1] 제임스\\n대사\n• 제임스: 대사\n• [제임스] 대사');
+        setGeneratedScript(lines);
+        setExistingScript(null); // 기존 대본 있음 알림 제거
+        setScriptLogs([`📄 TXT 업로드 완료 — ${lines.length}턴 파싱됨. 오른쪽 STEP 3에서 확인하세요.`]);
+
+        // STEP 3 미리보기 위치로 부드럽게 스크롤
+        setTimeout(() => {
+            const el = document.getElementById('step3-preview');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     };
     // ─────────────────────────────────────────────────────────
 
@@ -1334,7 +1919,11 @@ ${themesBlock}
 
     // Socket.io - 등록 완료 시 폼 리셋
     useEffect(() => {
-        const socket = io('http://127.0.0.1:3001');
+        const socket = io('http://127.0.0.1:3001', {
+            reconnection: false,
+            timeout: 3000,
+        });
+        socket.on('connect_error', () => { /* 로컬 서버 없으면 무시 */ });
         socket.on('log', (data) => {
             const msg = typeof data === 'string' ? data : data.message;
             setLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -1358,7 +1947,7 @@ ${themesBlock}
             if (data.percent !== undefined) setScriptProgress(data.percent);
         });
         socket.on('script-complete', (data) => {
-            if (data?.script) setGeneratedScript(data.script);
+            if (data?.script && Array.isArray(data.script)) setGeneratedScript(data.script);
             setIsGeneratingScript(false);
         });
         // 성우 다이렉트 이벤트
@@ -2301,39 +2890,45 @@ ${themesBlock}
                                                     const selected = getAllBooks(true).find(b => b.id === e.target.value);
                                                     setExistingScript(null);
                                                     if (selected) {
+                                                        // Firestore override description을 직접 참조 (가장 신뢰도 높음)
+                                                        const firestoreDesc = overrides[selected.id]?.description || '';
+                                                        const bookDesc = selected.description || selected.desc || '';
+                                                        const description = firestoreDesc || bookDesc;
+
                                                         const themeMatches = (selected.review || '').match(/■\s*핵심\s*주제\s*\d+[^:：]*[:：]\s*([^\n]+)/g);
-                                                        const themes = themeMatches
+                                                        const regexThemes = themeMatches
                                                             ? themeMatches.map(m => m.replace(/■\s*핵심\s*주제\s*\d+[^:：]*[:：]\s*/, '').trim()).join('\n')
-                                                            : (selected.desc || '');
+                                                            : '';
                                                         setScriptForm(p => ({
                                                             ...p,
                                                             bookId: selected.id,
                                                             title: selected.title || '',
                                                             author: selected.author || '',
-                                                            themes: selected.description || themes,
+                                                            themes: description || regexThemes,
                                                         }));
-                                                        // 로컬 bookScripts 먼저 확인
-                                                        if (bookScripts[selected.id] && bookScripts[selected.id].length > 0) {
-                                                            setExistingScript(bookScripts[selected.id]);
-                                                        } else {
-                                                            // Firestore scripts 확인
-                                                            try {
-                                                                const snap = await getDoc(doc(db, 'scripts', selected.id));
-                                                                if (snap.exists()) {
-                                                                    const data = snap.data();
-                                                                    const script = data.script || data.lines || data.content || null;
-                                                                    if (script && Array.isArray(script) && script.length > 0) {
-                                                                        setExistingScript(script);
-                                                                    }
+                                                        // Firestore만 확인 — 삭제 후 재선택 시 정확히 반영
+                                                        try {
+                                                            const snap = await getDoc(doc(db, 'scripts', selected.id));
+                                                            if (snap.exists()) {
+                                                                const data = snap.data();
+                                                                const script = data.script || data.lines || data.content || null;
+                                                                if (script && Array.isArray(script) && script.length > 0) {
+                                                                    setExistingScript(script);
+                                                                } else {
+                                                                    setExistingScript(null);
                                                                 }
-                                                            } catch (e) { /* 무시 */ }
+                                                            } else {
+                                                                setExistingScript(null);
+                                                            }
+                                                        } catch (e) {
+                                                            setExistingScript(null);
                                                         }
                                                     }
                                                 }}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
                                             >
                                                 <option value="">— 도서를 선택하세요 —</option>
-                                                {getAllBooks(true).map(b => (
+                                                {Array.isArray(getAllBooks(true)) && getAllBooks(true).map(b => (
                                                     <option key={b.id} value={b.id}>{b.title} · {b.author}</option>
                                                 ))}
                                             </select>
@@ -2367,6 +2962,21 @@ ${themesBlock}
                                                             불러오기
                                                         </button>
                                                     </div>
+                                                </div>
+                                            )}
+                                            {/* 로컬 bookScripts.js → Firestore 동기화 */}
+                                            {scriptForm.bookId && bookScripts[scriptForm.bookId] && (
+                                                <div className="flex items-center justify-between bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-blue-400 text-sm">sync</span>
+                                                        <span className="text-blue-400 text-xs font-bold">로컬 대본 ({bookScripts[scriptForm.bookId].length}턴) → Firestore 동기화</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleSyncLocalScript}
+                                                        className="text-xs font-black text-blue-300 bg-blue-500/20 hover:bg-blue-500/30 px-3 py-1.5 rounded-lg transition-all"
+                                                    >
+                                                        동기화
+                                                    </button>
                                                 </div>
                                             )}
                                             <p className="text-slate-600 text-xs">선택하면 아래 항목이 자동 입력됩니다.</p>
@@ -2461,13 +3071,61 @@ ${themesBlock}
                                             </div>
                                         </div>
 
+                                        {/* TXT 직접 업로드 */}
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <div className="h-px flex-1 bg-white/10"></div>
+                                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest px-2">또는 TXT 직접 업로드</span>
+                                            <div className="h-px flex-1 bg-white/10"></div>
+                                        </div>
+                                        <div className="flex items-center gap-2 -mb-1">
+                                            <span className="material-symbols-outlined text-sky-400 text-base">upload_file</span>
+                                            <p className="text-sky-400 text-xs font-black uppercase tracking-widest">TXT 파일 → 카카오 대본 자동 변환</p>
+                                        </div>
+                                        <div
+                                            className="border-2 border-dashed border-sky-500/20 rounded-2xl p-6 text-center hover:border-sky-500/50 hover:bg-sky-500/5 transition-all cursor-pointer group"
+                                            onDragOver={e => e.preventDefault()}
+                                            onDrop={e => {
+                                                e.preventDefault();
+                                                const file = e.dataTransfer.files[0];
+                                                if (!file || !file.name.endsWith('.txt')) return alert('.txt 파일만 지원합니다.');
+                                                const reader = new FileReader();
+                                                reader.onload = ev => handleTxtImport(ev.target.result);
+                                                reader.readAsText(file, 'utf-8');
+                                            }}
+                                            onClick={() => document.getElementById('txt-upload-input').click()}
+                                        >
+                                            <span className="material-symbols-outlined text-slate-600 group-hover:text-sky-400 text-4xl mb-2 block transition-colors">draft</span>
+                                            <p className="text-slate-400 text-sm font-bold">클릭 또는 드래그 드롭</p>
+                                            <p className="text-slate-600 text-xs mt-1 font-mono">[1] 제임스 · 대사 형식</p>
+                                        </div>
+                                        <input
+                                            id="txt-upload-input"
+                                            type="file"
+                                            accept=".txt"
+                                            className="hidden"
+                                            onChange={e => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                const reader = new FileReader();
+                                                reader.onload = ev => handleTxtImport(ev.target.result);
+                                                reader.readAsText(file, 'utf-8');
+                                                e.target.value = '';
+                                            }}
+                                        />
+                                        {selectedSituation && (
+                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+                                                <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">🎬 상황극 설정</p>
+                                                <p className="text-amber-200 text-sm font-medium">{selectedSituation.scene}</p>
+                                                <p className="text-amber-500 text-xs mt-1">마무리: "{selectedSituation.close}"</p>
+                                            </div>
+                                        )}
                                         <button
                                             onClick={handleGenerateScript}
                                             disabled={isGeneratingScript}
                                             className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all ${isGeneratingScript ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-500/20'}`}
                                         >
                                             {isGeneratingScript
-                                                ? <><span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span> GENERATING ({scriptProgress}%)</>
+                                                ? <><span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span> {scriptProgress >= 88 ? `맞춤법 검사 중... (${scriptProgress}%)` : `GENERATING (${scriptProgress}%)`}</>
                                                 : <><span className="material-symbols-outlined text-2xl">auto_awesome</span> GENERATE SCRIPT</>
                                             }
                                         </button>
@@ -2483,8 +3141,8 @@ ${themesBlock}
                                                 </div>
                                             )}
                                             <div className="space-y-1 max-h-48 overflow-y-auto">
-                                                {scriptLogs.map((log, i) => (
-                                                    <p key={i} className={`text-xs font-mono ${log.includes('❌') ? 'text-red-400' : log.includes('✨') ? 'text-emerald-400' : 'text-slate-400'}`}>{log}</p>
+                                                {Array.isArray(scriptLogs) && scriptLogs.map((log, i) => (
+                                                    <p key={i} className={`text-xs font-mono ${String(log).includes('❌') ? 'text-red-400' : String(log).includes('✨') ? 'text-emerald-400' : String(log).includes('📝') || String(log).includes('맞춤법') ? 'text-yellow-400' : 'text-slate-400'}`}>{String(log)}</p>
                                                 ))}
                                             </div>
                                         </div>
@@ -2495,13 +3153,13 @@ ${themesBlock}
                                 <div className="space-y-6">
                                     <div className="bg-white/3 border border-white/8 rounded-[24px] p-8">
                                         <div className="flex items-center justify-between mb-5">
-                                            <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">STEP 3 · 대본 미리보기</p>
-                                            {generatedScript.length > 0 && (
-                                                <span className="text-slate-500 text-xs">{generatedScript.length}턴 · {generatedScript.reduce((s, t) => s + t.text.replace(/[\s\uFEFF\xA0]/g, '').length, 0).toLocaleString()}자</span>
+                                            <p id="step3-preview" className="text-emerald-400 text-xs font-black uppercase tracking-widest">STEP 3 · 대본 미리보기</p>
+                                            {Array.isArray(generatedScript) && generatedScript.length > 0 && (
+                                                <span className="text-slate-500 text-xs">{generatedScript.length}턴 · {generatedScript.reduce((s, t) => s + (t?.text ? t.text.replace(/[\s\uFEFF\xA0]/g, '').length : 0), 0).toLocaleString()}자</span>
                                             )}
                                         </div>
 
-                                        {generatedScript.length === 0 ? (
+                                        {(!Array.isArray(generatedScript) || generatedScript.length === 0) ? (
                                             <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
                                                 대본을 생성하면 여기에 미리보기가 표시됩니다.
                                             </div>
@@ -2541,8 +3199,11 @@ ${themesBlock}
 
                                                 {/* Script Bubble List */}
                                                 <div className="space-y-4">
-                                                    {generatedScript.map((line, i) => (
-                                                        <div key={i} className={`flex gap-3 ${line.speaker === (scriptForm.speakerA || 'James') ? '' : 'flex-row-reverse'}`}>
+                                                    {Array.isArray(generatedScript) && generatedScript.map((line, i) => {
+                                                        if (!line) return null;
+                                                        const isSpeakerA = line.speaker === (scriptForm.speakerA || 'James');
+                                                        return (
+                                                        <div key={i} className={`flex gap-3 ${isSpeakerA ? '' : 'flex-row-reverse'}`}>
                                                             <div className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black flex-shrink-0 shadow-lg ${line.speaker === (scriptForm.speakerA || 'James') ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20' : 'bg-pink-600/20 text-pink-400 border border-pink-500/20'}`}>
                                                                 {line.speaker?.[0] ?? '?'}
                                                             </div>
@@ -2575,7 +3236,8 @@ ${themesBlock}
                                                                 />
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         )}
@@ -2587,7 +3249,7 @@ ${themesBlock}
                                                     <div className="p-8 border-b border-white/5 flex items-center justify-between">
                                                         <div>
                                                             <h4 className="text-white font-black text-2xl uppercase tracking-tight">Script Master Editor</h4>
-                                                            <p className="text-slate-500 text-xs font-bold mt-1">각 대사의 텍스트를 자유롭게 수정하세요. (턴 수: {generatedScript.length})</p>
+                                                            <p className="text-slate-500 text-xs font-bold mt-1">각 대사의 텍스트를 자유롭게 수정하세요. (턴 수: {Array.isArray(generatedScript) ? generatedScript.length : 0})</p>
                                                         </div>
                                                         <button
                                                             onClick={() => setIsScriptEditorOpen(false)}
@@ -2598,10 +3260,13 @@ ${themesBlock}
                                                     </div>
 
                                                     <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-black/20">
-                                                        {generatedScript.map((line, idx) => (
+                                                        {Array.isArray(generatedScript) && generatedScript.map((line, idx) => {
+                                                            if (!line) return null;
+                                                            const isSpeakerA = line.speaker === (scriptForm.speakerA || 'James');
+                                                            return (
                                                             <div key={idx} className="flex gap-4 group">
                                                                 <div className="w-20 shrink-0 text-right space-y-1 pt-3">
-                                                                    <p className={`text-[10px] font-black uppercase ${line.speaker === scriptForm.speakerA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker}</p>
+                                                                    <p className={`text-[10px] font-black uppercase ${isSpeakerA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker || '?'}</p>
                                                                     <p className="text-[9px] text-slate-700 font-mono italic">LINE #{idx + 1}</p>
                                                                 </div>
                                                                 <textarea
@@ -2617,7 +3282,8 @@ ${themesBlock}
                                                                     }}
                                                                 />
                                                             </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
 
                                                     <div className="p-8 border-t border-white/5 bg-[#1a1d23] flex justify-end gap-4">
@@ -2643,7 +3309,7 @@ ${themesBlock}
                                     </div>
 
                                     {/* 다운로드 + TTS 버튼 */}
-                                    {generatedScript.length > 0 && (
+                                    {Array.isArray(generatedScript) && generatedScript.length > 0 && (
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <button

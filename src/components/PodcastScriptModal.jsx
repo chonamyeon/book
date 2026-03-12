@@ -34,24 +34,27 @@ export default function PodcastScriptModal() {
     } = useAudio();
 
     const localScript = scriptModalBookId ? (bookScripts[scriptModalBookId] || null) : null;
-    const [firestoreScript, setFirestoreScript] = useState([]);
+    const [firestoreScript, setFirestoreScript] = useState(null);
 
     useEffect(() => {
-        if (!scriptModalBookId || localScript) { setFirestoreScript([]); return; }
+        if (!scriptModalBookId) { setFirestoreScript(null); return; }
+        // Firestore 우선 — 새로 생성된 대본이 있으면 항상 최신 버전 사용
         getDoc(doc(db, 'scripts', scriptModalBookId)).then(snap => {
             if (snap.exists()) {
                 const lines = snap.data().lines || [];
                 setFirestoreScript(lines.map(l => ({
-                    role: l.speaker === '스텔라' ? 'B' : 'A',
+                    // { speaker } 포맷과 { role } 포맷 둘 다 처리
+                    role: l.role || (l.speaker === '스텔라' ? 'B' : 'A'),
                     text: l.text,
                 })));
             } else {
-                setFirestoreScript([]);
+                setFirestoreScript(null);
             }
-        }).catch(() => setFirestoreScript([]));
-    }, [scriptModalBookId, localScript]);
+        }).catch(() => setFirestoreScript(null));
+    }, [scriptModalBookId]);
 
-    const script = localScript || firestoreScript;
+    // Firestore 우선, 없으면 로컬 bookScripts 폴백
+    const script = (firestoreScript && firestoreScript.length > 0) ? firestoreScript : (localScript || []);
     const chatEndRef = useRef(null);
     const containerRef = useRef(null);
     const [userScrolled, setUserScrolled] = useState(false);

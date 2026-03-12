@@ -7,6 +7,7 @@ import { useBookData } from '../hooks/useBookData';
 import { useAudio } from '../contexts/AudioContext';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
+import InsightBanner from '../components/InsightBanner';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
@@ -166,17 +167,17 @@ export default function Home() {
                 {/* 🏠 Header Navigation */}
                 <main className="flex-grow pb-32">
                     {/* Independent Header Area - Positioned above the image */}
-                    <div className="bg-[#101218] px-3 pt-[5px] pb-3">
+                    <div className="bg-[#101218] px-3 pb-3" style={{ paddingTop: 'calc(5px + env(safe-area-inset-top, 0px))' }}>
                         <header className="flex items-center justify-between">
                             <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-start">
                                 <div className="flex items-center gap-[7px]">
                                     {/* 🔊 Gray Waveform Graphic Logo */}
                                     <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]">
-                                        <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                                        <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                                        <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                                        <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                                        <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-sm" />
+                                        <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-none" />
+                                        <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-none" />
+                                        <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-none" />
+                                        <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-none" />
+                                        <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-none" />
                                     </div>
                                     <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                                 </div>
@@ -239,7 +240,7 @@ export default function Home() {
                                     <button
                                         key={chip}
                                         onClick={() => navigate(`/category/${chipToIdMap[chip]}`)}
-                                        className="px-5 py-2 rounded-full border bg-white/5 border-white/10 text-white/40 text-[12px] font-black whitespace-nowrap transition-all active:scale-95 shadow-lg hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500"
+                                        className="px-5 py-2 rounded-none border bg-white/5 border-white/10 text-white/40 text-[12px] font-black whitespace-nowrap transition-all active:scale-95 shadow-lg hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500"
                                     >
                                         #{chip}
                                     </button>
@@ -249,7 +250,7 @@ export default function Home() {
 
                         {/* ⭐ Social Proof Section */}
                         <div className="relative z-10 px-6 pb-6 pt-0">
-                            <div className="glass-card bg-zinc-900/40 border border-white/5 rounded-sm p-4 text-center">
+                            <div className="glass-card bg-zinc-900/40 border border-white/5 rounded-none p-4 text-center">
                                 <div className="flex items-center justify-center gap-1 mb-2">
                                     {[1, 2, 3, 4, 5].map(star => (
                                         <span key={star} className="material-symbols-outlined text-orange-500 text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
@@ -275,13 +276,14 @@ export default function Home() {
                             </div>
                         </div>
 
-                        {/* 2️⃣ Weekly Focus */}
-                        <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-sm pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+ 
+                         {/* 2️⃣ Weekly Focus */}
+                        <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Weekly Focus</h2>
                                     <div className="flex items-center gap-2">
-                                        <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                        <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">매주 무료로 청취하는 위클리 포커스</p>
                                     </div>
                                 </div>
@@ -289,13 +291,13 @@ export default function Home() {
                             {weeklyFocusBooks.length === 0 && booksLoading ? (
                                 // 첫 방문자용 스켈레톤 (Firestore 로딩 중)
                                 [0, 1].map(i => (
-                                    <div key={i} className="glass-card rounded-sm p-4 flex gap-5 items-center border border-white/5 animate-pulse">
-                                        <div className="w-[70px] h-[98px] rounded-sm bg-white/10 flex-shrink-0" />
+                                    <div key={i} className="glass-card rounded-none p-4 flex gap-5 items-center border border-white/5 animate-pulse">
+                                        <div className="w-[70px] h-[98px] rounded-none bg-white/10 flex-shrink-0" />
                                         <div className="flex-grow space-y-2">
                                             <div className="h-4 bg-white/10 rounded w-3/4" />
                                             <div className="h-3 bg-white/5 rounded w-full" />
                                             <div className="flex gap-1 mt-3">
-                                                {[0, 1, 2, 3].map(j => <div key={j} className="flex-1 h-6 bg-white/5 rounded-sm" />)}
+                                                {[0, 1, 2, 3].map(j => <div key={j} className="flex-1 h-6 bg-white/5 rounded-none" />)}
                                             </div>
                                         </div>
                                     </div>
@@ -308,8 +310,8 @@ export default function Home() {
                                 const isThisPlaying = podcastPlaying && podcastInfo?.id === book.id;
                                 return (
                                     <div key={idx} className="relative group">
-                                        <div onClick={() => navigate(`/review/${book.id}`)} className="cursor-pointer glass-card rounded-sm p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
-                                            <div className="w-[70px] h-[98px] rounded-sm overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
+                                        <div onClick={() => navigate(`/review/${book.id}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
+                                            <div className="w-[70px] h-[98px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
                                                 <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} />
                                             </div>
                                             <div className="flex-grow min-w-0">
@@ -331,7 +333,7 @@ export default function Home() {
                                                     <Link
                                                         to={`/review/${book.id}`}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
                                                     >
                                                         리뷰
                                                     </Link>
@@ -342,7 +344,7 @@ export default function Home() {
                                                             const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`;
                                                             openScriptModal(book.id, audioUrl, book.title, book.cover);
                                                         }}
-                                                        className={`flex-1 flex items-center justify-center py-1.5 rounded-sm border text-[9.5px] font-black transition-all whitespace-nowrap ${isThisPlaying
+                                                        className={`flex-1 flex items-center justify-center py-1.5 rounded-none border text-[9.5px] font-black transition-all whitespace-nowrap ${isThisPlaying
                                                             ? 'bg-orange-500 text-white border-orange-500 animate-pulse'
                                                             : 'bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20'
                                                             }`}
@@ -355,7 +357,7 @@ export default function Home() {
                                                             e.stopPropagation();
                                                             addToLibrary(book);
                                                         }}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
                                                     >
                                                         서재추가
                                                     </button>
@@ -364,7 +366,7 @@ export default function Home() {
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
                                                     >
                                                         구매하기
                                                     </a>
@@ -384,11 +386,11 @@ export default function Home() {
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5">직장인이 가장 많이 듣는 인사이트</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                    <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">지금 직장인의 고민으로 가장 많이 듣는 인사이트</p>
                                 </div>
                             </div>
-                            <Link to="/archive" className="size-10 rounded-xl border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
+                            <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
                                 <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
                             </Link>
                         </div>
@@ -401,7 +403,7 @@ export default function Home() {
                                     <Link
                                         key={i}
                                         to={targetLink}
-                                        className="relative group block w-full min-h-[160px] rounded-sm overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                                        className="relative group block w-full min-h-[160px] rounded-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900 transition-all hover:scale-[1.01] active:scale-[0.98]"
                                     >
                                         {/* Background Image & Advanced Overlays */}
                                         <div className="absolute inset-0 pointer-events-none">
@@ -423,7 +425,7 @@ export default function Home() {
                                         <div className="relative h-full min-h-[160px] p-7 flex flex-col justify-end z-10 w-full">
                                             {/* Category Pill (Glassmorphism) */}
                                             <div className="mb-3">
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-xl border border-white/10 text-[12.5px] font-black text-white uppercase tracking-widest drop-shadow-md">
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-none bg-white/10 backdrop-blur-xl border border-white/10 text-[12.5px] font-black text-white uppercase tracking-widest drop-shadow-md">
                                                     <span className="text-orange-500 mr-1.5">🎧</span>
                                                     {cat.subLabel.replace(/[()]/g, '')}
                                                 </span>
@@ -436,7 +438,7 @@ export default function Home() {
                                             </h3>
 
                                             {/* Hover Detail (Optional hint) */}
-                                            <div className="absolute right-6 bottom-6 size-10 rounded-xl bg-white/5 backdrop-blur-2xl border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                                            <div className="absolute right-6 bottom-6 size-10 rounded-none bg-white/5 backdrop-blur-2xl border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
                                                 <span className="material-symbols-outlined text-white text-xl">arrow_outward</span>
                                             </div>
                                         </div>
@@ -454,11 +456,11 @@ export default function Home() {
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">주간 최다 조회 아카이뷰</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                    <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번주 가장 많이 들은 아카이뷰</p>
                                 </div>
                             </div>
-                            <Link to="/archive" className="size-10 rounded-xl border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
+                            <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
                                 <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
                             </Link>
                         </div>
@@ -467,7 +469,7 @@ export default function Home() {
                                 <div key={i} className={`flex items-start gap-3 pb-5 ${i !== enrichedPopularArchives.length - 1 ? 'border-b border-white/5' : ''}`}>
                                     <span className="text-3xl font-black text-white/10 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
                                     <Link to={`/review/${item.id}`} className="flex-shrink-0">
-                                        <div className="w-[60px] h-[82px] rounded-lg overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
+                                        <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
                                             {item.cover
                                                 ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
                                                 : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-xl">menu_book</span></div>
@@ -485,16 +487,16 @@ export default function Home() {
                                             <span className="text-[9px] font-black text-white/30">📖 5분</span>
                                         </div>
                                         <div className="flex gap-1">
-                                            <Link to={`/review/${item.id}`} className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                            <Link to={`/review/${item.id}`} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                 리뷰
                                             </Link>
-                                            <button onClick={(e) => { e.stopPropagation(); const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
+                                            <button onClick={(e) => { e.stopPropagation(); const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
                                                 ▶ 재생하기
                                             </button>
-                                            <button onClick={() => addToLibrary(item)} className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                            <button onClick={() => addToLibrary(item)} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                 서재추가
                                             </button>
-                                            <a href={item.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center py-1.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                            <a href={item.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                 구매하기
                                             </a>
                                         </div>
@@ -519,11 +521,11 @@ export default function Home() {
                                 <div>
                                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">아카이뷰 Originals</h2>
                                     <div className="flex items-center gap-2">
-                                        <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                        <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">아카이뷰 만에 특별한 오리지널 컨텐츠</p>
                                     </div>
                                 </div>
-                                <Link to="/archive" className="size-10 rounded-sm border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
+                                <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
                                     <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
                                 </Link>
                             </div>
@@ -532,12 +534,12 @@ export default function Home() {
                                 {originalContents.map((content) => (
                                     <div
                                         key={content.id}
-                                        className="glass-card rounded-sm p-4 flex gap-5 border border-white/5 shadow-2xl overflow-hidden relative"
+                                        className="glass-card rounded-none p-4 flex gap-5 border border-white/5 shadow-2xl overflow-hidden relative"
                                     >
                                         {/* Left: Image (Reduced size) */}
                                         <div
                                             onClick={() => navigate(`/review/${content.id}`)}
-                                            className="w-[110px] shrink-0 aspect-[3.5/5] rounded-lg overflow-hidden border border-white/10 shadow-lg cursor-pointer group"
+                                            className="w-[110px] shrink-0 aspect-[3.5/5] rounded-none overflow-hidden border border-white/10 shadow-lg cursor-pointer group"
                                         >
                                             <img
                                                 src={content.cover}
@@ -558,16 +560,16 @@ export default function Home() {
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2 mt-3">
-                                                <Link to={`/review/${content.id}`} className="flex items-center justify-center py-2.5 rounded-sm bg-white/10 border border-white/20 text-[9.5px] font-black text-white hover:bg-white/20 transition-all whitespace-nowrap">
+                                                <Link to={`/review/${content.id}`} className="flex items-center justify-center py-2.5 rounded-none bg-white/10 border border-white/20 text-[9.5px] font-black text-white hover:bg-white/20 transition-all whitespace-nowrap">
                                                     리뷰
                                                 </Link>
-                                                <button onClick={(e) => { e.stopPropagation(); const audioUrl = content.podcastFile || content.voiceAudioUrl || content.audioUrl || `/audio/${content.id}.mp3`; openScriptModal(content.id, audioUrl, content.title, content.cover); }} className="flex items-center justify-center py-2.5 rounded-sm bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
+                                                <button onClick={(e) => { e.stopPropagation(); const audioUrl = content.podcastFile || content.voiceAudioUrl || content.audioUrl || `/audio/${content.id}.mp3`; openScriptModal(content.id, audioUrl, content.title, content.cover); }} className="flex items-center justify-center py-2.5 rounded-none bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
                                                     ▶ 재생하기
                                                 </button>
-                                                <button onClick={() => addToLibrary(content)} className="flex items-center justify-center py-2.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                                <button onClick={() => addToLibrary(content)} className="flex items-center justify-center py-2.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                     서재추가
                                                 </button>
-                                                <a href={content.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-2.5 rounded-sm bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                                <a href={content.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-2.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                     구매하기
                                                 </a>
                                             </div>
@@ -586,7 +588,7 @@ export default function Home() {
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">유명인들의 추천 아카이뷰</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                    <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">유명 셀럽들이 추천했던 도서 컬렉션</p>
                                 </div>
                             </div>
@@ -594,8 +596,8 @@ export default function Home() {
 
                         <div className="grid grid-cols-2 gap-3">
                             {(showAllCelebs ? celebrities.filter(c => !c.id.includes('editor') && !c.id.includes('original') && !c.id.includes('guru')) : celebrities.filter(c => !c.id.includes('editor') && !c.id.includes('original') && !c.id.includes('guru')).slice(0, 6)).map((celeb) => (
-                                <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="flex flex-col items-center bg-white/5 border border-white/10 rounded-xl p-4 group transition-all duration-300 hover:bg-white/10 hover:border-white/30 shadow-lg">
-                                    <div className="w-full aspect-square rounded-xl overflow-hidden mb-3 shadow-inner">
+                                <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="flex flex-col items-center bg-white/5 border border-white/10 rounded-none p-4 group transition-all duration-300 hover:bg-white/10 hover:border-white/30 shadow-lg">
+                                    <div className="w-full aspect-square rounded-none overflow-hidden mb-3 shadow-inner">
                                         <img src={celeb.image} alt={celeb.name} loading="lazy" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-110" />
                                     </div>
                                     <h4 className="text-[14px] font-black tracking-tight text-white mb-1 truncate w-full text-center drop-shadow-md">{celeb.name === '김남준 (RM)' ? 'RM (BTS)' : celeb.name}</h4>
@@ -605,7 +607,7 @@ export default function Home() {
                         </div>
                         <button
                             onClick={() => setShowAllCelebs(!showAllCelebs)}
-                            className="w-full mt-6 py-3.5 rounded-xl border border-white/10 text-white/50 text-[11px] font-black tracking-widest uppercase hover:bg-white/5 hover:text-white transition-colors"
+                            className="w-full mt-6 py-3.5 rounded-none border border-white/10 text-white/50 text-[11px] font-black tracking-widest uppercase hover:bg-white/5 hover:text-white transition-colors"
                         >
                             {showAllCelebs ? '접기 (SHOW LESS)' : '더보기 (SEE MORE)'}
                         </button>
@@ -625,19 +627,19 @@ export default function Home() {
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">아카이뷰 유료 멤버십 안내</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-[2px] bg-orange-500 rounded-sm"></div>
+                                    <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Membership Guide</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="glass-card rounded-sm p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+                        <div className="glass-card rounded-none p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">
                             {/* Subtle background glow */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-full pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-none pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 {/* Free Column */}
-                                <div className="bg-black/40 border border-white/5 rounded-sm p-4 relative z-10">
+                                <div className="bg-black/40 border border-white/5 rounded-none p-4 relative z-10">
                                     <h3 className="text-[12px] font-black text-white/50 text-center mb-4 uppercase tracking-widest border-b border-white/5 pb-2">일반 회원</h3>
                                     <ul className="space-y-3">
                                         <li className="flex items-center gap-2">
@@ -664,8 +666,8 @@ export default function Home() {
                                 </div>
 
                                 {/* Premium Column */}
-                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-sm p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)]">
-                                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-sm shadow-lg">PRO</div>
+                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-none p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)]">
+                                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
                                     <h3 className="text-[12px] font-black text-orange-500 text-center mb-4 uppercase tracking-widest border-b border-orange-500/20 pb-2">프리미엄</h3>
                                     <ul className="space-y-3">
                                         <li className="flex items-center gap-2">
@@ -684,7 +686,7 @@ export default function Home() {
                                             <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
                                             <span className="text-[11px] font-bold text-white/90">핵심 실천 가이드 제공</span>
                                         </li>
-                                        <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-sm border border-orange-500/20 mt-3 shadow-inner">
+                                        <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-none border border-orange-500/20 mt-3 shadow-inner">
                                             <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>
                                             <div className="flex-1 mt-0.5">
                                                 <span className="text-[11px] font-black text-orange-400 block mb-0.5 tracking-tight">기록노트 연동 성취 트래커</span>
@@ -718,7 +720,7 @@ export default function Home() {
 
                             {/* Step 1 */}
                             <div className="flex gap-4 items-start relative z-10">
-                                <div className="w-12 h-12 rounded-sm bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
+                                <div className="w-12 h-12 rounded-none bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
                                     <span className="material-symbols-outlined text-white/60">menu_book</span>
                                 </div>
                                 <div className="pt-2">
@@ -729,7 +731,7 @@ export default function Home() {
 
                             {/* Step 2 */}
                             <div className="flex gap-4 items-start relative z-10">
-                                <div className="w-12 h-12 rounded-sm bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
+                                <div className="w-12 h-12 rounded-none bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
                                     <span className="material-symbols-outlined text-orange-500">headphones</span>
                                 </div>
                                 <div className="pt-2">
@@ -740,7 +742,7 @@ export default function Home() {
 
                             {/* Step 3 */}
                             <div className="flex gap-4 items-start relative z-10">
-                                <div className="w-12 h-12 rounded-sm bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
+                                <div className="w-12 h-12 rounded-none bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
                                     <span className="material-symbols-outlined text-white/60">auto_awesome</span>
                                 </div>
                                 <div className="pt-2">
@@ -763,21 +765,21 @@ export default function Home() {
                     >
                         <div className="relative group">
                             {/* Card Background Bloom */}
-                            <div className="absolute inset-0 bg-orange-600/5 blur-[50px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                            <div className="absolute inset-0 bg-orange-600/5 blur-[50px] rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-                            <div className="relative glass-card bg-zinc-900/40 rounded-sm p-10 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+                            <div className="relative glass-card bg-zinc-900/40 rounded-none p-10 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
                                 <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">커피 한 잔 가격으로</h2>
                                 <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">성공한 사람들의 생각을 듣다</p>
 
                                 <button
                                     onClick={() => navigate('/membership')}
-                                    className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-sm font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] mb-6"
+                                    className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-none font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] mb-6"
                                 >
                                     <span className="material-symbols-outlined text-[20px] font-black">rocket_launch</span>
                                     지금 시작하기
                                 </button>
 
-                                <div onClick={() => navigate('/membership')} className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer py-1 px-3 rounded-full hover:bg-white/5">
+                                <div onClick={() => navigate('/membership')} className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer py-1 px-3 rounded-none hover:bg-white/5">
                                     <span className="text-[12px] font-black tracking-widest uppercase">월 4,900원</span>
                                     <span className="material-symbols-outlined text-[14px] font-black">arrow_forward_ios</span>
                                 </div>

@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { useBookData } from '../hooks/useBookData';
 import { useAudio } from '../contexts/AudioContext';
+import InsightBanner from '../components/InsightBanner';
+import { availableAudio } from '../data/availableAudio';
 
 const categoriesInfo = [
     {
@@ -66,12 +68,17 @@ export default function Editorial() {
     const navigate = useNavigate();
     const scrollContainerRef = useRef(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState(categoriesInfo[0].id);
+    const [showAllBooks, setShowAllBooks] = useState(false);
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { openScriptModal } = useAudio();
 
     const allBooks = useMemo(() => {
         return getAllBooks();
     }, [getAllBooks]);
+
+    useEffect(() => {
+        setShowAllBooks(false);
+    }, [selectedCategoryId]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -88,7 +95,7 @@ export default function Editorial() {
     }, []);
 
     const filterBooksByCategory = (catId) => {
-        return allBooks
+        const filtered = allBooks
             .filter(book => {
                 const bCat = (book.category || '').toLowerCase();
                 const bSec = (book.section || '').toUpperCase();
@@ -98,8 +105,9 @@ export default function Editorial() {
                 if (catId === 'HUMANITIES') return bCat.includes('인문') || bCat.includes('역사') || bSec === 'PHILOSOPHY';
                 if (catId === 'PSYCHOLOGY') return bCat.includes('심리') || bSec === 'HEALING';
                 return false;
-            })
-            .slice(0, 5);
+            });
+
+        return showAllBooks ? filtered : filtered.slice(0, 5);
     };
 
     const addToLibrary = (book) => {
@@ -116,7 +124,7 @@ export default function Editorial() {
         return (
             <div className="bg-[#0e1015] min-h-screen flex items-center justify-center font-display">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-2 border-orange-500/20 border-t-orange-500 rounded-none animate-spin" />
                     <span className="text-orange-500 text-[10px] font-bold tracking-widest uppercase">Archiview</span>
                 </div>
             </div>
@@ -132,10 +140,14 @@ export default function Editorial() {
                     {/* 🚀 1. Weekly Insight Section */}
                     <section className="relative h-[480px] w-full overflow-hidden mb-12">
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0e1015] via-[#0e1015]/40 to-transparent z-10"></div>
-                        <img
-                            src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1600&auto=format&fit=crop"
+                        <video
+                            src="/images/Figure_walking2.mp4"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
                             className="absolute inset-0 w-full h-full object-cover"
-                            alt="Weekly Insight Background"
+                            style={{ transform: 'scale(1.1) translateX(30px)' }}
                         />
                         <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                             <div className="flex items-center gap-3 mb-4">
@@ -158,17 +170,17 @@ export default function Editorial() {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="text-orange-500 font-bold text-xs tracking-[0.3em] uppercase"
                                 >
-                                    Weekly Insight
+                                    THE ART OF TIME
                                 </motion.span>
                             </div>
                             <motion.h2
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="text-5xl font-light leading-tight tracking-tighter mb-4"
+                                className="text-[35px] font-light leading-tight tracking-tighter mb-4"
                             >
-                                시간의 흔적,<br />
-                                <span className="font-bold">기록의 가치</span>
+                                모두 흘려보낼 때<br />
+                                <span className="font-bold">당신은 채워갑니다</span>
                             </motion.h2>
                             <motion.p
                                 initial={{ opacity: 0 }}
@@ -176,10 +188,13 @@ export default function Editorial() {
                                 transition={{ delay: 0.2 }}
                                 className="text-white/60 text-sm max-w-xs leading-relaxed"
                             >
-                                변하지 않는 본질을 찾는 성공한 사람들의 시선과 기록에 대한 깊은 사유.
+                                누구에게나 시간은 공평하게 흐르지만<br />
+                                그 시간을 무엇으로 채우느냐가<br />
+                                내일의 당신을 결정합니다
                             </motion.p>
                         </div>
                     </section>
+
 
                     {/* 🚀 2. Trending Now Horizontal Scroll */}
                     <section className="relative">
@@ -193,7 +208,7 @@ export default function Editorial() {
                                 onClick={() => {
                                     if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' })
                                 }}
-                                className="absolute left-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-full text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
+                                className="absolute left-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-none text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
                             >
                                 <span className="material-symbols-outlined text-[32px] font-light">chevron_left</span>
                             </button>
@@ -203,7 +218,7 @@ export default function Editorial() {
                                 onClick={() => {
                                     if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' })
                                 }}
-                                className="absolute right-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-full text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
+                                className="absolute right-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-none text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
                             >
                                 <span className="material-symbols-outlined text-[32px] font-light">chevron_right</span>
                             </button>
@@ -216,8 +231,8 @@ export default function Editorial() {
                                         onClick={() => navigate(`/category/${item.id}`)}
                                         className="flex-none w-[200px] group cursor-pointer"
                                     >
-                                        <div className="relative aspect-[3/4] rounded-sm overflow-hidden mb-3 border border-white/5 shadow-2xl">
-                                            <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-sm flex items-center justify-center font-black text-xs">
+                                        <div className="relative aspect-[3/4] rounded-none overflow-hidden mb-3 border border-white/5 shadow-2xl">
+                                            <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-none flex items-center justify-center font-black text-xs">
                                                 0{idx + 1}
                                             </div>
                                             <img src={item.img} alt={item.label} className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
@@ -235,13 +250,13 @@ export default function Editorial() {
                     <div className="px-6 my-[28px]">
                         <div className="h-[1px] bg-white/5 w-full"></div>
                     </div>
-                    <section className="px-6 mb-12 sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
+                    <section className="px-6 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
                         <div className="flex overflow-x-auto no-scrollbar gap-3">
                             {categoriesInfo.map((cat) => (
                                 <button
                                     key={`tab-${cat.id}`}
                                     onClick={() => setSelectedCategoryId(cat.id)}
-                                    className={`px-5 py-2.5 rounded-sm border flex-none text-[13px] font-black tracking-tight whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-orange-600/50'}`}
+                                    className={`px-5 py-2.5 rounded-none border flex-none text-[13px] font-black tracking-tight whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-orange-600/50'}`}
                                 >
                                     {cat.label}
                                 </button>
@@ -258,9 +273,9 @@ export default function Editorial() {
                                 <article key={cat.id} id={`section-${cat.id}`} className="flex flex-col space-y-8 scroll-mt-36">
                                     {/* Category Header (Article Style) */}
                                     <div className="space-y-6">
-                                        <div className="relative w-full aspect-[16/9] rounded-sm overflow-hidden group shadow-2xl border border-white/5 cursor-pointer" onClick={() => navigate(`/category/${cat.id}`)}>
+                                        <div className="relative w-full aspect-[16/9] rounded-none overflow-hidden group shadow-2xl border border-white/5 cursor-pointer" onClick={() => navigate(`/category/${cat.id}`)}>
                                             <img src={cat.img} alt={cat.label} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                                            <div className="absolute top-4 right-4 bg-[#0e1015]/80 backdrop-blur-md px-4 py-1.5 rounded-sm border border-white/10 shadow-lg">
+                                            <div className="absolute top-4 right-4 bg-[#0e1015]/80 backdrop-blur-md px-4 py-1.5 rounded-none border border-white/10 shadow-lg">
                                                 <span className="text-[10px] text-orange-500 font-black tracking-widest uppercase">{cat.label}</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -272,13 +287,13 @@ export default function Editorial() {
                                                 <p className="text-white/40 text-[13px] leading-relaxed line-clamp-2 mb-4">{cat.sub}</p>
                                                 <div className="flex items-center gap-4 text-[10px] font-black text-white/20 uppercase tracking-[0.1em]">
                                                     <span>{cat.readTime}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-orange-500/40"></span>
+                                                    <span className="w-1 h-1 rounded-none bg-orange-500/40"></span>
                                                     <span>BY {cat.author}</span>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => navigate(`/category/${cat.id}`)}
-                                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-3 rounded-sm flex items-center gap-2 shadow-xl shadow-orange-600/20 active:scale-95 transition-all shrink-0"
+                                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-3 rounded-none flex items-center gap-2 shadow-xl shadow-orange-600/20 active:scale-95 transition-all shrink-0"
                                             >
                                                 <span className="material-symbols-outlined !text-xl fill-1">play_arrow</span>
                                                 <span className="font-bold text-sm tracking-tight">Listen</span>
@@ -287,68 +302,84 @@ export default function Editorial() {
                                     </div>
 
                                     {/* Embedded Book List (Vertical 5 books) */}
-                                    <div className="bg-white/5 rounded-sm p-6 space-y-10 border border-white/5">
+                                    <div className="bg-white/5 rounded-none p-6 space-y-10 border border-white/5">
                                         <div className="flex items-center justify-between mb-2">
                                             <h4 className="text-xs font-black text-orange-500 uppercase tracking-widest">Recommended Books</h4>
                                             <span className="text-[10px] text-white/30 font-bold uppercase">5 Picked</span>
                                         </div>
-                                        {books.map((item, idx) => (
-                                            <motion.div
-                                                key={item.id}
-                                                className="space-y-6"
-                                                initial={{ opacity: 0, y: 10 }}
-                                                whileInView={{ opacity: 1, y: 0 }}
-                                                viewport={{ once: true }}
-                                                transition={{ delay: idx * 0.05 }}
+                                        {books.map((item, idx) => {
+                                            const audioFileName = `${item.id}.mp3`;
+                                            const durationSec = availableAudio[audioFileName] || 0;
+                                            const durationMin = durationSec > 0 ? Math.ceil(durationSec / 60) : 15; // default 15
+                                            const readTimeMin = Math.ceil(durationMin / 3); // Reading is usually faster
+
+                                            return (
+                                                <motion.div
+                                                    key={item.id}
+                                                    className="space-y-6"
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    whileInView={{ opacity: 1, y: 0 }}
+                                                    viewport={{ once: true }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                >
+                                                    <div className="flex gap-4 group items-start">
+                                                        <div className="w-[100px] aspect-[3/4.2] rounded-none overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id}`)}>
+                                                            <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                            {item.isPodcast && (
+                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 flex flex-col justify-start py-1 h-full max-w-[calc(100%-116px)]">
+                                                            <div className="cursor-pointer mb-4" onClick={() => navigate(`/review/${item.id}`)}>
+                                                                <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mb-1 opacity-60 block">INSIGHT 0{idx + 1}</span>
+                                                                <h5 className="text-white font-black text-[15px] leading-tight mb-1.5 truncate">『{item.title}』</h5>
+                                                                <p className="text-white/40 text-[11px] font-medium italic line-clamp-1 opacity-80">{item.desc || item.author}</p>
+                                                            </div>
+
+                                                            {/* Listen / Read Time Indicators */}
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <div className="flex gap-1 bg-orange-500/10 px-2 py-0.5 rounded-none items-center">
+                                                                    <span className="text-[10px]">🎧</span>
+                                                                    <span className="text-orange-500 text-[10px] font-black">{durationMin}분</span>
+                                                                </div>
+                                                                <div className="flex gap-1 bg-white/5 px-2 py-0.5 rounded-none items-center">
+                                                                    <span className="text-[10px]">📖</span>
+                                                                    <span className="text-white/60 text-[10px] font-black">{readTimeMin}분</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 4 buttons in 2x2 grid (Home page style) */}
+                                                            <div className="grid grid-cols-2 gap-1.5 mt-auto">
+                                                                <button onClick={() => navigate(`/review/${item.id}`)} className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white font-bold text-[11px] flex items-center justify-center">
+                                                                    리뷰
+                                                                </button>
+                                                                <button onClick={() => { if (!item.isPodcast) return; const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className={`h-9 rounded-none border transition-all font-bold text-[11px] flex items-center justify-center gap-1 ${!item.isPodcast ? 'opacity-20 cursor-not-allowed border-[#333] text-white/40' : 'bg-transparent border-orange-500/50 text-orange-500 hover:bg-orange-500/10'}`} disabled={!item.isPodcast}>
+                                                                    <span>▶</span> 재생하기
+                                                                </button>
+                                                                <button onClick={() => addToLibrary(item)} className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
+                                                                    서재추가
+                                                                </button>
+                                                                <a href={item.purchaseLink || `https://search.kyobobook.co.kr/search?keyword=${item.title}`} target="_blank" rel="noopener noreferrer" className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
+                                                                    구매하기
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {idx < books.length - 1 && <div className="h-[1px] w-full bg-white/5 mt-2"></div>}
+                                                </motion.div>
+                                            );
+                                        })}
+
+                                        <div className="pt-4 flex justify-center">
+                                            <button
+                                                onClick={() => setShowAllBooks(!showAllBooks)}
+                                                className="px-8 py-3 rounded-none border border-orange-500/30 bg-orange-500/5 text-orange-500 font-black text-xs tracking-[0.2em] hover:bg-orange-500/10 transition-all active:scale-95"
                                             >
-                                                <div className="flex gap-4 group items-start">
-                                                    <div className="w-[100px] aspect-[3/4.2] rounded-sm overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id}`)}>
-                                                        <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                                        {item.isPodcast && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 flex flex-col justify-start py-1 h-full max-w-[calc(100%-116px)]">
-                                                        <div className="cursor-pointer mb-4" onClick={() => navigate(`/review/${item.id}`)}>
-                                                            <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mb-1 opacity-60 block">INSIGHT 0{idx + 1}</span>
-                                                            <h5 className="text-white font-black text-[15px] leading-tight mb-1.5 truncate">『{item.title}』</h5>
-                                                            <p className="text-white/40 text-[11px] font-medium italic line-clamp-1 opacity-80">{item.desc || item.author}</p>
-                                                        </div>
-
-                                                        {/* Listen / Read Time Indicators */}
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <div className="flex gap-1 bg-orange-500/10 px-2 py-0.5 rounded-sm items-center">
-                                                                <span className="text-[10px]">🎧</span>
-                                                                <span className="text-orange-500 text-[10px] font-black">15분</span>
-                                                            </div>
-                                                            <div className="flex gap-1 bg-white/5 px-2 py-0.5 rounded-sm items-center">
-                                                                <span className="text-[10px]">📖</span>
-                                                                <span className="text-white/60 text-[10px] font-black">5분</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* 4 buttons in 2x2 grid (Home page style) */}
-                                                        <div className="grid grid-cols-2 gap-1.5 mt-auto">
-                                                            <button onClick={() => navigate(`/review/${item.id}`)} className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white font-bold text-[11px] flex items-center justify-center">
-                                                                리뷰
-                                                            </button>
-                                                            <button onClick={() => { if (!item.isPodcast) return; const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className={`h-9 rounded-sm border transition-all font-bold text-[11px] flex items-center justify-center gap-1 ${!item.isPodcast ? 'opacity-20 cursor-not-allowed border-[#333] text-white/40' : 'bg-transparent border-orange-500/50 text-orange-500 hover:bg-orange-500/10'}`} disabled={!item.isPodcast}>
-                                                                <span>▶</span> 재생하기
-                                                            </button>
-                                                            <button onClick={() => addToLibrary(item)} className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
-                                                                서재추가
-                                                            </button>
-                                                            <a href={item.purchaseLink || `https://search.kyobobook.co.kr/search?keyword=${item.title}`} target="_blank" rel="noopener noreferrer" className="h-9 rounded-sm bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
-                                                                구매하기
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {idx < books.length - 1 && <div className="h-[1px] w-full bg-white/5 mt-2"></div>}
-                                            </motion.div>
-                                        ))}
+                                                {showAllBooks ? 'SHOW LESS' : 'VIEW ALL'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </article>
                             );

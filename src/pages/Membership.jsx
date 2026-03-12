@@ -18,7 +18,7 @@ export default function Membership() {
             <main className="pt-12 pb-20">
                 {/* 🎯 Target Audience Hero Section */}
                 <div className="px-8 text-center mb-16 space-y-6">
-                    <div className="inline-block px-4 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                    <div className="inline-block px-4 py-1 rounded-none bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-2">
                         For Busy Professionals
                     </div>
                     <h1 className="text-3xl md:text-4xl text-white font-black leading-tight tracking-tight break-keep">
@@ -37,7 +37,7 @@ export default function Membership() {
 
                     <div className="grid gap-4">
                         {/* Point 1: For Commuters */}
-                        <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] space-y-3 relative overflow-hidden">
+                        <div className="bg-white/5 border border-white/10 p-6 rounded-none space-y-3 relative overflow-hidden">
                             <div className="absolute -right-4 -top-4 opacity-5">
                                 <span className="material-symbols-outlined text-8xl">commute</span>
                             </div>
@@ -51,7 +51,7 @@ export default function Membership() {
                         </div>
 
                         {/* Point 2: For Busy Schedule */}
-                        <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] space-y-3 relative overflow-hidden">
+                        <div className="bg-white/5 border border-white/10 p-6 rounded-none space-y-3 relative overflow-hidden">
                             <div className="absolute -right-4 -top-4 opacity-5">
                                 <span className="material-symbols-outlined text-8xl">schedule</span>
                             </div>
@@ -65,7 +65,7 @@ export default function Membership() {
                         </div>
 
                         {/* Point 3: Global Leader's Insight */}
-                        <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] space-y-3 relative overflow-hidden text-blue-400">
+                        <div className="bg-white/5 border border-white/10 p-6 rounded-none space-y-3 relative overflow-hidden text-blue-400">
                             <div className="absolute -right-4 -top-4 opacity-5">
                                 <span className="material-symbols-outlined text-8xl">psychology</span>
                             </div>
@@ -82,7 +82,7 @@ export default function Membership() {
 
                 {/* 💳 Pricing Pass */}
                 <section className="px-6 mb-12">
-                    <div className="bg-gradient-to-br from-[#1a1d24] to-black border border-gold/30 rounded-[40px] p-10 shadow-2xl relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-[#1a1d24] to-black border border-gold/30 rounded-none p-10 shadow-2xl relative overflow-hidden">
                         <div className="space-y-8 relative z-10">
                             <div className="text-center space-y-2">
                                 <h4 className="text-gold font-black text-xs uppercase tracking-widest">Limited Access</h4>
@@ -113,7 +113,7 @@ export default function Membership() {
 
                             <button
                                 onClick={handleSubscribe}
-                                className="w-full py-5 bg-gold text-primary font-black rounded-2xl shadow-xl hover:brightness-110 active:scale-[0.98] transition-all text-sm"
+                                className="w-full py-5 bg-gold text-primary font-black rounded-none shadow-xl hover:brightness-110 active:scale-[0.98] transition-all text-sm"
                             >
                                 지금 바로 시작하기
                             </button>

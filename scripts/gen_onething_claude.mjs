@@ -45,9 +45,9 @@ function buildPrompt(targetMin, targetMax, turnLimit, extraInstruction = '') {
 - 스텔라 (여성): 처음 접하는 쪽, 현실적인 직장인 감성으로 반응하고 질문
 
 [🔴 절대 준수 사항]
-- 총 턴 수: 정확히 ${turnLimit}턴 (이하)
+- 총 턴 수: 정확히 ${turnLimit}턴
 - 총 대사 글자 수 (공백·줄바꿈 제외): 반드시 ${targetMin}자 ~ ${targetMax}자
-- 각 대사: 반드시 2~5문장 구성, 단독 1문장 대사 금지
+- 각 대사: 반드시 **3~5문장** 구성, 단독 1~2문장 대사 금지
 - 턴당 평균 목표: 약 ${Math.round((targetMin + targetMax) / 2 / turnLimit)}자 (공백 제외)
 - ⚠️ 인트로 금지: "안녕하세요, 저는 제임스입니다" 같은 소개 첫 2줄 절대 금지
 - 첫 대사: 출근길/커피/야근 등 자연스러운 일상 대화로 바로 시작
@@ -95,8 +95,8 @@ async function callClaude(prompt) {
 }
 
 async function main() {
-    const TARGET_MIN = 2800;
-    const TARGET_MAX = 3050;
+    const TARGET_MIN = 2500;
+    const TARGET_MAX = 3000;
     const TURN_LIMIT = 50;
 
     console.log('🚀 원씽 팟캐스트 대본 생성 시작 (Claude claude-sonnet-4-5)');

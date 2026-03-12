@@ -33,8 +33,8 @@ export default function Profile() {
         return (
             <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-10">
-                    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
-                    <div className="size-20 rounded-full border-t-2 border-gold animate-spin"></div>
+                    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-none scale-150 animate-pulse"></div>
+                    <div className="size-20 rounded-none border-t-2 border-gold animate-spin"></div>
                 </div>
                 <h2 className="text-white text-xl font-bold mb-2">인증 확인 중</h2>
                 <p className="text-slate-500 text-sm">잠시만 기다려주세요...</p>
@@ -52,11 +52,11 @@ export default function Profile() {
                 <main className="px-6 pt-8 pb-24 animate-fade-in-up space-y-8">
 
                     {/* Membership Card */}
-                    <div className="relative w-full aspect-[1.58/1] rounded-2xl overflow-hidden shadow-2xl group">
+                    <div className="relative w-full aspect-[1.58/1] rounded-none overflow-hidden shadow-2xl group">
                         {/* Background with texture */}
                         <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-black"></div>
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                        <div className="absolute -top-24 -right-24 size-64 bg-gold/20 blur-[80px] rounded-full"></div>
+                        <div className="absolute -top-24 -right-24 size-64 bg-gold/20 blur-[80px] rounded-none"></div>
 
                         {/* Card Content */}
                         <div className="absolute inset-0 p-6 flex flex-col justify-between">
@@ -65,14 +65,14 @@ export default function Profile() {
                                     <h3 className="serif-title text-gold text-lg italic tracking-wider">The Archiview</h3>
                                     <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] block mt-1">Private Membership</span>
                                 </div>
-                                <div className="size-8 rounded-full border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-sm">
+                                <div className="size-8 rounded-none border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-sm">
                                     <span className="material-symbols-outlined text-white/80 text-sm">fingerprint</span>
                                 </div>
                             </div>
 
                             <div>
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="size-12 rounded-full bg-slate-700 border-2 border-gold/50 overflow-hidden shadow-lg">
+                                    <div className="size-12 rounded-none bg-slate-700 border-2 border-gold/50 overflow-hidden shadow-lg">
                                         <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=0D8ABC&color=fff`} alt={user.displayName} className="w-full h-full object-cover" />
                                     </div>
                                     <div>
@@ -96,15 +96,15 @@ export default function Profile() {
 
                     {/* Stats Row */}
                     <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
                             <span className="block text-2xl font-black text-white mb-1">12</span>
                             <span className="text-[9px] text-slate-400 uppercase tracking-wider">Archived</span>
                         </div>
-                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
                             <span className="block text-2xl font-black text-white mb-1">85</span>
                             <span className="text-[9px] text-slate-400 uppercase tracking-wider">Insights</span>
                         </div>
-                        <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
                             <span className="block text-2xl font-black text-white mb-1">4</span>
                             <span className="text-[9px] text-slate-400 uppercase tracking-wider">Badges</span>
                         </div>
@@ -114,10 +114,10 @@ export default function Profile() {
                     <div className="space-y-4">
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My archiview</h4>
 
-                        <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+                        <div className="bg-white/5 rounded-none overflow-hidden border border-white/5 divide-y divide-white/5">
                             <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                    <div className="size-8 rounded-none bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                                         <span className="material-symbols-outlined text-lg">book_2</span>
                                     </div>
                                     <span className="text-sm text-slate-200 font-medium">나의 서재</span>
@@ -126,7 +126,7 @@ export default function Profile() {
                             </button>
                             <button onClick={() => navigate('/reading-notes')} className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                                    <div className="size-8 rounded-none bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
                                         <span className="material-symbols-outlined text-lg">edit_note</span>
                                     </div>
                                     <span className="text-sm text-slate-200 font-medium">독서 노트</span>
@@ -135,7 +135,7 @@ export default function Profile() {
                             </button>
                             <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                                    <div className="size-8 rounded-none bg-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
                                         <span className="material-symbols-outlined text-lg">bookmark</span>
                                     </div>
                                     <span className="text-sm text-slate-200 font-medium">스크랩북</span>
@@ -149,7 +149,7 @@ export default function Profile() {
                     <div className="space-y-4 pt-4">
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Account</h4>
 
-                        <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+                        <div className="bg-white/5 rounded-none overflow-hidden border border-white/5 divide-y divide-white/5">
                             <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
                                     <span className="material-symbols-outlined text-slate-400">settings</span>

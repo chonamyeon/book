@@ -40,7 +40,7 @@ export const celebrities = [
                 "id": "leverage",
                 "section": "WEALTH",
                 "isPodcast": true,
-                "podcastFile": "/audio/leverage_2026.mp3",
+                "podcastFile": "/audio/leverage.mp3",
                 "title": "레버리지",
                 "author": "롭 무어",
                 "cover": "/images/covers/leverage.jpg",

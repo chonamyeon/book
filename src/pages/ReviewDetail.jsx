@@ -207,7 +207,7 @@ export default function ReviewDetail() {
             if (b) {
                 // Auto-detect isPodcast and podcastFile based on availableAudio
                 const fileName = `${b.id}.mp3`;
-                const hasAudioFile = availableAudio.includes(fileName);
+                const hasAudioFile = !!availableAudio[fileName];
 
                 return {
                     ...b,
@@ -423,11 +423,11 @@ export default function ReviewDetail() {
                 <div className="rv-topbar-title-wrap">
                     <div className="flex items-center gap-2 mb-0.5">
                         <div className="flex items-end h-[14px] gap-[1.5px] mr-0.5 pb-[1px]">
-                            <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[2px] bg-zinc-400 rounded-sm" />
-                            <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[2px] bg-zinc-400 rounded-sm" />
-                            <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[2px] bg-zinc-400 rounded-sm" />
-                            <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[2px] bg-zinc-400 rounded-sm" />
-                            <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[2px] bg-zinc-400 rounded-sm" />
+                            <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[2px] bg-zinc-400 rounded-none" />
+                            <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[2px] bg-zinc-400 rounded-none" />
+                            <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[2px] bg-zinc-400 rounded-none" />
+                            <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[2px] bg-zinc-400 rounded-none" />
+                            <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[2px] bg-zinc-400 rounded-none" />
                         </div>
                         <span className="text-[12px] font-black tracking-[-0.03em] uppercase text-white/50" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                     </div>
@@ -437,7 +437,7 @@ export default function ReviewDetail() {
                 <div className="rv-topbar-right">
                     <button
                         onClick={handleKakaoShare}
-                        className="size-10 flex items-center justify-center rounded-xl bg-[#FEE500] text-[#3c1e1e] active:scale-95 transition-all shadow-lg"
+                        className="size-10 flex items-center justify-center rounded-none bg-[#FEE500] text-[#3c1e1e] active:scale-95 transition-all shadow-lg"
                     >
                         <span className="material-symbols-outlined text-xl font-bold">chat_bubble</span>
                     </button>

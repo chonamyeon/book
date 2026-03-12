@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { AudioProvider } from './contexts/AudioContext';
 import MiniPlayer from './components/MiniPlayer';
+import InsightBanner from './components/InsightBanner';
 import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -37,7 +38,7 @@ const PageLoader = () => (
 
 // 모든 모바일용 페이지를 감싸는 레이아웃 컴포넌트
 const MobileLayout = ({ children }) => (
-  <div className="max-w-[430px] mx-auto min-h-screen bg-background-light dark:bg-background-dark shadow-2xl relative overflow-hidden">
+  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative overflow-hidden flex flex-col">
     {children}
   </div>
 );
@@ -88,6 +89,7 @@ export default function App() {
               <Route path="/reading-notes" element={<ProtectedRoute><MobileLayout><ReadingNotes /></MobileLayout></ProtectedRoute>} />
             </Routes>
           </Suspense>
+          {/* <InsightBanner /> */}
           <MiniPlayer />
           <PodcastScriptModal />
         </div>

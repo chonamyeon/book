@@ -18,6 +18,13 @@ textarea {
     touch-action: manipulation;
 }
 
+/* 버튼 및 링크에서 텍스트 선택 방지 (모바일 앱 느낌) */
+button, 
+a {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 /* iOS Safari 자동 줌 방지: 폼 요소 font-size가 16px 미만이면 자동 줌됨 */
 input,
 select,
@@ -73,12 +80,12 @@ input[type="search"] {
 
     .custom-scrollbar::-webkit-scrollbar-track {
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
+        border-radius: 0;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(212, 175, 55, 0.3);
-        border-radius: 10px;
+        border-radius: 0;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -129,7 +136,7 @@ input[type="search"] {
         position: absolute;
         inset: -2px;
         border: 1px solid rgba(255, 215, 0, 0.15);
-        border-radius: 0.6rem;
+        border-radius: 0;
         pointer-events: none;
     }
 

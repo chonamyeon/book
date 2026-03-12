@@ -28,3 +28,5 @@ build_output
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

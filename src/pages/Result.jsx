@@ -106,15 +106,15 @@ export default function Result() {
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
             {/* Header */}
             <header className="sticky top-0 z-50 flex items-center justify-between bg-background-light/80 dark:bg-background-dark/80 px-4 py-4 backdrop-blur-md border-b border-primary/10 dark:border-white/10">
-                <Link to="/quiz" className="flex size-10 items-center justify-center rounded-full hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
+                <Link to="/quiz" className="flex size-10 items-center justify-center rounded-none hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
                     <span className="material-symbols-outlined text-2xl">arrow_back</span>
                 </Link>
                 <h1 className="text-lg font-bold tracking-tight">테스트 결과</h1>
                 <div className="flex gap-2">
-                    <button onClick={handleKakaoShare} className="flex size-10 items-center justify-center rounded-full bg-[#FEE500] text-[#3c1e1e] transition-colors">
+                    <button onClick={handleKakaoShare} className="flex size-10 items-center justify-center rounded-none bg-[#FEE500] text-[#3c1e1e] transition-colors">
                         <span className="material-symbols-outlined text-2xl font-bold">chat_bubble</span>
                     </button>
-                    <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
+                    <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-none hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
                         <span className="material-symbols-outlined text-2xl">share</span>
                     </button>
                 </div>
@@ -125,16 +125,16 @@ export default function Result() {
                 <section className="flex flex-col items-center px-6 py-8 text-center animate-fade-in-up">
                     <div className="relative mb-6">
                         {/* Decorative Glow */}
-                        <div className="absolute inset-0 scale-110 rounded-full bg-primary/20 blur-3xl dark:bg-blue-500/10"></div>
+                        <div className="absolute inset-0 scale-110 rounded-none bg-primary/20 blur-3xl dark:bg-blue-500/10"></div>
                         {/* Persona Graphic - Dynamic Image */}
-                        <div className="relative flex size-48 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/5 p-4 dark:border-white/10">
-                            <div className="size-40 rounded-full bg-cover bg-center shadow-2xl" style={{ backgroundImage: `url('${data.image}')` }}></div>
-                            <div className="absolute -bottom-2 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-4 ring-background-dark">검증된 분석 결과</div>
+                        <div className="relative flex size-48 items-center justify-center rounded-none border-4 border-primary/20 bg-primary/5 p-4 dark:border-white/10">
+                            <div className="size-40 rounded-none bg-cover bg-center shadow-2xl" style={{ backgroundImage: `url('${data.image}')` }}></div>
+                            <div className="absolute -bottom-2 rounded-none bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-4 ring-background-dark">검증된 분석 결과</div>
                         </div>
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight text-primary dark:text-white">{data.persona}</h2>
                     <p className="mt-2 text-slate-600 dark:text-slate-400 font-medium">{data.subtitle}</p>
-                    <div className="mt-4 flex items-center gap-2 rounded-full bg-primary/5 px-3 py-1 dark:bg-white/5">
+                    <div className="mt-4 flex items-center gap-2 rounded-none bg-primary/5 px-3 py-1 dark:bg-white/5">
                         <span className="material-symbols-outlined text-sm text-blue-500">verified</span>
                         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">과학적으로 입증된 결과</span>
                     </div>
@@ -143,17 +143,17 @@ export default function Result() {
                 {/* Metric Cards Grid */}
                 <section className="px-4 py-4 animate-fade-in-up delay-100">
                     <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="flex flex-col items-center justify-center rounded-xl bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
+                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.wpm.label}</span>
                             <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.wpm.value}</span>
                             <span className="text-[10px] font-bold text-emerald-500">{data.metrics.wpm.change}</span>
                         </div>
-                        <div className="flex flex-col items-center justify-center rounded-xl bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
+                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.accuracy.label}</span>
                             <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.accuracy.value}</span>
                             <span className="text-[10px] font-bold text-emerald-500">{data.metrics.accuracy.rank}</span>
                         </div>
-                        <div className="flex flex-col items-center justify-center rounded-xl bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
+                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.retention.label}</span>
                             <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.retention.value}</span>
                             <span className="text-[10px] font-bold text-emerald-500">{data.metrics.retention.rank}</span>
@@ -161,7 +161,7 @@ export default function Result() {
                     </div>
 
                     {/* Metric Interpretation Guide */}
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-4 border border-slate-100 dark:border-white/5">
+                    <div className="bg-slate-50 dark:bg-white/5 rounded-none p-4 border border-slate-100 dark:border-white/5">
                         <h4 className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
                             <span className="material-symbols-outlined text-sm">info</span> 지표 해석 가이드
                         </h4>
@@ -186,14 +186,14 @@ export default function Result() {
                 <section className="px-6 py-4 flex gap-3 animate-fade-in-up delay-300">
                     <button
                         onClick={handleShare}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold transition-all active:scale-95 shadow-xl hover:shadow-primary/20"
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-none bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold transition-all active:scale-95 shadow-xl hover:shadow-primary/20"
                     >
                         <span className="material-symbols-outlined text-xl">share</span>
                         결과 공유하기
                     </button>
                     <button
                         onClick={handleInstagramShare}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white font-bold transition-all active:scale-95 shadow-xl hover:shadow-[#dc2743]/30"
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-none bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white font-bold transition-all active:scale-95 shadow-xl hover:shadow-[#dc2743]/30"
                     >
                         <span className="material-symbols-outlined text-xl">photo_camera</span>
                         인스타 업로드
@@ -201,7 +201,7 @@ export default function Result() {
                 </section>
 
                 {/* Gated Premium Section */}
-                <section className="relative mx-4 mt-8 mb-12 overflow-hidden rounded-3xl border border-primary/20 dark:border-white/10 bg-white dark:bg-[#0f172a] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-fade-in-up delay-500">
+                <section className="relative mx-4 mt-8 mb-12 overflow-hidden rounded-none border border-primary/20 dark:border-white/10 bg-white dark:bg-[#0f172a] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-fade-in-up delay-500">
                     <div className="p-6 md:p-8">
                         <div className="flex items-center justify-between mb-8">
                             <div>
@@ -216,7 +216,7 @@ export default function Result() {
                         {/* Blurred Content / Real Content */}
                         <div className={`space-y-8 transition-all duration-700 ${!isPremiumUnlocked ? 'filter blur-xl opacity-20 pointer-events-none select-none h-[500px] overflow-hidden' : ''}`}>
                             {/* 1. Radar Chart Component (SVG) */}
-                            <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-2xl border border-primary/5 dark:border-white/5 relative">
+                            <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-none border border-primary/5 dark:border-white/5 relative">
                                 <h4 className="text-sm font-bold text-primary dark:text-white mb-6 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-blue-500">radar</span>
                                     5-Dimension 인지 역량 모델
@@ -257,7 +257,7 @@ export default function Result() {
                                 </h4>
 
                                 {/* Analysis Item 1: Cognitive Load */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-xl">
+                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
                                     <div className="flex justify-between items-end mb-2">
                                         <div>
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">인지 부하 처리량 (Cognitive Load Capacity)</span>
@@ -269,7 +269,7 @@ export default function Result() {
                                         </div>
                                     </div>
                                     {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden relative mb-3">
+                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
                                         <div className="absolute top-0 left-0 h-full bg-slate-400 w-[45%] opacity-30"></div> {/* Average Marker Area */}
                                         <div className="absolute top-0 left-[44%] h-full w-[2px] bg-slate-500 z-10"></div> {/* Average Line */}
                                         <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-gold shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.load.score}%` }}></div> {/* User Score */}
@@ -284,7 +284,7 @@ export default function Result() {
                                 </div>
 
                                 {/* Analysis Item 2: Inference Speed */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-xl">
+                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
                                     <div className="flex justify-between items-end mb-2">
                                         <div>
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">맥락 추론 속도 (Inference Speed)</span>
@@ -296,7 +296,7 @@ export default function Result() {
                                         </div>
                                     </div>
                                     {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden relative mb-3">
+                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
                                         <div className="absolute top-0 left-0 h-full bg-slate-400 w-[52%] opacity-30"></div>
                                         <div className="absolute top-0 left-[51%] h-full w-[2px] bg-slate-500 z-10"></div>
                                         <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.inference.score}%` }}></div>
@@ -311,7 +311,7 @@ export default function Result() {
                                 </div>
 
                                 {/* Analysis Item 3: Vocabulary Depth (New) */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-xl">
+                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
                                     <div className="flex justify-between items-end mb-2">
                                         <div>
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">어휘 다양성 (Lexical Diversity)</span>
@@ -323,7 +323,7 @@ export default function Result() {
                                         </div>
                                     </div>
                                     {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden relative mb-3">
+                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
                                         <div className="absolute top-0 left-0 h-full bg-slate-400 w-[38%] opacity-30"></div>
                                         <div className="absolute top-0 left-[37%] h-full w-[2px] bg-slate-500 z-10"></div>
                                         <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-600 to-pink-400 shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.vocabulary.score}%` }}></div>
@@ -339,7 +339,7 @@ export default function Result() {
                             </div>
 
                             {/* 3. Expert Comments */}
-                            <div className="bg-primary/5 dark:bg-white/5 p-5 rounded-2xl border-l-4 border-primary dark:border-gold">
+                            <div className="bg-primary/5 dark:bg-white/5 p-5 rounded-none border-l-4 border-primary dark:border-gold">
                                 <h4 className="text-sm font-bold text-primary dark:text-white mb-2 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-xl">auto_awesome</span>
                                     AI 큐레이터의 종합 제언
@@ -362,9 +362,9 @@ export default function Result() {
                                     {currentRecommendation.books.map((book, index) => (
                                         <div
                                             key={index}
-                                            className="flex gap-4 p-4 rounded-xl bg-white dark:bg-white/5 border border-primary/5 dark:border-white/5 shadow-sm hover:shadow-md transition-all group"
+                                            className="flex gap-4 p-4 rounded-none bg-white dark:bg-white/5 border border-primary/5 dark:border-white/5 shadow-sm hover:shadow-md transition-all group"
                                         >
-                                            <div className="w-16 h-24 shrink-0 rounded-md overflow-hidden bg-slate-200 shadow-md">
+                                            <div className="w-16 h-24 shrink-0 rounded-none overflow-hidden bg-slate-200 shadow-md">
                                                 <img
                                                     src={book.cover}
                                                     alt={book.title}
@@ -381,7 +381,7 @@ export default function Result() {
                                                         href={book.link}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="flex-1 bg-gold hover:bg-gold-light text-primary text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"
+                                                        className="flex-1 bg-gold hover:bg-gold-light text-primary text-[10px] font-bold py-2 rounded-none flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"
                                                     >
                                                         구매하기 <span className="material-symbols-outlined text-xs">shopping_cart</span>
                                                     </a>
@@ -401,7 +401,7 @@ export default function Result() {
                                                                 alert('서재에 추가되었습니다. ✅');
                                                             }
                                                         }}
-                                                        className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-95"
+                                                        className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white text-[10px] font-bold py-2 rounded-none flex items-center justify-center gap-1 transition-all active:scale-95"
                                                     >
                                                         추천지정 <span className="material-symbols-outlined text-xs">bookmark</span>
                                                     </button>
@@ -425,7 +425,7 @@ export default function Result() {
                                     {currentRecommendation.travel && currentRecommendation.travel.map((place, index) => (
                                         <div
                                             key={index}
-                                            className="relative overflow-hidden rounded-xl bg-slate-900 group shadow-md hover:shadow-xl transition-all"
+                                            className="relative overflow-hidden rounded-none bg-slate-900 group shadow-md hover:shadow-xl transition-all"
                                         >
                                             {/* Image Background */}
                                             <div className="absolute inset-0">
@@ -435,7 +435,7 @@ export default function Result() {
 
                                             {/* Content */}
                                             <div className="relative p-5 flex flex-col items-start justify-end h-32">
-                                                <span className="text-[10px] font-bold text-gold bg-black/30 px-2 py-0.5 rounded-full mb-2 backdrop-blur-sm border border-white/10">{place.country}</span>
+                                                <span className="text-[10px] font-bold text-gold bg-black/30 px-2 py-0.5 rounded-none mb-2 backdrop-blur-sm border border-white/10">{place.country}</span>
                                                 <h5 className="text-lg font-bold text-white leading-tight mb-1">{place.place}</h5>
                                                 <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{place.desc}</p>
                                             </div>
@@ -445,7 +445,7 @@ export default function Result() {
                             </div>
 
                             {isPremiumUnlocked && (
-                                <div className="mt-8 p-4 bg-green-500/10 rounded-xl text-green-600 text-sm font-bold text-center border border-green-500/20 shadow-inner flex flex-col items-center gap-2 animate-fade-in">
+                                <div className="mt-8 p-4 bg-green-500/10 rounded-none text-green-600 text-sm font-bold text-center border border-green-500/20 shadow-inner flex flex-col items-center gap-2 animate-fade-in">
                                     <span className="material-symbols-outlined text-2xl">check_circle</span>
                                     <span>모든 데이터 분석 및 추천 도서 잠금이 해제되었습니다.</span>
                                 </div>
@@ -457,13 +457,13 @@ export default function Result() {
                             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm p-6 text-center">
                                 {/* Time Sale Badge */}
                                 <div className="mb-8 animate-bounce-subtle">
-                                    <div className="bg-red-600 text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] uppercase tracking-[0.2em] border border-white/20">
+                                    <div className="bg-red-600 text-white text-[11px] font-black px-4 py-1.5 rounded-none shadow-[0_0_20px_rgba(220,38,38,0.5)] uppercase tracking-[0.2em] border border-white/20">
                                         ⚡ Limited Time Sale ⚡
                                     </div>
                                 </div>
 
-                                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[2.5rem] p-8 border border-white/20 shadow-2xl w-full max-w-sm">
-                                    <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-gold/20 to-gold/5 mx-auto ring-1 ring-gold/30">
+                                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-none p-8 border border-white/20 shadow-2xl w-full max-w-sm">
+                                    <div className="mb-4 flex size-20 items-center justify-center rounded-none bg-gradient-to-br from-gold/20 to-gold/5 mx-auto ring-1 ring-gold/30">
                                         <span className="material-symbols-outlined text-5xl text-gold animate-pulse">lock</span>
                                     </div>
 
@@ -483,7 +483,7 @@ export default function Result() {
                                     </div>
 
                                     {/* Countdown Timer */}
-                                    <div className="mb-8 bg-slate-100 dark:bg-white/5 py-3 rounded-2xl border border-slate-200 dark:border-white/10">
+                                    <div className="mb-8 bg-slate-100 dark:bg-white/5 py-3 rounded-none border border-slate-200 dark:border-white/10">
                                         <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">할인 마감까지 남은 시간</p>
                                         <div className="text-3xl font-black text-slate-900 dark:text-white font-mono tracking-widest flex items-center justify-center gap-2">
                                             <span className="material-symbols-outlined text-red-500 animate-pulse">alarm</span>
@@ -491,7 +491,7 @@ export default function Result() {
                                         </div>
                                     </div>
 
-                                    <button onClick={handleUnlock} className="group relative w-full overflow-hidden rounded-2xl bg-gold text-slate-900 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+                                    <button onClick={handleUnlock} className="group relative w-full overflow-hidden rounded-none bg-gold text-slate-900 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
                                         <div className="relative flex items-center justify-center gap-3 py-5 px-6">
                                             <span className="text-base font-black uppercase tracking-tight">리포트 평생 소장하기</span>
                                             <span className="material-symbols-outlined font-bold">arrow_forward</span>

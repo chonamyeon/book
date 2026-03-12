@@ -55,7 +55,7 @@ export const useBookData = () => {
         if (!localBook && !override) return null;
 
         const fileName = `${bookId}.mp3`;
-        const hasAudioFile = availableAudio.includes(fileName);
+        const hasAudioFile = !!availableAudio[fileName];
 
         return {
             ...(localBook || {}),
@@ -85,7 +85,7 @@ export const useBookData = () => {
             if (override?.isDeleted) return;
 
             const fileName = `${id}.mp3`;
-            const hasAudioFile = availableAudio.includes(fileName);
+            const hasAudioFile = !!availableAudio[fileName];
 
             bookMap.set(id, {
                 ...book,

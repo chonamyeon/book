@@ -114,14 +114,14 @@ export default function Celebrity() {
                                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 />
                                 <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
-                                    <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
+                                    <div className="size-12 rounded-none bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
                                         <span className="material-symbols-outlined text-gold">psychology</span>
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
                                     <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
                                         나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이뷰를 완성하세요.
                                     </p>
-                                    <div className="px-8 py-3 bg-gold text-primary font-black rounded-xl text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
+                                    <div className="px-8 py-3 bg-gold text-primary font-black rounded-none text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
                                         <span>테스트 시작하기</span>
                                         <span className="material-symbols-outlined text-sm">auto_awesome</span>
                                     </div>
@@ -189,7 +189,7 @@ export default function Celebrity() {
                                                     </h6>
                                                     <button
                                                         onClick={() => toggleReview(index)}
-                                                        className="px-4 py-2 rounded-full bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
+                                                        className="px-4 py-2 rounded-none bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
                                                     >
                                                         {expandedReviews[index] ? '접기' : '전체보기'}
                                                     </button>
@@ -205,13 +205,13 @@ export default function Celebrity() {
                                             {book.id ? (
                                                 <Link
                                                     to={`/review/${book.id}`}
-                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 >
                                                     <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
                                                     <span className="material-symbols-outlined text-sm">menu_book</span>
                                                 </Link>
                                             ) : (
-                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
                                                     <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
                                                     <span className="material-symbols-outlined text-sm">menu_book</span>
                                                 </div>
@@ -221,12 +221,12 @@ export default function Celebrity() {
                                             {book.id ? (
                                                 <button
                                                     onClick={() => { const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`; openScriptModal(book.id, audioUrl, book.title, book.cover); }}
-                                                    className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 >
                                                     <span className="leading-[1.1]">🎧 팟캐스트</span>
                                                 </button>
                                             ) : (
-                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
                                                     <span className="leading-[1.1]">🎧 팟캐스트</span>
                                                 </div>
                                             )}
@@ -248,7 +248,7 @@ export default function Celebrity() {
                                                         alert('서재에 추가되었습니다. ✅');
                                                     }
                                                 }}
-                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                             >
                                                 <span>서재 추가</span>
                                                 <span className="material-symbols-outlined text-sm">bookmark</span>
@@ -260,13 +260,13 @@ export default function Celebrity() {
                                                     href={book.purchaseLink}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 >
                                                     <span>구매하기</span>
                                                     <span className="material-symbols-outlined text-xs">shopping_cart</span>
                                                 </a>
                                             ) : (
-                                                <div className="bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                                <div className="bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
                                                     <span>구매하기</span>
                                                     <span className="material-symbols-outlined text-xs">shopping_cart</span>
                                                 </div>
@@ -290,12 +290,12 @@ export default function Celebrity() {
                                     to={`/celebrity/${c.id}`}
                                     className={`flex flex-col items-center gap-3 transition-all duration-300 group ${c.id === celeb.id ? 'opacity-100 scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
                                 >
-                                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 p-1 transition-colors duration-500 ${c.id === celeb.id ? 'border-accent shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'border-primary/30 group-hover:border-accent'}`}>
-                                        <img loading="lazy" className={`w-full h-full object-cover rounded-full transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
+                                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-none border-2 p-1 transition-colors duration-500 ${c.id === celeb.id ? 'border-accent shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'border-primary/30 group-hover:border-accent'}`}>
+                                        <img loading="lazy" className={`w-full h-full object-cover rounded-none transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
                                     </div>
                                     <div className="text-center">
                                         <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-widest block transition-colors duration-300 ${c.id === celeb.id ? 'text-accent' : 'text-slate-500 group-hover:text-slate-200'}`}>{c.name}</span>
-                                        {c.id === celeb.id && <div className="w-4 h-[2px] bg-accent mx-auto mt-1 rounded-full"></div>}
+                                        {c.id === celeb.id && <div className="w-4 h-[2px] bg-accent mx-auto mt-1 rounded-none"></div>}
                                     </div>
                                 </Link>
                             ))}

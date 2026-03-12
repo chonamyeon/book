@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { availableAudio } from '../data/availableAudio';
 
 const AudioCtx = createContext();
 
@@ -14,14 +15,75 @@ export const AudioProvider = ({ children }) => {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
+    // Insight Tracking states
+    const [dailyListenTime, setDailyListenTime] = useState(0); // in seconds
+    const [dailyTarget, setDailyTarget] = useState(15 * 60); // 15 mins
+    const [streak, setStreak] = useState(0);
+
     // Script Modal states
     const [scriptModalOpen, setScriptModalOpen] = useState(false);
     const [scriptModalBookId, setScriptModalBookId] = useState(null);
 
     const speechAudio = useRef(null);
-    const musicAudio = useRef(null); // 사용하지 않지만 기존 구조 유지를 위해 유지
+    const musicAudio = useRef(null);
     const podcastAudioRef = useRef(null);
     const stopSignal = useRef(false);
+    const lastTickRef = useRef(Date.now());
+
+    // Load progress from localStorage
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const savedData = JSON.parse(localStorage.getItem('archiview_progress') || '{}');
+        
+        if (savedData.date === today) {
+            setDailyListenTime(savedData.listenTime || 0);
+        } else {
+            // New day, reset daily time but check streak
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            if (savedData.date === yesterdayStr && savedData.listenTime >= (10 * 60)) { // 10 mins minimum for streak
+                 setStreak(prev => (savedData.streak || 0) + 1);
+            } else if (savedData.date !== today) {
+                 setStreak(savedData.streak || 0); // Keep existing or reset if missed? User requested "3일 연속"
+            }
+            setDailyListenTime(0);
+        }
+        
+        if (savedData.streak) setStreak(savedData.streak);
+    }, []);
+
+    // Save progress to localStorage
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const data = {
+            date: today,
+            listenTime: dailyListenTime,
+            streak: streak
+        };
+        localStorage.setItem('archiview_progress', JSON.stringify(data));
+    }, [dailyListenTime, streak]);
+
+    // Tracking Loop
+    useEffect(() => {
+        let interval;
+        if (podcastPlaying) {
+            lastTickRef.current = Date.now();
+            interval = setInterval(() => {
+                const now = Date.now();
+                const delta = (now - lastTickRef.current) / 1000;
+                lastTickRef.current = now;
+                
+                setDailyListenTime(prev => {
+                    const newVal = prev + delta;
+                    // Check if target met for the first time today to maybe bump streak
+                    return newVal;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [podcastPlaying]);
 
     useEffect(() => {
         speechAudio.current = new Audio();
@@ -36,9 +98,8 @@ export const AudioProvider = ({ children }) => {
         pa.addEventListener('loadedmetadata', onMeta);
         pa.addEventListener('ended', onEnded);
 
-        // 터치/클릭 시 오디오 잠금 해제
         const unlock = () => {
-            [speechAudio.current, musicAudio.current, podcastAudioRef.current].forEach(a => {
+            [speechAudio.current, musicAudio.current].forEach(a => {
                 if (a) { a.play().catch(() => { }); a.pause(); }
             });
             document.removeEventListener('click', unlock);
@@ -54,7 +115,6 @@ export const AudioProvider = ({ children }) => {
         };
     }, []);
 
-    // ❌ 배경음악(carefree.mp3) 기능을 완전히 삭제했습니다.
     const stopAll = () => {
         stopSignal.current = true;
         if (speechAudio.current) {
@@ -76,33 +136,21 @@ export const AudioProvider = ({ children }) => {
     };
 
     const playPodcast = async (script, id = "podcast", audioUrl = null) => {
-        // 모든 소리 즉시 정지
         stopAll();
-
         setIsSpeaking(true);
         setActiveAudioId(id);
         stopSignal.current = false;
 
-        // ID에서 불필요한 수식어 제거 및 파일명 결정
         const baseId = id.toLowerCase().replace(/review|pick|weekly|guru/g, '').replace(/^-+/, '').replace(/[^a-z0-9-]/g, '');
         const finalUrl = audioUrl || `/audio/${baseId}.mp3`;
 
-        console.log("🔊 팟캐스트 목소리 재생 시작:", finalUrl);
-
         if (finalUrl) {
             try {
-                // 캐시 방지용 쿼리 추가
                 speechAudio.current.src = `${finalUrl}?v=${Date.now()}`;
-
                 await speechAudio.current.play();
-
                 await new Promise((resolve) => {
                     speechAudio.current.onended = () => resolve();
-                    speechAudio.current.onerror = (e) => {
-                        console.error("❌ 오디오 파일 없음:", finalUrl);
-                        resolve();
-                    };
-
+                    speechAudio.current.onerror = () => resolve();
                     const checkStop = setInterval(() => {
                         if (stopSignal.current) {
                             speechAudio.current.pause();
@@ -115,19 +163,16 @@ export const AudioProvider = ({ children }) => {
                 console.error("❌ 재생 오류:", error);
             }
         }
-
         setIsSpeaking(false);
         setActiveAudioId(null);
     };
 
     const speakReview = (text, id) => playPodcast([], id);
 
-    // 🆕 MP3 Player Controls (MiniPlayer용)
     const playPodcastMP3 = useCallback((src, title, cover, id = null) => {
         const pa = podcastAudioRef.current;
         if (!pa) return;
 
-        // 동일한 소스인 경우 토글
         if (podcastInfo?.src === src) {
             if (podcastPlaying) {
                 pa.pause();
@@ -139,11 +184,10 @@ export const AudioProvider = ({ children }) => {
             return;
         }
 
-        // 다른 소스인 경우 초기화 후 재생
         if (src) {
             stopAll();
             pa.src = src;
-            pa.load(); // 메타데이터 로드 보장
+            pa.load();
             pa.play().catch(() => { });
             setPodcastPlaying(true);
             setPodcastInfo({ src, title, cover, id });
@@ -185,6 +229,7 @@ export const AudioProvider = ({ children }) => {
         <AudioCtx.Provider value={{
             isSpeaking, activeAudioId, playPodcast, speakReview, stopAll,
             podcastPlaying, podcastInfo, currentTime, duration,
+            dailyListenTime, dailyTarget, streak,
             playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3,
             scriptModalOpen, scriptModalBookId, openScriptModal, closeScriptModal
         }}>

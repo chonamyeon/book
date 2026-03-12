@@ -109,7 +109,7 @@ export default function BottomNavigation() {
                         >
                             <div className="relative group/nav">
                                 {isActive && (
-                                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
+                                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-none scale-150 animate-pulse"></div>
                                 )}
                                 <div className="flex items-center justify-center transition-all duration-500 relative z-10 mb-1">
                                     <span className={`material-symbols-outlined text-[26px] transition-all duration-500 ${isActive ? 'fill-1 scale-110 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)] text-gold' : 'scale-90 opacity-80 text-white/50 group-hover/nav:text-white/80'}`}>
@@ -128,7 +128,7 @@ export default function BottomNavigation() {
                 <div className="absolute -top-20 right-6">
                     <button
                         onClick={() => setIsFinderOpen(!isFinderOpen)}
-                        className={`size-14 rounded-sm flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
+                        className={`size-14 rounded-none flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}
                     >
                         <span className="material-symbols-outlined text-[32px] font-bold">add</span>
                     </button>
@@ -139,7 +139,7 @@ export default function BottomNavigation() {
                                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                                className="absolute bottom-20 right-0 w-[calc(100vw-48px)] max-w-[280px] bg-[#1a1c23]/95 backdrop-blur-3xl border border-white/10 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[60]"
+                                className="absolute bottom-20 right-0 w-[calc(100vw-48px)] max-w-[280px] bg-[#1a1c23]/95 backdrop-blur-3xl border border-white/10 rounded-none p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[60]"
                             >
                                 {/* Triangle arrow for speech bubble effect */}
                                 <div className="absolute -bottom-2 right-10 w-4 h-4 bg-[#1a1c23] border-r border-b border-white/10 rotate-45 translate-x-1/2"></div>
@@ -161,7 +161,7 @@ export default function BottomNavigation() {
                                                         <button
                                                             key={g}
                                                             onClick={() => setFormData({ ...formData, gender: g })}
-                                                            className={`h-10 rounded-xl text-[13px] font-bold transition-all border ${formData.gender === g ? 'bg-gold border-gold text-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                                                            className={`h-10 rounded-none text-[13px] font-bold transition-all border ${formData.gender === g ? 'bg-gold border-gold text-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
                                                         >
                                                             {g}
                                                         </button>
@@ -174,7 +174,7 @@ export default function BottomNavigation() {
                                                 <select
                                                     value={formData.age}
                                                     onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-xl px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
+                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-none px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
                                                 >
                                                     <option value="" disabled className="bg-[#1a1c23]">나이를 선택해주세요</option>
                                                     {Array.from({ length: 61 }, (_, i) => i + 10).map(age => (
@@ -188,7 +188,7 @@ export default function BottomNavigation() {
                                                 <select
                                                     value={formData.job}
                                                     onChange={(e) => setFormData({ ...formData, job: e.target.value })}
-                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-xl px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
+                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-none px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
                                                 >
                                                     <option value="" disabled className="bg-[#1a1c23]">직업을 선택해주세요</option>
                                                     {['개인사업', '직장인', '학생', '무직', '창업준비중'].map(job => (
@@ -202,7 +202,7 @@ export default function BottomNavigation() {
                                                 <select
                                                     value={formData.interest}
                                                     onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
-                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-xl px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
+                                                    className="w-full bg-[#1a1c23] border border-white/10 rounded-none px-4 py-2 text-white text-[13px] outline-none focus:border-gold/50 transition-all font-bold appearance-none cursor-pointer"
                                                 >
                                                     <option value="" disabled className="bg-[#1a1c23]">관심분야를 선택해주세요</option>
                                                     {['예술', '경제', '문화', '사회', '자기개발'].map(interest => (
@@ -213,7 +213,7 @@ export default function BottomNavigation() {
 
                                             <button
                                                 onClick={handleFind}
-                                                className="w-full h-12 bg-gradient-to-r from-gold to-[#c5a040] rounded-2xl text-primary font-black uppercase tracking-widest shadow-lg shadow-gold/20 active:scale-95 transition-all mt-1"
+                                                className="w-full h-12 bg-gradient-to-r from-gold to-[#c5a040] rounded-none text-primary font-black uppercase tracking-widest shadow-lg shadow-gold/20 active:scale-95 transition-all mt-1"
                                             >
                                                 찾기
                                             </button>
@@ -223,7 +223,7 @@ export default function BottomNavigation() {
 
                                 {finderStep === 2 && (
                                     <div className="h-[300px] flex flex-col items-center justify-center space-y-4">
-                                        <div className="size-16 border-4 border-gold/20 border-t-gold rounded-full animate-spin"></div>
+                                        <div className="size-16 border-4 border-gold/20 border-t-gold rounded-none animate-spin"></div>
                                         <p className="text-gold font-black animate-pulse">당신만을 위한 도서를 찾는 중...</p>
                                     </div>
                                 )}
@@ -242,8 +242,8 @@ export default function BottomNavigation() {
 
                                                 return (
                                                     <div key={idx} className="space-y-2">
-                                                        <div className="flex gap-4 p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
-                                                            <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-lg border border-white/5">
+                                                        <div className="flex gap-4 p-3 bg-white/5 border border-white/10 rounded-none hover:bg-white/10 transition-all group">
+                                                            <div className="w-12 h-16 rounded-none overflow-hidden flex-shrink-0 shadow-lg border border-white/5">
                                                                 <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                             </div>
                                                             <div className="flex flex-col justify-center overflow-hidden flex-1">
@@ -252,7 +252,7 @@ export default function BottomNavigation() {
                                                             </div>
                                                             {pickId && (
                                                                 <div className="flex items-center">
-                                                                    <span className="text-gold text-[10px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-full border border-gold/20">PICK</span>
+                                                                    <span className="text-gold text-[10px] font-black uppercase tracking-widest bg-gold/10 px-2 py-0.5 rounded-none border border-gold/20">PICK</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -262,7 +262,7 @@ export default function BottomNavigation() {
                                                                 <Link
                                                                     to={`/review/${pickId}`}
                                                                     onClick={() => setIsFinderOpen(false)}
-                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-none bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">menu_book</span>
                                                                     <span>리뷰</span>
@@ -276,7 +276,7 @@ export default function BottomNavigation() {
                                                                                 playPodcast(bookScripts[pickId], `finder-${pickId}`);
                                                                             }
                                                                         }}
-                                                                        className={`h-9 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${activeAudioId === `finder-${pickId}`
+                                                                        className={`h-9 rounded-none border flex items-center justify-center gap-1.5 transition-all ${activeAudioId === `finder-${pickId}`
                                                                             ? 'bg-gold border-gold text-primary font-bold'
                                                                             : 'bg-white/5 border-white/10 text-white hover:text-gold hover:border-gold/50'
                                                                             }`}
@@ -287,7 +287,7 @@ export default function BottomNavigation() {
                                                                 )}
                                                                 <button
                                                                     onClick={() => addToLibrary(book)}
-                                                                    className="h-9 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-none bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">bookmark</span>
                                                                     <span>서재 추가</span>
@@ -296,7 +296,7 @@ export default function BottomNavigation() {
                                                                     href={`https://www.coupang.com/np/search?q=${encodeURIComponent(book.title)}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="h-9 rounded-xl bg-gold/5 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-1.5"
+                                                                    className="h-9 rounded-none bg-gold/5 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest hover:bg-gold hover:text-primary transition-all flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
                                                                     <span>구매</span>
@@ -311,13 +311,13 @@ export default function BottomNavigation() {
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={resetFinder}
-                                                className="flex-1 h-11 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
+                                                className="flex-1 h-11 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-none text-[11px] font-black uppercase tracking-widest transition-all"
                                             >
                                                 닫기
                                             </button>
                                             <button
                                                 onClick={saveResults}
-                                                className="flex-[1.5] h-11 bg-gold text-primary rounded-xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-gold/20 active:scale-95"
+                                                className="flex-[1.5] h-11 bg-gold text-primary rounded-none text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-gold/20 active:scale-95"
                                             >
                                                 결과 저장하기
                                             </button>
