@@ -462,6 +462,14 @@ export default function AdminDashboard() {
     const [wavUploading, setWavUploading] = useState(false);
     const [wavUploadLog, setWavUploadLog] = useState('');
 
+    // ── E-book 생성 탭 상태 ─────────────────────────────────
+    const [isGeneratingEbook, setIsGeneratingEbook] = useState(false);
+    const [ebookLogs, setEbookLogs] = useState([]);
+    const [generatedEbook, setGeneratedEbook] = useState('');
+    const [isLoadingEbook, setIsLoadingEbook] = useState(false);
+    const [existingEbook, setExistingEbook] = useState(null);
+    const [showEbookPreviewModal, setShowEbookPreviewModal] = useState(false);
+
     // 인트로/아웃트로 병합
     const [mergeIntroFile, setMergeIntroFile] = useState(null);
     const [mergeMainFile, setMergeMainFile] = useState(null);
@@ -1116,7 +1124,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - 책의 내용을 **전부 설명하지 마세요**. 핵심 개념 1~2가지만 맛보기로 소개합니다.
 - 구체적인 사례, 실험, 데이터, 인용문을 원문 그대로 옮기는 것은 금지입니다.
 - 대신 "이 책에 이런 내용이 있는데, 직접 읽어봐야 제대로 느낀다"는 식으로 **구매 욕구를 자극**하세요.
-- 턴 36~42 구간 안에서 **구매 유도 멘트를 반드시 1회** 삽입하세요. (위 턴 구조 참고)
+- ⚠️ **구매 유도 멘트는 반드시 1회 삽입해야 합니다. 빠뜨리면 실패한 대본입니다.** 행동 인사이트 구간이 끝나고 수렴으로 넘어가기 직전에 삽입하세요.
 - 팟캐스트를 듣고 나면 "책을 더 읽고 싶다"는 느낌이 들어야 성공한 대본입니다.
 
 # 오늘의 상황: ${situation.scene}
@@ -1171,21 +1179,22 @@ ${themesBlock}
 - 클로징에서 방송 마무리 멘트 절대 금지. 친구끼리 자리 마무리하듯 끝낼 것.
 
 # Script Writing Rules:
-1. **분량:** 전체 대본은 공백 포함 ${targetMin}자에서 ${targetMax}자 사이로 작성합니다.
+1. **분량:** 글자 수 제한 없음. 내용이 충분히 전달될 때까지 자유롭게 작성합니다.
 2. **흐름 (절대 준수):**
-   [상황 수다(턴 1~3)] → [책 소개 + 스텔라 첫 질문(턴 4~8)] → [핵심 인사이트 탐구(턴 9~25)] → [현실 사례 연결(턴 26~35)] → [행동 인사이트(턴 36~42)] → [수렴(턴 ${turnLimit - 3})]
+   [상황 수다(턴 1~3)] → [책 소개 + 스텔라 첫 질문(턴 4~8)] → [핵심 인사이트 탐구] → [현실 사례 연결] → [행동 인사이트] → [수렴(턴 ${turnLimit - 5}~${turnLimit - 3})]
 3. **턴(Turn) 구성:**
    - 전체 턴 수는 정확히 ${turnLimit - 3}턴으로 작성합니다. (클로징 3턴은 별도 생성됩니다)
    - 각 턴은 실질적인 내용이 담긴 문장으로 구성합니다.
+   - 핵심 인사이트·현실 사례·행동 인사이트 구간은 턴 번호에 제한을 두지 않습니다. 내용이 충분히 다뤄질 때까지 자연스럽게 진행하세요.
 4. **⚠️ 사례 규칙 (필수):**
-   - 턴 26~35 구간에 실제 사례를 최소 2개 포함하세요.
+   - 현실 사례 연결 구간에 실제 사례를 최소 2개 포함하세요.
    - 사례 유형: 기업 사례(실제 회사명), 유명 인물 사례, 직장인 공감 현실 사례 중 혼합.
    - 사례는 "어떤 회사가 이걸 실제로 해봤는데..." 식으로 대화 안에 자연스럽게 녹여야 합니다.
 5. **⚠️ 행동 인사이트 (필수):**
-   - 턴 36~42 구간에 직장인이 내일 당장 시도할 수 있는 구체적 행동을 최소 2개 제시하세요.
+   - 행동 인사이트 구간에 직장인이 내일 당장 시도할 수 있는 구체적 행동을 최소 2개 제시하세요.
    - "그래서 뭘 하라고?" 라는 질문에 바로 답이 되는 수준으로 구체적이어야 합니다.
    - 예) "아침 첫 30분은 이메일 절대 안 열기", "하루 3개짜리 To-do만 쓰기" 같은 실행 가능한 행동.
-6. **⚠️ 수렴 구간 (턴 ${turnLimit - 3}) — 핵심 규칙:**
+6. **⚠️ 수렴 구간 (턴 ${turnLimit - 5}~${turnLimit - 3}, 총 3턴) — 핵심 규칙:**
    - 책의 핵심 인사이트를 새로 꺼내지 말 것. 이미 나온 내용을 정리하는 방향으로.
    - 두 사람의 대화가 슬슬 마무리 되는 느낌. 에너지를 낮추며 수렴.
    - 클로징 3턴과 자연스럽게 연결될 수 있도록 여운을 남기며 끝낼 것.
@@ -1199,7 +1208,7 @@ ${themesBlock}
 9. **⚠️ 저작권 보호 & 구매 유도 (필수 규칙):**
    - 책 내용을 처음부터 끝까지 요약하지 마세요. 핵심 개념은 **맛보기 수준**으로만 소개합니다.
    - 원문 인용, 구체적 수치, 실험 결과를 그대로 읊는 것은 금지입니다.
-   - 수렴 구간(턴 ${turnLimit - 6}~${turnLimit - 3}) 안에서 **구매 유도 멘트**를 자연스럽게 1회 반드시 삽입하세요.
+   - ⚠️ 수렴 시작 직전(턴 ${turnLimit - 6} 근처)에 **구매 유도 멘트를 반드시 1회 삽입하세요. 절대 생략 불가.**
    - ⚠️ 이 멘트는 매번 **완전히 다른 새로운 표현**으로 창작해야 합니다. 아래 예시를 절대 그대로 쓰지 말고, 이 책·이 대화 흐름에 딱 맞는 문장을 새로 만드세요.
      참고 뉘앙스 (절대 그대로 사용 금지):
      · "스포하고 싶은데, 이건 직접 읽어야 진짜 느낌이 오거든."
@@ -1223,7 +1232,7 @@ ${themesBlock}
                 },
                 body: JSON.stringify({
                         model: 'claude-sonnet-4-6',
-                        max_tokens: 4500,
+                        max_tokens: 5000,
                         system: `You are a writer for a fun, lively Korean podcast that sounds like two friends chatting — not a book review show. Strictly follow:
 1. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO \`\`\`json wrapper.
 2. Use only "speaker" and "text" as keys.
@@ -1231,10 +1240,12 @@ ${themesBlock}
 4. STRUCTURE IS MANDATORY:
    - Turns 1–4: ONLY situational small talk about "${situation.scene}". NO book mention whatsoever.
    - Turn 5: natural transition to the book.
-   - Turns 6–${turnLimit - 3}: book content, insights, humor.
-   - DO NOT write a closing. Stop at turn ${turnLimit - 3} mid-conversation. The script will be continued separately.
+   - Turns 6–${turnLimit - 6}: book content, insights, real-world examples, action insights. No fixed turn limits per section — let the content breathe naturally.
+   - Turns ${turnLimit - 5}–${turnLimit - 3}: wind-down (수렴), 3 turns. Summarize what was discussed, lower the energy, leave a lingering impression.
+   - DO NOT write a closing. Stop at turn ${turnLimit - 3}. The closing 3 turns will be generated separately.
 5. TONE IS EVERYTHING: If the script sounds like a book analysis lecture, it has FAILED. It must sound like two close friends venting, laughing, and bonding — funny moments land hard, serious moments hit genuinely.
-6. CASUAL SPEECH ONLY: Both speakers must use 반말 (informal Korean) throughout. No 존댓말 (~요, ~습니다, ~죠). They are close friends, not colleagues.`,
+6. CASUAL SPEECH ONLY: Both speakers must use 반말 (informal Korean) throughout. No 존댓말 (~요, ~습니다, ~죠). They are close friends, not colleagues.
+7. PURCHASE NUDGE — MANDATORY, NO EXCEPTIONS: Around turn ${turnLimit - 6}, you MUST include exactly one line that naturally encourages the listener to read the book. Something like "honestly, what I told you is maybe 10% of it — you gotta read it yourself to really feel it." If this line is missing, the script has FAILED.`,
                     messages: [
                         { role: 'user', content: prompt }
                     ]
@@ -1484,6 +1495,109 @@ JSON 배열만 출력.`
         }
     };
 
+    // ── E-book(전문 통찰 에세이) 생성 로직 ──────────────────────
+    const handleGenerateEbook = async () => {
+        const { bookId, title, author, themes } = scriptForm;
+        const currentGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        
+        if (!currentGeminiKey) return alert('Gemini API 키가 설정되어 있지 않습니다.');
+        if (!bookId || !title || !author) return alert('도서를 먼저 선택하세요.');
+
+        setIsGeneratingEbook(true);
+        setEbookLogs(['E-book 생성 시작...', '엔진: Gemini 1.5 Flash (Reliable)', '구성: 표지 + 에세이(10p) + 종이']);
+
+        const prompt = `# Role: 당신은 통찰력 있는 "전문 도서 비평가"이자 "인사이트 에세이스트"입니다.
+# Goal: 도서 "${title}"의 핵심 내용을 바탕으로, "표지 -> 본문 에세이 -> 마무리 페이지"로 연결되는 프리미엄 이북 콘텐츠를 작성합니다.
+
+# ⚠️ 최우선 금지 규칙 (절대 준수):
+1. **팟캐스트 형식을 절대 사용하지 마세요.** (대화체, 대본 형식, 캐릭터 이름 금지)
+2. **오직 "순수 에세이" 문체로만 작성하세요.** (~다, ~한다 체 사용)
+3. **등장인물 간의 대화나 방송 진행 멘트는 절대 삼가세요.**
+
+# 콘텐츠 구성 구조 (필수):
+
+### 1. COVER PAGE (표지)
+- <div class="ebook-cover"> 태그로 감싸주세요.
+- 책 제목과 저자명을 포함하십시오.
+- 책을 관통하는 "한 줄의 강렬한 통찰 멘트"를 중심에 배치하세요.
+
+### 2. MAIN ESSAY CONTENT (본문)
+- <div class="ebook-main-content"> 태그로 감싸주세요.
+- **도서 내용 소개 (30%)**: 핵심 개념과 저자의 의도.
+- **오리지널 인사이트 및 재해석 (70%)**: 현대 사회와 삶에 연결한 깊이 있는 통찰.
+- **중요**: 내용을 읽기 편하게 여러 개의 <section class="ebook-page"> 태그로 나누어 작성하세요. (각 페이지는 하나의 완결된 주제를 담습니다.)
+- HTML 태그(h1, h2, h3, p, ul, li)를 적절히 사용하세요.
+
+### 3. END PAGE (마무리)
+- <div class="ebook-end-page"> 태그로 감싸주세요.
+- "감사의 말"과 함께 책 제목, 저자, 그리고 가상의 출판사 명칭 "The Archiview Publishing"을 표기하세요.
+
+# Book Information:
+- 제목: ${title}
+- 저자: ${author}
+${themes ? `- 핵심 주제: ${themes}` : ''}
+
+# Output Format:
+- 반드시 순수 HTML 태그만 출력하세요. 마크다운 기호(\`\`\`)는 제외하십시오.
+- 모바일 가독성을 위해 단락 구분을 명확히 하고 <br/>을 활용하세요.`;
+
+        try {
+            // v1beta가 가장 범용적으로 작동하되, 모델명을 명확히 함
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentGeminiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 8192,
+                    }
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err?.error?.message || `API 오류 ${res.status}`);
+            }
+
+            const data = await res.json();
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const cleanedContent = content.replace(/```html/g, '').replace(/```/g, '').trim();
+            
+            setGeneratedEbook(cleanedContent);
+            setEbookLogs(prev => [...prev, '이북 패키지 생성 완료 (Gemini)']);
+        } catch (e) {
+            setEbookLogs(prev => [...prev, `❌ 오류: ${e.message}`]);
+        } finally {
+            setIsGeneratingEbook(false);
+        }
+    };
+
+    const handleSaveEbook = async () => {
+        const { bookId, title, author } = scriptForm;
+        if (!generatedEbook) return alert('생성된 내용이 없습니다.');
+        if (!bookId) return alert('Book ID가 없습니다.');
+
+        setIsLoadingEbook(true);
+        try {
+            await setDoc(doc(db, 'ebooks', bookId), {
+                content: generatedEbook,
+                title,
+                author,
+                updatedAt: serverTimestamp()
+            });
+            await setDoc(doc(db, 'book_overrides', bookId), {
+                isEbook: true,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            alert('Firestore에 E-book이 성공적으로 저장되었습니다.');
+        } catch (e) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setIsLoadingEbook(false);
+        }
+    };
+
     const handleSyncLocalScript = async () => {
         const bookId = scriptForm.bookId;
         if (!bookId) return alert('Book ID를 먼저 선택하세요.');
@@ -1500,7 +1614,7 @@ JSON 배열만 출력.`
             });
             setExistingScript(localScript);
             setGeneratedScript(localScript);
-            setScriptLogs(prev => [...prev, `✅ 로컬 대본 → Firestore 동기화 완료 (${localScript.length}턴)`]);
+            setScriptLogs(prev => [...prev, `로컬 대본 Firestore 동기화 완료 (${localScript.length}턴)`]);
             alert(`완료! ${localScript.length}턴 대본이 저장되었습니다.`);
         } catch (e) {
             alert('저장 실패: ' + e.message);
@@ -1527,7 +1641,7 @@ JSON 배열만 출력.`
 
             setExistingScript(null);
             setGeneratedScript([]);
-            setScriptLogs(prev => [...prev, `🗑️ '${bookId}' 대본이 삭제되었습니다.`]);
+            setScriptLogs(prev => [...prev, `'${bookId}' 대본이 삭제되었습니다.`]);
             alert('대본이 삭제되었습니다.');
         } catch (e) {
             alert('삭제 실패: ' + e.message);
@@ -1783,7 +1897,8 @@ JSON 배열만 출력.`
         const file = e.dataTransfer.files[0];
         if (file && file.type === 'audio/mpeg') {
             setVoiceFile(file);
-            setVoiceLogs(prev => [...prev, `[FILE] ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) 로드됨`]);
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            setVoiceLogs(prev => [...prev, `[FILE] ${file.name} (${fileSizeMB}MB) LOADED`]);
         } else {
             alert('MP3 파일만 업로드 가능합니다.');
         }
@@ -1869,17 +1984,17 @@ JSON 배열만 출력.`
             alert('AI 대본 자동 생성을 위해 Claude API 키가 필요합니다.\n「AI 대본 생성」 탭에서 먼저 API 키를 입력해주세요.'); return;
         }
         // 미리보기 확인
-        const preview = `📚 등록 정보 확인\n\n` +
-            `Book ID: ${newBookReg.bookId}\n` +
-            `제목: ${newBookReg.title}\n` +
-            `저자: ${newBookReg.author}\n` +
-            `셀럽: ${celeb}\n` +
-            `카테고리: ${category}\n` +
-            `섹션: ${SECTIONS.find(s => s.id === newBookReg.section)?.name}\n` +
-            `설명: ${newBookReg.desc || '(자동 생성)'}\n` +
-            `구매링크: ${newBookReg.purchaseLink || '(없음)'}\n` +
-            `AI 대본 생성: ${autoGenScript ? '✅ 자동 생성' : '❌ 생략'}\n\n` +
-            `이 정보로 등록하시겠습니까?`;
+        const preview = "[등록 정보 확인]\n\n" +
+            "Book ID: " + newBookReg.bookId + "\n" +
+            "제목: " + newBookReg.title + "\n" +
+            "저자: " + newBookReg.author + "\n" +
+            "셀럽: " + celeb + "\n" +
+            "카테고리: " + category + "\n" +
+            "섹션: " + (SECTIONS.find(s => s.id === newBookReg.section)?.name) + "\n" +
+            "설명: " + (newBookReg.desc || "(자동 생성)") + "\n" +
+            "구매링크: " + (newBookReg.purchaseLink || "(없음)") + "\n" +
+            "AI 대본 생성: " + (autoGenScript ? "자동 생성" : "생략") + "\n\n" +
+            "이 정보로 등록하시겠습니까?";
         if (!window.confirm(preview)) return;
 
         setIsRegistering(true);
@@ -2048,10 +2163,10 @@ JSON 배열만 출력.`
                     AI 대본 자동 생성 (Claude API)
                 </label>
                 {autoGenScript && !scriptApiKey && (
-                    <span className="text-[9px] text-yellow-400">⚠️ 「AI 대본 생성」 탭에서 API 키 필요</span>
+                    <span className="text-[9px] text-yellow-400"> (AI 대본 생성 탭에서 API 키 필요)</span>
                 )}
                 {autoGenScript && scriptApiKey && (
-                    <span className="text-[9px] text-emerald-400">✅ API 키 준비됨</span>
+                    <span className="text-[9px] text-emerald-400"> (API 키 준비됨)</span>
                 )}
             </div>
             <button onClick={handleRegisterBook} disabled={isRegistering} className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-lg transition-all ${isRegistering ? 'bg-slate-700 text-slate-500' : 'bg-emerald-500 text-white hover:bg-emerald-400 active:scale-[0.98]'}`}>
@@ -2154,6 +2269,7 @@ JSON 배열만 출력.`
         'books': '도서 관리',
         'popular': '인기 아카이뷰',
         'script': 'AI 대본 생성',
+        'ebook': 'E-BOOK 제작',
         'podcast': 'AI 팟캐스트',
         'voice': '성우 다이렉트',
         'sales': '매출 관리',
@@ -2246,7 +2362,7 @@ JSON 배열만 출력.`
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-xl">
-                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : 'settings'}
+                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'ebook' ? 'auto_stories' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : 'settings'}
                                 </span>
                                 {tabNames[tab].toUpperCase()}
                             </button>
@@ -3114,9 +3230,9 @@ JSON 배열만 출력.`
                                         />
                                         {selectedSituation && (
                                             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
-                                                <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">🎬 상황극 설정</p>
+                                                <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">SCENE SETTING</p>
                                                 <p className="text-amber-200 text-sm font-medium">{selectedSituation.scene}</p>
-                                                <p className="text-amber-500 text-xs mt-1">마무리: "{selectedSituation.close}"</p>
+                                                <p className="text-amber-500 text-xs mt-1">CLOSING: "{selectedSituation.close}"</p>
                                             </div>
                                         )}
                                         <button
@@ -3124,10 +3240,17 @@ JSON 배열만 출력.`
                                             disabled={isGeneratingScript}
                                             className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all ${isGeneratingScript ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-500/20'}`}
                                         >
-                                            {isGeneratingScript
-                                                ? <><span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span> {scriptProgress >= 88 ? `맞춤법 검사 중... (${scriptProgress}%)` : `GENERATING (${scriptProgress}%)`}</>
-                                                : <><span className="material-symbols-outlined text-2xl">auto_awesome</span> GENERATE SCRIPT</>
-                                            }
+                                            {isGeneratingScript ? (
+                                                <>
+                                                    <span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span>
+                                                    {scriptProgress >= 88 ? `SPELL CHECKING... (${scriptProgress}%)` : `GENERATING (${scriptProgress}%)`}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-2xl">auto_awesome</span>
+                                                    GENERATE SCRIPT
+                                                </>
+                                            )}
                                         </button>
                                     </div>
 
@@ -3483,6 +3606,153 @@ JSON 배열만 출력.`
                     )}
 
                     {/* Podcast Mode - PC Dual Panel */}
+                    {activeTab === 'ebook' && (
+                        <div className="space-y-12 animate-fade-in">
+                            <div className="flex justify-between items-end">
+                                <div className="space-y-3">
+                                    <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">E-Book Factory</h3>
+                                    <p className="text-slate-500 text-xl font-medium italic">전문가 수준의 인사이트 에세이를 생성하고 관리합니다.</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowEbookPreviewModal(true)}
+                                        disabled={!generatedEbook}
+                                        className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-black text-white hover:bg-white/10 transition-all uppercase tracking-widest disabled:opacity-30"
+                                    >
+                                        PREVIEW BOOK
+                                    </button>
+                                    <button
+                                        onClick={handleSaveEbook}
+                                        disabled={!generatedEbook || isLoadingEbook}
+                                        className="px-10 py-4 bg-gold text-primary rounded-2xl text-xs font-black hover:scale-105 transition-all shadow-xl uppercase tracking-widest disabled:opacity-50"
+                                    >
+                                        {isLoadingEbook ? 'SAVING...' : 'SAVE TO FIRESTORE'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                                {/* Left: Config & Selection */}
+                                <div className="space-y-8">
+                                    <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-xl">
+                                        <h4 className="text-white font-black text-xl mb-8 flex items-center gap-4">
+                                            <span className="material-symbols-outlined text-gold">auto_awesome</span>
+                                            ESSAY GENERATION
+                                        </h4>
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Target Book</label>
+                                                <select
+                                                    value={scriptForm.bookId}
+                                                    onChange={(e) => {
+                                                        const book = realBooks.find(b => b.id === e.target.value);
+                                                        if (book) {
+                                                            setScriptForm(prev => ({
+                                                                ...prev,
+                                                                bookId: book.id,
+                                                                title: book.title,
+                                                                author: book.author,
+                                                                themes: book.description || ''
+                                                            }));
+                                                            // Load existing ebook if any
+                                                            const checkExisting = async () => {
+                                                                const docSnap = await getDoc(doc(db, 'ebooks', book.id));
+                                                                if (docSnap.exists()) {
+                                                                    setGeneratedEbook(docSnap.data().content);
+                                                                    setExistingEbook(docSnap.data());
+                                                                } else {
+                                                                    setGeneratedEbook('');
+                                                                    setExistingEbook(null);
+                                                                }
+                                                            };
+                                                            checkExisting();
+                                                        }
+                                                    }}
+                                                    className="w-full bg-black/60 border-2 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-gold outline-none transition-all font-bold"
+                                                >
+                                                    <option value="">도서를 선택하세요</option>
+                                                    {realBooks.map(b => (
+                                                        <option key={b.id} value={b.id}>{b.title} ({b.author})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="p-6 bg-gold/5 border border-gold/10 rounded-3xl space-y-4">
+                                                <div className="flex items-center gap-3 text-gold">
+                                                    <span className="material-symbols-outlined text-sm">info</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter">AI Generation Rules (30/70 Ratio)</span>
+                                                </div>
+                                                <ul className="text-[11px] text-slate-400 space-y-2 font-medium">
+                                                    <li>• 도서 내용(30%) + 독창적 인사이트(70%)</li>
+                                                    <li>• 전문 비평가 페르소나 (수다·대화 절대 금지)</li>
+                                                    <li>• 도입-본문-실행지침-결론의 에세이 구조</li>
+                                                    <li>• 모바일 최적화된 문단 나누기 적용</li>
+                                                </ul>
+                                            </div>
+
+                                            <button
+                                                onClick={handleGenerateEbook}
+                                                disabled={isGeneratingEbook || !scriptForm.bookId}
+                                                className={`w-full py-6 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl ${
+                                                    isGeneratingEbook || !scriptForm.bookId
+                                                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                                        : 'bg-gradient-to-r from-gold to-amber-500 text-primary hover:scale-[1.02] active:scale-[0.98]'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl font-black">{isGeneratingEbook ? 'sync' : 'magic_button'}</span>
+                                                {isGeneratingEbook ? 'GENERATING...' : 'GENERATE INSIGHT ESSAY'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Logs */}
+                                    <div className="bg-black/40 border border-white/5 rounded-[32px] p-8 h-64 overflow-y-auto font-mono text-[10px] space-y-2">
+                                        {ebookLogs.map((log, i) => (
+                                            <div key={i} className={`flex gap-3 ${log.startsWith('❌') ? 'text-red-400' : log.startsWith('✅') ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                                <span className="opacity-30">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
+                                                <span>{log}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Right: Preview / Editor */}
+                                <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded-[48px] overflow-hidden flex flex-col h-[800px] shadow-2xl relative">
+                                    <div className="bg-white/5 px-10 py-6 border-b border-white/10 flex items-center justify-between">
+                                        <h4 className="text-white font-black text-sm uppercase tracking-widest flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-gold">edit_note</span>
+                                            ESSAY CONTENT EDITOR
+                                        </h4>
+                                        <div className="flex items-center gap-4">
+                                            {existingEbook && <span className="text-[10px] font-black text-emerald-500 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">FIRESTORE SYNCED</span>}
+                                            {!existingEbook && generatedEbook && <span className="text-[10px] font-black text-amber-500 px-3 py-1 bg-amber-500/10 rounded-full border border-amber-500/20">UNSAVED DRAFT</span>}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-hidden p-8">
+                                        <textarea
+                                            value={generatedEbook}
+                                            onChange={(e) => setGeneratedEbook(e.target.value)}
+                                            placeholder="AI가 생성한 에세이 내용이 여기에 표시됩니다. HTML 형식을 직접 수정할 수 있습니다."
+                                            className="w-full h-full bg-black/40 border-2 border-white/5 rounded-3xl p-10 text-slate-300 font-medium text-lg focus:border-gold/50 outline-none transition-all resize-none leading-relaxed scrollbar-hide"
+                                        />
+                                    </div>
+
+                                    {/* Overlay for generation */}
+                                    {isGeneratingEbook && (
+                                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center space-y-8">
+                                            <div className="size-24 border-8 border-gold/20 border-t-gold rounded-full animate-spin"></div>
+                                            <div className="text-center">
+                                                <h5 className="text-white font-black text-2xl mb-2">통찰을 엮는 중...</h5>
+                                                <p className="text-slate-500 text-sm font-bold uppercase tracking-widest animate-pulse">Gemini 2.5 Flash is thinking</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'podcast' && (
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 animate-fade-in items-start">
                             <div className="space-y-12">
@@ -4024,13 +4294,134 @@ JSON 배열만 출력.`
                             </div>
                         </div>
                     )}
+
+                {/* E-book Preview Modal: Redesigned with Premium Horizontal Paging */}
+                {showEbookPreviewModal && (
+                    <div className="fixed inset-0 z-[2000] bg-[#050608]/98 backdrop-blur-3xl flex items-center justify-center p-4 md:p-10 transition-all animate-fade-in">
+                        <div className="absolute top-8 right-8 z-50">
+                            <button
+                                onClick={() => setShowEbookPreviewModal(false)}
+                                className="size-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-gold hover:text-primary transition-all shadow-2xl group"
+                            >
+                                <span className="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform">close</span>
+                            </button>
+                        </div>
+
+                        <div className="w-full max-w-[500px] h-[85vh] bg-black border border-gold/30 rounded-[40px] shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col relative ring-1 ring-gold/20">
+                            {/* Paper Texture Overlay */}
+                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/p6.png')]"></div>
+                            
+                            {/* Horizontal Snap Scroll Container */}
+                            <div 
+                                id="ebook-paging-container"
+                                className="flex-1 flex overflow-x-auto scroll-snap-type-x-mandatory scrollbar-hide scroll-smooth"
+                                style={{
+                                    scrollSnapType: 'x mandatory',
+                                    WebkitOverflowScrolling: 'touch'
+                                }}
+                            >
+                                {/* [Slide] Cover Page */}
+                                <div className="min-w-full h-full flex-shrink-0 scroll-snap-align-start p-12 flex flex-col items-center justify-center text-center relative">
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-gold/10 blur-[100px] rounded-full"></div>
+                                    <div className="z-10 space-y-10">
+                                        <div className="size-24 bg-gold/5 rounded-[40px] flex items-center justify-center mx-auto border border-gold/20 shadow-2xl">
+                                            <span className="material-symbols-outlined text-gold text-5xl">auto_stories</span>
+                                        </div>
+                                        <h1 className="text-white font-black text-5xl uppercase tracking-tighter leading-tight">{scriptForm.title}</h1>
+                                        <div className="space-y-2">
+                                            <p className="text-gold font-bold text-xl uppercase tracking-[0.3em]">{scriptForm.author}</p>
+                                            <div className="w-16 h-[2px] bg-gold/30 mx-auto mt-4"></div>
+                                        </div>
+                                        <p className="text-slate-500 font-medium italic text-lg px-6 leading-relaxed">
+                                            "통찰의 아카이브, 당신의 성장을 위한 기록"
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* [Slide] Main Content - Dynamically split if sections exist, otherwise one long scrollable page */}
+                                <div className="min-w-full h-full flex-shrink-0 scroll-snap-align-start p-10 overflow-y-auto custom-scrollbar">
+                                    <div className="prose prose-invert max-w-none font-serif">
+                                        <div
+                                            dangerouslySetInnerHTML={{ __html: generatedEbook }}
+                                            className="ebook-content-body text-xl leading-[2.1] text-slate-200"
+                                            style={{ wordBreak: 'break-word' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* [Slide] End Page */}
+                                <div className="min-w-full h-full flex-shrink-0 scroll-snap-align-start p-16 flex flex-col items-center justify-center text-center space-y-12 bg-white/[0.02]">
+                                    <div className="w-20 h-20 border border-gold/20 rounded-full flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-gold/50 text-3xl">local_library</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h4 className="text-gold font-black text-3xl uppercase tracking-[0.4em]">FINISH</h4>
+                                        <p className="text-slate-500 text-lg">아카이뷰와 함께해주셔서 감사합니다.</p>
+                                    </div>
+                                    <div className="space-y-2 opacity-50 border-t border-white/10 pt-10 w-full max-w-xs mx-auto">
+                                        <p className="text-white text-sm font-bold uppercase">{scriptForm.title}</p>
+                                        <p className="text-slate-400 text-xs font-medium">{scriptForm.author}</p>
+                                        <p className="text-gold text-[10px] font-black tracking-[0.5em] mt-6">THE ARCHIVIEW PUBLISHING</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bottom Controls */}
+                            <div className="px-10 py-8 bg-black/50 border-t border-white/5 backdrop-blur-md flex justify-between items-center z-50">
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const container = document.getElementById('ebook-paging-container');
+                                            container.scrollBy({ left: -container.offsetWidth, behavior: 'smooth' });
+                                        }}
+                                        className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gold hover:bg-gold hover:text-primary transition-all"
+                                    >
+                                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const container = document.getElementById('ebook-paging-container');
+                                            container.scrollBy({ left: container.offsetWidth, behavior: 'smooth' });
+                                        }}
+                                        className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gold hover:bg-gold hover:text-primary transition-all"
+                                    >
+                                        <span className="material-symbols-outlined">arrow_forward_ios</span>
+                                    </button>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] font-black text-gold uppercase tracking-[0.2em] block mb-1">PREMIUM READER v1.0</span>
+                                    <div className="flex gap-1 justify-end">
+                                        <div className="size-1.5 bg-gold rounded-full"></div>
+                                        <div className="size-1.5 bg-white/10 rounded-full"></div>
+                                        <div className="size-1.5 bg-white/10 rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <style>{`
+                            .scroll-snap-type-x-mandatory { scroll-snap-type: x mandatory; }
+                            .scroll-snap-align-start { scroll-snap-align: start; }
+                            .scrollbar-hide::-webkit-scrollbar { display: none; }
+                            .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+                            
+                            .ebook-content-body h1 { font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 2.5rem; line-height: 1.1; background: linear-gradient(to right, #d4af37, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                            .ebook-content-body h2 { font-size: 1.6rem; font-weight: 800; color: #d4af37; margin-top: 4rem; margin-bottom: 1.8rem; border-left: 4px solid #d4af37; padding-left: 1.5rem; line-height: 1.3; }
+                            .ebook-content-body p { margin-bottom: 2.5rem; }
+                            
+                            .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.2); border-radius: 10px; }
+                        `}</style>
+                    </div>
+                )}
                 </main>
 
                 {/* PC 환경에서는 하단 바를 숨기거나 다르게 처리 */}
                 <div className="lg:hidden">
                     <BottomNavigation />
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

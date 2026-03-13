@@ -192,13 +192,25 @@ export default function Library() {
 
                                             {/* Overlay Actions */}
                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                                                <Link
+                                                    to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}?tab=review`}
+                                                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px] font-black">visibility</span>
+                                                </Link>
+                                                <Link
+                                                    to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}?tab=ebook`}
+                                                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px] font-black">auto_stories</span>
+                                                </Link>
                                                 <a
                                                     href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
+                                                    className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px] font-black">shopping_bag</span>
+                                                    <span className="material-symbols-outlined text-[18px] font-black">shopping_bag</span>
                                                 </a>
                                                 <button
                                                     onClick={() => removeSavedBook(book.title)}

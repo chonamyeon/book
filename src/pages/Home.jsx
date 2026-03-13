@@ -130,7 +130,7 @@ export default function Home() {
             alert('이미 서재에 보관된 도서입니다.');
             return;
         }
-        const updated = [...saved, { title: book.title, author: book.author, cover: book.cover }];
+        const updated = [...saved, { id: book.id, title: book.title, author: book.author, cover: book.cover }];
         localStorage.setItem('savedBooks', JSON.stringify(updated));
         window.dispatchEvent(new Event('savedBooksUpdated'));
         alert('서재에 보관되었습니다. ✅');
@@ -329,13 +329,20 @@ export default function Home() {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex gap-1">
+                                                <div className="grid grid-cols-2 gap-1.5">
                                                     <Link
-                                                        to={`/review/${book.id}`}
+                                                        to={`/review/${book.id}?tab=review`}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                                                        className="flex-1 flex items-center justify-center py-2 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
                                                     >
                                                         리뷰
+                                                    </Link>
+                                                    <Link
+                                                        to={`/review/${book.id}?tab=ebook`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="flex-1 flex items-center justify-center py-2 rounded-none bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[9.5px] font-black text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all whitespace-nowrap"
+                                                    >
+                                                        이북
                                                     </Link>
                                                     <button
                                                         onClick={(e) => {
@@ -344,7 +351,7 @@ export default function Home() {
                                                             const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`;
                                                             openScriptModal(book.id, audioUrl, book.title, book.cover);
                                                         }}
-                                                        className={`flex-1 flex items-center justify-center py-1.5 rounded-none border text-[9.5px] font-black transition-all whitespace-nowrap ${isThisPlaying
+                                                        className={`flex-1 flex items-center justify-center py-2 rounded-none border text-[9.5px] font-black transition-all whitespace-nowrap ${isThisPlaying
                                                             ? 'bg-orange-500 text-white border-orange-500 animate-pulse'
                                                             : 'bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20'
                                                             }`}
@@ -357,19 +364,10 @@ export default function Home() {
                                                             e.stopPropagation();
                                                             addToLibrary(book);
                                                         }}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                                                        className="flex-1 flex items-center justify-center py-2 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
                                                     >
                                                         서재추가
                                                     </button>
-                                                    <a
-                                                        href={book.purchaseLink || '#'}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
-                                                    >
-                                                        구매하기
-                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -486,19 +484,19 @@ export default function Home() {
                                             <span className="text-[9px] font-black text-orange-500">🎧 15분</span>
                                             <span className="text-[9px] font-black text-white/30">📖 5분</span>
                                         </div>
-                                        <div className="flex gap-1">
-                                            <Link to={`/review/${item.id}`} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                        <div className="flex gap-1 mt-2">
+                                            <Link to={`/review/${item.id}?tab=review`} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                 리뷰
                                             </Link>
+                                            <Link to={`/review/${item.id}?tab=ebook`} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[9.5px] font-black text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all whitespace-nowrap">
+                                                이북
+                                            </Link>
                                             <button onClick={(e) => { e.stopPropagation(); const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
-                                                ▶ 재생하기
+                                                ▶ 재생
                                             </button>
                                             <button onClick={() => addToLibrary(item)} className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
-                                                서재추가
+                                                서재
                                             </button>
-                                            <a href={item.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center py-1.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
-                                                구매하기
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -560,18 +558,18 @@ export default function Home() {
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2 mt-3">
-                                                <Link to={`/review/${content.id}`} className="flex items-center justify-center py-2.5 rounded-none bg-white/10 border border-white/20 text-[9.5px] font-black text-white hover:bg-white/20 transition-all whitespace-nowrap">
+                                                <Link to={`/review/${content.id}?tab=review`} className="flex items-center justify-center py-2 rounded-none bg-white/10 border border-white/20 text-[9.5px] font-black text-white hover:bg-white/20 transition-all whitespace-nowrap">
                                                     리뷰
                                                 </Link>
-                                                <button onClick={(e) => { e.stopPropagation(); const audioUrl = content.podcastFile || content.voiceAudioUrl || content.audioUrl || `/audio/${content.id}.mp3`; openScriptModal(content.id, audioUrl, content.title, content.cover); }} className="flex items-center justify-center py-2.5 rounded-none bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
+                                                <Link to={`/review/${content.id}?tab=ebook`} className="flex items-center justify-center py-2 rounded-none bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[9.5px] font-black text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all whitespace-nowrap">
+                                                    이북
+                                                </Link>
+                                                <button onClick={(e) => { e.stopPropagation(); const audioUrl = content.podcastFile || content.voiceAudioUrl || content.audioUrl || `/audio/${content.id}.mp3`; openScriptModal(content.id, audioUrl, content.title, content.cover); }} className="flex items-center justify-center py-2 rounded-none bg-orange-500/10 border border-orange-500/20 text-[9.5px] font-black text-orange-400 hover:bg-orange-500/20 transition-all whitespace-nowrap">
                                                     ▶ 재생하기
                                                 </button>
-                                                <button onClick={() => addToLibrary(content)} className="flex items-center justify-center py-2.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
+                                                <button onClick={() => addToLibrary(content)} className="flex items-center justify-center py-2 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
                                                     서재추가
                                                 </button>
-                                                <a href={content.purchaseLink || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-2.5 rounded-none bg-white/5 border border-white/10 text-[9.5px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap">
-                                                    구매하기
-                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -631,6 +629,32 @@ export default function Home() {
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Membership Guide</p>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Recommendation Highlight Box */}
+                        <div className="mb-6 bg-zinc-900/50 border border-white/5 p-5 rounded-none relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-2xl rounded-full -mr-10 -mt-10"></div>
+                            <h3 className="text-[13px] font-black text-orange-500 mb-3 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[16px]">stars</span>
+                                아카이뷰는 이런 분께 추천합니다
+                            </h3>
+                            <div className="grid grid-cols-1 gap-y-2.5">
+                                {[
+                                    "직장을 다니지만 지적 채워짐이 필요하신 분",
+                                    "친구에게 책을 선물하고 싶은데 선택이 어려우신 분",
+                                    "성장하고 싶은데 항상 제자리라 느껴지시는 분",
+                                    "성공한 사람들의 인사이트가 절실하신 분",
+                                    "서점 가기 전, 무슨 도서를 살지 고민되시는 분"
+                                ].map((item, idx) => (
+                                    <div key={idx} className="flex items-start gap-2">
+                                        <span className="text-orange-500/50 text-[11px] mt-0.5">●</span>
+                                        <span className="text-[11px] font-bold text-gray-300 leading-relaxed break-keep">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="mt-4 text-[10.5px] font-medium text-gray-500 bg-white/5 p-2 border-l-2 border-orange-500/30">
+                                아카이뷰를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
+                            </p>
                         </div>
 
                         <div className="glass-card rounded-none p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">

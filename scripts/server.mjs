@@ -48,14 +48,22 @@ const io = new Server(server, {
     }
 });
 
-app.use(cors());
 // Chrome Private Network Access 허용 (HTTPS → localhost 요청 차단 해제)
 app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
+    // 1. 요청에 Private Network Access 헤더가 있는지 확인
+    if (req.headers['access-control-request-private-network']) {
         res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    // 2. OPTIONS preflight 요청에 대해서는 명시적으로 헤더 추가
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Private-Network');
+        return res.sendStatus(204); // CORS 미들웨어가 처리하기 전에 먼저 응답
     }
     next();
 });
+app.use(cors());
 app.use(express.json());
 
 // 멀터 설정 (파일 업로드)
@@ -768,39 +776,39 @@ app.post('/api/book/crawl', async (req, res) => {
             const $search = cheerio.load(searchHtml);
             const detailLink = $search('.prod_link').first().attr('href');
 
+
             if (detailLink) {
-                console.log(`[CRAWL] 교보 상세 페이지 발견: ${detailLink}`);
-                const detailRes = await fetch(detailLink, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
-                });
-                const detailHtml = await detailRes.text();
-                const $ = cheerio.load(detailHtml);
+                finalUrl = detailLink;
+                const bookId = detailLink.split('/').pop().replace(/[^A-Z0-9]/gi, ''); // Clean ID
+                console.log(`[CRAWL] 교보문고 도서 ID 추출: ${bookId}`);
 
-                const kyoboExtract = (id) => {
-                    const html = $(id).find('.intro_bottom').html() || $(id).find('.info_text').html() || "";
-                    return cleanText(html);
+                const fetchKyoboAPI = async (subPath) => {
+                    try {
+                        const url = `https://product.kyobobook.co.kr/api/gw/pdt/product/${bookId}/${subPath}`;
+                        const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } });
+                        if (res.ok) return await res.json();
+                    } catch (e) { console.error(`[KYOB O API ERROR] ${subPath}`, e.message); }
+                    return null;
                 };
 
-                const resObj = {
-                    intro: kyoboExtract('#scroll_01'),
-                    toc: kyoboExtract('#scroll_03'),
-                    inside: kyoboExtract('#scroll_04'),
-                    review: kyoboExtract('#scroll_05')
-                };
+                const introData = await fetchKyoboAPI('introduction');
+                const contentsData = await fetchKyoboAPI('contents');
+                const reviewData = await fetchKyoboAPI('publisherReview');
+                const bookCardData = await fetchKyoboAPI('book-card');
 
-                // 표지 이미지 추출 (Kyobo)
-                const coverImg = $('.portrait_img_box img').attr('src') || $('.prod_img_box img').attr('src');
-                if (coverImg) coverUrl = coverImg;
+                if (introData && introData.data) description += `■ 책소개\n${cleanText(introData.data.introduction || "")}\n\n`;
+                if (contentsData && contentsData.data) description += `■ 목차\n${cleanText(contentsData.data.contents || "")}\n\n`;
+                if (reviewData && reviewData.data) description += `■ 출판사 서평\n${cleanText(reviewData.data.publisherReview || "")}\n\n`;
+                
+                if (bookCardData && bookCardData.data && bookCardData.data.picutreUrl) {
+                    coverUrl = bookCardData.data.picutreUrl;
+                }
 
-                if (resObj.intro) {
-                    description += `■ 책소개\n${resObj.intro}\n\n`;
-                    if (resObj.toc) description += `■ 목차\n${resObj.toc}\n\n`;
-                    if (resObj.inside) description += `■ 책속으로\n${resObj.inside}\n\n`;
-                    if (resObj.review) description += `■ 출판사 서평\n${resObj.review}\n\n`;
-                    finalUrl = detailLink;
-                    console.log(`[CRAWL] 교보문고 데이터 획득 성공`);
+                if (description) {
+                    console.log(`[CRAWL] 교보문고 데이터 획득 성공 (JSON API)`);
                 }
             }
+
         } catch (e) { console.error('[KYOB O CRAWL ERROR]', e.message); }
 
         // 2. YES24 시도 (결과가 없거나 부족할 때 보완)
@@ -879,10 +887,12 @@ app.post('/api/book/analyze', async (req, res) => {
 ${description}
 
 작성 가이드라인:
-1. **도서 구조 추론**: 책의 전체적인 흐름과 각 장(Chapter)이 갖는 의미를 논리적으로 분석해주세요.
-2. **핵심 통찰(Key Insights)**: 이 책이 독자에게 전달하려는 가장 중요한 메시지 3~5가지를 깊이 있게 추출해주세요.
-3. **사실적 스토리 및 에피소드**: 책에 언급된 구체적인 사례나, 주제와 연관된 전반적인 사실적 배경 정보를 풍성하게 정리해주세요.
-4. **문체**: 지적이면서도 통찰력이 느껴지는 톤으로 작성해주세요. (한국어로 작성)
+1. **도서 구조 분석**: 책의 전체적인 흐름과 구성을 논리적으로 분석해주세요.
+2. **핵심 주제 명시**: 팟캐스트에서 반드시 다뤄야 할 핵심 주제 3~5가지를 다음 형식을 지켜서 작성해주세요. (이후 프로그램에서 자동으로 추출됩니다)
+   - ■ 핵심 주제 1: (주제 제목) - (상세 설명)
+   - ■ 핵심 주제 2: (주제 제목) - (상세 설명)
+3. **풍성한 사례**: 각 주제를 뒷받침하는 책 속의 구체적인 에피소드나 데이터를 포함해주세요.
+4. **팟캐스트 연출 팁**: 제임스와 스텔라가 이 내용을 어떻게 재미있게 풀어나가면 좋을지 제언해주세요.
 
 이 리포트는 나중에 팟캐스트 대본의 기초 자료로 사용될 것입니다.
 `;

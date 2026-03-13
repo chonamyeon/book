@@ -11,7 +11,7 @@ import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/fire
 import { useAuth } from '../hooks/useAuth';
 import './ReviewDetail.css';
 
-const CHARS_PER_PAGE = 280;
+const CHARS_PER_PAGE = 400;
 
 function buildPages(book) {
     if (!book || !book.review) return [];
@@ -221,12 +221,15 @@ export default function ReviewDetail() {
 
     const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
     const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
-    const [activeTab, setActiveTab] = useState('review');
+
+    const initialTab = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState(initialTab || 'review');
 
     // Firestore / Script / Podcast States & Derivations
     const [firestoreScript, setFirestoreScript] = useState(null);
     const [firestoreAudioUrl, setFirestoreAudioUrl] = useState(null);
     const [firestoreIsPodcast, setFirestoreIsPodcast] = useState(false);
+    const [firestoreEbook, setFirestoreEbook] = useState(null);
 
     const script = useMemo(() => bookScripts[id] || firestoreScript || [], [id, firestoreScript]);
     const hasScript = script.length > 0;
@@ -237,24 +240,36 @@ export default function ReviewDetail() {
         return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile || `/audio/${book.id}.mp3`;
     }, [book, firestoreAudioUrl]);
 
+    const ebookPages = useMemo(() => firestoreEbook || [], [firestoreEbook]);
+    const hasEbook = ebookPages.length > 0;
+
+    const displayPages = useMemo(() => {
+        // We handle 'ebook' separately in the render now for the premium experience
+        return pages;
+    }, [pages]);
+
+    const total = displayPages.length + 2;
+    const progress = (total > 1) ? pageIdx / (total - 1) : 0;
+
     // 탭 파라미터 감지 및 자동 재생 연동
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab === 'podcast' && isPodcast) {
-            setActiveTab('podcast');
-            // 자동 재생 시도 (이미 재생 중인 게 아닐 때만)
-            if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                setTimeout(() => {
-                    playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
-                }, 500);
+        if (tab && ['review', 'podcast', 'ebook'].includes(tab)) {
+            setActiveTab(tab);
+            if (tab === 'podcast' && isPodcast) {
+                // 자동 재생 시도 (이미 재생 중인 게 아닐 때만)
+                if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
+                    setTimeout(() => {
+                        playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+                    }, 500);
+                }
             }
-        } else if (book && !hasReview && isPodcast) {
-            setActiveTab('podcast');
+        } else if (book && !hasReview) {
+            if (hasEbook) setActiveTab('ebook');
+            else if (isPodcast) setActiveTab('podcast');
         }
-    }, [book, hasReview, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3, isPodcast]);
+    }, [book, hasReview, hasEbook, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3, isPodcast]);
 
-    const total = pages.length + 2;
-    const progress = (total > 1) ? pageIdx / (total - 1) : 0;
     const isThisPodcastActive = podcastInfo?.src === podcastSrc;
 
     const chatEndRef = useRef(null);
@@ -279,6 +294,31 @@ export default function ReviewDetail() {
                 const d = snap.data();
                 setFirestoreAudioUrl(d.voiceAudioUrl || d.audioUrl || null);
                 if (d.isPodcast) setFirestoreIsPodcast(true);
+            }
+        }).catch(() => { });
+
+        // 이북 데이터 조회
+        getDoc(doc(db, 'ebooks', id)).then(snap => {
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.pages && Array.isArray(data.pages)) {
+                    setFirestoreEbook(data.pages);
+                } else if (data.content) {
+                    // Split content by <section class="ebook-page">
+                    const content = data.content;
+                    const sections = content.split(/<section[^>]*class=["']ebook-page["'][^>]*>/i);
+                    // The first element might be empty if content starts with the tag
+                    const validSections = sections
+                        .map(s => s.split(/<\/section>/i)[0])
+                        .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
+                    
+                    if (validSections.length > 0) {
+                        setFirestoreEbook(validSections);
+                    } else {
+                        // Fallback: just put the whole content in one page if no sections found
+                        setFirestoreEbook([content]);
+                    }
+                }
             }
         }).catch(() => { });
     }, [id]);
@@ -410,6 +450,7 @@ export default function ReviewDetail() {
         });
     }, [book]);
 
+
     return (
         <div
             className={`rv-root ${activeTab === 'podcast' ? 'podcast-view' : ''}`}
@@ -454,6 +495,15 @@ export default function ReviewDetail() {
                     <span className="material-symbols-outlined">menu_book</span>
                     <span>리뷰</span>
                 </button>
+                {hasEbook && (
+                    <button
+                        className={`rv-tab ${activeTab === 'ebook' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('ebook')}
+                    >
+                        <span className="material-symbols-outlined">auto_stories</span>
+                        <span>이북</span>
+                    </button>
+                )}
                 {hasScript && isPodcast && (
                     <button
                         className={`rv-tab ${activeTab === 'podcast' ? 'active' : ''}`}
@@ -522,10 +572,12 @@ export default function ReviewDetail() {
                             </Page>
 
                             {/* 2. Content Pages */}
-                            {pages.map((p, i) => (
-                                <Page key={i}>
+                            {displayPages.map((p, i) => (
+                                <Page key={`review-${i}`}>
                                     <div className="rv-content">
-                                        <div className="rv-section-label">The Archiview · Review</div>
+                                        <div className="rv-section-label">
+                                            The Archiview · Review
+                                        </div>
                                         <h2 className="rv-page-header">{p.header}</h2>
                                         {p.isSummary ? (
                                             <div className="rv-summary-body">
@@ -611,6 +663,110 @@ export default function ReviewDetail() {
                         <button className="rv-nav-btn" onClick={() => flipBook.current?.pageFlip().flipNext()} disabled={pageIdx === total - 1}>
                             <span className="material-symbols-outlined">arrow_forward_ios</span>
                         </button>
+                    </div>
+                </div>
+            ) : activeTab === 'ebook' ? (
+                <div className="rv-ebook-stage">
+                    <div className="rv-ebook-reader">
+                        {/* Paper Texture Overlay */}
+                        <div className="rv-paper-overlay"></div>
+                        
+                        {/* Horizontal Snap Scroll Container */}
+                        <div 
+                            id="rv-ebook-paging-container"
+                            className="rv-ebook-paging-container"
+                        >
+                            {/* [Slide] Cover Page */}
+                            <div className="rv-ebook-slide rv-ebook-cover">
+                                <div className="rv-ebook-glow"></div>
+                                <div className="rv-ebook-cover-content">
+                                    <div className="rv-ebook-icon-box">
+                                        <span className="material-symbols-outlined">auto_stories</span>
+                                    </div>
+                                    <h1 className="rv-ebook-title">{book.title}</h1>
+                                    <div className="rv-ebook-author-box">
+                                        <p className="rv-ebook-author">{book.author}</p>
+                                        <div className="rv-ebook-divider"></div>
+                                    </div>
+                                    <p className="rv-ebook-tagline">
+                                        "통찰의 아카이브, 당신의 성장을 위한 기록"
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* [Slides] Content Pages */}
+                            {ebookPages.map((pageHtml, i) => (
+                                <div key={i} className="rv-ebook-slide rv-ebook-content-slide">
+                                    <div className="rv-ebook-page-header">
+                                        <span className="rv-ebook-chapter-label">INSIGHT ESSAY</span>
+                                        <span className="rv-ebook-brand">ARCHIVIEW</span>
+                                    </div>
+                                    <div className="rv-ebook-content-scroll">
+                                        <div 
+                                            className="rv-ebook-body"
+                                            dangerouslySetInnerHTML={{ __html: pageHtml }}
+                                        />
+                                    </div>
+                                    <div className="rv-ebook-page-footer">
+                                        <span className="rv-ebook-page-number">— {i + 1} —</span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* [Slide] End Page */}
+                            <div className="rv-ebook-slide rv-ebook-final">
+                                <div className="rv-ebook-final-icon">
+                                    <span className="material-symbols-outlined">local_library</span>
+                                </div>
+                                <div className="rv-ebook-final-content">
+                                    <h4 className="rv-ebook-finish-text">FINISH</h4>
+                                    <p className="rv-ebook-thanks">아카이뷰와 함께해주셔서 감사합니다.</p>
+                                </div>
+                                <div className="rv-ebook-colophon">
+                                    <p className="rv-ebook-colophon-title">{book.title}</p>
+                                    <p className="rv-ebook-colophon-author">{book.author}</p>
+                                    <p className="rv-ebook-colophon-brand">THE ARCHIVIEW PUBLISHING</p>
+                                    <button 
+                                        className="rv-ebook-back-btn"
+                                        onClick={() => navigate('/library')}
+                                    >
+                                        RETURN TO LIBRARY
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        <div className="rv-ebook-controls">
+                            <div className="rv-ebook-nav-btns">
+                                <button
+                                    onClick={() => {
+                                        const container = document.getElementById('rv-ebook-paging-container');
+                                        container.scrollBy({ left: -container.offsetWidth, behavior: 'smooth' });
+                                    }}
+                                    className="rv-ebook-nav-btn"
+                                >
+                                    <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const container = document.getElementById('rv-ebook-paging-container');
+                                        container.scrollBy({ left: container.offsetWidth, behavior: 'smooth' });
+                                    }}
+                                    className="rv-ebook-nav-btn"
+                                >
+                                    <span className="material-symbols-outlined">arrow_forward_ios</span>
+                                </button>
+                            </div>
+                            <div className="rv-ebook-status">
+                                <span className="rv-ebook-version">PREMIUM READER v1.0</span>
+                                <div className="rv-ebook-progress-dots">
+                                    <div className="rv-ebook-dot active"></div>
+                                    <div className="rv-ebook-dot"></div>
+                                    <div className="rv-ebook-dot"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             ) : activeTab === 'podcast' ? (

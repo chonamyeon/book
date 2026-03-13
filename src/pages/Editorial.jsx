@@ -115,7 +115,7 @@ export default function Editorial() {
         if (saved.some(b => b.title === book.title)) {
             alert('이미 서재에 보관된 도서입니다.'); return;
         }
-        localStorage.setItem('savedBooks', JSON.stringify([...saved, { title: book.title, author: book.author, cover: book.cover }]));
+        localStorage.setItem('savedBooks', JSON.stringify([...saved, { id: book.id, title: book.title, author: book.author, cover: book.cover }]));
         window.dispatchEvent(new Event('savedBooksUpdated'));
         alert('서재에 보관되었습니다. ✅');
     };
@@ -352,18 +352,18 @@ export default function Editorial() {
 
                                                             {/* 4 buttons in 2x2 grid (Home page style) */}
                                                             <div className="grid grid-cols-2 gap-1.5 mt-auto">
-                                                                <button onClick={() => navigate(`/review/${item.id}`)} className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white font-bold text-[11px] flex items-center justify-center">
+                                                                <button onClick={() => navigate(`/review/${item.id}?tab=review`)} className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white font-bold text-[11px] flex items-center justify-center">
                                                                     리뷰
                                                                 </button>
+                                                                <button onClick={() => navigate(`/review/${item.id}?tab=ebook`)} className="h-9 rounded-none bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all font-bold text-[11px] flex items-center justify-center">
+                                                                    이북
+                                                                </button>
                                                                 <button onClick={() => { if (!item.isPodcast) return; const audioUrl = item.podcastFile || item.voiceAudioUrl || item.audioUrl || `/audio/${item.id}.mp3`; openScriptModal(item.id, audioUrl, item.title, item.cover); }} className={`h-9 rounded-none border transition-all font-bold text-[11px] flex items-center justify-center gap-1 ${!item.isPodcast ? 'opacity-20 cursor-not-allowed border-[#333] text-white/40' : 'bg-transparent border-orange-500/50 text-orange-500 hover:bg-orange-500/10'}`} disabled={!item.isPodcast}>
-                                                                    <span>▶</span> 재생하기
+                                                                    <span>▶</span> 재생
                                                                 </button>
                                                                 <button onClick={() => addToLibrary(item)} className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
-                                                                    서재추가
+                                                                    서재
                                                                 </button>
-                                                                <a href={item.purchaseLink || `https://search.kyobobook.co.kr/search?keyword=${item.title}`} target="_blank" rel="noopener noreferrer" className="h-9 rounded-none bg-transparent border border-[#333] hover:bg-white/5 transition-all text-white/80 font-bold text-[11px] flex items-center justify-center">
-                                                                    구매하기
-                                                                </a>
                                                             </div>
                                                         </div>
                                                     </div>

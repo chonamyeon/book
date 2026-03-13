@@ -35,6 +35,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // 7. E-books
+    match /ebooks/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
