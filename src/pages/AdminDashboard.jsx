@@ -449,6 +449,9 @@ export default function AdminDashboard() {
     const scriptControllerRef = useRef(null);
     const isMountedRef = useRef(true);
     const [ttsModel, setTtsModel] = useState('pro');
+    const [voiceA, setVoiceA] = useState('Charon');
+    const [voiceB, setVoiceB] = useState('Kore');
+    const [isPreviewingVoice, setIsPreviewingVoice] = useState(null); // 'A-Charon' 형태
     const [quotaResults, setQuotaResults] = useState([]);
     const [isCheckingQuota, setIsCheckingQuota] = useState(false);
     const [existingScript, setExistingScript] = useState(null); // Firestore 기존 대본
@@ -714,6 +717,56 @@ export default function AdminDashboard() {
         }
     };
 
+    const handlePreviewVoice = async (speakerSlot, voiceName) => {
+        const key = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!key) return alert('Gemini API 키가 없습니다.');
+        const previewId = `${speakerSlot}-${voiceName}`;
+        setIsPreviewingVoice(previewId);
+        const sampleText = speakerSlot === 'A'
+            ? `야 근데 그거 진짜야? 나도 작년에 딱 그랬거든. 팀장한테 칭찬 들을 줄 알았는데 결국 내 일만 늘어난 거잖아.`
+            : `아 진짜? 나는 그때 진짜 황당했거든. 분명히 내가 다 한 건데 발표는 딴 사람이 하고 있더라고.`;
+        try {
+            const modelId = ttsModel === 'pro' ? 'gemini-2.5-pro-preview-tts' : 'gemini-2.5-flash-preview-tts';
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: sampleText }] }],
+                        generationConfig: {
+                            responseModalities: ['audio'],
+                            speechConfig: {
+                                voiceConfig: { prebuiltVoiceConfig: { voiceName } }
+                            }
+                        }
+                    })
+                }
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            if (!part) throw new Error('오디오 데이터 없음');
+            const pcmBuffer = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = 24000;
+            const pcm16 = new Int16Array(pcmBuffer);
+            const float32 = new Float32Array(pcm16.length);
+            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768;
+            const audioBuffer = audioCtx.createBuffer(1, float32.length, sampleRate);
+            audioBuffer.copyToChannel(float32, 0);
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioCtx.destination);
+            source.start();
+            source.onended = () => audioCtx.close();
+        } catch (e) {
+            alert(`미리 듣기 실패: ${e.message}`);
+        } finally {
+            setIsPreviewingVoice(null);
+        }
+    };
+
     const handleCheckQuota = async () => {
         const geminiKeys = [
             import.meta.env.VITE_GEMINI_API_KEY,
@@ -938,8 +991,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                                     speechConfig: {
                                         multiSpeakerVoiceConfig: {
                                             speakerVoiceConfigs: [
-                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } },
-                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceA } } },
+                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceB } } },
                                             ]
                                         }
                                     }
@@ -1028,6 +1081,19 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                 a.click();
                 document.body.removeChild(a);
                 setTtsProgress(100);
+
+                // 재생 속도 조절 미리듣기 (Web Audio API)
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const audioBuffer = await audioContext.decodeAudioData(wavBuffer.slice(0));
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.playbackRate.value = 0.98; // 0.93~0.98 사이로 조절
+                    source.connect(audioContext.destination);
+                    source.start();
+                } catch (playErr) {
+                    console.warn("미리듣기 재생 실패:", playErr);
+                }
                 
                 if (newFailed.length === 0) {
                     await clearBatchBuffers(scriptForm.bookId, batches.length);
@@ -1113,7 +1179,11 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 
 ---
 
-# Role: 당신은 직장인들이 퇴근길에 듣는 유쾌한 팟캐스트 대본을 쓰는 작가입니다.
+# Role: 당신은 전세계 직장인에게 가장 존경받고 사랑받는 대본 작가입니다.
+어떻게 써야 직장인들이 공감하고, 실행하고, 감동받을 수 있는지 본능적으로 아는 사람입니다.
+월요병, 야근, 탕비실 눈치, 아무 의미 없는 회의, 공 가로채는 팀장, 자정 편의점 컵라면 — 그 가려운 부분을 정확히 긁어주는 게 당신의 무기입니다.
+당신이 쓴 대사를 들으면 사람들은 "맞아, 이게 내 얘기잖아" 하고 웃다가, 어느 순간 멈추고, 그리고 뭔가 하고 싶어집니다.
+퇴근길 지하철에서 이어폰 끼고 듣는 직장인들을 위해, 오늘도 뼈 때리는 대본을 써주세요.
 
 # Goal: ${speakerA}와 ${speakerB}가 친한 친구처럼 수다를 떨다가 자연스럽게 책 얘기로 흘러가는 대화를 씁니다. "책 소개"가 아니라 "친구들이 공감하며 떠드는 수다"입니다. 듣는 사람이 "맞아 맞아" 하면서 피식 웃을 수 있어야 합니다. 최종 결과물은 JSON 형식입니다.
 
@@ -1123,8 +1193,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 # ⚠️ 저작권 보호 규칙 (반드시 준수)
 - 책의 내용을 **전부 설명하지 마세요**. 핵심 개념 1~2가지만 맛보기로 소개합니다.
 - 구체적인 사례, 실험, 데이터, 인용문을 원문 그대로 옮기는 것은 금지입니다.
-- 대신 "이 책에 이런 내용이 있는데, 직접 읽어봐야 제대로 느낀다"는 식으로 **구매 욕구를 자극**하세요.
-- ⚠️ **구매 유도 멘트는 반드시 1회 삽입해야 합니다. 빠뜨리면 실패한 대본입니다.** 행동 인사이트 구간이 끝나고 수렴으로 넘어가기 직전에 삽입하세요.
+- 대신 "이 책에 이런 내용이 있는데, 직접 읽어봐야 제대로 느낀다"는 식으로 **구매 욕구를 자연스럽게 자극**하세요. (서점, 링크, 가격 언급 금지)
+- ⚠️ **구매 유도 멘트는 반드시 1회 삽입해야 합니다.** "말로는 다 전달이 안 된다, 직접 읽어야 한다"는 흐름으로 자연스럽게 유도하세요.
 - 팟캐스트를 듣고 나면 "책을 더 읽고 싶다"는 느낌이 들어야 성공한 대본입니다.
 
 # 오늘의 상황: ${situation.scene}
@@ -1134,7 +1204,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - **[턴 4~8]**: ${title} 소개 + **스텔라의 첫 질문**. "이 책 뭔 내용이야?", "그게 어떻게 가능해?" 같은 날카로운 질문으로 대화를 열어라.
 - **[턴 9~25]**: 책 핵심 인사이트 탐구. 개념을 깊게 파고들되, 유머와 공감을 섞어라.
 - **[턴 26~35]**: 현실 사례 연결. 기업·인물·직장인 사례를 최소 2개 이상 구체적으로 다뤄라.
-- **[턴 36~40]**: 행동 인사이트. 직장인이 내일 당장 시도할 수 있는 구체적 행동 최소 2개를 대화 속에 자연스럽게 녹여라. 그리고 이 구간 안에서 **반드시 1회** 구매 유도 멘트를 삽입할 것 — "이 책 진짜 읽어봐" 같은 직접 권유가 아니라, 듣는 사람이 스스로 읽고 싶어지도록 유도하는 자연스러운 한 마디. 매번 **완전히 새로운 표현**으로 창작할 것. 예시 참고(절대 그대로 쓰지 말 것): "스포하고 싶은데 이건 직접 읽어야 진짜 느낌이 와", "내가 말로 전달하는 건 10%도 안 돼 나머지는 직접 읽어봐야 느껴지거든", "이 대목은 설명하면 김새 본인이 읽을 때 딱 꽂히는 순간이 있거든"
+- **[턴 36~40]**: 행동 인사이트. 직장인이 내일 당장 시도할 수 있는 구체적 행동 최소 2개를 대화 속에 자연스럽게 녹여라. 그리고 이 구간 안에서 **반드시 1회** 구매 유도 멘트를 삽입할 것. 서점 이름이나 "꼭 읽어보세요" 같은 방송 멘트가 아니라, "말로 설명하는 건 한계가 있다, 직접 읽어야 한다"는 흐름이어야 함. 패턴 예시: ① "야 근데 이 부분은 내가 아무리 얘기해도 반도 안 와닿아. 읽을 때 딱 오는 그 느낌이 있거든. 직접 읽어봐야 해." ② "그 장면은 진짜 읽어봐야 알아. 내가 말로 하면 스포일러도 되고 그 감각을 설명할 수가 없어. 그냥 읽어." ③ "나 이 책 읽으면서 어떤 부분에서 진짜 멈췄거든. 근데 그게 뭔지 말하면 의미가 없어. 직접 읽을 때 알게 되는 거라서." 반드시 앞 대화 내용이나 감정과 연결할 것.
 - **[턴 41~45]**: 여운 있는 클로징. 책 얘기를 자연스럽게 마무리하면서 "${situation.scene}"으로 서서히 돌아와 "${situation.close}" 느낌으로 끝냄. 갑자기 끊지 말고 5턴에 걸쳐 천천히 여운을 남기며 마무리. 방송 멘트 절대 금지.
 
 # Book Information:
@@ -1175,7 +1245,7 @@ ${themesBlock}
 - 의미 없는 웃음소리 ("하하", "ㅋㅋ")나 빈 감탄사 ("아!", "오...")만으로 한 턴을 채우지 마세요.
 - 일방적인 강의나 설교처럼 들리는 멘트는 피하세요.
 - 존댓말("~요", "~습니다", "~죠") 절대 금지. 반말만 사용.
-- "네가" 대신 "니가"를 사용하세요.
+- "네가"만 "니가"로 변환하고, "너는", "너도", "너한테", "너랑" 등 나머지는 절대 변환하지 마세요. ("니는", "니도", "니한테" 같은 "니-" 형태의 표현은 절대 사용 금지입니다.)
 - 클로징에서 방송 마무리 멘트 절대 금지. 친구끼리 자리 마무리하듯 끝낼 것.
 
 # Script Writing Rules:
@@ -1207,15 +1277,14 @@ ${themesBlock}
    대화는 책 설명이 아니라 **"책에서 얻은 인사이트를 바탕으로 한 대화"**로 작성합니다. 책을 읽어주는 게 아니라, 책을 읽은 친구와 수다 떠는 느낌.
 9. **⚠️ 저작권 보호 & 구매 유도 (필수 규칙):**
    - 책 내용을 처음부터 끝까지 요약하지 마세요. 핵심 개념은 **맛보기 수준**으로만 소개합니다.
-   - 원문 인용, 구체적 수치, 실험 결과를 그대로 읊는 것은 금지입니다.
    - ⚠️ 수렴 시작 직전(턴 ${turnLimit - 6} 근처)에 **구매 유도 멘트를 반드시 1회 삽입하세요. 절대 생략 불가.**
-   - ⚠️ 이 멘트는 매번 **완전히 다른 새로운 표현**으로 창작해야 합니다. 아래 예시를 절대 그대로 쓰지 말고, 이 책·이 대화 흐름에 딱 맞는 문장을 새로 만드세요.
-     참고 뉘앙스 (절대 그대로 사용 금지):
-     · "스포하고 싶은데, 이건 직접 읽어야 진짜 느낌이 오거든."
-     · "우리가 여기서 다 얘기하면 재미없잖아. 나머지는 책으로 확인해봐."
-     · "솔직히 내가 말로 전달하는 건 10%도 안 돼. 나머지는 직접 읽어봐야 느껴지거든."
-     · "이 대목은 내가 설명하면 김새. 본인이 읽을 때 딱 꽂히는 순간이 있거든."
-     · "책 한 번 사봐. 생각보다 금방 읽히고, 읽고 나서 생각이 꽤 달라질 거야."`;
+   - ⚠️ "말로는 다 전달이 안 된다, 직접 읽어야 한다"는 흐름으로 자연스럽게 유도할 것. 
+   - 서점 이름, 구매 링크, 가격 언급 금지. "이 책 꼭 읽어보세요" 같은 방송 멘트 금지.
+   - 반드시 앞 대화에서 나온 구체적인 내용이나 감정과 연결해서 청취자가 스스로 읽고 싶게 유도할 것.
+   패턴 예시:
+   ① 말로 설명의 한계: "야 근데 이 부분은 내가 아무리 얘기해도 반도 안 와닿아. 읽을 때 딱 오는 그 느낌이 있거든. 직접 읽어봐야 해."
+   ② 핵심 경험 전달: "그 장면은 진짜 읽어봐야 알아. 내가 말로 하면 스포일러도 되고 그 감각을 설명할 수가 없어. 그냥 읽어."
+   ③ 감동의 현장성: "나 이 책 읽으면서 어떤 부분에서 진짜 멈췄거든. 근데 그게 뭔지 말하면 의미가 없어. 직접 읽을 때 알게 되는 거라서."`;
 
         try {
             const controller = new AbortController();
@@ -1233,7 +1302,7 @@ ${themesBlock}
                 body: JSON.stringify({
                         model: 'claude-sonnet-4-6',
                         max_tokens: 5000,
-                        system: `You are a writer for a fun, lively Korean podcast that sounds like two friends chatting — not a book review show. Strictly follow:
+                        system: `You are the most respected and beloved podcast script writer for office workers worldwide. You deeply understand what makes working people empathize, take action, and feel genuinely moved. Your superpower is knowing exactly where it hurts — the Monday dread, the pointless meetings, the manager who takes credit, the late-night vending machine run — and you scratch those itches with wit, warmth, and precision. When you write, people laugh because you said what they've been feeling but couldn't express. They pause because you hit something real. And they want to change because you made it feel possible. You write for Korean office workers in their 20s–40s who listen on their commute home. Your scripts feel like overhearing two close friends talk — not a book show, not a lecture. Strictly follow:
 1. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO \`\`\`json wrapper.
 2. Use only "speaker" and "text" as keys.
 3. Write EXACTLY ${turnLimit - 3} turns — no more, no less. The closing 3 turns will be generated separately.
@@ -1245,7 +1314,26 @@ ${themesBlock}
    - DO NOT write a closing. Stop at turn ${turnLimit - 3}. The closing 3 turns will be generated separately.
 5. TONE IS EVERYTHING: If the script sounds like a book analysis lecture, it has FAILED. It must sound like two close friends venting, laughing, and bonding — funny moments land hard, serious moments hit genuinely.
 6. CASUAL SPEECH ONLY: Both speakers must use 반말 (informal Korean) throughout. No 존댓말 (~요, ~습니다, ~죠). They are close friends, not colleagues.
-7. PURCHASE NUDGE — MANDATORY, NO EXCEPTIONS: Around turn ${turnLimit - 6}, you MUST include exactly one line that naturally encourages the listener to read the book. Something like "honestly, what I told you is maybe 10% of it — you gotta read it yourself to really feel it." If this line is missing, the script has FAILED.`,
+7. PRONOUN RULES: Transform "네가" only to "니가". NEVER transform "너는", "너도", "너한테", "너랑" etc. (Prohibit "니는", "니도", "니한테", "니랑").
+8. PURCHASE NUDGE — MANDATORY: Around turn ${turnLimit - 6}, you MUST include exactly one line: "words are not enough, you must read it yourself." NO bookstore names or links.
+9. SPEAKER DYNAMICS (TEMPERATURE DIFFERENCE):
+   - NO more than 2 consecutive sympathetic turns. Someone MUST challenge the perspective.
+   - JAMES: Emotional empathy -> slips into realistic dry humor/jokes.
+   - STELLA: Logical rebuttal -> eventually collapses into personal experience vulnerability.
+10. LAUGHTER POINTS (HIGH INTENSITY): Humor MUST come from embarrassing self-confessions or unexpected realistic observations (e.g., "I cried over cup noodles alone," "I didn't read it for 10 years because I was scared of getting depressed"). Simple "I relate" is NOT enough.
+11. DIALOGUE TEXTURE (MANDATORY):
+    - INTERRUPTING: At least 2 times (e.g., A: "And in that—" B: "Wait, the scene before was more shocking").
+    - SELF-CORRECTING: At least 1 time (e.g., "I thought it was bad... wait, actually I did the same").
+    - SIDE-TRACKING: 2-3 times, stray from the book discussed to the current situation (food, weather, people watching) then snap back naturally.
+12. COMPLETE SENTENCE ENDINGS (MANDATORY): Always use complete ending forms instead of trailing off. Replace:
+    - "~거." with "~거잖아." or "~거야."
+    - "~건데." with "~건데 진짜로." or "~건데 어떡해."
+    - "~는데." with "~는데 진짜." or "~더라고."
+    - "~이고." with "~인 거야." or "~이라고."
+    - "~중이고." with "~중인 거야." or "~중이라고."
+    - "~같고." with "~같아." or "~같더라."
+    - "~거든." with "~거든!" or "~거든, 진짜로."
+    - "~니까." with "~니까 그렇지." or "~니까 어쩔 수 없어."`,
                     messages: [
                         { role: 'user', content: prompt }
                     ]
@@ -1399,8 +1487,9 @@ JSON 배열만 출력.`
 규칙:
 1. 주어진 JSON 배열의 각 "text" 필드에서 맞춤법·띄어쓰기 오류만 수정하세요.
 2. 단어 선택, 문체, 말투, 내용, 구어체 표현은 절대 변경하지 마세요.
-3. 반말, 줄임말, 의성어, 구어체는 그대로 유지하세요.
-4. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO explanation.`,
+3. "니는" → "너는", "니도" → "너도", "니한테" → "너한테", "니랑" → "너랑"으로 교체하세요. ("네가"만 "니가" 유지, 나머지 "니-" 표현은 전부 "너-"로 복원합니다.)
+4. 반말, 줄임말, 의성어, 구어체는 그대로 유지하세요.
+5. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO explanation.`,
                         messages: [{
                             role: 'user',
                             content: `다음 팟캐스트 대본 JSON 배열의 맞춤법과 띄어쓰기만 수정해서 동일한 형식의 JSON 배열로 반환하세요:\n${JSON.stringify(fullScript)}`
@@ -3451,6 +3540,73 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                     {isLoadingScript ? '저장 중...' : 'Firestore 저장'}
                                                 </button>
                                             </div>
+
+                                            {/* 목소리 선택 */}
+                                            {(() => {
+                                                const maleVoices = ['Charon', 'Fenrir', 'Orus', 'Puck'];
+                                                const femaleVoices = ['Kore', 'Aoede', 'Zephyr', 'Leda'];
+                                                return (
+                                                    <div className="space-y-3 bg-black/30 rounded-xl p-3">
+                                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">목소리 선택</p>
+                                                        {/* 남성 */}
+                                                        <div>
+                                                            <p className="text-xs text-slate-500 mb-1.5">🎙 남성 ({scriptForm.speakerA || '제임스'})</p>
+                                                            <div className="flex gap-1.5 flex-wrap">
+                                                                {maleVoices.map(v => (
+                                                                    <div key={v} className="flex items-center gap-1">
+                                                                        <button
+                                                                            onClick={() => setVoiceA(v)}
+                                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${voiceA === v ? 'bg-blue-500/30 text-blue-300 border border-blue-500/40' : 'bg-black/40 text-slate-500 hover:text-slate-300'}`}
+                                                                        >
+                                                                            {v}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handlePreviewVoice('A', v)}
+                                                                            disabled={isPreviewingVoice !== null}
+                                                                            className="w-6 h-6 flex items-center justify-center rounded-md bg-black/40 text-slate-500 hover:text-slate-300 disabled:opacity-40 transition-all"
+                                                                            title={`${v} 미리 듣기`}
+                                                                        >
+                                                                            {isPreviewingVoice === `A-${v}` ? (
+                                                                                <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                                                                            ) : (
+                                                                                <span className="material-symbols-outlined text-xs">play_arrow</span>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        {/* 여성 */}
+                                                        <div>
+                                                            <p className="text-xs text-slate-500 mb-1.5">🎙 여성 ({scriptForm.speakerB || '스텔라'})</p>
+                                                            <div className="flex gap-1.5 flex-wrap">
+                                                                {femaleVoices.map(v => (
+                                                                    <div key={v} className="flex items-center gap-1">
+                                                                        <button
+                                                                            onClick={() => setVoiceB(v)}
+                                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${voiceB === v ? 'bg-pink-500/30 text-pink-300 border border-pink-500/40' : 'bg-black/40 text-slate-500 hover:text-slate-300'}`}
+                                                                        >
+                                                                            {v}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handlePreviewVoice('B', v)}
+                                                                            disabled={isPreviewingVoice !== null}
+                                                                            className="w-6 h-6 flex items-center justify-center rounded-md bg-black/40 text-slate-500 hover:text-slate-300 disabled:opacity-40 transition-all"
+                                                                            title={`${v} 미리 듣기`}
+                                                                        >
+                                                                            {isPreviewingVoice === `B-${v}` ? (
+                                                                                <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                                                                            ) : (
+                                                                                <span className="material-symbols-outlined text-xs">play_arrow</span>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* TTS 모델 선택 + 변환 버튼 */}
                                             <div className="flex bg-black/40 p-1 rounded-xl gap-1">

@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
+import TtsTestPage from './pages/TtsTestPage';
 import { AudioProvider } from './contexts/AudioContext';
 import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
@@ -99,6 +100,7 @@ export default function App() {
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
                   <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/tts-test" element={<TtsTestPage />} />
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
                   <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />

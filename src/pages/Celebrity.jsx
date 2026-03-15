@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
 import { useBookData } from '../hooks/useBookData';
+import BookCardActions from '../components/BookCardActions';
 
 export default function Celebrity() {
     const { id } = useParams();
@@ -200,78 +201,7 @@ export default function Celebrity() {
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-2 gap-3 mt-4">
-                                            {/* 1. REVIEW DETAIL */}
-                                            {book.id ? (
-                                                <Link
-                                                    to={`/review/${book.id}`}
-                                                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                >
-                                                    <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
-                                                    <span className="material-symbols-outlined text-sm">menu_book</span>
-                                                </Link>
-                                            ) : (
-                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="leading-[1.1]">REVIEW<br />DETAIL</span>
-                                                    <span className="material-symbols-outlined text-sm">menu_book</span>
-                                                </div>
-                                            )}
-
-                                            {/* 2. PODCAST */}
-                                            {book.id ? (
-                                                <button
-                                                    onClick={() => { const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`; openScriptModal(book.id, audioUrl, book.title, book.cover); }}
-                                                    className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                >
-                                                    <span className="leading-[1.1]">🎧 팟캐스트</span>
-                                                </button>
-                                            ) : (
-                                                <div className="bg-white/5 opacity-20 border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="leading-[1.1]">🎧 팟캐스트</span>
-                                                </div>
-                                            )}
-
-                                            {/* 3. 서재 추가 */}
-                                            <button
-                                                onClick={() => {
-                                                    const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-                                                    const isSaved = saved.some(b => b.title === book.title);
-                                                    if (isSaved) {
-                                                        const filtered = saved.filter(b => b.title !== book.title);
-                                                        localStorage.setItem('savedBooks', JSON.stringify(filtered));
-                                                        window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                        alert('서재에서 삭제되었습니다.');
-                                                    } else {
-                                                        saved.push(book);
-                                                        localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                        window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                        alert('서재에 추가되었습니다. ✅');
-                                                    }
-                                                }}
-                                                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 flex-1 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                            >
-                                                <span>서재 추가</span>
-                                                <span className="material-symbols-outlined text-sm">bookmark</span>
-                                            </button>
-
-                                            {/* 4. 구매하기 */}
-                                            {book.purchaseLink ? (
-                                                <a
-                                                    href={book.purchaseLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="bg-[#FF9900]/10 hover:bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/30 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                >
-                                                    <span>구매하기</span>
-                                                    <span className="material-symbols-outlined text-xs">shopping_cart</span>
-                                                </a>
-                                            ) : (
-                                                <div className="bg-white/5 text-white/20 border border-white/10 text-center py-3.5 rounded-none text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span>구매하기</span>
-                                                    <span className="material-symbols-outlined text-xs">shopping_cart</span>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <BookCardActions book={book} />
                                     </div>
                                 ))}
                             </div>

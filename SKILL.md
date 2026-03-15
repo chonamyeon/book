@@ -13,7 +13,7 @@ description: 아카이뷰(The Archive) 프로젝트의 이북 시스템, AI 연�
 ## 2. 핵심 기술 스택
 - **Frontend**: React, Vite, Tailwind CSS, Framer Motion
 - **Database/Hosting**: Firebase (Firestore, Hosting)
-- **AI Engine**: Google AI Studio (Gemini 1.5 Flash)
+- **AI Engine**: Google AI Studio (Gemini 2.5 Pro)
 - **Special Libraries**: `react-pageflip` (이북 구현), `framer-motion` (애니메이션)
 
 ## 3. AI 서비스 아키텍처 (`src/services/gemini.js`)
@@ -24,7 +24,7 @@ Gemini API는 다음 세 가지 주요 기능을 담당합니다.
 
 **주의사항**:
 - 보안 차단을 방지하기 위해 `safetySettings`는 `BLOCK_NONE`으로 설정되어 있습니다.
-- 대화의 안정성을 위해 `gemini-1.5-flash` 모델을 사용하며, History는 단일 프롬프트로 병합하여 전달합니다.
+- 대화의 안정성을 위해 `gemini-2.5-pro` 모델을 사용하며, History는 단일 프롬프트로 병합하여 전달합니다.
 
 ## 4. 이북 시스템 (`src/pages/ReviewDetail.jsx`)
 - **Flipbook logic**: `react-pageflip`을 사용하여 실제 책을 넘기는 경험을 제공합니다.

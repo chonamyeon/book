@@ -30,3 +30,22 @@ build_output
 *.sw?
 
 .vercel
+
+# GCP 서비스 계정 키 (민감 파일)
+*-ef15269bb6cb.json
+upheld-dragon-*.json
+
+# 오디오 파일 (용량 큰 파일)
+public/audio/
+
+# 임시/디버그 스크립트
+tmp/
+files/
+*.py
+check_*.js
+count_*.cjs
+trace_*.cjs
+test_fetch*.mjs
+dm.md
+commute.html
+yt-dlp.exe

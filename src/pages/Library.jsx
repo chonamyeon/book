@@ -198,12 +198,7 @@ export default function Library() {
                                                 >
                                                     <span className="material-symbols-outlined text-[18px] font-black">visibility</span>
                                                 </Link>
-                                                <Link
-                                                    to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}?tab=ebook`}
-                                                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px] font-black">auto_stories</span>
-                                                </Link>
+
                                                 <a
                                                     href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
                                                     target="_blank"

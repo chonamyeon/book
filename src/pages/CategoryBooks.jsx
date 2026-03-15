@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useBookData } from '../hooks/useBookData';
 import TopNavigation from '../components/TopNavigation';
 import { useAudio } from '../contexts/AudioContext';
+import BookCardActions from '../components/BookCardActions';
 
 const categoriesInfo = [
     { label: "내 성장을 가속화하고 싶을 때", subLabel: "자기계발 & 성공학", id: 'SELF_DEV', img: '/images/cat_success.png', seq: "01", accent: "orange-500", search: "자기계발" },
@@ -162,48 +163,7 @@ export default function CategoryBooks() {
                                             </div>
                                         </div>
 
-                                        {/* Clearly visible 4-button Grid */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Link
-                                                to={`/review/${book.id}`}
-                                                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg bg-white text-black text-[11px] font-black active:scale-95 transition-all shadow-lg"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">auto_stories</span>
-                                                <span>리뷰 디테일</span>
-                                            </Link>
-                                            <button
-                                                onClick={() => { const audioUrl = book.podcastFile || book.voiceAudioUrl || book.audioUrl || `/audio/${book.id}.mp3`; openScriptModal(book.id, audioUrl, book.title, book.cover); }}
-                                                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg bg-zinc-900/50 text-white text-[11px] font-black active:scale-95 transition-all border border-white/5 hover:bg-zinc-800"
-                                            >
-                                                <span>🎧 팟캐스트</span>
-                                            </button>
-                                            <button
-                                                onClick={() => alert('서재 추가 기능은 준비 중입니다.')}
-                                                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg bg-zinc-900/50 text-white text-[11px] font-black active:scale-95 transition-all border border-white/5 hover:bg-zinc-800"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                                                <span>서재 추가</span>
-                                            </button>
-                                            {book.purchaseLink ? (
-                                                <a
-                                                    href={book.purchaseLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg bg-zinc-900/50 text-white text-[11px] font-black active:scale-95 transition-all border border-white/5 hover:bg-zinc-800"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
-                                                    <span>도서 구매</span>
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    disabled
-                                                    className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg bg-zinc-900/20 text-zinc-600 text-[11px] font-black border border-white/5 cursor-not-allowed"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
-                                                    <span>도서 구매</span>
-                                                </button>
-                                            )}
-                                        </div>
+                                                                                <BookCardActions book={book} />
                                     </motion.article>
                                 ))
                             )}
