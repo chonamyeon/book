@@ -2357,6 +2357,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
 
     const tabNames = {
         'dashboard': '대시보드',
+        'automation': '일괄 자동화 ⚡',
         'members': '회원 관리',
         'books': '도서 관리',
         'popular': '인기 아카이뷰',
@@ -2365,8 +2366,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         'podcast': 'AI 팟캐스트',
         'voice': '성우 다이렉트',
         'sales': '매출 관리',
-        'payment': '결제 설정',
-        'automation': '일괄 자동화'
+        'payment': '결제 설정'
     };
 
     // If initial loading is still happening from auth or first fetch
@@ -2426,7 +2426,10 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                 <span className="material-symbols-outlined text-primary font-black">shield_person</span>
                             </div>
                             <div>
-                                <h1 className="text-white font-black text-xl tracking-tight uppercase">Control Center</h1>
+                                <h1 className="text-white font-black text-xl tracking-tight uppercase flex items-center gap-3">
+                                    Control Center 
+                                    <span className="bg-gold text-primary text-[10px] px-2 py-0.5 rounded-full font-black tracking-widest leading-none">V1.5B</span>
+                                </h1>
                                 <p className="text-gold/50 text-[10px] font-black tracking-[0.2em]">THE ARCHIVIEW MASTER</p>
                             </div>
                         </div>
