@@ -201,6 +201,9 @@ export default function AdminDashboard() {
     });
     const [password, setPassword] = useState('');
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [selectedBatchBooks, setSelectedBatchBooks] = useState([]);
+    const [isBatchRunning, setIsBatchRunning] = useState(false);
+    const [batchProgressText, setBatchProgressText] = useState('');
     const { getAllBooks, loading: booksLoading, overrides } = useBookData();
 
     // 🆕 Password Check
@@ -2362,7 +2365,8 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         'podcast': 'AI 팟캐스트',
         'voice': '성우 다이렉트',
         'sales': '매출 관리',
-        'payment': '결제 설정'
+        'payment': '결제 설정',
+        'automation': '일괄 자동화'
     };
 
     // If initial loading is still happening from auth or first fetch
@@ -2451,7 +2455,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-xl">
-                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'ebook' ? 'auto_stories' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : 'settings'}
+                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'ebook' ? 'auto_stories' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : tab === 'automation' ? 'smart_button' : 'settings'}
                                 </span>
                                 {tabNames[tab].toUpperCase()}
                             </button>
@@ -4571,7 +4575,66 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                         `}</style>
                     </div>
                 )}
-                </main>
+                
+                    {/* 일괄 자동화 관리 탭 */}
+                    {activeTab === 'automation' && (
+                        <div className="space-y-10 animate-fade-in">
+                            <div className="flex justify-between items-end">
+                                <div className="space-y-2">
+                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+                                        <div className="size-2 rounded-full bg-red-400 animate-ping"></div>
+                                        <span className="text-red-400 text-[10px] font-black uppercase tracking-widest">Batch Automation Engine</span>
+                                    </div>
+                                    <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">일괄 자동화</h3>
+                                    <p className="text-slate-500 text-lg font-medium">다중 도서를 선택하여 대본/TTS 및 E-BOOK을 일괄 생성합니다</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 rounded-[40px] border border-white/10 p-10 space-y-8 backdrop-blur-xl flex flex-col items-center justify-center min-h-[500px]">
+                                <h4 className="text-white font-bold text-xl">자동화 대상 도서 선택</h4>
+                                <div className="w-full max-h-[400px] overflow-y-auto pr-4 scrollbar-hide space-y-2">
+                                    {realBooks.map(book => (
+                                        <label key={book.id} className="flex flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 cursor-pointer border border-transparent hover:border-white/10 transition-all">
+                                            <input 
+                                                type="checkbox" 
+                                                className="w-5 h-5 accent-gold cursor-pointer"
+                                                checked={selectedBatchBooks.includes(book.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedBatchBooks(prev => [...prev, book.id]);
+                                                    else setSelectedBatchBooks(prev => prev.filter(id => id !== book.id));
+                                                }}
+                                            />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-white">{book.title}</p>
+                                                <p className="text-xs text-slate-400">{book.id}</p>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                                
+                                <div className="w-full flex flex-wrap gap-4 pt-6 border-t border-white/10">
+                                    <button 
+                                        onClick={() => setSelectedBatchBooks(realBooks.map(b => b.id))}
+                                        className="px-6 py-3 rounded-xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 transition-all"
+                                    >전체 선택</button>
+                                    <button 
+                                        onClick={() => setSelectedBatchBooks([])}
+                                        className="px-6 py-3 rounded-xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 transition-all"
+                                    >선택 해제</button>
+                                    <div className="flex-1"></div>
+                                    <button 
+                                        onClick={() => alert('대본/TTS 자동화 백그라운드 작업 시작 중...')}
+                                        className="px-8 py-3 rounded-xl flex items-center gap-2 bg-white text-black font-black hover:bg-gold transition-all"
+                                    ><span className="material-symbols-outlined">play_arrow</span> 대본/TTS 일괄 생성</button>
+                                    <button 
+                                        onClick={() => alert('E-BOOK 자동화 백그라운드 작업 시작 중...')}
+                                        className="px-8 py-3 rounded-xl flex items-center gap-2 bg-gold text-primary font-black hover:scale-105 transition-all shadow-xl shadow-gold/20"
+                                    ><span className="material-symbols-outlined">auto_stories</span> E-BOOK 일괄 생성</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+</main>
 
                 {/* PC 환경에서는 하단 바를 숨기거나 다르게 처리 */}
                 <div className="lg:hidden">
