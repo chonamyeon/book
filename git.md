@@ -86,31 +86,38 @@ src/
 ### TTS 최적화 단계 (optimizeScriptForTts)
 
 TTS 직전 자동 실행. 실패 시 원본 그대로 진행.
+- **API**: `gemini-2.5-flash` · `thinkingBudget: 0` · `maxOutputTokens: 16384`
+- thinking 파트 필터링: `parts.filter(p => !p.thought)` 로 실제 응답만 추출
+- `finishReason` 체크 → STOP 외 중단 시 에러 처리
 
 | 규칙 | 내용 |
 |------|------|
 | 문장 분리 | 쉼표 없이 30자 이상이면 의미 단위로 끊음 |
 | 숫자 한글화 | 3만→삼만, 1천→천, CEO→씨이오, SNS→에스엔에스 |
 | 표기 제거 | ㅋㅋㅋ/ㅎㅎ 삭제, ...→마침표, ~→삭제, !!→! |
-| 금지 | 괄호 지시문 추가 금지, 내용·턴 수 변경 금지 |
+| 구조 교정 | 오프닝·클로징 상황극 장소 불일치 자동 수정 |
+| 전환 교정 | 책→상황극 급전환 구간에 브릿지 대사 조정 |
+| 금지 | 괄호 지시문 추가 금지, 턴 수 변경 금지 |
 
-### 대본 구조 (45턴 고정)
+### 대본 구조 (58턴 고정 — 현재 버전)
 
 | 구간 | 내용 |
 |------|------|
-| 턴 1~3 | 상황 설명 (책 언급 금지) |
-| 턴 4~8 | 책 소개 + 스텔라 첫 질문 |
-| 턴 9~37 | 핵심 인사이트 + 현실 사례 + 행동 인사이트 (턴 제한 없음, 내용 중심) |
-| ~턴 39 | 구매 유도 멘트 1회 (수렴 직전 필수) |
-| 턴 40~42 | 수렴 (3턴, 에너지 낮추며 마무리) |
-| 턴 43~45 | 여운 있는 클로징 (3턴, 별도 생성) |
+| 턴 1~6 | 상황극 오프닝 (책 언급 금지) |
+| 턴 7~9 | 자연스럽게 책 얘기로 넘어가는 브릿지 |
+| 턴 10~35 | 책 핵심 개념 수다 (구체 인용 금지) |
+| 턴 36~45 | 현실 직장 사례 최소 2개 |
+| 턴 46~52 | 행동 인사이트 2개 + 추천 유도 1회 (턴 48~52 사이) |
+| 턴 53~55 | 텐션 낮추기 + 책→상황 복귀 브릿지 |
+| 턴 56~58 | 상황극 클로징 (오프닝과 동일 장소·상황) |
 
 ### AI 대본 생성 프롬프트 주요 규칙
-- **화자 역할**: 제임스(책 소개) ↔ 스텔라(질문·반응) — 역할 교체 금지
-- **구매 유도**: 수렴 직전 반드시 1회 삽입 (생략 시 실패)
-- **저작권**: 핵심 개념 맛보기만, 원문 인용·수치 금지
-- **max_tokens**: 5000
-- **클로징**: 제임스는 쿨하게 행동으로 마무리, 스텔라가 따뜻한 감사 멘트 담당
+- **화자**: 화자A(공감·건조개그) ↔ 화자B(현실반박 5회↑ + 자폭고백)
+- **상황극**: `SCRIPT_SITUATIONS` 50가지 중 선택 — `scene`(오프닝) + `close`(클로징 마지막 대사)
+- **`close` 멘트**: 프롬프트에 직접 전달 → 턴 58 마지막 대사로 그대로 사용 강제
+- **클로징 일치**: 턴 56~58은 반드시 오프닝(턴 1~6)과 동일한 장소·상황
+- **구매 유도**: 턴 48~52 사이 정확히 1회, 판매성 표현 금지
+- **4단계 검토**: 18개 항목 체크 (16~18번: 상황극 일관성, 전환 자연스러움)
 
 ---
 
@@ -132,11 +139,13 @@ TTS 직전 자동 실행. 실패 시 원본 그대로 진행.
 ```js
 const [batchLogs, setBatchLogs] = useState([]);
 const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-const [batchMode, setBatchMode] = useState('full'); // 'full' | 'tts-only'
+const [batchMode, setBatchMode] = useState('full'); // 'full' | 'tts-only' | 'optimize-only'
 const [batchBookStatuses, setBatchBookStatuses] = useState({});
-// { [bookId]: 'pending' | 'generating' | 'tts' | 'done' | 'error' }
+// { [bookId]: 'pending' | 'generating' | 'tts' | 'done' | 'error' | 'skipped' }
 const [batchScriptStatuses, setBatchScriptStatuses] = useState({});
 // { [bookId]: true(스크립트 있음) | false(없음) }
+const [batchOptimizedStatuses, setBatchOptimizedStatuses] = useState({});
+// { [bookId]: boolean } — Firestore optimizedAt 필드 존재 여부
 const [batchScriptPreview, setBatchScriptPreview] = useState(null);
 // { bookId, title, script: [{speaker, text}] } | null
 ```
@@ -179,11 +188,25 @@ const runTtsForBook = async (script, bookId, addBatchLog) => {
 
 ### UI 구성 (automation 탭)
 
-- **작업 현황 4카드**: 전체 / 완료(대본+TTS) / 대본만 / 미시작
-- **도서 목록**: 체크박스 + 상태 뱃지 (✅완료 / 📝대본만 / ⬜미시작)
+- **작업 현황 5카드**: 전체 / 완료(대본+TTS) / 🔧최적화 / 대본만 / 미시작
+- **도서 목록**: 체크박스 + 상태 뱃지
+  - ✅ 최적화완료 (대본+오디오+최적화)
+  - ✅ 완료 (대본+오디오)
+  - 🔧 최적화 (대본+최적화, TTS 미완)
+  - 📝 대본만
+  - ⬜ 미시작
   - 뱃지 클릭 → 스크립트 미리보기 모달
 - **스크립트 미리보기 모달**: 턴별 인라인 편집 → Firestore 저장 → "이 도서 TTS 실행" 버튼
 - **진행 상황**: 전체 진행바 + 도서별 상태 요약 + 배치 로그 패널
+
+### Firestore scripts/{bookId} 구조
+```js
+{
+  script: [{speaker, text}, ...],  // 대본 배열
+  updatedAt: "ISO string",          // 마지막 수정
+  optimizedAt: "ISO string",        // 최적화 완료 시각 (optimize-only 실행 시 저장)
+}
+```
 
 ### TTS 발화 속도 지시 (배치·단일 모두 적용)
 
