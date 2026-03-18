@@ -1,6 +1,6 @@
 # The Archiview — 프로젝트 현황 정리
 
-> 최종 업데이트: 2026-03-18
+> 최종 업데이트: 2026-03-18 (TTS 최적화 파이프라인 + 배치 모드 3종)
 > 배포: https://book-site-123.web.app
 > 저장소: https://github.com/chonamyeon/book
 
@@ -13,7 +13,7 @@
 | 프론트엔드 | React 19, React Router 7, Vite 7 |
 | 스타일 | Tailwind CSS 3, Framer Motion |
 | 백엔드 | Firebase (Auth, Firestore, Storage), Firebase Hosting |
-| AI | Claude Sonnet 4.6 (대본 생성), Claude Haiku (맞춤법), Gemini 2.5 Pro/Flash TTS |
+| AI | Claude Sonnet 4.6 (대본 생성), Claude Haiku (맞춤법), Gemini 2.5 Flash (TTS 최적화), Gemini 2.5 Pro/Flash TTS |
 | 결제 | Toss Payments (예정) |
 | 국제화 | i18next |
 
@@ -77,10 +77,22 @@ src/
 2. Claude Sonnet 4.6 → 45턴 대본 생성 (JSON 배열)
 3. Claude Haiku → 맞춤법 검사 (자동)
 4. 대본 미리보기 + 인라인 편집
-5. Gemini 2.5 Pro/Flash TTS → WAV 변환
-6. 인트로/아웃트로 병합 → MP3
-7. Firestore 저장 + 팟캐스트 활성화
+5. Gemini 2.5 Flash → TTS 최적화 (문장 분리·숫자 한글화·불필요 표기 제거)
+6. Gemini 2.5 Pro/Flash TTS → WAV 변환
+7. 인트로/아웃트로 병합 → MP3
+8. Firestore 저장 + 팟캐스트 활성화
 ```
+
+### TTS 최적화 단계 (optimizeScriptForTts)
+
+TTS 직전 자동 실행. 실패 시 원본 그대로 진행.
+
+| 규칙 | 내용 |
+|------|------|
+| 문장 분리 | 쉼표 없이 30자 이상이면 의미 단위로 끊음 |
+| 숫자 한글화 | 3만→삼만, 1천→천, CEO→씨이오, SNS→에스엔에스 |
+| 표기 제거 | ㅋㅋㅋ/ㅎㅎ 삭제, ...→마침표, ~→삭제, !!→! |
+| 금지 | 괄호 지시문 추가 금지, 내용·턴 수 변경 금지 |
 
 ### 대본 구조 (45턴 고정)
 
@@ -107,12 +119,13 @@ src/
 ### 개요
 단일 1:1:1 모드(AI 대본 생성 탭)는 절대 건드리지 않고, 배치 전용 함수/상태를 완전 분리하여 구현.
 
-### 배치 모드 2가지
+### 배치 모드 3가지
 
-| 모드 | 동작 |
-|------|------|
-| **풀 배치** | 선택 도서 순차 처리: 대본 생성(Claude) → Firestore 저장(덮어쓰기) → TTS → WAV 다운로드 |
-| **TTS 전용** | 선택 도서 순차 처리: Firestore에서 대본 조회 → TTS → WAV 다운로드 (대본 없으면 스킵) |
+| 모드 | 색상 | 동작 |
+|------|------|------|
+| **풀 배치** | 보라 | 대본 생성(Claude) → Flash 최적화 → Firestore 저장 → TTS → WAV |
+| **TTS 전용** | 초록 | Firestore 대본 → Flash 최적화 → TTS → WAV (대본 없으면 스킵) |
+| **대본 최적화** | 노랑 | Firestore 대본 → Flash 교정 → Firestore 저장 → TTS → WAV |
 
 ### 추가된 상태 (배치 전용)
 
@@ -153,9 +166,15 @@ const runTtsForBook = async (script, bookId, addBatchLog) => {
 };
 ```
 
+#### `optimizeScriptForTts(script, logFn)`
+- Gemini 2.5 Flash (`gemini-2.5-flash`) 텍스트 API 호출
+- 단일 모드(`handleRunTts`) + 배치 모드(`runTtsForBook`) TTS 직전 공통 실행
+- 실패 시 원본 script 그대로 반환 (TTS는 계속 진행)
+
 #### `handleBatchRun(mode)`
-- `mode='full'`: 항상 대본 재생성(덮어쓰기) → TTS
-- `mode='tts-only'`: Firestore 대본 조회 → TTS (없으면 스킵)
+- `mode='full'`: 대본 생성(Claude) → 최적화 → TTS
+- `mode='tts-only'`: Firestore 대본 → 최적화 → TTS (없으면 스킵)
+- `mode='optimize-only'`: Firestore 대본 → 최적화 → Firestore 저장 → TTS
 - 기존 `handleGenerateScript({ isBatch: true })` 호출 (단일 모드 UI 상태 우회)
 
 ### UI 구성 (automation 탭)
