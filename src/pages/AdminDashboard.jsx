@@ -204,6 +204,16 @@ export default function AdminDashboard() {
     const [selectedBatchBooks, setSelectedBatchBooks] = useState([]);
     const [isBatchRunning, setIsBatchRunning] = useState(false);
     const [batchProgressText, setBatchProgressText] = useState('');
+    // ── 배치 전용 상태 ─────────────────────────────────────────
+    const [batchLogs, setBatchLogs] = useState([]);
+    const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+    const [batchMode, setBatchMode] = useState('full'); // 'full' | 'tts-only'
+    const [batchBookStatuses, setBatchBookStatuses] = useState({});
+    // { [bookId]: 'pending'|'generating'|'tts'|'done'|'error'|'skipped' }
+    const [batchScriptStatuses, setBatchScriptStatuses] = useState({});
+    // { [bookId]: true(있음) | false(없음) } — 탭 진입 시 Firestore 일괄 조회
+    const [batchScriptPreview, setBatchScriptPreview] = useState(null);
+    // { bookId, title, script: [{speaker, text}] } | null
     const { getAllBooks, loading: booksLoading, overrides } = useBookData();
 
     // 🆕 Password Check
@@ -682,6 +692,30 @@ export default function AdminDashboard() {
         };
     }, []);
 
+    // automation 탭 진입 시 Firestore 대본 존재 여부 일괄 조회
+    useEffect(() => {
+        if (activeTab !== 'automation' || !realBooks.length) return;
+        const checkAll = async () => {
+            const results = {};
+            await Promise.all(realBooks.map(async (book) => {
+                try {
+                    const snap = await getDoc(doc(db, 'scripts', book.id));
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const script = data.script || data.lines || data.content || null;
+                        results[book.id] = !!(script && Array.isArray(script) && script.length > 0);
+                    } else {
+                        results[book.id] = false;
+                    }
+                } catch {
+                    results[book.id] = false;
+                }
+            }));
+            setBatchScriptStatuses(results);
+        };
+        checkAll();
+    }, [activeTab, realBooks.length]);
+
     // 대본 생성 중 브라우저 새로고침/탭 닫기 방지
     useEffect(() => {
         if (!isGeneratingScript) return;
@@ -927,6 +961,13 @@ export default function AdminDashboard() {
 - 대사마다 화자 이름을 확인 후 목소리를 즉시 전환할 것. 이전 화자 목소리가 이어지는 것 금지.
 - "${speakerA}"의 대사를 "${speakerB}" 목소리로, 또는 그 반대로 읽는 것은 치명적 오류입니다.
 
+⚠️ 속도 & 발음 절대 규칙 (최우선):
+- 전체 발화 속도를 평소보다 20~25% 느리게 유지할 것. 절대 빠르게 읽지 말 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것.
+- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
+- 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
+- 청취자가 이해할 수 있도록 여유 있는 페이스를 끝까지 유지할 것.
+
 ⚠️ 이것은 낭독이 아닌 연기입니다!
 ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대화입니다. 책 읽는 것처럼 들리면 실패입니다.
 
@@ -941,12 +982,12 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 
 [발음 규칙]
 - 단어 끝까지 또렷하게. 받침 연음 자연스럽게(있어→이써).
-- 쉼표(,)에서 짧게, 마침표(.)에서 충분히 쉬어 읽을 것.
+- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 충분히 쉬어 읽을 것.
 - 숫자: 3가지→세 가지, CEO→씨이오, SNS→에스엔에스.
 
 [${speakerA} — 남성 MALE 전용]
-- 여유 있고 편안한 친구. 생각하면서 말하는 느낌. 절대 서두르지 말 것.
-- 자연스러운 숨 고르기와 간격으로 편안한 톤 유지.
+- 낮고 차분한 목소리. 생각하면서 천천히 말하는 느낌. 절대 서두르지 말 것.
+- 자연스러운 숨 고르기와 충분한 간격으로 여유 있는 톤 유지.
 - ※ 이 화자는 절대 여성 목소리 사용 금지.
 
 [${speakerB} — 여성 FEMALE 전용]
@@ -1113,6 +1154,220 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         } finally {
             setIsTtsRunning(false);
         }
+    };
+
+    // ── 배치 전용 TTS 헬퍼 — 단일 모드 상태 일절 건드리지 않음 ──────
+    const runTtsForBook = async (script, bookId, addBatchLog) => {
+        const geminiKeys = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+            import.meta.env.VITE_GEMINI_API_KEY4,
+            import.meta.env.VITE_GEMINI_API_KEY5,
+            import.meta.env.VITE_GEMINI_API_KEY6,
+            import.meta.env.VITE_GEMINI_API_KEY7,
+            import.meta.env.VITE_GEMINI_API_KEY8,
+        ].filter(Boolean);
+
+        if (!geminiKeys.length) throw new Error('Gemini API 키가 없습니다.');
+
+        const BATCH = 100;
+        const speakerA = '제임스';
+        const speakerB = '스텔라';
+        const modelId = ttsModel === 'pro' ? 'gemini-2.5-pro-preview-tts' : 'gemini-2.5-flash-preview-tts';
+        const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
+
+        const batches = [];
+        for (let i = 0; i < script.length; i += BATCH) batches.push(script.slice(i, i + BATCH));
+        addBatchLog(`🎙️ [${bookId}] TTS 시작 — ${script.length}턴 · ${modelLabel}`);
+
+        const pcmBuffers = new Array(batches.length).fill(null);
+
+        for (let b = 0; b < batches.length; b++) {
+            const batch = batches[b];
+            const ttsInstruction = `⚠️ CRITICAL — 목소리 배정 절대 규칙:
+- 화자 "${speakerA}" → 반드시 남성(MALE) 목소리만 사용.
+- 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용.
+
+⚠️ 속도 & 발음 절대 규칙 (가장 중요):
+- 전체 발화 속도를 평소보다 20~25% 느리게 유지할 것. 절대 빠르게 읽지 말 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것.
+- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
+- 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
+- 청취자가 내용을 이해할 수 있도록 여유 있는 페이스를 유지할 것.
+- 절대로 서두르거나 문장을 뭉개서 읽지 말 것.
+
+[${speakerA} — 남성]
+- 낮고 차분한 목소리. 생각하면서 천천히 말하는 느낌. 여유 있는 호흡.
+
+[${speakerB} — 여성]
+- 또렷하고 명확한 목소리. 질문은 끝을 살짝 올리되 서두르지 않게. 쿨하고 느긋하게.
+
+[대본]
+`;
+            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+            const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000;
+
+            let success = false;
+            let attempts = 0;
+            while (!success && attempts < geminiKeys.length) {
+                const key = geminiKeys[(b + attempts) % geminiKeys.length];
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), fetchTimeout);
+                    // 경과 시간 타이머
+                    let elapsed = 0;
+                    const timerInterval = setInterval(() => {
+                        elapsed++;
+                        setBatchLogs(prev => {
+                            const filtered = prev.filter(l => !l.includes(`⏳ [${bookId}]`));
+                            return [...filtered, `[${new Date().toLocaleTimeString()}] ⏳ [${bookId}] 배치 ${b + 1}/${batches.length} 생성 중... ${elapsed}초 경과`];
+                        });
+                    }, 1000);
+                    const res = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+                        {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            signal: controller.signal,
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: multiText }] }],
+                                generationConfig: {
+                                    responseModalities: ['audio'],
+                                    speechConfig: {
+                                        multiSpeakerVoiceConfig: {
+                                            speakerVoiceConfigs: [
+                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceA } } },
+                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceB } } },
+                                            ]
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    );
+                    clearTimeout(timeoutId);
+                    if (!res.ok) {
+                        const errJson = await res.json().catch(() => null);
+                        throw new Error(errJson?.error?.message || `HTTP ${res.status}`);
+                    }
+                    const data = await res.json();
+                    const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    if (!part) throw new Error('오디오 데이터 없음');
+                    pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+                    clearInterval(timerInterval);
+                    success = true;
+                    addBatchLog(`✅ [${bookId}] 배치 ${b + 1}/${batches.length} 완료`);
+                } catch (e) {
+                    clearInterval(timerInterval);
+                    attempts++;
+                    const is429 = e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED');
+                    if (attempts < geminiKeys.length) {
+                        addBatchLog(`⚠️ [${bookId}] 배치 ${b + 1} 재시도 (${attempts}/${geminiKeys.length}) — ${is429 ? '할당량 소진' : e.message}`);
+                        if (!is429) await new Promise(r => setTimeout(r, 10000));
+                    } else {
+                        throw new Error(`배치 ${b + 1} 실패: ${e.message}`);
+                    }
+                }
+            }
+
+            if (b < batches.length - 1) {
+                const delay = ttsModel === 'pro' ? 35000 : 30000;
+                addBatchLog(`⏱ [${bookId}] 다음 배치까지 ${delay / 1000}초 대기...`);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+
+        const successBuffers = pcmBuffers.filter(Boolean);
+        if (!successBuffers.length) throw new Error('생성된 오디오 없음');
+        const wavBuffer = createWavFromPcm(successBuffers);
+        const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${bookId}_tts.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addBatchLog(`🎉 [${bookId}] WAV 다운로드 완료!`);
+    };
+
+    // ── 배치 메인 함수 ────────────────────────────────────────────
+    const handleBatchRun = async (mode) => {
+        if (!selectedBatchBooks.length) return alert('도서를 1개 이상 선택하세요.');
+        const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || scriptApiKey;
+        if (mode === 'full' && !apiKey) return alert('Claude API 키가 필요합니다. AI 대본 생성 탭에서 먼저 입력해 주세요.');
+
+        setIsBatchRunning(true);
+        setBatchLogs([]);
+        setBatchProgress({ current: 0, total: selectedBatchBooks.length });
+        const initialStatuses = {};
+        selectedBatchBooks.forEach(id => { initialStatuses[id] = 'pending'; });
+        setBatchBookStatuses(initialStatuses);
+
+        const addLog = (msg) => setBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+        addLog(`🚀 배치 시작 — ${selectedBatchBooks.length}권 · 모드: ${mode === 'full' ? '풀 배치' : 'TTS 전용'}`);
+
+        for (let i = 0; i < selectedBatchBooks.length; i++) {
+            const bookId = selectedBatchBooks[i];
+            const book = realBooks.find(b => b.id === bookId);
+            if (!book) { addLog(`⚠️ [${bookId}] 도서 정보 없음, 스킵`); continue; }
+
+            setBatchProgress({ current: i + 1, total: selectedBatchBooks.length });
+            addLog(`\n📚 [${i + 1}/${selectedBatchBooks.length}] ${book.title} 처리 시작`);
+
+            try {
+                let script = null;
+
+                if (mode === 'full') {
+                    // 풀 배치: 항상 새로 대본 생성 (기존 대본 덮어쓰기)
+                    setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'generating' }));
+                    const hadScript = batchScriptStatuses[bookId] === true;
+                    addLog(`✏️ [${bookId}] 대본 ${hadScript ? '재생성 (덮어쓰기)' : '생성'} 중...`);
+                    const firestoreDesc = overrides[bookId]?.description || '';
+                    const themes = firestoreDesc || book.description || book.desc || '';
+                    script = await handleGenerateScript({
+                        bookId,
+                        title: book.title,
+                        author: book.author,
+                        themes,
+                        isBatch: true,
+                    });
+                    if (!script) throw new Error('대본 생성 실패');
+                    addLog(`✅ [${bookId}] 대본 생성 완료 (${script.length}턴)`);
+                    setBatchScriptStatuses(prev => ({ ...prev, [bookId]: true }));
+                } else {
+                    // TTS 전용: Firestore 대본 불러오기
+                    const snap = await getDoc(doc(db, 'scripts', bookId));
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const stored = data.script || data.lines || data.content || null;
+                        if (stored && Array.isArray(stored) && stored.length > 0) {
+                            script = stored;
+                            addLog(`📂 [${bookId}] 기존 대본 불러옴 (${script.length}턴)`);
+                        }
+                    }
+                    if (!script) {
+                        addLog(`⏭️ [${bookId}] 대본 없음 — TTS 전용 모드라 스킵`);
+                        setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'skipped' }));
+                        continue;
+                    }
+                }
+
+                // TTS
+                setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'tts' }));
+                await runTtsForBook(script, bookId, addLog);
+                setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'done' }));
+
+            } catch (e) {
+                addLog(`❌ [${bookId}] 오류: ${e.message}`);
+                setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'error' }));
+            }
+        }
+
+        addLog(`\n🏁 배치 완료! ${selectedBatchBooks.length}권 처리됨`);
+        setIsBatchRunning(false);
     };
 
     const handleGenerateScript = async (overrides = {}) => {
@@ -4361,62 +4616,383 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                     </div>
                 )}
                 
-                    {/* 일괄 자동화 관리 탭 */}
+                    {/* 일괄 자동화 탭 */}
                     {activeTab === 'automation' && (
-                        <div className="space-y-10 animate-fade-in">
-                            <div className="flex justify-between items-end">
-                                <div className="space-y-2">
-                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
-                                        <div className="size-2 rounded-full bg-red-400 animate-ping"></div>
-                                        <span className="text-red-400 text-[10px] font-black uppercase tracking-widest">Batch Automation Engine</span>
+                        <div className="space-y-8 animate-fade-in">
+                            {/* 헤더 */}
+                            <div className="bg-gradient-to-r from-violet-950/60 to-indigo-950/60 border border-violet-500/20 rounded-[28px] p-10">
+                                <div className="flex items-center gap-5 mb-2">
+                                    <div className="size-14 bg-violet-500/20 border border-violet-500/30 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-violet-400 text-3xl">bolt</span>
                                     </div>
-                                    <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">일괄 자동화</h3>
-                                    <p className="text-slate-500 text-lg font-medium">다중 도서를 선택하여 대본/TTS 및 E-BOOK을 일괄 생성합니다</p>
+                                    <div>
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-white font-black text-4xl italic tracking-tighter uppercase">일괄 자동화</h3>
+                                            <span className="bg-violet-500 text-white text-[10px] px-3 py-1 rounded-full not-italic animate-pulse">BATCH ENGINE</span>
+                                        </div>
+                                        <p className="text-slate-500 text-lg font-medium italic mt-1">다수의 도서를 선택하여 대본 생성 + TTS를 순차 처리합니다.</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white/5 rounded-[40px] border border-white/10 p-10 space-y-8 backdrop-blur-xl flex flex-col items-center justify-center min-h-[500px]">
-                                <h4 className="text-white font-bold text-xl">자동화 대상 도서 선택</h4>
-                                <div className="w-full max-h-[400px] overflow-y-auto pr-4 scrollbar-hide space-y-2">
-                                    {realBooks.map(book => (
-                                        <label key={book.id} className="flex flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 cursor-pointer border border-transparent hover:border-white/10 transition-all">
-                                            <input 
-                                                type="checkbox" 
-                                                className="w-5 h-5 accent-gold cursor-pointer"
-                                                checked={selectedBatchBooks.includes(book.id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) setSelectedBatchBooks(prev => [...prev, book.id]);
-                                                    else setSelectedBatchBooks(prev => prev.filter(id => id !== book.id));
-                                                }}
-                                            />
-                                            <div className="flex-1">
-                                                <p className="font-bold text-white">{book.title}</p>
-                                                <p className="text-xs text-slate-400">{book.id}</p>
+                            {/* 작업 현황 요약 */}
+                            {(() => {
+                                const total = realBooks.length;
+                                const done = realBooks.filter(b => batchScriptStatuses[b.id] === true && (overrides[b.id]?.isPodcast || overrides[b.id]?.audioUrl)).length;
+                                const scriptOnly = realBooks.filter(b => batchScriptStatuses[b.id] === true && !overrides[b.id]?.isPodcast && !overrides[b.id]?.audioUrl).length;
+                                const none = realBooks.filter(b => batchScriptStatuses[b.id] === false && !overrides[b.id]?.isPodcast && !overrides[b.id]?.audioUrl).length;
+                                const audioOnly = total - done - scriptOnly - none;
+                                return (
+                                    <div className="grid grid-cols-4 gap-4">
+                                        {[
+                                            { label: '전체 도서', value: total, color: 'text-white', bg: 'bg-white/5 border-white/10' },
+                                            { label: '✅ 완료', value: done, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', desc: '대본 + 오디오' },
+                                            { label: '📝 대본만', value: scriptOnly, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20', desc: 'TTS 필요' },
+                                            { label: '⬜ 미시작', value: none, color: 'text-slate-500', bg: 'bg-white/3 border-white/8', desc: '대본+TTS 필요' },
+                                        ].map(item => (
+                                            <div key={item.label} className={`${item.bg} border rounded-2xl p-5 text-center`}>
+                                                <p className={`text-3xl font-black ${item.color}`}>{item.value}</p>
+                                                <p className="text-white text-xs font-bold mt-1">{item.label}</p>
+                                                {item.desc && <p className="text-slate-600 text-[10px] mt-0.5">{item.desc}</p>}
                                             </div>
-                                        </label>
-                                    ))}
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                {/* LEFT — 도서 선택 */}
+                                <div className="space-y-5">
+                                    {/* 모드 선택 */}
+                                    <div className="bg-white/3 border border-white/8 rounded-[20px] p-5">
+                                        <p className="text-violet-400 text-xs font-black uppercase tracking-widest mb-4">실행 모드 선택</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setBatchMode('full')}
+                                                disabled={isBatchRunning}
+                                                className={`p-4 rounded-2xl border-2 text-left transition-all ${batchMode === 'full' ? 'bg-violet-500/20 border-violet-500/50 text-white' : 'bg-black/20 border-white/10 text-slate-500 hover:border-white/20'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-2">auto_awesome</span>
+                                                <p className="font-black text-sm">풀 배치</p>
+                                                <p className="text-xs mt-1 opacity-70">대본 없으면 생성 → TTS<br/>대본 있으면 TTS만</p>
+                                            </button>
+                                            <button
+                                                onClick={() => setBatchMode('tts-only')}
+                                                disabled={isBatchRunning}
+                                                className={`p-4 rounded-2xl border-2 text-left transition-all ${batchMode === 'tts-only' ? 'bg-emerald-500/20 border-emerald-500/50 text-white' : 'bg-black/20 border-white/10 text-slate-500 hover:border-white/20'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-2">record_voice_over</span>
+                                                <p className="font-black text-sm">TTS 전용</p>
+                                                <p className="text-xs mt-1 opacity-70">대본 있는 도서만<br/>TTS → WAV</p>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 도서 목록 */}
+                                    <div className="bg-white/3 border border-white/8 rounded-[20px] p-5 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest">도서 선택</p>
+                                            <span className="text-slate-500 text-xs">{selectedBatchBooks.length}개 선택됨</span>
+                                        </div>
+
+                                        <div className="flex gap-2 mb-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (batchMode === 'tts-only') {
+                                                        setSelectedBatchBooks(realBooks.filter(b => batchScriptStatuses[b.id] === true).map(b => b.id));
+                                                    } else {
+                                                        setSelectedBatchBooks(realBooks.map(b => b.id));
+                                                    }
+                                                }}
+                                                disabled={isBatchRunning}
+                                                className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                            >전체 선택</button>
+                                            <button
+                                                onClick={() => setSelectedBatchBooks([])}
+                                                disabled={isBatchRunning}
+                                                className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                            >선택 해제</button>
+                                        </div>
+
+                                        <div className="max-h-[420px] overflow-y-auto space-y-1.5 pr-1">
+                                            {realBooks.map(book => {
+                                                const hasScript = batchScriptStatuses[book.id] === true;
+                                                const status = batchBookStatuses[book.id];
+                                                const isDisabled = isBatchRunning || (batchMode === 'tts-only' && !hasScript);
+                                                const statusColors = {
+                                                    pending: 'text-slate-500',
+                                                    generating: 'text-yellow-400 animate-pulse',
+                                                    tts: 'text-blue-400 animate-pulse',
+                                                    done: 'text-emerald-400',
+                                                    error: 'text-red-400',
+                                                    skipped: 'text-slate-600',
+                                                };
+                                                const statusLabels = {
+                                                    pending: '대기',
+                                                    generating: '대본 생성 중...',
+                                                    tts: 'TTS 변환 중...',
+                                                    done: '완료',
+                                                    error: '오류',
+                                                    skipped: '스킵',
+                                                };
+                                                return (
+                                                    <label
+                                                        key={book.id}
+                                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                                                            isDisabled ? 'opacity-40 cursor-not-allowed border-transparent' :
+                                                            selectedBatchBooks.includes(book.id) ? 'bg-violet-500/10 border-violet-500/30 cursor-pointer' :
+                                                            'bg-white/3 border-white/5 hover:bg-white/5 cursor-pointer'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 accent-violet-500 cursor-pointer shrink-0"
+                                                            checked={selectedBatchBooks.includes(book.id)}
+                                                            disabled={isDisabled}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setSelectedBatchBooks(prev => [...prev, book.id]);
+                                                                else setSelectedBatchBooks(prev => prev.filter(id => id !== book.id));
+                                                            }}
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-bold text-white truncate">{book.title}</p>
+                                                            <p className="text-[10px] text-slate-500 font-mono">{book.id}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {/* 작업 완료 뱃지 */}
+                                                            {(() => {
+                                                                const hasAudio = overrides[book.id]?.isPodcast || overrides[book.id]?.audioUrl;
+                                                                const handlePreviewScript = async (e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    const snap = await getDoc(doc(db, 'scripts', book.id));
+                                                                    if (!snap.exists()) return alert('대본을 불러올 수 없습니다.');
+                                                                    const data = snap.data();
+                                                                    const script = data.script || data.lines || data.content || [];
+                                                                    setBatchScriptPreview({ bookId: book.id, title: book.title, script });
+                                                                };
+                                                                if (hasScript && hasAudio) return (
+                                                                    <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 transition-all cursor-pointer">✅ 완료</button>
+                                                                );
+                                                                if (hasScript && !hasAudio) return (
+                                                                    <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/30 transition-all cursor-pointer">📝 대본만</button>
+                                                                );
+                                                                return (
+                                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/5 text-slate-600">⬜ 미시작</span>
+                                                                );
+                                                            })()}
+                                                            {status && (
+                                                                <span className={`text-[10px] font-black ${statusColors[status] || 'text-slate-500'}`}>
+                                                                    {statusLabels[status] || status}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* 실행 버튼 */}
+                                    <button
+                                        onClick={() => handleBatchRun(batchMode)}
+                                        disabled={isBatchRunning || !selectedBatchBooks.length}
+                                        className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all ${
+                                            isBatchRunning || !selectedBatchBooks.length
+                                                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                                : batchMode === 'full'
+                                                    ? 'bg-violet-500 text-white hover:bg-violet-400 hover:scale-[1.02] shadow-xl shadow-violet-500/20'
+                                                    : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] shadow-xl shadow-emerald-500/20'
+                                        }`}
+                                    >
+                                        {isBatchRunning ? (
+                                            <>
+                                                <span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span>
+                                                처리 중... ({batchProgress.current}/{batchProgress.total})
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-2xl">
+                                                    {batchMode === 'full' ? 'auto_awesome' : 'record_voice_over'}
+                                                </span>
+                                                {batchMode === 'full' ? `풀 배치 실행 (${selectedBatchBooks.length}권)` : `TTS 전용 배치 (${selectedBatchBooks.length}권)`}
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
-                                
-                                <div className="w-full flex flex-wrap gap-4 pt-6 border-t border-white/10">
-                                    <button 
-                                        onClick={() => setSelectedBatchBooks(realBooks.map(b => b.id))}
-                                        className="px-6 py-3 rounded-xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 transition-all"
-                                    >전체 선택</button>
-                                    <button 
-                                        onClick={() => setSelectedBatchBooks([])}
-                                        className="px-6 py-3 rounded-xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 transition-all"
-                                    >선택 해제</button>
-                                    <div className="flex-1"></div>
-                                    <button 
-                                        onClick={() => alert('대본/TTS 자동화 백그라운드 작업 시작 중...')}
-                                        className="px-8 py-3 rounded-xl flex items-center gap-2 bg-white text-black font-black hover:bg-gold transition-all"
-                                    ><span className="material-symbols-outlined">play_arrow</span> 대본/TTS 일괄 생성</button>
-                                    <button 
-                                        onClick={() => alert('E-BOOK 자동화 백그라운드 작업 시작 중...')}
-                                        className="px-8 py-3 rounded-xl flex items-center gap-2 bg-gold text-primary font-black hover:scale-105 transition-all shadow-xl shadow-gold/20"
-                                    ><span className="material-symbols-outlined">auto_stories</span> E-BOOK 일괄 생성</button>
+
+                                {/* RIGHT — 진행 상황 */}
+                                <div className="space-y-5">
+                                    {/* 전체 진행 */}
+                                    {(isBatchRunning || batchProgress.total > 0) && (
+                                        <div className="bg-white/3 border border-white/8 rounded-[20px] p-5 space-y-3">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest">전체 진행</p>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex-1 bg-white/5 rounded-full h-2">
+                                                    <div
+                                                        className="h-2 bg-violet-500 rounded-full transition-all duration-500"
+                                                        style={{ width: batchProgress.total ? `${(batchProgress.current / batchProgress.total) * 100}%` : '0%' }}
+                                                    />
+                                                </div>
+                                                <span className="text-white text-sm font-black shrink-0">
+                                                    {batchProgress.current} / {batchProgress.total}
+                                                </span>
+                                            </div>
+                                            {/* 도서별 상태 요약 */}
+                                            <div className="flex gap-3 flex-wrap">
+                                                {['done', 'generating', 'tts', 'error', 'skipped'].map(s => {
+                                                    const count = Object.values(batchBookStatuses).filter(v => v === s).length;
+                                                    if (!count) return null;
+                                                    const colors = { done: 'text-emerald-400', generating: 'text-yellow-400', tts: 'text-blue-400', error: 'text-red-400', skipped: 'text-slate-500' };
+                                                    const labels = { done: '완료', generating: '대본생성', tts: 'TTS', error: '오류', skipped: '스킵' };
+                                                    return (
+                                                        <span key={s} className={`text-xs font-black ${colors[s]}`}>
+                                                            {labels[s]} {count}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 실행 로그 */}
+                                    <div className="bg-black/60 border border-white/8 rounded-[20px] p-5 min-h-[400px] flex flex-col">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest">실행 로그</p>
+                                            {batchLogs.length > 0 && (
+                                                <button
+                                                    onClick={() => setBatchLogs([])}
+                                                    className="text-slate-600 hover:text-slate-400 text-xs transition-all"
+                                                >지우기</button>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto space-y-0.5 max-h-[500px]">
+                                            {batchLogs.length === 0 ? (
+                                                <p className="text-slate-600 text-sm text-center mt-16">배치를 실행하면 여기에 로그가 표시됩니다.</p>
+                                            ) : (
+                                                batchLogs.map((log, i) => (
+                                                    <p key={i} className={`text-xs font-mono leading-relaxed ${
+                                                        log.includes('❌') ? 'text-red-400' :
+                                                        log.includes('🎉') || log.includes('✅') || log.includes('🏁') ? 'text-emerald-400' :
+                                                        log.includes('⏳') || log.includes('✏️') || log.includes('🎙️') ? 'text-yellow-400' :
+                                                        log.includes('📂') || log.includes('🚀') || log.includes('📚') ? 'text-violet-400' :
+                                                        log.includes('⚠️') || log.includes('⏭️') ? 'text-orange-400' :
+                                                        'text-slate-400'
+                                                    }`}>{log}</p>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* 대본 미리보기 + 수정 모달 */}
+                            {batchScriptPreview && (() => {
+                                const isSaving = isLoadingScript;
+                                const handleSavePreviewScript = async () => {
+                                    setIsLoadingScript(true);
+                                    try {
+                                        await setDoc(doc(db, 'scripts', batchScriptPreview.bookId), {
+                                            script: batchScriptPreview.script,
+                                            lines: batchScriptPreview.script,
+                                            title: batchScriptPreview.title,
+                                            updatedAt: serverTimestamp(),
+                                        }, { merge: true });
+                                        alert('저장 완료! TTS 실행 시 수정된 대본이 적용됩니다.');
+                                    } catch (e) {
+                                        alert('저장 실패: ' + e.message);
+                                    } finally {
+                                        setIsLoadingScript(false);
+                                    }
+                                };
+                                return (
+                                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fade-in">
+                                    <div className="bg-[#1a1d23] border border-white/10 w-full max-w-3xl h-[85vh] rounded-[40px] flex flex-col overflow-hidden shadow-2xl">
+                                        {/* 모달 헤더 */}
+                                        <div className="p-7 border-b border-white/5 flex items-center justify-between shrink-0">
+                                            <div>
+                                                <h4 className="text-white font-black text-xl uppercase tracking-tight">대본 확인 · 수정</h4>
+                                                <p className="text-slate-500 text-xs font-bold mt-0.5">
+                                                    {batchScriptPreview.title} · {batchScriptPreview.script.length}턴 · {batchScriptPreview.script.reduce((s, t) => s + (t?.text?.replace(/\s/g, '').length || 0), 0).toLocaleString()}자
+                                                    <span className="text-emerald-500 ml-2">· 대사를 클릭하면 바로 수정됩니다</span>
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => setBatchScriptPreview(null)}
+                                                className="size-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">close</span>
+                                            </button>
+                                        </div>
+                                        {/* 대본 내용 — 수정 가능 */}
+                                        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                                            {batchScriptPreview.script.map((line, i) => {
+                                                const isA = line.speaker === '제임스' || line.speaker === 'James' || line.speaker === (scriptForm.speakerA || '제임스');
+                                                return (
+                                                    <div key={i} className={`flex gap-3 ${isA ? '' : 'flex-row-reverse'}`}>
+                                                        <div className={`size-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 mt-1 ${isA ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20' : 'bg-pink-600/20 text-pink-400 border border-pink-500/20'}`}>
+                                                            {line.speaker?.[0] ?? '?'}
+                                                        </div>
+                                                        <div className={`flex-1 max-w-[80%] rounded-2xl px-4 py-2.5 border border-transparent hover:border-white/10 transition-all ${isA ? 'bg-blue-500/10 rounded-tl-none' : 'bg-pink-500/10 rounded-tr-none'}`}>
+                                                            <p className={`text-[9px] font-black uppercase mb-1.5 ${isA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker} · {i + 1}</p>
+                                                            <textarea
+                                                                className="w-full bg-transparent text-slate-200 text-sm leading-relaxed outline-none resize-none focus:bg-white/5 rounded-lg px-1 py-0.5 transition-all min-h-[2.5em]"
+                                                                value={line.text}
+                                                                rows={1}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    e.target.style.height = 'auto';
+                                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    setBatchScriptPreview(prev => {
+                                                                        const next = [...prev.script];
+                                                                        next[i] = { ...next[i], text: val };
+                                                                        return { ...prev, script: next };
+                                                                    });
+                                                                }}
+                                                                onFocus={(e) => {
+                                                                    e.target.style.height = 'auto';
+                                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {/* 모달 푸터 */}
+                                        <div className="p-6 border-t border-white/5 flex justify-between items-center shrink-0">
+                                            <button
+                                                onClick={() => setBatchScriptPreview(null)}
+                                                className="px-6 py-3 rounded-xl text-slate-400 font-black text-sm hover:text-white transition-all"
+                                            >닫기</button>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={handleSavePreviewScript}
+                                                    disabled={isSaving}
+                                                    className="px-8 py-3 bg-white/10 border border-white/20 text-white font-black text-sm rounded-xl hover:bg-white/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                >
+                                                    <span className="material-symbols-outlined text-base">{isSaving ? 'sync' : 'save'}</span>
+                                                    {isSaving ? '저장 중...' : '수정 저장'}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setBatchScriptPreview(null);
+                                                        if (!selectedBatchBooks.includes(batchScriptPreview.bookId)) {
+                                                            setSelectedBatchBooks(prev => [...prev, batchScriptPreview.bookId]);
+                                                        }
+                                                        setBatchMode('tts-only');
+                                                    }}
+                                                    className="px-8 py-3 bg-emerald-500 text-white font-black text-sm rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined text-base">record_voice_over</span>
+                                                    이 도서 TTS 실행
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                );
+                            })()}
                         </div>
                     )}
 </main>
