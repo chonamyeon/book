@@ -212,6 +212,8 @@ export default function AdminDashboard() {
     // { [bookId]: 'pending'|'generating'|'tts'|'done'|'error'|'skipped' }
     const [batchScriptStatuses, setBatchScriptStatuses] = useState({});
     // { [bookId]: true(있음) | false(없음) } — 탭 진입 시 Firestore 일괄 조회
+    const [batchOptimizedStatuses, setBatchOptimizedStatuses] = useState({});
+    // { [bookId]: boolean } — optimizedAt 필드 있으면 true
     const [batchScriptPreview, setBatchScriptPreview] = useState(null);
     // { bookId, title, script: [{speaker, text}] } | null
     const { getAllBooks, loading: booksLoading, overrides } = useBookData();
@@ -697,6 +699,7 @@ export default function AdminDashboard() {
         if (activeTab !== 'automation' || !realBooks.length) return;
         const checkAll = async () => {
             const results = {};
+            const optimized = {};
             await Promise.all(realBooks.map(async (book) => {
                 try {
                     const snap = await getDoc(doc(db, 'scripts', book.id));
@@ -704,14 +707,18 @@ export default function AdminDashboard() {
                         const data = snap.data();
                         const script = data.script || data.lines || data.content || null;
                         results[book.id] = !!(script && Array.isArray(script) && script.length > 0);
+                        optimized[book.id] = !!(data.optimizedAt);
                     } else {
                         results[book.id] = false;
+                        optimized[book.id] = false;
                     }
                 } catch {
                     results[book.id] = false;
+                    optimized[book.id] = false;
                 }
             }));
             setBatchScriptStatuses(results);
+            setBatchOptimizedStatuses(optimized);
         };
         checkAll();
     }, [activeTab, realBooks.length]);
@@ -906,6 +913,19 @@ export default function AdminDashboard() {
 - 직장인 유머·비유·위트 100% 살릴 것
 - "어", "근데", "아" 같은 자연스러운 추임새 유지
 
+━━━ 구조 교정 규칙 (기존 대본 일관성) ━━━
+이 규칙들은 내용 변경이 허용되는 예외 구간이야.
+
+[오프닝·클로징 상황극 일치]
+- 첫 3~6턴을 분석해 어떤 장소·상황에서 시작하는지 파악해 (예: 카페, 한강, 등산 중 등)
+- 마지막 3턴이 오프닝과 다른 장소·상황으로 끝나면 오프닝과 동일한 장소·상황으로 자연스럽게 수정
+- 마지막 1턴은 반드시 그 장소·상황에 맞는 행동으로 마무리되어야 함 (예: 카페면 "음료 다 마셨다, 가자", 등산이면 "이제 올라가자")
+
+[책 → 상황극 급전환 교정]
+- 책 얘기가 끝나고 갑자기 상황극 복귀 멘트가 나오면 어색함
+- 클로징 직전 2~3턴에서 "야 얘기가 너무 길어졌다", "정신차려보니 시간이", "어 벌써" 같은 자연스러운 전환 브릿지가 없으면 기존 턴 중 가장 자연스러운 위치의 text를 수정해 브릿지 역할을 하도록 조정
+- 단, 턴을 추가·삭제하지 말고 기존 턴의 text만 수정할 것
+
 반환 형식: 입력과 동일한 JSON 배열 [{speaker, text}, ...]
 JSON 외 다른 텍스트 절대 출력하지 마.
 
@@ -917,12 +937,24 @@ ${JSON.stringify(script)}`;
                 {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } })
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.3,
+                            maxOutputTokens: 16384,
+                            thinkingConfig: { thinkingBudget: 0 },
+                        }
+                    })
                 }
             );
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (data.error) throw new Error(`API 오류: ${data.error.message}`);
+            const finishReason = data.candidates?.[0]?.finishReason;
+            if (finishReason && finishReason !== 'STOP') throw new Error(`생성 중단: ${finishReason}`);
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const raw = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+            logFn?.(`🔍 최적화 응답 길이: ${raw.length}자`);
             const match = raw.match(/\[[\s\S]*\]/);
             if (!match) throw new Error('JSON 파싱 실패');
             const optimized = JSON.parse(match[0]);
@@ -1231,7 +1263,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
     };
 
     // ── 배치 전용 TTS 헬퍼 — 단일 모드 상태 일절 건드리지 않음 ──────
-    const runTtsForBook = async (script, bookId, addBatchLog) => {
+    const runTtsForBook = async (script, bookId, addBatchLog, skipOptimize = false) => {
         const geminiKeys = [
             import.meta.env.VITE_GEMINI_API_KEY,
             import.meta.env.VITE_GEMINI_API_KEY2,
@@ -1251,9 +1283,12 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         const modelId = ttsModel === 'pro' ? 'gemini-2.5-pro-preview-tts' : 'gemini-2.5-flash-preview-tts';
         const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
 
-        // TTS 최적화 (Gemini Flash)
-        addBatchLog(`✏️ [${bookId}] TTS 최적화 중 (Gemini Flash)...`);
-        const ttsReadyScript = await optimizeScriptForTts(script, addBatchLog);
+        // TTS 최적화 (Gemini Flash) — 이미 최적화된 경우 스킵
+        let ttsReadyScript = script;
+        if (!skipOptimize) {
+            addBatchLog(`✏️ [${bookId}] TTS 최적화 중 (Gemini Flash)...`);
+            ttsReadyScript = await optimizeScriptForTts(script, addBatchLog);
+        }
 
         const batches = [];
         for (let i = 0; i < ttsReadyScript.length; i += BATCH) batches.push(ttsReadyScript.slice(i, i + BATCH));
@@ -1434,8 +1469,10 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     addLog(`📂 [${bookId}] 기존 대본 불러옴 (${stored.length}턴)`);
                     setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'generating' }));
                     const optimized = await optimizeScriptForTts(stored, addLog);
-                    await setDoc(doc(db, 'scripts', bookId), { script: optimized, updatedAt: new Date().toISOString() }, { merge: true });
+                    const now = new Date().toISOString();
+                    await setDoc(doc(db, 'scripts', bookId), { script: optimized, updatedAt: now, optimizedAt: now }, { merge: true });
                     addLog(`💾 [${bookId}] 최적화 완료 → Firestore 저장됨 (${optimized.length}턴)`);
+                    setBatchOptimizedStatuses(prev => ({ ...prev, [bookId]: true }));
                     script = optimized; // TTS로 이어짐
                 } else {
                     // TTS 전용: Firestore 대본 불러오기
@@ -1455,9 +1492,9 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     }
                 }
 
-                // TTS
+                // TTS (optimize-only는 이미 최적화 완료 → 중복 호출 방지)
                 setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'tts' }));
-                await runTtsForBook(script, bookId, addLog);
+                await runTtsForBook(script, bookId, addLog, mode === 'optimize-only');
                 setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'done' }));
 
             } catch (e) {
@@ -1522,8 +1559,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                 return response.content[0].text;
             };
 
-            const situation = selectedSituation 
-                ? "선택된 상황: " + selectedSituation.scene 
+            const situation = selectedSituation
+                ? `선택된 상황: ${selectedSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${selectedSituation.close}"`
                 : '스튜디오 안에서 팟캐스트 녹음 진행';
 
             addLog('✅ [1단계] Claude 4.5 Sonnet 초기 대본 생성 요청 중...');
@@ -1593,9 +1630,10 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 
 [2단계 클로징 통합]
 58턴까지 작성 후 마지막 6턴은 자연 마무리:
+턴 54~55: 책 얘기 텐션 낮추기 — 갑자기 끊지 말고 "야 우리 얘기가 너무 길어졌다", "정신차려보니 시간이" 같은 브릿지 1~2턴 삽입. 책 → 상황 급전환 금지.
 턴 56: "오늘 얘기 진짜 좋았다" 뉘앙스
-턴 57: 주변 상황으로 눈 돌리기 (예: "바람도 시원하고" "벌써 어두워졌네")
-턴 58: 주어진 목표 마무리 멘트 (예: "자 슬슬 정상 가자!")`;
+턴 57: 오프닝에서 설정한 장소·상황 속 주변 묘사로 자연 복귀 (오프닝과 동일한 장소·상황이어야 함. 전혀 다른 장소나 상황으로 바뀌는 것 절대 금지)
+턴 58: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것. 임의로 바꾸거나 다른 멘트로 대체 금지.`;
 
             const prompt1 = `도서 정보:
 제목: ${title}
@@ -1640,6 +1678,9 @@ ${themes ? '주제: ' + themes : ''}
 13. 논리나 반복적인 부분에서 어색함이 없는가?
 14. 문장 끝 글자 뭉개짐 위험 체크: 받침 없는 짧은 글자로 끝나는 경우, "진짜." ".. " 등으로 교정.
 15. 마지막 10자 구간에 쉼표/마침표 1개 이상 있는가?
+16. 턴 58 마지막 대사가 주어진 [클로징 복귀 멘트]와 일치하는가?
+17. 턴 56~58이 오프닝(턴 1~6)과 동일한 장소·상황인가? (전혀 다른 배경으로 바뀌었으면 수정)
+18. 책 얘기에서 클로징으로 전환이 급작스럽지 않은가? (브릿지 없이 뚝 끊기면 수정)
 
 위 항목 중 하나라도 위반이면 가장 최소한의 단어/구두점/끝맺음만 수정하고, 특유의 말투·캐릭터성·내용은 절대 변경하지 마세요.
 모든 검토 완료 후 오직 완성된 58턴 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
@@ -4741,12 +4782,13 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                 const done = realBooks.filter(b => batchScriptStatuses[b.id] === true && (overrides[b.id]?.isPodcast || overrides[b.id]?.audioUrl)).length;
                                 const scriptOnly = realBooks.filter(b => batchScriptStatuses[b.id] === true && !overrides[b.id]?.isPodcast && !overrides[b.id]?.audioUrl).length;
                                 const none = realBooks.filter(b => batchScriptStatuses[b.id] === false && !overrides[b.id]?.isPodcast && !overrides[b.id]?.audioUrl).length;
-                                const audioOnly = total - done - scriptOnly - none;
+                                const optimizedCount = realBooks.filter(b => batchOptimizedStatuses[b.id] === true).length;
                                 return (
-                                    <div className="grid grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-5 gap-4">
                                         {[
                                             { label: '전체 도서', value: total, color: 'text-white', bg: 'bg-white/5 border-white/10' },
                                             { label: '✅ 완료', value: done, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', desc: '대본 + 오디오' },
+                                            { label: '🔧 최적화', value: optimizedCount, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', desc: 'TTS 최적화 완료' },
                                             { label: '📝 대본만', value: scriptOnly, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20', desc: 'TTS 필요' },
                                             { label: '⬜ 미시작', value: none, color: 'text-slate-500', bg: 'bg-white/3 border-white/8', desc: '대본+TTS 필요' },
                                         ].map(item => (
@@ -4880,8 +4922,15 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                                     const script = data.script || data.lines || data.content || [];
                                                                     setBatchScriptPreview({ bookId: book.id, title: book.title, script });
                                                                 };
+                                                                const isOptimized = batchOptimizedStatuses[book.id] === true;
+                                                                if (hasScript && hasAudio && isOptimized) return (
+                                                                    <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 transition-all cursor-pointer">✅ 최적화완료</button>
+                                                                );
                                                                 if (hasScript && hasAudio) return (
                                                                     <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 transition-all cursor-pointer">✅ 완료</button>
+                                                                );
+                                                                if (hasScript && isOptimized) return (
+                                                                    <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-all cursor-pointer">🔧 최적화</button>
                                                                 );
                                                                 if (hasScript && !hasAudio) return (
                                                                     <button onClick={handlePreviewScript} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/30 transition-all cursor-pointer">📝 대본만</button>
