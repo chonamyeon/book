@@ -910,6 +910,103 @@ ${description}
         res.status(500).json({ error: error.message });
     }
 });
+// ── 타임스탬프 생성 API ───────────────────────────────────────
+import { execSync as execSyncTs } from 'child_process';
+
+app.post('/api/timestamps/generate', async (req, res) => {
+    const { bookId, script } = req.body;
+    if (!bookId) return res.status(400).json({ error: 'bookId 필요' });
+
+    const mp3Path = path.resolve(__dirname, `../public/audio/${bookId}.mp3`);
+    if (!fs.existsSync(mp3Path)) {
+        return res.status(404).json({ error: `오디오 파일 없음: ${bookId}.mp3` });
+    }
+
+    try {
+        // 총 길이
+        const durRaw = execSyncTs(
+            `ffprobe -v error -show_entries format=duration -of csv=p=0 "${mp3Path}"`,
+            { encoding: 'utf8' }
+        ).trim();
+        const duration = parseFloat(durRaw);
+
+        let segments;
+        let method;
+
+        // silencedetect 시도 (-25dB:0.15)
+        const silenceRaw = execSyncTs(
+            `ffmpeg -i "${mp3Path}" -af "silencedetect=noise=-25dB:duration=0.15" -f null - 2>&1`,
+            { encoding: 'utf8' }
+        );
+        const silences = [];
+        const silRe = /silence_end: ([\d.]+) \| silence_duration: ([\d.]+)/g;
+        let sm;
+        while ((sm = silRe.exec(silenceRaw)) !== null) {
+            const end = parseFloat(sm[1]), dur2 = parseFloat(sm[2]);
+            silences.push({ end, dur: dur2, start: end - dur2 });
+        }
+
+        const needed = (script?.length || 0) - 1;
+        const usesSilence = script?.length > 0 && silences.length >= needed * 0.6;
+
+        if (usesSilence) {
+            const bounds = silences
+                .sort((a, b) => b.dur - a.dur)
+                .slice(0, needed)
+                .sort((a, b) => a.start - b.start)
+                .map(s => (s.start + s.end) / 2);
+
+            segments = [];
+            let prev = 0;
+            for (let i = 0; i < bounds.length; i++) {
+                segments.push({
+                    index: i,
+                    speaker: script[i]?.speaker || (i % 2 === 0 ? '제임스' : '스텔라'),
+                    start: +prev.toFixed(3),
+                    end: +bounds[i].toFixed(3),
+                    text: script[i]?.text || '',
+                });
+                prev = bounds[i];
+            }
+            segments.push({
+                index: bounds.length,
+                speaker: script[bounds.length]?.speaker || '제임스',
+                start: +prev.toFixed(3),
+                end: +duration.toFixed(3),
+                text: script[bounds.length]?.text || '',
+            });
+            method = 'silencedetect-25dB';
+        } else {
+            // char-ratio fallback
+            if (!script?.length) return res.status(400).json({ error: '스크립트가 없습니다' });
+            const totalChars = script.reduce((s, t) => s + (t.text || '').length, 0);
+            let acc = 0;
+            segments = script.map((turn, i) => {
+                const start = (acc / totalChars) * duration;
+                acc += (turn.text || '').length;
+                const end = (acc / totalChars) * duration;
+                return {
+                    index: i,
+                    speaker: turn.speaker || (i % 2 === 0 ? '제임스' : '스텔라'),
+                    start: +start.toFixed(3),
+                    end: +end.toFixed(3),
+                    text: turn.text || '',
+                };
+            });
+            method = 'char-ratio';
+        }
+
+        // 로컬 파일에도 저장
+        const tsPath = path.resolve(__dirname, `../public/timestamps/${bookId}.json`);
+        fs.writeFileSync(tsPath, JSON.stringify({ method, bookId, segments }, null, 2));
+
+        console.log(`[TIMESTAMPS] ${bookId}: ${segments.length} segs, method=${method}`);
+        res.json({ success: true, method, segments, duration });
+    } catch (e) {
+        console.error('[TIMESTAMPS ERROR]', e);
+        res.status(500).json({ error: e.message });
+    }
+});
 // ─────────────────────────────────────────────────────────────
 
 const PORT = 3001;

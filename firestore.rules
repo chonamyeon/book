@@ -41,6 +41,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // 8. Timestamps (오디오 싱크)
+    match /timestamps/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

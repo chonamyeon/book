@@ -206,7 +206,7 @@ export default function ReadingNotes() {
             // Find book info if bId is provided
             if (bId) {
                 for (const celeb of celebrities) {
-                    const found = celeb.books?.find(b => b.id === bId);
+                    const found = celeb.books?.find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bId);
                     if (found) {
                         setBookTitle(found.title);
                         setActiveActionGuide(found.actionGuide || []);

@@ -4,9 +4,30 @@
 
 /* ===== 모바일 전역 최적화 ===== */
 
+/* iOS 텍스트 크기 자동 확대 방지 */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+    scroll-behavior: smooth;
+    /* iOS 모멘텀 스크롤 */
+    -webkit-overflow-scrolling: touch;
+}
+
+body {
+    overscroll-behavior-y: none;
+    overflow-x: hidden;
+    /* 폰트 렌더링 최적화 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
 /* 탭 하이라이트 제거 */
 * {
     -webkit-tap-highlight-color: transparent;
+    /* 박스 사이징 통일 */
+    box-sizing: border-box;
 }
 
 /* 터치 딜레이 제거 (300ms 탭 지연 방지) */
@@ -19,7 +40,7 @@ textarea {
 }
 
 /* 버튼 및 링크에서 텍스트 선택 방지 (모바일 앱 느낌) */
-button, 
+button,
 a {
     user-select: none;
     -webkit-user-select: none;
@@ -32,23 +53,6 @@ textarea {
     font-size: max(16px, 1em);
 }
 
-/* 스크롤 체이닝 방지 및 풀-투-리프레시 제거 */
-html {
-    overscroll-behavior-y: none;
-    scroll-behavior: smooth;
-}
-
-body {
-    overscroll-behavior-y: none;
-    /* 가로 스크롤 방지 */
-    overflow-x: hidden;
-}
-
-/* 이미지 최대 너비 보장 */
-img {
-    max-width: 100%;
-}
-
 /* iOS에서 input 스타일 초기화 */
 input[type="text"],
 input[type="email"],
@@ -57,6 +61,51 @@ input[type="search"] {
     -webkit-appearance: none;
     appearance: none;
     border-radius: 0;
+}
+
+/* 이미지 최대 너비 보장 */
+img {
+    max-width: 100%;
+    /* 이미지 렌더링 최적화 */
+    image-rendering: auto;
+}
+
+/* 최소 터치 영역 (iOS HIG: 44pt) */
+button,
+[role="button"],
+a {
+    min-height: 44px;
+}
+
+/* 작은 아이콘 버튼은 예외 (패딩으로 보완) */
+.btn-icon-sm {
+    min-height: unset;
+}
+
+/* iOS Safari 하단 safe area를 위한 CSS 변수 */
+:root {
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    /* 바텀 네비 + safe area 합산 높이 (페이지 패딩용) */
+    --nav-bottom-height: calc(72px + var(--safe-area-bottom));
+    /* 미니플레이어 활성 시 추가 패딩 */
+    --miniplayer-height: 64px;
+}
+
+/* 스크롤 가능한 컨테이너 성능 최적화 */
+.scroll-container {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+}
+
+/* GPU 가속이 필요한 요소 (헤더, 미니플레이어, 바텀 네비) */
+.gpu-accelerated {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 @layer utilities {
@@ -140,6 +189,16 @@ input[type="search"] {
         pointer-events: none;
     }
 
+    /* 바텀 네비 높이만큼 페이지 하단 패딩 (콘텐츠가 네비에 가리지 않게) */
+    .pb-nav {
+        padding-bottom: var(--nav-bottom-height);
+    }
+
+    /* 미니플레이어 표시 중일 때 추가 패딩 */
+    .pb-nav-player {
+        padding-bottom: calc(var(--nav-bottom-height) + var(--miniplayer-height));
+    }
+
     @keyframes premium-glow {
 
         0%,
@@ -157,4 +216,21 @@ input[type="search"] {
     .anim-pulse {
         animation: premium-glow 2s ease-in-out infinite;
     }
+
+    @keyframes wave-bounce {
+        0%, 100% { transform: scaleY(0.4); }
+        50% { transform: scaleY(1); }
+    }
+
+    .animate-wave-bar {
+        animation: wave-bounce 1s ease-in-out infinite;
+        transform-origin: center;
+        will-change: transform;
+    }
+
+    .wave-delay-1 { animation-delay: 0.1s; }
+    .wave-delay-2 { animation-delay: 0.3s; }
+    .wave-delay-3 { animation-delay: 0.0s; }
+    .wave-delay-4 { animation-delay: 0.4s; }
+    .wave-delay-5 { animation-delay: 0.2s; }
 }

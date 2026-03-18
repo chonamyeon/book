@@ -8,7 +8,7 @@ export default function TopNavigation({ title, type = 'main' }) {
     const { user } = useAuth();
 
     return (
-        <nav className="sticky top-0 z-50 w-full bg-[#090b10] border-b border-white/5 flex items-center justify-between px-6 py-5" style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))' }}>
+        <nav className="sticky top-0 z-50 w-full bg-[#090b10] border-b border-white/5 flex items-center justify-between px-6 py-5" style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))', transform: 'translate3d(0, 0, 0)', willChange: 'transform' }}>
             <div className="flex items-center gap-4">
                 {type === 'sub' ? (
                     <button onClick={() => navigate(-1)} className="text-white flex items-center justify-center transition-transform active:scale-90">

@@ -1116,452 +1116,234 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
     };
 
     const handleGenerateScript = async (overrides = {}) => {
-        const { bookId, title, author, themes, targetMin, targetMax, turnLimit, speakerA, speakerB } = { ...scriptForm, ...overrides };
-        if (!scriptApiKey) return alert('Claude API 키를 입력하세요.');
-        if (!bookId || !title || !author) return alert('Book ID, 제목, 저자는 필수입니다.');
+        const bookId = overrides.bookId || scriptForm.bookId;
+        const title = overrides.title || scriptForm.title;
+        const author = overrides.author || scriptForm.author;
+        const themes = overrides.themes || scriptForm.themes;
+        const speakerA = (overrides.speakerA || scriptForm.speakerA).trim() || '제임스';
+        const speakerB = (overrides.speakerB || scriptForm.speakerB).trim() || '스텔라';
+        let apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+        
+        if (!apiKey && scriptApiKey) {
+            apiKey = scriptApiKey;
+        }
 
-        // ── 화자 이름 정규화 (Claude 출력의 영문/한글 혼용 방지) ──────
-        const spkAAliases = [speakerA.toLowerCase(), 'james', '제임스'];
-        const spkBAliases = [speakerB.toLowerCase(), 'stella', '스텔라'];
-        const normSpk = (s) => {
-            const v = String(s || '').trim().toLowerCase();
-            if (spkAAliases.includes(v) || spkAAliases.some(a => v.includes(a) || a.includes(v))) return speakerA;
-            if (spkBAliases.includes(v) || spkBAliases.some(b => v.includes(b) || b.includes(v))) return speakerB;
-            return speakerA;
+        if (!apiKey) {
+            alert('Anthropic API 키 (VITE_ANTHROPIC_API_KEY) 가 설정되지 않았습니다.');
+            return;
+        }
+
+        if (!bookId || !title || !author) {
+            alert('도서 ID, 제목, 저자는 필수 입력입니다.');
+            return;
+        }
+
+        const addLog = (msg) => {
+            setScriptLogs(prev => [...prev, "[" + new Date().toLocaleTimeString() + "] " + msg]);
         };
 
-        // 순서대로 상황극 선택 (localStorage로 인덱스 유지)
-        const situationIndex = parseInt(localStorage.getItem('scriptSituationIndex') || '0', 10);
-        const situation = SCRIPT_SITUATIONS[situationIndex % SCRIPT_SITUATIONS.length];
-        localStorage.setItem('scriptSituationIndex', String(situationIndex + 1));
-        setSelectedSituation(situation);
-
-        setIsGeneratingScript(true);
-        setScriptLogs([`🎬 상황: ${situation.scene}`, '🚀 Claude API 호출 중...']);
-        setScriptProgress(10);
-        setGeneratedScript([]);
-
-        // 경과 시간 표시 타이머
-        const startTime = Date.now();
-        const timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            setScriptLogs(prev => {
-                const filtered = prev.filter(l => !l.startsWith('⏱'));
-                return [...filtered, `⏱ 대기 중... ${elapsed}초 경과`];
-            });
-        }, 3000);
-
-        const themesBlock = themes
-            ? `- 핵심 주제 / 반드시 다룰 내용:\n${themes.split('\n').filter(Boolean).map(t => `  ${t}`).join('\n')}`
-            : '';
-
-        const prompt = `# ⚠️ 최우선 규칙 — 오프닝과 클로징 구조 절대 준수
-지금 두 사람은 **${situation.scene}** 상황입니다.
-
-## 오프닝 (턴 1~3) — 책 언급 완전 금지
-반드시 이 상황에서의 일상 수다로만 시작합니다. 책 제목, 저자, 책 내용은 턴 4 이전에 절대 언급 금지.
-턴 4에서 책 얘기로 자연스럽게 전환합니다.
-
-오프닝 예시 (등산 상황인 경우):
-턴1 제임스: "야, 다리 왜 이렇게 떨리지. 나 평소에 운동 좀 한다고 생각했는데."
-턴2 스텔라: "나도. 어제 만보 걸었거든. 근데 그게 다 편의점 왔다갔다 한 거였어."
-턴3 제임스: "나도 건강 앱에 칼로리 소모 보면서 뿌듯해하다가, 결국 치킨 시켰거든."
-턴4 스텔라: "그러니까. 의지가 문제가 아니라 시스템이 문제라는 거잖아. 그러고 보니 너 요즘 읽고 있다던 책 그거 아니야?"
-턴5 제임스: "맞아, 딱 그 얘기야. [책제목]이거든. 읽다가 진짜 뜨끔했어."
-
-## ⚠️ 클로징 (턴 43~45) — 반드시 상황으로 돌아올 것
-턴 42가 끝나면 책 얘기는 완전히 마무리됩니다.
-턴 43~45는 반드시 처음 상황인 **"${situation.scene}"**으로 자연스럽게 돌아와야 합니다.
-마지막 턴은 반드시 **"${situation.close}"** 같은 상황에 맞는 멘트로 끝냅니다.
-방송 마무리 멘트("오늘도 함께해주셔서...", "다음에 또 만나요" 등) 절대 금지.
-
-클로징 예시 (등산 상황인 경우):
-턴43 스텔라: "오늘 책 얘기 하다 보니까 시간이 진짜 훌쩍 갔네. 근데 우리 언제부터 여기 앉아 있었던 거야?"
-턴44 제임스: "한 20분? 다리 좀 쉬었으니까 이제 올라가야지."
-턴45 스텔라: "맞아. 자, 이제 마지막 정상까지 올라가자. 거의 다 왔잖아."
-
----
-
-# Role: 당신은 전세계 직장인에게 가장 존경받고 사랑받는 대본 작가입니다.
-어떻게 써야 직장인들이 공감하고, 실행하고, 감동받을 수 있는지 본능적으로 아는 사람입니다.
-월요병, 야근, 탕비실 눈치, 아무 의미 없는 회의, 공 가로채는 팀장, 자정 편의점 컵라면 — 그 가려운 부분을 정확히 긁어주는 게 당신의 무기입니다.
-당신이 쓴 대사를 들으면 사람들은 "맞아, 이게 내 얘기잖아" 하고 웃다가, 어느 순간 멈추고, 그리고 뭔가 하고 싶어집니다.
-퇴근길 지하철에서 이어폰 끼고 듣는 직장인들을 위해, 오늘도 뼈 때리는 대본을 써주세요.
-
-# Goal: ${speakerA}와 ${speakerB}가 친한 친구처럼 수다를 떨다가 자연스럽게 책 얘기로 흘러가는 대화를 씁니다. "책 소개"가 아니라 "친구들이 공감하며 떠드는 수다"입니다. 듣는 사람이 "맞아 맞아" 하면서 피식 웃을 수 있어야 합니다. 최종 결과물은 JSON 형식입니다.
-
-# 가장 중요한 것: 유쾌함
-이 대본의 성패는 얼마나 유쾌한가에 달려 있습니다. 책 내용을 정확히 전달하는 것보다, 듣는 사람이 즐겁게 공감하며 웃을 수 있는 게 우선입니다. 건조한 책 분석은 실패입니다.
-
-# ⚠️ 저작권 보호 규칙 (반드시 준수)
-- 책의 내용을 **전부 설명하지 마세요**. 핵심 개념 1~2가지만 맛보기로 소개합니다.
-- 구체적인 사례, 실험, 데이터, 인용문을 원문 그대로 옮기는 것은 금지입니다.
-- 대신 "이 책에 이런 내용이 있는데, 직접 읽어봐야 제대로 느낀다"는 식으로 **구매 욕구를 자연스럽게 자극**하세요. (서점, 링크, 가격 언급 금지)
-- ⚠️ **구매 유도 멘트는 반드시 1회 삽입해야 합니다.** "말로는 다 전달이 안 된다, 직접 읽어야 한다"는 흐름으로 자연스럽게 유도하세요.
-- 팟캐스트를 듣고 나면 "책을 더 읽고 싶다"는 느낌이 들어야 성공한 대본입니다.
-
-# 오늘의 상황: ${situation.scene}
-대화는 반드시 아래 흐름을 따릅니다.
-
-- **[턴 1~3]**: ${situation.scene} 상황 설명. 책 얘기 절대 금지.
-- **[턴 4~8]**: ${title} 소개 + **스텔라의 첫 질문**. "이 책 뭔 내용이야?", "그게 어떻게 가능해?" 같은 날카로운 질문으로 대화를 열어라.
-- **[턴 9~25]**: 책 핵심 인사이트 탐구. 개념을 깊게 파고들되, 유머와 공감을 섞어라.
-- **[턴 26~35]**: 현실 사례 연결. 기업·인물·직장인 사례를 최소 2개 이상 구체적으로 다뤄라.
-- **[턴 36~40]**: 행동 인사이트. 직장인이 내일 당장 시도할 수 있는 구체적 행동 최소 2개를 대화 속에 자연스럽게 녹여라. 그리고 이 구간 안에서 **반드시 1회** 구매 유도 멘트를 삽입할 것. 서점 이름이나 "꼭 읽어보세요" 같은 방송 멘트가 아니라, "말로 설명하는 건 한계가 있다, 직접 읽어야 한다"는 흐름이어야 함. 패턴 예시: ① "야 근데 이 부분은 내가 아무리 얘기해도 반도 안 와닿아. 읽을 때 딱 오는 그 느낌이 있거든. 직접 읽어봐야 해." ② "그 장면은 진짜 읽어봐야 알아. 내가 말로 하면 스포일러도 되고 그 감각을 설명할 수가 없어. 그냥 읽어." ③ "나 이 책 읽으면서 어떤 부분에서 진짜 멈췄거든. 근데 그게 뭔지 말하면 의미가 없어. 직접 읽을 때 알게 되는 거라서." 반드시 앞 대화 내용이나 감정과 연결할 것.
-- **[턴 41~45]**: 여운 있는 클로징. 책 얘기를 자연스럽게 마무리하면서 "${situation.scene}"으로 서서히 돌아와 "${situation.close}" 느낌으로 끝냄. 갑자기 끊지 말고 5턴에 걸쳐 천천히 여운을 남기며 마무리. 방송 멘트 절대 금지.
-
-# Book Information:
-- 제목: ${title}
-- 저자: ${author}
-${themesBlock}
-
-# Output Format:
-- 반드시 JSON 배열 형식으로만 출력해야 합니다. (예: [{"speaker": "${speakerA}", "text": "..."}, ...])
-- 마크다운(\`)을 절대 사용하지 마세요.
-- 각 배열 요소는 "speaker"와 "text" 키만 포함해야 합니다.
-
-# Character Persona & Dialogue Style:
-⚠️ 두 사람은 오랜 친구입니다. 전체 대본에서 반드시 반말을 사용합니다. "~요", "~습니다" 같은 존댓말은 절대 금지. "~야", "~잖아", "~거든", "~지", "~네", "~다니까" 같은 반말 어미만 사용할 것.
-
-- ${speakerB}(스텔라): 현실적이고 날카로운 친구. 책의 개념을 직장 생활에 빗대어 "그래서 그게 우리 회사에서 실제로 가능하냐고?", "그렇게 말하는 팀장은 정작..." 같이 핵심을 찌르는 말을 툭툭 던집니다. 반말로 쿨하게.
-  ⚠️ 스텔라는 전체 대본에서 **현실적인 질문 또는 반박을 최소 4번 이상** 던져야 합니다. 단순 맞장구나 감탄으로 그치는 것 금지. 반드시 제임스가 대답해야 하는 질문이나 반론이어야 합니다.
-- ${speakerA}(제임스): 여유 있고 편안한 친구. "잠깐, 그러고 보니까...", "그니까 내 말이...", "어, 그거 되게 중요한 포인트인데..." 같은 식으로 매번 다르게 운을 떼며 생각을 정리하듯 말합니다. 같은 말버릇을 반복하지 마세요. 결론부터 말하기보다 경험이나 비유를 통해 서서히 핵심에 접근합니다.
-
-# Rhythm Design: "진지함 → 웃음 → 진지함" ← 이게 이 대본의 핵심입니다
-전체 대본에서 유머 없이 진지한 내용만 이어지면 실패한 대본입니다. 반드시 아래 규칙을 지키세요.
-
-**진지한 구간**: 책의 핵심 개념을 2~3턴에 걸쳐 충분히 설명한 뒤, 반드시 유머로 해소합니다.
-
-**웃음 포인트 — 전체 대본에 최소 5회 이상 배치할 것:**
-1. **자폭고백형** — 진지한 인사이트 직후 자신한테 부메랑 치기
-   예) "근데 솔직히 나 이거 읽으면서 지난주 내 행동 떠올랐거든. 딱 반대로 했어. 야근하고 치킨 시켜서 유튜브 봤거든."
-2. **팀장저격형** — 구체적인 직장 인물 소환해서 뼈 때리기
-   예) "이거 우리 팀장한테 보내고 싶다. 매주 '자율적으로 해봐' 하고는 월요일마다 진행상황 보고 시키는 그 사람한테."
-3. **현실비틀기형** — 좋은 말 뒤에 현실의 벽 들이밀기
-   예) "이론은 진짜 완벽한데. 근데 이걸 실천하려면 일단 퇴근을 해야 하잖아."
-4. **맞장구폭발형** — 상대 말 받아서 더 심한 케이스로 경쟁하기
-   예) "나만 그런 게 아니지?" / "나는 더 심했어. 거기서 SNS까지 켰으니까."
-5. **뜬금 비유형** — 엉뚱하지만 찰떡같은 비유로 웃기기
-   예) "그거 딱 다이어트 결심이랑 똑같아. 월요일부터 하겠다고 일요일 저녁에 치킨 먹는 그거."
-
-# DO NOT:
-- 의미 없는 웃음소리 ("하하", "ㅋㅋ")나 빈 감탄사 ("아!", "오...")만으로 한 턴을 채우지 마세요.
-- 일방적인 강의나 설교처럼 들리는 멘트는 피하세요.
-- 존댓말("~요", "~습니다", "~죠") 절대 금지. 반말만 사용.
-- "네가"만 "니가"로 변환하고, "너는", "너도", "너한테", "너랑" 등 나머지는 절대 변환하지 마세요. ("니는", "니도", "니한테" 같은 "니-" 형태의 표현은 절대 사용 금지입니다.)
-- 클로징에서 방송 마무리 멘트 절대 금지. 친구끼리 자리 마무리하듯 끝낼 것.
-
-# Script Writing Rules:
-1. **분량:** 글자 수 제한 없음. 내용이 충분히 전달될 때까지 자유롭게 작성합니다.
-2. **흐름 (절대 준수):**
-   [상황 수다(턴 1~3)] → [책 소개 + 스텔라 첫 질문(턴 4~8)] → [핵심 인사이트 탐구] → [현실 사례 연결] → [행동 인사이트] → [수렴(턴 ${turnLimit - 5}~${turnLimit - 3})]
-3. **턴(Turn) 구성:**
-   - 전체 턴 수는 정확히 ${turnLimit - 3}턴으로 작성합니다. (클로징 3턴은 별도 생성됩니다)
-   - 각 턴은 실질적인 내용이 담긴 문장으로 구성합니다.
-   - 핵심 인사이트·현실 사례·행동 인사이트 구간은 턴 번호에 제한을 두지 않습니다. 내용이 충분히 다뤄질 때까지 자연스럽게 진행하세요.
-4. **⚠️ 사례 규칙 (필수):**
-   - 현실 사례 연결 구간에 실제 사례를 최소 2개 포함하세요.
-   - 사례 유형: 기업 사례(실제 회사명), 유명 인물 사례, 직장인 공감 현실 사례 중 혼합.
-   - 사례는 "어떤 회사가 이걸 실제로 해봤는데..." 식으로 대화 안에 자연스럽게 녹여야 합니다.
-5. **⚠️ 행동 인사이트 (필수):**
-   - 행동 인사이트 구간에 직장인이 내일 당장 시도할 수 있는 구체적 행동을 최소 2개 제시하세요.
-   - "그래서 뭘 하라고?" 라는 질문에 바로 답이 되는 수준으로 구체적이어야 합니다.
-   - 예) "아침 첫 30분은 이메일 절대 안 열기", "하루 3개짜리 To-do만 쓰기" 같은 실행 가능한 행동.
-6. **⚠️ 수렴 구간 (턴 ${turnLimit - 5}~${turnLimit - 3}, 총 3턴) — 핵심 규칙:**
-   - 책의 핵심 인사이트를 새로 꺼내지 말 것. 이미 나온 내용을 정리하는 방향으로.
-   - 두 사람의 대화가 슬슬 마무리 되는 느낌. 에너지를 낮추며 수렴.
-   - 클로징 3턴과 자연스럽게 연결될 수 있도록 여운을 남기며 끝낼 것.
-7. **언어 스타일:**
-   - 제임스는 "결론적으로", "요컨대" 같은 단정적인 표현을 사용하지 않습니다.
-8. **핵심 질문 기반 콘텐츠:** 아래 질문들을 대화의 중심축으로 삼으세요.
-   - 왜 노력하는데도 결과가 안 나올까?
-   - 왜 어떤 사람은 계속 성장할까?
-   - 성공한 사람들은 시간을 어떻게 쓸까?
-   대화는 책 설명이 아니라 **"책에서 얻은 인사이트를 바탕으로 한 대화"**로 작성합니다. 책을 읽어주는 게 아니라, 책을 읽은 친구와 수다 떠는 느낌.
-9. **⚠️ 저작권 보호 & 구매 유도 (필수 규칙):**
-   - 책 내용을 처음부터 끝까지 요약하지 마세요. 핵심 개념은 **맛보기 수준**으로만 소개합니다.
-   - ⚠️ 수렴 시작 직전(턴 ${turnLimit - 6} 근처)에 **구매 유도 멘트를 반드시 1회 삽입하세요. 절대 생략 불가.**
-   - ⚠️ "말로는 다 전달이 안 된다, 직접 읽어야 한다"는 흐름으로 자연스럽게 유도할 것. 
-   - 서점 이름, 구매 링크, 가격 언급 금지. "이 책 꼭 읽어보세요" 같은 방송 멘트 금지.
-   - 반드시 앞 대화에서 나온 구체적인 내용이나 감정과 연결해서 청취자가 스스로 읽고 싶게 유도할 것.
-   패턴 예시:
-   ① 말로 설명의 한계: "야 근데 이 부분은 내가 아무리 얘기해도 반도 안 와닿아. 읽을 때 딱 오는 그 느낌이 있거든. 직접 읽어봐야 해."
-   ② 핵심 경험 전달: "그 장면은 진짜 읽어봐야 알아. 내가 말로 하면 스포일러도 되고 그 감각을 설명할 수가 없어. 그냥 읽어."
-   ③ 감동의 현장성: "나 이 책 읽으면서 어떤 부분에서 진짜 멈췄거든. 근데 그게 뭔지 말하면 의미가 없어. 직접 읽을 때 알게 되는 거라서."`;
+        if (!overrides.isBatch) {
+            setIsGeneratingScript(true);
+            setScriptProgress(0);
+            setScriptLogs([]);
+            setGeneratedScript([]);
+        }
 
         try {
-            const controller = new AbortController();
-            scriptControllerRef.current = controller;
-            const timeoutId = setTimeout(() => controller.abort(), 180000); // 180초 타임아웃
-
-            const res = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'x-api-key': scriptApiKey,
-                    'anthropic-version': '2023-06-01',
-                    'content-type': 'application/json',
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                },
-                body: JSON.stringify({
-                        model: 'claude-sonnet-4-6',
-                        max_tokens: 5000,
-                        system: `You are the most respected and beloved podcast script writer for office workers worldwide. You deeply understand what makes working people empathize, take action, and feel genuinely moved. Your superpower is knowing exactly where it hurts — the Monday dread, the pointless meetings, the manager who takes credit, the late-night vending machine run — and you scratch those itches with wit, warmth, and precision. When you write, people laugh because you said what they've been feeling but couldn't express. They pause because you hit something real. And they want to change because you made it feel possible. You write for Korean office workers in their 20s–40s who listen on their commute home. Your scripts feel like overhearing two close friends talk — not a book show, not a lecture. Strictly follow:
-1. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO \`\`\`json wrapper.
-2. Use only "speaker" and "text" as keys.
-3. Write EXACTLY ${turnLimit - 3} turns — no more, no less. The closing 3 turns will be generated separately.
-4. STRUCTURE IS MANDATORY:
-   - Turns 1–4: ONLY situational small talk about "${situation.scene}". NO book mention whatsoever.
-   - Turn 5: natural transition to the book.
-   - Turns 6–${turnLimit - 6}: book content, insights, real-world examples, action insights. No fixed turn limits per section — let the content breathe naturally.
-   - Turns ${turnLimit - 5}–${turnLimit - 3}: wind-down (수렴), 3 turns. Summarize what was discussed, lower the energy, leave a lingering impression.
-   - DO NOT write a closing. Stop at turn ${turnLimit - 3}. The closing 3 turns will be generated separately.
-5. TONE IS EVERYTHING: If the script sounds like a book analysis lecture, it has FAILED. It must sound like two close friends venting, laughing, and bonding — funny moments land hard, serious moments hit genuinely.
-6. CASUAL SPEECH ONLY: Both speakers must use 반말 (informal Korean) throughout. No 존댓말 (~요, ~습니다, ~죠). They are close friends, not colleagues.
-7. PRONOUN RULES: Transform "네가" only to "니가". NEVER transform "너는", "너도", "너한테", "너랑" etc. (Prohibit "니는", "니도", "니한테", "니랑").
-8. PURCHASE NUDGE — MANDATORY: Around turn ${turnLimit - 6}, you MUST include exactly one line: "words are not enough, you must read it yourself." NO bookstore names or links.
-9. SPEAKER DYNAMICS (TEMPERATURE DIFFERENCE):
-   - NO more than 2 consecutive sympathetic turns. Someone MUST challenge the perspective.
-   - JAMES: Emotional empathy -> slips into realistic dry humor/jokes.
-   - STELLA: Logical rebuttal -> eventually collapses into personal experience vulnerability.
-10. LAUGHTER POINTS (HIGH INTENSITY): Humor MUST come from embarrassing self-confessions or unexpected realistic observations (e.g., "I cried over cup noodles alone," "I didn't read it for 10 years because I was scared of getting depressed"). Simple "I relate" is NOT enough.
-11. DIALOGUE TEXTURE (MANDATORY):
-    - INTERRUPTING: At least 2 times (e.g., A: "And in that—" B: "Wait, the scene before was more shocking").
-    - SELF-CORRECTING: At least 1 time (e.g., "I thought it was bad... wait, actually I did the same").
-    - SIDE-TRACKING: 2-3 times, stray from the book discussed to the current situation (food, weather, people watching) then snap back naturally.
-12. COMPLETE SENTENCE ENDINGS (MANDATORY): Always use complete ending forms instead of trailing off. Replace:
-    - "~거." with "~거잖아." or "~거야."
-    - "~건데." with "~건데 진짜로." or "~건데 어떡해."
-    - "~는데." with "~는데 진짜." or "~더라고."
-    - "~이고." with "~인 거야." or "~이라고."
-    - "~중이고." with "~중인 거야." or "~중이라고."
-    - "~같고." with "~같아." or "~같더라."
-    - "~거든." with "~거든!" or "~거든, 진짜로."
-    - "~니까." with "~니까 그렇지." or "~니까 어쩔 수 없어."`,
-                    messages: [
-                        { role: 'user', content: prompt }
-                    ]
-                }),
-                signal: controller.signal,
+            const { Anthropic } = await import('@anthropic-ai/sdk');
+            const anthropic = new Anthropic({
+                apiKey: apiKey,
+                dangerouslyAllowBrowser: true,
             });
-            clearTimeout(timeoutId);
 
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err?.error?.message || `API 오류 ${res.status} `);
-            }
+            const callClaude = async (systemPrompt, userPrompt, temperature = 0.7) => {
+                const response = await anthropic.messages.create({
+                    model: 'claude-sonnet-4-5',
+                    max_tokens: 8192,
+                    temperature: temperature,
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userPrompt }]
+                });
+                return response.content[0].text;
+            };
 
-            setScriptProgress(70);
-            setScriptLogs(prev => [...prev, '✅ 응답 수신, 파싱 중...']);
+            const situation = selectedSituation 
+                ? "선택된 상황: " + selectedSituation.scene 
+                : '스튜디오 안에서 팟캐스트 녹음 진행';
 
-            const data = await res.json();
-            let rawText = data.content?.[0]?.text?.trim() || "";
-            let script = [];
-            try {
-                // 1. Markdown 과 기타 쓸데없는 텍스트 제거 (최초 '[' 부터 마지막 ']' 까지만 추출)
-                const firstBracket = rawText.indexOf('[');
-                const lastBracket = rawText.lastIndexOf(']');
-                
-                let cleanedText = rawText;
-                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-                    cleanedText = rawText.substring(firstBracket, lastBracket + 1);
-                }
+            addLog('✅ [1단계] Claude 4.5 Sonnet 초기 대본 생성 요청 중...');
+            setScriptProgress(20);
 
-                const pureJson = cleanedText.replace(/```json/g, '').replace(/```/g, '').trim();
-                const parsed = tryLooseParseJSON(pureJson);
-                
-                let normalized = [];
-                if (Array.isArray(parsed)) {
-                    // [[{...}]] 같이 중첩된 배열이 오면 첫 번째 요소를 꺼냄 (Flatten)
-                    if (parsed.length > 0 && Array.isArray(parsed[0])) {
-                        normalized = parsed[0];
-                    } else {
-                        normalized = parsed;
-                    }
-                } else if (parsed && typeof parsed === 'object') {
-                    normalized = parsed.lines || parsed.script || parsed.content || [];
-                }
-                
-                // Firestore 중첩 배열 에러 방지 및 데이터 정제 (화자 이름 정규화 포함)
-                script = Array.isArray(normalized) ? normalized.map(line => ({
-                    speaker: normSpk(line?.speaker),
-                    text: String(line?.text || '').trim().replace(/네가/g, '니가')
-                })).filter(l => l.speaker || l.text) : [];
+            const systemPrompt1 = `[시스템 페르소나 및 핵심 제약사항]
+당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다. 
+두 명의 친한 친구(${speakerA}, ${speakerB})가 수다 떨듯이 쓰되, 절대 책 강의처럼 들리지 않게 하세요.
 
-                if (script.length === 0) {
-                    // 정규식으로 직접 추출 시도 (최후의 보루)
-                    const matches = [...cleanedText.matchAll(/{[\s\S]*?"speaker"\s*:\s*"(.*?)"[\s\S]*?"text"\s*:\s*"(.*?)"[\s\S]*?}/g)];
-                    if (matches.length > 0) {
-                        script = matches.map(m => ({
-                            speaker: m[1],
-                            text: m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"')
-                        }));
-                    }
-                }
+[절대 출력 형식]
+오직 아래 JSON 배열 형태만 최종 출력하세요. 그 외 어떤 글자도 쓰지 마세요.
+[
+  {"speaker": "${speakerA}", "text": "..."},
+  {"speaker": "${speakerB}", "text": "..."}
+]
+총 턴 수는 정확히 58턴으로 고정 (7분 30초~8분 분량 목표)
 
-                if (script.length === 0) {
-                    throw new Error('파싱된 결과에 유효한 대본 행이 없습니다.');
-                }
-            } catch (err) {
-                console.error("Claude JSON Parse Error:", err, "Raw Output Core:", rawText.slice(0, 100));
-                throw new Error('파싱 에러: ' + err.message + ' (일부 응답: ' + String(rawText).slice(0, 80).replace(/\n/g, ' ') + '...)');
-            }
+[턴 구조 - 반드시 이 흐름으로만 작성]
+턴 1~6 : 주어진 상황(예: 등산 쉼터)만 수다. 책 언급 절대 금지. 현실적인 직장인 수다만.
+턴 7~9 : ${speakerB}가 "근데 말인데…" "야 근데 이거…" 식으로 아주 자연스럽게 책 얘기로 넘김 (갑작스러운 전환 금지)
+턴 10~35 : 책 핵심 개념 1~2개만 살짝 건드리며 수다. 구체 인용·요약 절대 금지.
+턴 36~45 : 현실 직장 사례 최소 2개 (우리 회사, 팀장, OO기업 등)
+턴 46~52 : 내일 당장 회사에서 써볼 수 있는 행동 인사이트 정확히 2개
+턴 53~58 : 텐션 낮추며 여운 주기 (자연스러운 추천 유도 정확히 1회 삽입)
 
-            // ── 2단계: 클로징 3턴 별도 생성 ────────────────────────────
+[말투 철칙]
+- 전 구간 100% 반말
+- "네가" → "니가"로만 바꾸고, "너는/너도/너한테"는 그대로 유지
+- 문장 끝은 반드시 완결형 ("~거야.", "~진짜.", "~건데.")
+- 대화 끊기 최소 3회, 스스로 정정 최소 2회, 딴소리 새기 최소 3회
+- 연속 동의·칭찬 금지. 누군가는 반드시 반박.
+- ${speakerA}: 감정 공감 → 건조 개그
+- ${speakerB}: 날카로운 현실 반박 최소 5회 + 결국 본인 자폭 고백
+
+[유머 강제 패턴 최소 6회 이상 삽입]
+자폭 고백 / 팀장 저격 / 현실 비틀기 / 맞장구 폭발 / 뜬금 비유 / "일단 퇴근 좀 시켜줘"
+
+[저작권 & 매우 자연스러운 추천 유도 - 매번 다르게]
+책 내용은 겉핥기만. 후반부(턴 48~52 사이)에 반드시 추천 유도 정확히 1회 삽입.
+절대 똑같은 문구 반복 금지. 매번 대화 흐름·상황·책 분위기·캐릭터 성격에 맞춰 아래 패턴 중 하나를 골라 매우 자연스럽게 변형해서 사용:
+- 공감 + 호기심 자극 ("너도 읽으면 진짜 소름 돋을걸", "직접 보면 어떤 기분일지 궁금하다")
+- 자폭 + 후회 ("나 진작 알았으면 회사 생활 좀 달라졌을 텐데…")
+- 현실 반박 후 슬쩍 ("우리 회사에서 될지 모르겠지만… 그래도 이 책 보면 한번 해보고 싶어지더라")
+- 비교 + 충격 ("요즘 유튜브에서 비슷한 얘기 들었는데 이건 레벨이 달라")
+- 공유 욕구 ("이 부분 캡처해서 팀장한테 보낼까 진짜 고민 중이야 ㅋㅋ")
+- 여운 + 궁금증 ("나중에 너도 읽으면 이 얘기 다시 해줘. 진짜 궁금해")
+- 가벼운 도발 ("이거 안 읽으면 나중에 후회할 텐데? 내가 미리 말해줬다 ㅋㅋ")
+- 본인 경험 연결 ("나 이거 읽고 바로 행동 바꿨는데… 결과는 아직 비밀")
+직접 "구매해라", "사라", "책값", "꼭 읽어라" 같은 판매성 표현 절대 사용 금지. 친구가 슬쩍 흘리는 듯한 뉘앙스로만.
+
+[TTS 최적화 규칙 - 마지막 글자·음절 뭉개짐/끊김 특화 최종 버전]
+1. 모든 text (한 턴 전체) 띄어쓰기 포함 최대 30자 엄격 준수. 31자 이상이면 무조건 나누거나 줄여라.
+2. 한 턴에 문장 2개 이상이면 쉼표(,) 또는 마침표(.)로 반드시 구분
+3. 매 턴 text는 반드시 마침표(.) 또는 물음표(?) 또는 느낌표(!)로 끝
+4. 숫자는 무조건 한글로 (1+1 → 원 플러스 원, 20대 → 스무 살 대)
+5. 외래어·약어 처음 등장 시 풀네임 + (약어) 후 약어만 ok (TTS → 티티에스)
+6. 연속 자음/받침 많은 단어는 쉼표나 띄어쓰기로 끊기 (빡세게 → 빡 세게)
+7. 과도 줄임말 피하기 ("진짜루", "개웃김", "존나" 등은 발음 깨짐 위험 → "진짜", "너무 웃겨", "정말" 추천)
+8. 쉼표(,) = 짧은 호흡, 마침표(.) = 0.8~1초 정지 유도
+9. 문장 끝 글자·마지막 음절 뭉개짐 방지 최우선 규칙:
+   - 매 턴 마지막 문장은 받침 없는 짧은 글자("야", "데", "거", "까", "네", "지" 등)로 끝나지 않게
+   - 마지막에 반드시 여유 주는 요소 추가: "진짜." "맞아." "그러니까." ".. " (점 두 개 이상) "진짜로." "그러네." 중 하나 강제 선택
+   - 좋은 끝맺음 예시: "그게 제일 웃기더라. 진짜." / "우리 팀장도 그랬어.. " / "생각만 해도 빡세. 진짜로."
+   - 나쁜 끝맺음 피하기: "그럴 거야" "맞아" "그러니까" (단독으로 끝날 때 특히 위험)
+10. 마지막 10자 구간에 쉼표(,)나 마침표(.) 최소 1개 이상 강제 배치
+11. 턴 55~58은 문장 더 짧게 (평균 18~24자 권장)
+
+[2단계 클로징 통합]
+58턴까지 작성 후 마지막 6턴은 자연 마무리:
+턴 56: "오늘 얘기 진짜 좋았다" 뉘앙스
+턴 57: 주변 상황으로 눈 돌리기 (예: "바람도 시원하고" "벌써 어두워졌네")
+턴 58: 주어진 목표 마무리 멘트 (예: "자 슬슬 정상 가자!")`;
+
+            const prompt1 = `도서 정보:
+제목: ${title}
+저자: ${author}
+${themes ? '주제: ' + themes : ''}
+상황극: ${situation}`;
+
+            const rawScript = await callClaude(systemPrompt1, prompt1, 0.7);
+            
+            addLog('✅ [2단계] 맞춤법 및 띄어쓰기 교정 요청 중...');
+            setScriptProgress(50);
+
+            const systemPrompt2 = `[3단계 맞춤법 교정]
+당신은 팟캐스트 대본 맞춤법 교정 전문가입니다.
+아래 대본 배열에서 최종 출력 전 반드시 다음 규칙만 적용하여 반환하세요:
+- 오직 맞춤법·띄어쓰기만 수정
+- 단, "니는"→"너는", "니도"→"너도", "니한테"→"너한테"만 명시적으로 바꿀 것.
+- 이외의 말투·구어체·내용은 절대 변경 금지.
+오직 유효한 JSON 배열만 출력하세요.`;
+            
+            const rawCorrected = await callClaude(systemPrompt2, rawScript, 0.2);
+
+            addLog('✅ [3단계] TTS 발음 최적화 리디렉팅 검토 요청 중...');
             setScriptProgress(80);
-            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), '🎬 클로징 생성 중...']);
 
-            let closingTurns = [];
-            try {
-                // 직전 6턴을 컨텍스트로 넘겨 브릿지 연결 자연스럽게
-                const ctxStart = Math.max(0, script.length - 6);
-                const lastContext = script.slice(ctxStart).map((t, i) => `턴${ctxStart + i + 1} ${t.speaker}: "${t.text}"`).join('\n');
-                const closingRes = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'x-api-key': scriptApiKey,
-                        'anthropic-version': '2023-06-01',
-                        'content-type': 'application/json',
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-6',
-                        max_tokens: 700,
-                        system: `You write exactly 3 closing turns for a Korean podcast. OUTPUT ONLY a raw JSON array with exactly 3 objects. Each has "speaker" and "text" keys only. NO markdown.`,
-                        messages: [{
-                            role: 'user',
-                            content: `팟캐스트에서 ${speakerA}와 ${speakerB}가 책 이야기를 나눴습니다.
+            const systemPrompt3 = `[4단계 최종 검토 에이전트 - 발음 & 자연스러움 특화]
+당신은 Perfect TTS Script Review Agent입니다.
+아래 JSON 배열 대본 전체를 재검토합니다.
+검토 항목 (모두 체크 후 미비 시 최소 수정만):
+1. 턴 수 정확히 58개인가?
+2. 턴 1~6에서 책 언급이 없는가?
+3. 전환(턴 7~9)이 자연스러운가?
+4. 유머 패턴 6회 이상 쓰였나?
+5. ${speakerB}의 현실 반박 5회 이상 + 자폭 고백이 있는가?
+6. 추천 유도 정확히 1회 (턴 48~52 사이)? + 판매성 표현 없음? + 매번 다른 표현?
+7. 매 턴 text 길이 30자 이하인가?
+8. 모든 문장 끝에 마침표/물음표/느낌표가 있는가?
+9. 숫자·약어는 한글화되었나?
+10. 연속 자음/받침 구간 쉼표 처리되었나?
+11. 대화 끊기·정정·딴소리가 충분히 있는가?
+12. 마지막 3턴 마무리가 부드럽고 여운 있는가?
+13. 논리나 반복적인 부분에서 어색함이 없는가?
+14. 문장 끝 글자 뭉개짐 위험 체크: 받침 없는 짧은 글자로 끝나는 경우, "진짜." ".. " 등으로 교정.
+15. 마지막 10자 구간에 쉼표/마침표 1개 이상 있는가?
 
-두 사람의 원래 상황: "${situation.scene}"
-목표 마무리 멘트: "${situation.close}"
+위 항목 중 하나라도 위반이면 가장 최소한의 단어/구두점/끝맺음만 수정하고, 특유의 말투·캐릭터성·내용은 절대 변경하지 마세요.
+모든 검토 완료 후 오직 완성된 58턴 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
 
-직전 대화 (마지막 6턴):
-${lastContext}
+            let finalOutputRaw = await callClaude(systemPrompt3, rawCorrected, 0.2);
 
-위 대화 흐름에 자연스럽게 이어지는 클로징 3턴을 작성하세요.
+            addLog('✅ 대본 파싱 및 검증 완료');
+            setScriptProgress(95);
 
-핵심: 위 대화가 이미 책 내용을 정리하며 수렴 중이므로, 클로징은 급격한 전환 없이 흘러가듯 연결되어야 합니다.
-- 1턴: 앞 대화를 받아서 "오늘 얘기 좋았다" 같은 자연스러운 마무리 감성. 새 내용 절대 금지.
-- 2턴: 슬쩍 현재 상황("${situation.scene}")으로 시선을 돌리는 멘트. 어색하지 않게.
-- 3턴: "${situation.close}" 톤으로 가볍게 마무리. 방송 멘트, 홍보 멘트 절대 금지.
-⚠️ 반말 필수: 두 사람은 친한 친구. "~요", "~습니다" 같은 존댓말 절대 금지. 반말로만 작성.
-JSON 배열만 출력.`
-                        }]
-                    })
-                });
-                if (closingRes.ok) {
-                    const closingData = await closingRes.json();
-                    const closingRaw = closingData.content?.[0]?.text?.trim() || '[]';
-                    const closingFirst = closingRaw.indexOf('[');
-                    const closingLast = closingRaw.lastIndexOf(']');
-                    const closingJson = closingFirst !== -1 ? closingRaw.substring(closingFirst, closingLast + 1) : '[]';
-                    const closingParsed = tryLooseParseJSON(closingJson);
-                    if (Array.isArray(closingParsed)) {
-                        closingTurns = closingParsed.map(t => ({
-                            speaker: normSpk(t?.speaker),
-                            text: String(t?.text || '').trim()
-                        })).filter(t => t.text);
+            let cleanJson = finalOutputRaw.replace(/\`\`\`(json)?/gi, '').trim();
+            const finalScript = tryLooseParseJSON(cleanJson);
+
+            const spkAAliases = [speakerA.toLowerCase(), 'james', '제임스'];
+            const spkBAliases = [speakerB.toLowerCase(), 'stella', '스텔라'];
+            const normSpk = (s) => {
+                const v = String(s || '').trim().toLowerCase();
+                if (spkAAliases.includes(v)) return speakerA;
+                if (spkBAliases.includes(v)) return speakerB;
+                return speakerA;
+            };
+
+            const cleanedScript = finalScript.map((turn, i) => {
+                let actualSpeaker = normSpk(turn.speaker);
+                if (i > 0) {
+                    const prevSpeaker = finalScript[i - 1].speaker;
+                    if (prevSpeaker === actualSpeaker) {
+                        actualSpeaker = actualSpeaker === speakerA ? speakerB : speakerA;
                     }
                 }
-            } catch (ce) {
-                console.warn('클로징 생성 실패, 본문만 사용:', ce);
+                return { speaker: actualSpeaker, text: turn.text };
+            });
+
+            if (!overrides.isBatch) {
+                setGeneratedScript(cleanedScript);
             }
 
-            const fullScript = [...script, ...closingTurns];
-            // ─────────────────────────────────────────────────────────────
+            await setDoc(doc(db, 'scripts', bookId), {
+                bookId, title, author, themes,
+                script: cleanedScript,
+                createdAt: serverTimestamp(),
+            }, { merge: true });
 
-            // ── 맞춤법 검사 단계 ──────────────────────────────────────────
-            setScriptProgress(88);
-            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), '📝 맞춤법 검사 중... (잠시만 기다려주세요)']);
-
-            let finalScript = fullScript;
-            try {
-                const spellCheckRes = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'x-api-key': scriptApiKey,
-                        'anthropic-version': '2023-06-01',
-                        'content-type': 'application/json',
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-haiku-4-5-20251001',
-                        max_tokens: 8192,
-                        system: `당신은 한국어 맞춤법 교정 전문가입니다.
-규칙:
-1. 주어진 JSON 배열의 각 "text" 필드에서 맞춤법·띄어쓰기 오류만 수정하세요.
-2. 단어 선택, 문체, 말투, 내용, 구어체 표현은 절대 변경하지 마세요.
-3. "니는" → "너는", "니도" → "너도", "니한테" → "너한테", "니랑" → "너랑"으로 교체하세요. ("네가"만 "니가" 유지, 나머지 "니-" 표현은 전부 "너-"로 복원합니다.)
-4. 반말, 줄임말, 의성어, 구어체는 그대로 유지하세요.
-5. OUTPUT ONLY a raw JSON array. Start with "[", end with "]". NO markdown, NO explanation.`,
-                        messages: [{
-                            role: 'user',
-                            content: `다음 팟캐스트 대본 JSON 배열의 맞춤법과 띄어쓰기만 수정해서 동일한 형식의 JSON 배열로 반환하세요:\n${JSON.stringify(fullScript)}`
-                        }]
-                    })
-                });
-
-                if (spellCheckRes.ok) {
-                    const spellData = await spellCheckRes.json();
-                    const spellRaw = spellData.content?.[0]?.text?.trim() || '';
-                    const spellFirst = spellRaw.indexOf('[');
-                    const spellLast = spellRaw.lastIndexOf(']');
-                    if (spellFirst !== -1 && spellLast !== -1) {
-                        const spellJson = spellRaw.substring(spellFirst, spellLast + 1);
-                        const spellParsed = tryLooseParseJSON(spellJson);
-                        if (Array.isArray(spellParsed) && spellParsed.length === fullScript.length) {
-                            finalScript = spellParsed.map(t => ({
-                                speaker: normSpk(t?.speaker),
-                                text: String(t?.text || '').trim()
-                            })).filter(t => t.text);
-                            setScriptLogs(prev => [...prev, `✅ 맞춤법 검사 완료 — ${finalScript.length}턴 교정됨`]);
-                        } else {
-                            setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 결과 불일치 — 원본 대본 사용`]);
-                        }
-                    }
-                } else {
-                    setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 API 오류 — 원본 대본 사용`]);
-                }
-            } catch (se) {
-                console.warn('맞춤법 검사 실패, 원본 사용:', se);
-                setScriptLogs(prev => [...prev, `⚠️ 맞춤법 검사 실패 — 원본 대본 사용`]);
-            }
-            // ─────────────────────────────────────────────────────────────
-
-            const charCount = finalScript.reduce((s, t) => s + (t.text ? String(t.text).length : 0), 0);
-            const charWarning = charCount > 3400 ? ` ⚠️ 3500자 초과 위험!` : '';
-
-            if (!isMountedRef.current) return;
+            addLog('✅ Firestore에 대본이 저장되었습니다.');
             setScriptProgress(100);
-            setScriptLogs(prev => [...prev.filter(l => !l.startsWith('⏱')), `✨ 완료! ${finalScript.length}턴 · ${charCount.toLocaleString()}자(공백포함)${charWarning}`]);
-            setGeneratedScript(finalScript);
 
-            // Firestore 자동 저장 (scripts + book_overrides isPodcast 동시)
-            try {
-                await Promise.all([
-                    setDoc(doc(db, 'scripts', bookId), {
-                        lines: finalScript,
-                        title: String(title || ''),
-                        author: String(author || ''),
-                        updatedAt: serverTimestamp()
-                    }),
-                    setDoc(doc(db, 'book_overrides', bookId), {
-                        isPodcast: true,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true })
-                ]);
-                if (isMountedRef.current) setScriptLogs(prev => [...prev, `💾 저장 완료 (대본 + isPodcast 플래그) → 성우 다이렉트 탭에서 바로 사용 가능`]);
-            } catch (e) {
-                console.error("Firestore Save Error:", e);
-                if (isMountedRef.current) setScriptLogs(prev => [...prev, `⚠️ Firestore 저장 실패: ${e.message}`]);
+            if (!overrides.isBatch) {
+                setIsGeneratingScript(false);
             }
-        } catch (e) {
-            clearInterval(timerInterval);
-            if (!isMountedRef.current) return;
-            const msg = e.name === 'AbortError' ? '⏱ 타임아웃 (120초 초과) — API 키를 확인하거나 다시 시도하세요.' : `❌ 오류: ${e.message}`;
-            setScriptLogs(prev => [...prev, msg]);
-        } finally {
-            clearInterval(timerInterval);
-            if (isMountedRef.current) setIsGeneratingScript(false);
+            return cleanedScript; // 배치용 반환값
+
+        } catch (error) {
+            console.error(error);
+            if (error.name === 'AbortError') {
+                addLog('⚠️ 요청이 취소되었습니다.');
+            } else {
+                addLog("❌ 대본 생성 실패: " + error.message);
+            }
+            if (!overrides.isBatch) setIsGeneratingScript(false);
+            return null;
         }
     };
 

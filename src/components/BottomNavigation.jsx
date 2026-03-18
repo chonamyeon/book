@@ -91,8 +91,8 @@ export default function BottomNavigation() {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-gold/20 bg-[#090b10]/95 backdrop-blur-2xl transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="flex justify-around items-center px-4 pt-4 pb-6 relative">
+        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-gold/20 bg-[#090b10]/95 backdrop-blur-2xl transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', transform: 'translate3d(-50%, 0, 0)' }}>
+            <div className="flex justify-around items-center px-4 pt-3 pb-3 relative">
                 {/* Subtle gold line on top of active item */}
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-gold/10 to-transparent"></div>
 
@@ -125,7 +125,7 @@ export default function BottomNavigation() {
                 })}
 
                 {/* Floating Finder Button and Modal */}
-                <div className="absolute -top-20 right-6">
+                <div className="absolute -top-[72px] right-6">
                     <button
                         onClick={() => setIsFinderOpen(!isFinderOpen)}
                         className={`size-14 rounded-none flex items-center justify-center shadow-2xl transition-all duration-500 active:scale-90 ${isFinderOpen ? 'bg-white text-[#090b10] rotate-45' : 'bg-gold text-[#090b10] rotate-0'} hover:shadow-gold/40`}

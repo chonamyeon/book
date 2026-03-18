@@ -9,17 +9,126 @@ import { availableAudio } from '../data/availableAudio';
 import { db } from '../firebase';
 import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { chatWithGemini } from '../services/gemini';
 import './ReviewDetail.css';
 
 const CHARS_PER_PAGE = 400;
 
+// 모바일 화면 높이별 안전한 페이지 글자수
+// 패널티를 현실적으로 낮췄으므로(h1/h2=20, blockquote=40) maxChars를 넉넉하게 설정
+function getMobileMaxChars() {
+    if (window.innerWidth > 600) return 480;
+    const h = window.innerHeight;
+    if (h < 700) return 280;   // iPhone SE
+    if (h < 820) return 330;   // iPhone 12 mini, 일반 iPhone
+    return 400;                 // iPhone 14 Pro Max 등 대형
+}
+
+// <br><br> 연속 줄바꿈을 </p><p>로 정규화 (긴 단락 분할 가능하게)
+function normalizeBrTags(html) {
+    return html.replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '</p><p>');
+}
+
+// DOM 실제 높이 측정으로 페이지 분할 (오버플로우 방지)
+function splitPageByHeight(html, div, maxH) {
+    div.innerHTML = html;
+    if (div.scrollHeight <= maxH) return [html];
+
+    const children = Array.from(div.children);
+
+    // 단일 <p> 요소: 문장 단위로 분할 시도
+    if (children.length <= 1) {
+        const m = html.match(/^(<p[^>]*>)([\s\S]*?)(<\/p>)$/i);
+        if (m) {
+            const [, open, text, close] = m;
+            const parts = text.replace(/([.?!。？！])\s+/g, '$1\x00').split('\x00').filter(Boolean);
+            if (parts.length > 1) {
+                const pages = [];
+                let cur = '';
+                for (const s of parts) {
+                    const test = open + cur + s + ' ' + close;
+                    div.innerHTML = test;
+                    if (cur && div.scrollHeight > maxH) {
+                        pages.push(open + cur.trimEnd() + close);
+                        cur = s + ' ';
+                    } else {
+                        cur += s + ' ';
+                    }
+                }
+                if (cur.trim()) pages.push(open + cur.trim() + close);
+                if (pages.length > 1) return pages;
+            }
+        }
+        return [html];
+    }
+
+    // 복수 요소: 요소 단위로 분할
+    const pages = [];
+    let curHtml = '';
+    for (const child of children) {
+        const test = curHtml + child.outerHTML;
+        div.innerHTML = test;
+        if (curHtml && div.scrollHeight > maxH) {
+            pages.push(curHtml.trim());
+            curHtml = child.outerHTML;
+        } else {
+            curHtml = test;
+        }
+    }
+    if (curHtml.trim()) {
+        pages.push(...splitPageByHeight(curHtml.trim(), div, maxH));
+    }
+    return pages.length > 0 ? pages : [html];
+}
+
+// 모바일 전용: DOM 측정으로 rawPages를 재분할
+async function measureAndResplitPages(rawPages) {
+    if (window.innerWidth > 600) return rawPages;
+    try { await document.fonts.ready; } catch (_) {}
+
+    // CSS 모바일 마스터 블록 기준 높이 계산 (안전 마진 8% 포함)
+    // FlipBook: innerHeight-96, sheet padding: 24+28, header: ~27, footer: ~20
+    const bodyH = (window.innerHeight - 96 - 52 - 47) * 0.88;
+    const bodyW = window.innerWidth - 40;
+
+    const div = document.createElement('div');
+    div.id = '__ebk_m__';
+    div.style.cssText = `position:fixed;top:-9999px;left:0;width:${bodyW}px;overflow:visible;visibility:hidden;font-family:'Noto Serif KR',Georgia,serif;font-size:13px;line-height:1.88;word-break:break-word;overflow-wrap:anywhere;`;
+
+    const sty = document.createElement('style');
+    sty.id = '__ebk_s__';
+    sty.textContent = `#__ebk_m__ p{margin-bottom:0.75em;margin-top:0;} #__ebk_m__ h1{font-size:1.05rem;margin:0 0 1rem;font-weight:700;} #__ebk_m__ h2{font-size:0.92rem;margin:1.2rem 0 0.5rem;font-weight:700;} #__ebk_m__ h3{font-size:0.88rem;margin:1rem 0 0.4rem;} #__ebk_m__ blockquote{margin:1rem 0;padding:1rem 0.7rem 0.9rem;border-left:3px solid #c8a870;} #__ebk_m__ blockquote p{font-size:0.88rem;margin-bottom:0;}`;
+
+    document.head.appendChild(sty);
+    document.body.appendChild(div);
+
+    const result = [];
+    try {
+        for (const page of rawPages) {
+            result.push(...splitPageByHeight(page, div, bodyH));
+        }
+    } finally {
+        document.body.removeChild(div);
+        document.head.removeChild(sty);
+    }
+    return result;
+}
+
 // 한 페이지에 표시하기엔 긴 HTML 섹션을 단락 단위로 재분할
 function splitEbookSection(html, maxChars = 480) {
-    // </p> </h1~6> 닫힘 태그 뒤에 구분자를 삽입해 분할 (정규식 백레퍼런스 오류 방지)
-    const marked = html
+    // blockquote 내부의 </p>는 분할하지 않도록 보호 (cite가 다음 페이지로 넘어가는 버그 방지)
+    let working = html.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, m =>
+        m.replace(/<\/p>/gi, '</\x01p>')
+    );
+    // 분할 지점 마킹: </p>, </h1~6>, </blockquote> 뒤에 \x00 삽입
+    working = working
         .replace(/<\/p>/gi, '</p>\x00')
-        .replace(/<\/h[1-6]>/gi, m => m + '\x00');
-    const parts = marked.split('\x00').filter(p => p.trim());
+        .replace(/<\/h[1-6]>/gi, m => m + '\x00')
+        .replace(/<\/blockquote>/gi, '</blockquote>\x00');
+    // 보호된 </p> 복원
+    working = working.replace(/<\/\x01p>/g, '</p>');
+
+    const parts = working.split('\x00').filter(p => p.trim());
     if (parts.length <= 1) return [html];
 
     const pages = [];
@@ -27,9 +136,10 @@ function splitEbookSection(html, maxChars = 480) {
     let curLen = 0;
     for (const part of parts) {
         const textLen = part.replace(/<[^>]*>/g, '').trim().length;
-        // h1/h2 헤딩은 margin + line-height 때문에 본문 텍스트보다 2~3줄 더 차지함
-        const headingPenalty = /<h[12][^>]*>/i.test(part) ? 100 : /<h[3-6][^>]*>/i.test(part) ? 60 : 0;
-        const len = textLen + headingPenalty;
+        // 실제 시각적 높이 반영: h1/h2는 font+margin 합산시 약 1줄 추가, blockquote는 padding 추가
+        const headingPenalty = /<h[12][^>]*>/i.test(part) ? 20 : /<h[3-6][^>]*>/i.test(part) ? 10 : 0;
+        const blockquotePenalty = /<blockquote/i.test(part) ? 40 : 0;
+        const len = textLen + headingPenalty + blockquotePenalty;
         if (cur && curLen + len > maxChars) {
             pages.push(cur.trim());
             cur = part;
@@ -211,6 +321,30 @@ export default function ReviewDetail() {
     const { user } = useAuth();
     const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3 } = useAudio();
 
+    const book = useMemo(() => {
+        if (!celebrities) return null;
+        for (const c of celebrities) {
+            const b = c.books?.find((b) => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === id);
+            if (b) {
+                const validId = b.id || b.title.toLowerCase().replace(/\s+/g, '-');
+                // Auto-detect isPodcast and podcastFile based on availableAudio
+                const fileName = `${validId}.mp3`;
+                const hasAudioFile = !!availableAudio[fileName];
+
+                return {
+                    ...b,
+                    id: validId,
+                    isPodcast: b.isPodcast || hasAudioFile,
+                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null)
+                };
+            }
+        }
+        return null;
+    }, [id]);
+
+    const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
+    const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
+
     // ─── Action Integration ───
     const [completedActions, setCompletedActions] = useState([]);
 
@@ -231,30 +365,23 @@ export default function ReviewDetail() {
         return () => unsubscribe();
     }, [user, book]);
 
-    const book = useMemo(() => {
-        if (!celebrities) return null;
-        for (const c of celebrities) {
-            const b = c.books?.find((b) => b.id === id);
-            if (b) {
-                // Auto-detect isPodcast and podcastFile based on availableAudio
-                const fileName = `${b.id}.mp3`;
-                const hasAudioFile = !!availableAudio[fileName];
-
-                return {
-                    ...b,
-                    isPodcast: b.isPodcast || hasAudioFile,
-                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null)
-                };
-            }
-        }
-        return null;
-    }, [id]);
-
-    const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
-    const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
-
     const initialTab = searchParams.get('tab');
-    const [activeTab, setActiveTab] = useState(initialTab || 'review');
+    const [activeTab, setActiveTab] = useState(initialTab || 'ebook');
+
+    // ── Overlay Arrow Visibility (모바일 탭 시 잠깐 표시) ──
+    const [showArrows, setShowArrows] = useState(false);
+    const arrowFadeRef = useRef(null);
+    const handleBookTap = () => {
+        setShowArrows(true);
+        clearTimeout(arrowFadeRef.current);
+        arrowFadeRef.current = setTimeout(() => setShowArrows(false), 2500);
+    };
+
+    // ── Insight Chat State ─────────────────────────────────
+    const [chatMessages, setChatMessages] = useState([]);
+    const [chatInput, setChatInput] = useState('');
+    const [chatLoading, setChatLoading] = useState(false);
+    const chatScrollRef = useRef(null);
 
     // Firestore / Script / Podcast States & Derivations
     const [firestoreScript, setFirestoreScript] = useState(null);
@@ -263,7 +390,13 @@ export default function ReviewDetail() {
     const [firestoreEbook, setFirestoreEbook] = useState(null);
     const [ebookLoading, setEbookLoading] = useState(true);
 
-    const script = useMemo(() => bookScripts[id] || firestoreScript || [], [id, firestoreScript]);
+    const script = useMemo(() => {
+        const raw = firestoreScript || bookScripts[id] || [];
+        return raw.map(turn => ({
+            ...turn,
+            role: turn.role || (turn.speaker === 'B' || turn.speaker === '스텔라' ? 'B' : 'A'),
+        }));
+    }, [id, firestoreScript]);
     const hasScript = script.length > 0;
     const isPodcast = book?.isPodcast || firestoreIsPodcast;
 
@@ -281,27 +414,26 @@ export default function ReviewDetail() {
         return pages;
     }, [pages]);
 
-    const total = displayPages.length + 2;
+    const total = hasEbook ? (ebookPages.length + 2) : (displayPages.length + 2);
     const progress = (total > 1) ? pageIdx / (total - 1) : 0;
 
-    // 탭 파라미터 감지 및 자동 재생 연동
+    // 탭 파라미터 감지 (초기 마운트 + book/ebook 로드 시)
     useEffect(() => {
         const tab = searchParams.get('tab');
         if (tab && ['review', 'podcast', 'ebook'].includes(tab)) {
             setActiveTab(tab);
-            if (tab === 'podcast' && isPodcast) {
-                // 자동 재생 시도 (이미 재생 중인 게 아닐 때만)
+            // podcast 탭으로 URL 진입 시 자동 재생
+            if (tab === 'podcast' && book && podcastSrc) {
                 if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                    setTimeout(() => {
-                        playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
-                    }, 500);
+                    playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
                 }
             }
         } else if (book && !hasReview) {
             if (hasEbook) setActiveTab('ebook');
             else if (isPodcast) setActiveTab('podcast');
         }
-    }, [book, hasReview, hasEbook, searchParams, podcastPlaying, podcastInfo, podcastSrc, playPodcastMP3, isPodcast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [book, hasReview, hasEbook, isPodcast, podcastSrc]);
 
     const isThisPodcastActive = podcastInfo?.src === podcastSrc;
 
@@ -310,17 +442,15 @@ export default function ReviewDetail() {
     // Firestore에서 대본 + 오디오 URL + isPodcast 실시간 로드
     useEffect(() => {
         if (!id) return;
-        // 로컬에 없을 때만 Firestore 대본 조회
-        if (!bookScripts[id]) {
-            getDoc(doc(db, 'scripts', id)).then(snap => {
-                if (snap.exists()) {
-                    setFirestoreScript((snap.data().lines || []).map(l => ({
-                        role: l.speaker === '스텔라' ? 'B' : 'A',
-                        text: l.text
-                    })));
-                }
-            }).catch(() => { });
-        }
+        // Firestore 대본 항상 조회 (로컬보다 우선)
+        getDoc(doc(db, 'scripts', id)).then(snap => {
+            if (snap.exists()) {
+                setFirestoreScript((snap.data().lines || []).map(l => ({
+                    role: l.speaker === '스텔라' ? 'B' : 'A',
+                    text: l.text
+                })));
+            }
+        }).catch(() => { });
         // 성우 MP3 / 오디오 URL / isPodcast Firestore 오버라이드 조회
         getDoc(doc(db, 'book_overrides', id)).then(snap => {
             if (snap.exists()) {
@@ -331,11 +461,13 @@ export default function ReviewDetail() {
         }).catch(() => { });
 
         // 이북 데이터 조회
-        getDoc(doc(db, 'ebooks', id)).then(snap => {
+        getDoc(doc(db, 'ebooks', id)).then(async snap => {
             if (snap.exists()) {
                 const data = snap.data();
+                const mc = getMobileMaxChars();
+                let rawPages = null;
                 if (data.pages && Array.isArray(data.pages)) {
-                    setFirestoreEbook(data.pages.flatMap(p => splitEbookSection(p)));
+                    rawPages = data.pages.flatMap(p => splitEbookSection(normalizeBrTags(p), mc));
                 } else if (data.content) {
                     // Split content by <section class="ebook-page">
                     const content = data.content;
@@ -345,39 +477,57 @@ export default function ReviewDetail() {
                         .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
 
                     if (validSections.length > 0) {
-                        setFirestoreEbook(validSections.flatMap(s => splitEbookSection(s || '')));
+                        rawPages = validSections.flatMap(s => splitEbookSection(normalizeBrTags(s || ''), mc));
                     } else {
-                        setFirestoreEbook(splitEbookSection(content || ''));
+                        rawPages = splitEbookSection(normalizeBrTags(content || ''), mc);
                     }
+                }
+                if (rawPages) {
+                    const finalPages = await measureAndResplitPages(rawPages);
+                    setFirestoreEbook(finalPages);
                 }
             }
         }).catch(() => { }).finally(() => setEbookLoading(false));
     }, [id]);
 
-    // 오디오 싱크: public/timestamps/{id}.json 로드
+    // 오디오 싱크: Firestore timestamps → public/timestamps/{id}.json 순서
     const bubbleRefs = useRef([]);
     const [timestampData, setTimestampData] = useState(null);
 
     useEffect(() => {
         if (!id) return;
-        fetch(`/timestamps/${id}.json`)
-            .then(r => r.ok ? r.json() : null)
-            .then(data => setTimestampData(data))
-            .catch(() => setTimestampData(null));
+        // 1순위: Firestore timestamps 컬렉션
+        getDoc(doc(db, 'timestamps', id))
+            .then(snap => {
+                if (snap.exists() && snap.data().segments?.length > 0) {
+                    setTimestampData(snap.data());
+                } else {
+                    // 2순위: 로컬 JSON 파일
+                    return fetch(`/timestamps/${id}.json`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => setTimestampData(data));
+                }
+            })
+            .catch(() =>
+                fetch(`/timestamps/${id}.json`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => setTimestampData(data))
+                    .catch(() => setTimestampData(null))
+            );
     }, [id]);
 
     // 각 턴의 시작 시간 계산 (timestamps JSON → 글자 수 비율 추정 순서로 fallback)
     const turnStartTimes = useMemo(() => {
         if (script.length === 0) return [];
-        // 1순위: public/timestamps/{id}.json
-        if (timestampData?.segments?.length > 0) {
+        // 1순위: public/timestamps/{id}.json — 턴수가 일치할 때만 사용
+        if (timestampData?.segments?.length === script.length) {
             return timestampData.segments.map(s => s.start ?? 0);
         }
         // 2순위: script turn에 time 필드
         if (script[0]?.time !== undefined) {
             return script.map(turn => turn.time);
         }
-        // 3순위: 글자 수 비율 추정 (duration 필요)
+        // 3순위: 글자 수 비율 추정 (현재 로드된 script 기준)
         if (!duration) return [];
         const totalChars = script.reduce((sum, t) => sum + t.text.length, 0);
         let acc = 0;
@@ -483,10 +633,65 @@ export default function ReviewDetail() {
         });
     }, [book]);
 
+    // ── Insight Chat 핸들러 ─────────────────────────────────
+    const handleSendChat = useCallback(async (inputText) => {
+        const msg = (inputText || chatInput).trim();
+        if (!msg || chatLoading) return;
+        setChatInput('');
+
+        // 최초 메시지면 시스템 컨텍스트 구성
+        const isFirstMessage = chatMessages.length === 0;
+        const scriptContext = script.slice(0, 30).map(t => t.text).join(' ');
+        const systemPrompt = `당신은 '${book?.title}' (저자: ${book?.author}) 책 전문 독서 도우미입니다.
+아래는 이 책을 주제로 한 팟캐스트 대본 일부입니다:
+---
+${scriptContext}
+---
+독자의 질문에 이 책의 핵심 인사이트를 바탕으로 친근하고 통찰력 있게 답변하세요. 한국어로 답변하고, 실생활 적용 방법도 함께 제안하세요.`;
+
+        const userMsg = { role: 'user', content: msg };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatLoading(true);
+
+        try {
+            // chatWithGemini expects history as [{role, parts:[{text}]}]
+            const geminiHistory = isFirstMessage
+                ? [{ role: 'user', parts: [{ text: systemPrompt }] }, { role: 'model', parts: [{ text: '네, 이 책에 대해 무엇이든 물어보세요!' }] }]
+                : chatMessages.map(m => ({
+                    role: m.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: m.content }]
+                }));
+
+            const reply = await chatWithGemini(msg, geminiHistory);
+            setChatMessages(prev => [...prev, { role: 'model', content: reply }]);
+        } catch {
+            setChatMessages(prev => [...prev, { role: 'model', content: '잠시 후 다시 시도해 주세요.' }]);
+        } finally {
+            setChatLoading(false);
+        }
+    }, [chatInput, chatLoading, chatMessages, book, script]);
+
+    // 채팅 탭 진입 시 환영 메시지
+    useEffect(() => {
+        if (activeTab === 'chat' && chatMessages.length === 0 && book?.title) {
+            setChatMessages([{
+                role: 'model',
+                content: `안녕하세요! 저는 『${book.title}』 인사이트 도우미입니다 📖\n이 책에서 가장 인상 깊었던 부분이나 궁금한 점을 자유롭게 물어보세요.`
+            }]);
+        }
+    }, [activeTab, book?.title]);
+
+    // 채팅 자동 스크롤
+    useEffect(() => {
+        if (chatScrollRef.current) {
+            chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+    }, [chatMessages]);
 
     return (
         <div
             className={`rv-root ${activeTab === 'podcast' ? 'podcast-view' : ''}`}
+            style={{ background: '#0d0b08' }}
             onClick={resetHideTimer}
         >
             {/* ── Top Bar ── */}
@@ -495,38 +700,19 @@ export default function ReviewDetail() {
                     <span className="material-symbols-outlined">close</span>
                 </button>
                 <div className="rv-topbar-title-wrap">
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <div className="flex items-end h-[14px] gap-[1.5px] mr-0.5 pb-[1px]">
-                            <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[2px] bg-zinc-400 rounded-none" />
-                            <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[2px] bg-zinc-400 rounded-none" />
-                            <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[2px] bg-zinc-400 rounded-none" />
-                            <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[2px] bg-zinc-400 rounded-none" />
-                            <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[2px] bg-zinc-400 rounded-none" />
-                        </div>
-                        <span className="text-[12px] font-black tracking-[-0.03em] uppercase text-white/50" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
-                    </div>
                     <span className="rv-topbar-title">{book.title}</span>
                     <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
                 </div>
-                <div className="rv-topbar-right">
-                    <button
-                        onClick={handleKakaoShare}
-                        className="size-10 flex items-center justify-center rounded-none bg-[#FEE500] text-[#3c1e1e] active:scale-95 transition-all shadow-lg"
-                    >
-                        <span className="material-symbols-outlined text-xl font-bold">chat_bubble</span>
-                    </button>
-                </div>
+                <div className="rv-topbar-right" />
             </div>
 
             {/* ── Tab Bar ── */}
             <div className="rv-tab-bar">
                 <button
-                    className={`rv-tab ${activeTab === 'review' ? 'active' : ''} ${!hasAnyReview ? 'disabled' : ''}`}
-                    onClick={() => hasAnyReview && setActiveTab('review')}
-                    disabled={!hasAnyReview}
+                    className={`rv-tab ${activeTab === 'ebook' || activeTab === 'review' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('ebook')}
                 >
-                    <span className="material-symbols-outlined">menu_book</span>
-                    <span>리뷰</span>
+                    이북보기
                 </button>
 
                 {hasScript && isPodcast && (
@@ -539,18 +725,16 @@ export default function ReviewDetail() {
                             }
                         }}
                     >
-                        <span>🎧 팟캐스트</span>
+                        팟캐스트
                     </button>
                 )}
-                {book.actionGuide && book.actionGuide.length > 0 && (
-                    <button
-                        className={`rv-tab ${activeTab === 'action' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('action')}
-                    >
-                        <span className="material-symbols-outlined">rocket_launch</span>
-                        <span>액션 가이드</span>
-                    </button>
-                )}
+
+                <button
+                    className={`rv-tab ${activeTab === 'chat' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('chat')}
+                >
+                    인사이트 챗
+                </button>
             </div>
 
             {/* ── Stage (FlipBook Container) ── */}
@@ -560,18 +744,18 @@ export default function ReviewDetail() {
                         <span>이북 불러오는 중...</span>
                     </div>
                 ) :
-                <div className="rv-stage">
+                <div className="rv-stage" onTouchStart={handleBookTap} onClick={handleBookTap}>
                     <div className="rv-book-container">
                         <HTMLFlipBook
                             key={`flipbook-${hasEbook ? 'ebook' : 'review'}`}
                             ref={hasEbook ? ebookFlipBook : reviewFlipBook}
                             width={window.innerWidth > 600 ? 520 : window.innerWidth}
-                            height={window.innerWidth > 600 ? 740 : (hasEbook ? window.innerHeight * 0.82 : 740)}
+                            height={window.innerWidth > 600 ? 740 : window.innerHeight - 96}
                             size="stretch"
-                            minWidth={hasEbook ? 300 : 280}
-                            maxWidth={520}
+                            minWidth={280}
+                            maxWidth={window.innerWidth > 600 ? 520 : window.innerWidth}
                             minHeight={400}
-                            maxHeight={740}
+                            maxHeight={window.innerWidth > 600 ? 740 : window.innerHeight - 96}
                             maxShadowOpacity={0.4}
                             showCover={!hasEbook}
                             usePortrait={true}
@@ -625,11 +809,40 @@ export default function ReviewDetail() {
                                     )),
                                     <EbookPage key="ebook-final" className="rv-ebook-final-page">
                                         <div className="rv-ebook-final-inner">
-                                            <div className="rv-ebook-final-icon">
-                                                <span className="material-symbols-outlined">local_library</span>
+                                            <div className="rv-ebook-final-top">
+                                                <div className="rv-ebook-final-brand-row">
+                                                    <span className="rv-ebook-final-ornament">✦</span>
+                                                    <span className="rv-ebook-final-brand-name">THE ARCHIVIEW</span>
+                                                    <span className="rv-ebook-final-ornament">✦</span>
+                                                </div>
+                                                <p className="rv-ebook-final-essay-tag">INSIGHT ESSAY</p>
+                                                <h2 className="rv-ebook-final-booktitle">{book.title}</h2>
+                                                <div className="rv-ebook-final-rule"></div>
+                                                <div className="rv-ebook-final-meta">
+                                                    <div className="rv-ebook-final-meta-row">
+                                                        <span className="rv-ebook-final-meta-key">저  자</span>
+                                                        <span className="rv-ebook-final-meta-val">{book.author}</span>
+                                                    </div>
+                                                    {book.publisher && (
+                                                        <div className="rv-ebook-final-meta-row">
+                                                            <span className="rv-ebook-final-meta-key">출판사</span>
+                                                            <span className="rv-ebook-final-meta-val">{book.publisher}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="rv-ebook-final-meta-row">
+                                                        <span className="rv-ebook-final-meta-key">발  행</span>
+                                                        <span className="rv-ebook-final-meta-val">The Archiview</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <h4 className="rv-ebook-finish-text">FINISH</h4>
-                                            <p className="rv-ebook-thanks">아카이뷰와 함께해주셔서 감사합니다.</p>
+                                            <div className="rv-ebook-final-cta">
+                                                <span className="material-symbols-outlined rv-ebook-final-cta-icon">menu_book</span>
+                                                <p className="rv-ebook-final-cta-text">더 깊은 이야기가 궁금하다면<br/><strong>지금 서점으로 떠나보세요</strong></p>
+                                            </div>
+                                            <div className="rv-ebook-final-bottom">
+                                                <p className="rv-ebook-final-copyright">본 콘텐츠는 독자의 인사이트를 담은 창작 에세이이며, 원저작물의 저작권은 저자 및 출판사에 귀속됩니다.</p>
+                                                <p className="rv-ebook-final-copyright-mark">© The Archiview — All Rights Reserved</p>
+                                            </div>
                                         </div>
                                     </EbookPage>
                                 ]
@@ -728,29 +941,21 @@ export default function ReviewDetail() {
                         <div className="rv-progress-fill" style={{ width: `${progress * 100}%` }} />
                     </div>
 
-                    {/* ── Nav Buttons ── */}
-                    <div className={`rv-nav ${showUI ? 'visible' : 'hidden'}`}>
-                        <button 
-                            className="rv-nav-btn" 
-                            onClick={() => {
-                                if (hasEbook) ebookFlipBook.current?.pageFlip()?.flipPrev();
-                                else reviewFlipBook.current?.pageFlip()?.flipPrev();
-                            }} 
-                            disabled={pageIdx === 0}
-                        >
-                            <span className="material-symbols-outlined">arrow_back_ios_new</span>
-                        </button>
-                        <button 
-                            className="rv-nav-btn" 
-                            onClick={() => {
-                                if (hasEbook) ebookFlipBook.current?.pageFlip()?.flipNext();
-                                else reviewFlipBook.current?.pageFlip()?.flipNext();
-                            }} 
-                            disabled={pageIdx === total - 1}
-                        >
-                            <span className="material-symbols-outlined">arrow_forward_ios</span>
-                        </button>
-                    </div>
+                    {/* ── Overlay Arrows (투명, hover/탭 시 표시) ── */}
+                    <button
+                        className={`rv-overlay-btn rv-overlay-prev ${showArrows ? 'visible' : ''}`}
+                        onClick={e => { e.stopPropagation(); if (hasEbook) ebookFlipBook.current?.pageFlip()?.flipPrev(); else reviewFlipBook.current?.pageFlip()?.flipPrev(); }}
+                        disabled={pageIdx === 0}
+                    >
+                        <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <button
+                        className={`rv-overlay-btn rv-overlay-next ${showArrows ? 'visible' : ''}`}
+                        onClick={e => { e.stopPropagation(); if (hasEbook) ebookFlipBook.current?.pageFlip()?.flipNext(); else reviewFlipBook.current?.pageFlip()?.flipNext(); }}
+                        disabled={pageIdx === total - 1}
+                    >
+                        <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
                 </div>
 
 
@@ -778,6 +983,61 @@ export default function ReviewDetail() {
                         <div ref={chatEndRef} />
                     </div>
                 </div>
+
+            ) : activeTab === 'chat' ? (
+                /* ── Insight Chat ── */
+                <div className="rv-insight-stage">
+                    <div className="rv-insight-messages" ref={chatScrollRef}>
+                        {chatMessages.map((msg, i) => (
+                            <div key={i} className={`rv-insight-row ${msg.role === 'user' ? 'user' : 'ai'}`}>
+                                {msg.role !== 'user' && (
+                                    <div className="rv-insight-avatar">
+                                        <span className="material-symbols-outlined">psychology</span>
+                                    </div>
+                                )}
+                                <div className={`rv-insight-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}>
+                                    {msg.content.split('\n').map((line, j) => (
+                                        <span key={j}>{line}{j < msg.content.split('\n').length - 1 && <br/>}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        {chatLoading && (
+                            <div className="rv-insight-row ai">
+                                <div className="rv-insight-avatar">
+                                    <span className="material-symbols-outlined">psychology</span>
+                                </div>
+                                <div className="rv-insight-bubble ai rv-insight-typing">
+                                    <span/><span/><span/>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="rv-insight-input-bar">
+                        <textarea
+                            className="rv-insight-input"
+                            value={chatInput}
+                            onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendChat();
+                                }
+                            }}
+                            placeholder={`『${book.title}』에 대해 무엇이든 물어보세요...`}
+                            rows={1}
+                            disabled={chatLoading}
+                        />
+                        <button
+                            className="rv-insight-send"
+                            onClick={() => handleSendChat()}
+                            disabled={!chatInput.trim() || chatLoading}
+                        >
+                            <span className="material-symbols-outlined">send</span>
+                        </button>
+                    </div>
+                </div>
+
             ) : (
                 <div className="rv-action-stage">
                     <div className="rv-action-header">

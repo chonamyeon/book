@@ -11,6 +11,7 @@ import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { availableAudio } from '../data/availableAudio';
 
 export default function Home() {
     const { user } = useAuth();
@@ -20,6 +21,37 @@ export default function Home() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [showAllCelebs, setShowAllCelebs] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
+
+    const getAudioDurationMin = (podcastFile) => {
+        if (!podcastFile) return 15;
+        const fileName = podcastFile.split('/').pop();
+        const duration = availableAudio[fileName];
+        return Math.ceil((duration || 900) / 60);
+    };
+
+    const getAudioDurationFormatted = (book) => {
+        if (!book) return "15:00";
+        let duration = null;
+
+        // helper to safely check availableAudio keys (case-insensitive)
+        const findDuration = (filename) => {
+            if (!filename) return null;
+            const key = String(filename).toLowerCase();
+            return availableAudio[key] || availableAudio[`${key}.mp3`];
+        };
+
+        if (book.podcastFile) duration = findDuration(book.podcastFile.split('/').pop());
+        if (!duration && book.audioPath) duration = findDuration(book.audioPath.split('/').pop());
+        if (!duration && book.voiceAudioUrl) duration = findDuration(book.voiceAudioUrl.split('/').pop());
+        if (!duration && book.audioUrl) duration = findDuration(book.audioUrl.split('/').pop());
+        if (!duration && book.id) duration = findDuration(book.id);
+
+        if (!duration) return "15:00";
+        
+        const m = Math.floor(duration / 60);
+        const s = Math.floor(duration % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
     const cleanText = (t) => {
         if (!t) return "";
@@ -117,6 +149,7 @@ export default function Home() {
         return popularArchives.map(item => {
             const bookData = allBooks.find(b => b.id === item.id) || {};
             return {
+                ...bookData,
                 ...item,
                 cover: item.cover || bookData.cover || '',
                 purchaseLink: item.purchaseLink || bookData.purchaseLink || '',
@@ -311,7 +344,7 @@ export default function Home() {
                                 const isThisPlaying = podcastPlaying && podcastInfo?.id === book.id;
                                 return (
                                     <div key={idx} className="relative group">
-                                        <div onClick={() => navigate(`/review/${book.id}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
+                                        <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
                                             <div className="w-[70px] h-[98px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
                                                 <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} />
                                             </div>
@@ -322,11 +355,11 @@ export default function Home() {
                                                 <div className="flex gap-2 mb-3">
                                                     <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">
                                                         <span>🎧</span>
-                                                        <span>15분</span>
+                                                        <span>{book.isPodcast ? getAudioDurationFormatted(book) : '15:00'}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1 text-[9px] font-black text-white/40 bg-white/5 px-1.5 py-0.5 rounded-xs">
                                                         <span>📖</span>
-                                                        <span>5분</span>
+                                                        <span>{book.isPodcast ? Math.max(1, Math.round(getAudioDurationMin(book.podcastFile) / 2.5)) : 5}분</span>
                                                     </div>
                                                 </div>
 
@@ -428,7 +461,7 @@ export default function Home() {
                             {enrichedPopularArchives.map((item, i) => (
                                 <div key={i} className={`flex items-start gap-3 pb-5 ${i !== enrichedPopularArchives.length - 1 ? 'border-b border-white/5' : ''}`}>
                                     <span className="text-3xl font-black text-white/10 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
-                                    <Link to={`/review/${item.id}`} className="flex-shrink-0">
+                                    <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`} className="flex-shrink-0">
                                         <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
                                             {item.cover
                                                 ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
@@ -437,14 +470,18 @@ export default function Home() {
                                         </div>
                                     </Link>
                                     <div className="flex-1 min-w-0">
-                                        <Link to={`/review/${item.id}`}>
+                                        <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                                             <h4 className="text-white font-black text-[14px] tracking-tight truncate">{item.title}</h4>
                                         </Link>
                                         {item.author && <p className="text-gray-500 text-[10px] font-medium mt-0.5 truncate">{item.author}</p>}
                                         {item.listens && <p className="text-gray-600 text-[9px] font-black mt-0.5 uppercase tracking-[0.1em]">{item.listens} LISTENS</p>}
                                         <div className="flex gap-2 my-1.5">
-                                            <span className="text-[9px] font-black text-orange-500">🎧 15분</span>
-                                            <span className="text-[9px] font-black text-white/30">📖 5분</span>
+                                            <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">🎧 {item.isPodcast ? getAudioDurationFormatted(item) : '15:00'}</span>
+                                            {(item.youtubeUrl || item.videoUrl || item.videoId || item.videoLength || item.videoTime || item.isYoutube) && (
+                                                <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
+                                                    ▶️ {item.videoLength || item.videoTime || item.youtubeDuration || 5}분
+                                                </span>
+                                            )}
                                         </div>
                                         <BookCardActions book={item} />
                                     </div>
@@ -501,8 +538,12 @@ export default function Home() {
                                                 <h3 className="text-white font-black text-[15px] leading-tight break-keep line-clamp-2">{content.title}</h3>
                                                 <p className="text-gold text-[10px] font-black uppercase tracking-[0.15em] mb-1">아카이뷰 오리지널</p>
                                                 <div className="flex gap-2 mb-1">
-                                                    <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">🎧 18분</span>
-                                                    <span className="text-[9px] font-black text-white/30 bg-white/5 px-1.5 py-0.5 rounded-xs">📖 7분</span>
+                                                    <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">🎧 {content.isPodcast ? getAudioDurationFormatted(content) : '18:00'}</span>
+                                                    {(content.youtubeUrl || content.videoUrl || content.videoId || content.videoLength || content.videoTime || content.isYoutube) && (
+                                                        <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
+                                                            ▶️ {content.videoLength || content.videoTime || content.youtubeDuration || 7}분
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -532,7 +573,7 @@ export default function Home() {
                             {(showAllCelebs ? celebrities.filter(c => !c.id.includes('editor') && !c.id.includes('original') && !c.id.includes('guru')) : celebrities.filter(c => !c.id.includes('editor') && !c.id.includes('original') && !c.id.includes('guru')).slice(0, 6)).map((celeb) => (
                                 <Link key={celeb.id} to={`/celebrity/${celeb.id}`} className="flex flex-col items-center bg-white/5 border border-white/10 rounded-none p-4 group transition-all duration-300 hover:bg-white/10 hover:border-white/30 shadow-lg">
                                     <div className="w-full aspect-square rounded-none overflow-hidden mb-3 shadow-inner">
-                                        <img src={celeb.image} alt={celeb.name} loading="lazy" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-110" />
+                                        <img src={celeb.image} alt={celeb.name} loading="lazy" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
                                     </div>
                                     <h4 className="text-[14px] font-black tracking-tight text-white mb-1 truncate w-full text-center drop-shadow-md">{celeb.name === '김남준 (RM)' ? 'RM (BTS)' : celeb.name}</h4>
                                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter truncate w-full text-center">{celeb.role}</p>

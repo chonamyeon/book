@@ -21,8 +21,9 @@ export default function Celebrity() {
 
         // 1. 기존 celebrities.js 에 있던 도서들에 Firestore 덮어쓰기 적용
         const staticBooksWithOverrides = (celeb.books || []).map(staticBook => {
-            const overrideBook = all.find(b => b.id === staticBook.id);
-            return overrideBook || staticBook;
+            const staticId = staticBook.id || staticBook.title.toLowerCase().replace(/\s+/g, '-');
+            const overrideBook = all.find(b => b.id === staticId);
+            return overrideBook || { ...staticBook, id: staticId };
         });
 
         // 2. 이 셀럽을 위해 새로 추가된 완전 신규 도서
@@ -67,7 +68,7 @@ export default function Celebrity() {
                             {/* Background Portrait */}
                             <div className="absolute inset-0 z-0">
                                 <img
-                                    className="w-full h-full object-cover grayscale brightness-90 contrast-[1.15]"
+                                    className="w-full h-full object-cover brightness-90 contrast-[1.15]"
                                     src={celeb.image}
                                     alt={celeb.name}
                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544275039-35ed06764574?q=80&w=2000'; }}
@@ -221,7 +222,7 @@ export default function Celebrity() {
                                     className={`flex flex-col items-center gap-3 transition-all duration-300 group ${c.id === celeb.id ? 'opacity-100 scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
                                 >
                                     <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-none border-2 p-1 transition-colors duration-500 ${c.id === celeb.id ? 'border-accent shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'border-primary/30 group-hover:border-accent'}`}>
-                                        <img loading="lazy" className={`w-full h-full object-cover rounded-none transition-all duration-700 ${c.id === celeb.id ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} src={c.image} alt={c.name} />
+                                        <img loading="lazy" className="w-full h-full object-cover rounded-none transition-all duration-700" src={c.image} alt={c.name} />
                                     </div>
                                     <div className="text-center">
                                         <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-widest block transition-colors duration-300 ${c.id === celeb.id ? 'text-accent' : 'text-slate-500 group-hover:text-slate-200'}`}>{c.name}</span>

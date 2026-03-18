@@ -53,7 +53,7 @@ export const useBookData = () => {
 
     // 특정 도서 데이터 안전하게 가져오기
     const getBook = useCallback((bookId) => {
-        const localBook = (celebrities || []).flatMap(c => c.books || []).find(b => b.id === bookId);
+        const localBook = (celebrities || []).flatMap(c => c.books || []).find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bookId);
         const override = overrides[bookId];
 
         if (!localBook && !override) return null;

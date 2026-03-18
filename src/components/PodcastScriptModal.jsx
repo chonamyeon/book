@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
 import { db } from '../firebase';
@@ -35,15 +35,16 @@ export default function PodcastScriptModal() {
 
     const localScript = scriptModalBookId ? (bookScripts[scriptModalBookId] || null) : null;
     const [firestoreScript, setFirestoreScript] = useState(null);
+    const [timestamps, setTimestamps] = useState(null); // public/timestamps/{id}.json
 
     useEffect(() => {
-        if (!scriptModalBookId) { setFirestoreScript(null); return; }
-        // Firestore 우선 — 새로 생성된 대본이 있으면 항상 최신 버전 사용
+        if (!scriptModalBookId) { setFirestoreScript(null); setTimestamps(null); return; }
+
+        // 대본: Firestore 우선
         getDoc(doc(db, 'scripts', scriptModalBookId)).then(snap => {
             if (snap.exists()) {
                 const lines = snap.data().lines || [];
                 setFirestoreScript(lines.map(l => ({
-                    // { speaker } 포맷과 { role } 포맷 둘 다 처리
                     role: l.role || (l.speaker === '스텔라' ? 'B' : 'A'),
                     text: l.text,
                 })));
@@ -51,6 +52,18 @@ export default function PodcastScriptModal() {
                 setFirestoreScript(null);
             }
         }).catch(() => setFirestoreScript(null));
+
+        // 타임스탬프: public/timestamps/{id}.json (Whisper 생성)
+        fetch(`/timestamps/${scriptModalBookId}.json`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.segments?.length) {
+                    setTimestamps(data.segments); // [{index, start, end, ...}]
+                } else {
+                    setTimestamps(null);
+                }
+            })
+            .catch(() => setTimestamps(null));
     }, [scriptModalBookId]);
 
     // Firestore 우선, 없으면 로컬 bookScripts 폴백
@@ -59,11 +72,42 @@ export default function PodcastScriptModal() {
     const containerRef = useRef(null);
     const [userScrolled, setUserScrolled] = useState(false);
 
-    // 활성 턴 계산 (재생 시간 기준)
+    // script 각 턴 → Whisper 시작 시간 (인덱스 직접 매핑)
+    const turnStartTimes = useMemo(() => {
+        if (!timestamps?.length || !script?.length) return null;
+        // 턴수가 같으면 1:1 직접 매핑
+        if (timestamps.length === script.length) {
+            return timestamps.map(ts => ts.start ?? null);
+        }
+        // 턴수가 다르면 비례 인덱스로 매핑
+        return script.map((_, i) => {
+            const tsI = Math.round(i * (timestamps.length - 1) / (script.length - 1));
+            return timestamps[tsI]?.start ?? null;
+        });
+    }, [script, timestamps]);
+
+    // 활성 턴 계산 — Whisper 타임스탬프 우선, 없으면 글자수 비례 추정
     const activeTurnIndex = (() => {
-        if (!duration || !script.length) return -1;
-        const timePerTurn = duration / script.length;
-        return Math.min(Math.floor(currentTime / timePerTurn), script.length - 1);
+        if (!script.length) return -1;
+
+        // Whisper 타임스탬프 사용 (script 인덱스 기준으로 역방향 탐색)
+        if (turnStartTimes) {
+            for (let i = turnStartTimes.length - 1; i >= 0; i--) {
+                if (turnStartTimes[i] != null && currentTime >= turnStartTimes[i]) return i;
+            }
+            return 0;
+        }
+
+        // fallback: 글자수 비례
+        if (!duration) return -1;
+        const totalChars = script.reduce((sum, t) => sum + (t.text?.length || 1), 0);
+        let elapsed = 0;
+        for (let i = 0; i < script.length; i++) {
+            const turnDuration = ((script[i].text?.length || 1) / totalChars) * duration;
+            if (currentTime < elapsed + turnDuration) return i;
+            elapsed += turnDuration;
+        }
+        return script.length - 1;
     })();
 
     // 활성 턴으로 자동 스크롤

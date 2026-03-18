@@ -74,7 +74,7 @@ export const getBookId = (title) => {
 
     for (const celeb of celebrities) {
         const book = celeb.books.find(b => b.title === title);
-        if (book?.id) return book.id;
+        if (book) return book.id || book.title.toLowerCase().replace(/\s+/g, '-');
     }
     return null;
 };

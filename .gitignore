@@ -49,3 +49,6 @@ test_fetch*.mjs
 dm.md
 commute.html
 yt-dlp.exe
+
+.vercel
+.env*.local

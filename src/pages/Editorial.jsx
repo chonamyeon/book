@@ -324,7 +324,7 @@ export default function Editorial() {
                                                     transition={{ delay: idx * 0.05 }}
                                                 >
                                                     <div className="flex gap-4 group items-start">
-                                                        <div className="w-[100px] aspect-[3/4.2] rounded-none overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id}`)}>
+                                                        <div className="w-[100px] aspect-[3/4.2] rounded-none overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`)}>
                                                             <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                             {item.isPodcast && (
                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -333,7 +333,7 @@ export default function Editorial() {
                                                             )}
                                                         </div>
                                                         <div className="flex-1 flex flex-col justify-start py-1 h-full max-w-[calc(100%-116px)]">
-                                                            <div className="cursor-pointer mb-4" onClick={() => navigate(`/review/${item.id}`)}>
+                                                            <div className="cursor-pointer mb-4" onClick={() => navigate(`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`)}>
                                                                 <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mb-1 opacity-60 block">INSIGHT 0{idx + 1}</span>
                                                                 <h5 className="text-white font-black text-[15px] leading-tight mb-1.5 truncate">『{item.title}』</h5>
                                                                 <p className="text-white/40 text-[11px] font-medium italic line-clamp-1 opacity-80">{item.desc || item.author}</p>

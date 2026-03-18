@@ -26,20 +26,23 @@ export default function MiniPlayer() {
         }
     };
 
+    // 바텀 네비 높이(약 56px) + safe area 위에 표시
+    const bottomNavH = 56;
+
     return (
         <div style={{
             position: 'fixed',
-            bottom: 0,
+            bottom: `calc(${bottomNavH}px + env(safe-area-inset-bottom, 0px))`,
             left: '50%',
-            transform: 'translateX(-50%)',
+            transform: 'translate3d(-50%, 0, 0)',
             width: '100%',
             maxWidth: 430,
             background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             borderTop: '1px solid rgba(255,255,255,0.1)',
-            padding: '8px 12px',
-            paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-            zIndex: 9999,
+            padding: '8px 12px 10px',
+            zIndex: 60,
             boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+            willChange: 'transform',
         }}>
             {/* Progress bar */}
             <div

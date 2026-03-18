@@ -2,7 +2,6 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
-import TtsTestPage from './pages/TtsTestPage';
 import { AudioProvider } from './contexts/AudioContext';
 import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
@@ -67,7 +66,7 @@ const PageLoader = () => (
 );
 
 const MobileLayout = ({ children }) => (
-  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative overflow-hidden flex flex-col">
+  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative overflow-x-hidden flex flex-col">
     {children}
   </div>
 );
@@ -88,7 +87,6 @@ export default function App() {
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/test" element={<MobileLayout><div className="p-8 text-white">Hello World</div></MobileLayout>} />
                   <Route path="/" element={<MobileLayout><Home /></MobileLayout>} />
                   <Route path="/editorial" element={<MobileLayout><Editorial /></MobileLayout>} />
                   <Route path="/result" element={<ProtectedRoute><MobileLayout><Result /></MobileLayout></ProtectedRoute>} />
@@ -100,7 +98,6 @@ export default function App() {
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
                   <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
                   <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/tts-test" element={<TtsTestPage />} />
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
                   <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />

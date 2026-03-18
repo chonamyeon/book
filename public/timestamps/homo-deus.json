@@ -1,0 +1,104 @@
+{
+  "method": "silencedetect",
+  "bookId": "homo-deus",
+  "segments": [
+    {
+      "index": 0,
+      "speaker": "제임스",
+      "start": 0,
+      "end": 35.629,
+      "text": null
+    },
+    {
+      "index": 1,
+      "speaker": "스텔라",
+      "start": 35.629,
+      "end": 57.448,
+      "text": null
+    },
+    {
+      "index": 2,
+      "speaker": "제임스",
+      "start": 57.448,
+      "end": 59.598,
+      "text": null
+    },
+    {
+      "index": 3,
+      "speaker": "스텔라",
+      "start": 59.598,
+      "end": 63.864,
+      "text": null
+    },
+    {
+      "index": 4,
+      "speaker": "제임스",
+      "start": 63.864,
+      "end": 96.686,
+      "text": null
+    },
+    {
+      "index": 5,
+      "speaker": "스텔라",
+      "start": 96.686,
+      "end": 117.84,
+      "text": null
+    },
+    {
+      "index": 6,
+      "speaker": "제임스",
+      "start": 117.84,
+      "end": 195.048,
+      "text": null
+    },
+    {
+      "index": 7,
+      "speaker": "스텔라",
+      "start": 195.048,
+      "end": 232.546,
+      "text": null
+    },
+    {
+      "index": 8,
+      "speaker": "제임스",
+      "start": 232.546,
+      "end": 245.837,
+      "text": null
+    },
+    {
+      "index": 9,
+      "speaker": "스텔라",
+      "start": 245.837,
+      "end": 272.005,
+      "text": null
+    },
+    {
+      "index": 10,
+      "speaker": "제임스",
+      "start": 272.005,
+      "end": 303.644,
+      "text": null
+    },
+    {
+      "index": 11,
+      "speaker": "스텔라",
+      "start": 303.644,
+      "end": 345.355,
+      "text": null
+    },
+    {
+      "index": 12,
+      "speaker": "제임스",
+      "start": 345.355,
+      "end": 485.494,
+      "text": null
+    },
+    {
+      "index": 13,
+      "speaker": "스텔라",
+      "start": 485.494,
+      "end": 505.611,
+      "text": null
+    }
+  ]
+}

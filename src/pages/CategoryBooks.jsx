@@ -34,23 +34,20 @@ export default function CategoryBooks() {
             .filter(book => {
                 const sec = (book.section || '').toUpperCase();
                 const cat = (book.category || '').toLowerCase();
-                const title = (book.title || '').toLowerCase();
-                const searchKey = (categoryInfo.search || '').toLowerCase();
 
-                // If it's a direct ID match (Legacy)
-                if (sec === categoryInfo.id) return true;
+                if (categoryInfo.id === 'SELF_DEV') return cat.includes('자기계발');
+                if (categoryInfo.id === 'ECONOMY') return cat.includes('경제') || cat.includes('부자');
+                if (categoryInfo.id === 'MANAGEMENT') return cat.includes('경영');
+                if (categoryInfo.id === 'HUMANITIES') return cat.includes('인문');
+                if (categoryInfo.id === 'PSYCHOLOGY') return cat.includes('심리');
+                
+                // BURNOUT is both a legacy section and a category
+                if (categoryInfo.id === 'BURNOUT') return cat.includes('커리어') || sec === 'BURNOUT';
 
-                // If searching by keyword
-                if (searchKey) {
-                    if (categoryInfo.id === 'SELF_DEV') return cat.includes('자기계발') || sec === 'WEALTH';
-                    if (categoryInfo.id === 'ECONOMY') return cat.includes('경제') || sec === 'WEALTH';
-                    if (categoryInfo.id === 'MANAGEMENT') return cat.includes('경영');
-                    if (categoryInfo.id === 'HUMANITIES') return cat.includes('인문') || cat.includes('역사') || sec === 'PHILOSOPHY';
-                    if (categoryInfo.id === 'PSYCHOLOGY') return cat.includes('심리') || sec === 'HEALING';
-                    if (categoryInfo.id === 'BURNOUT') return sec === 'BURNOUT' || cat.includes('커리어') || cat.includes('직장');
-
-                    return cat.includes(searchKey) || title.includes(searchKey);
-                }
+                // Legacy IDs support
+                if (categoryInfo.id === 'WEALTH') return cat.includes('부자') || sec === 'WEALTH';
+                if (categoryInfo.id === 'HEALING') return cat.includes('심리') || sec === 'HEALING';
+                if (categoryInfo.id === 'PHILOSOPHY') return cat.includes('인문') || sec === 'PHILOSOPHY';
 
                 return false;
             })

@@ -1,18 +1,23 @@
 {
     "name": "The Archiview",
-    "short_name": "The Archiview",
+    "short_name": "Archiview",
     "start_url": "/?source=pwa",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#121212",
-    "theme_color": "#121212",
+    "background_color": "#090b10",
+    "theme_color": "#090b10",
     "scope": "/",
-    "description": "기록하고, 기억하고, 성장하세요.",
+    "lang": "ko",
+    "description": "프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스",
+    "categories": ["books", "education", "lifestyle"],
     "icons": [
         {
             "src": "/vite.svg",
             "type": "image/svg+xml",
-            "sizes": "512x512"
+            "sizes": "512x512",
+            "purpose": "any maskable"
         }
-    ]
+    ],
+    "screenshots": [],
+    "prefer_related_applications": false
 }
