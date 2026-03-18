@@ -868,6 +868,73 @@ export default function AdminDashboard() {
         setIsCheckingQuota(false);
     };
 
+    // ── TTS 텍스트 최적화 (Gemini Flash) — 단일·배치 공용 ────────
+    const optimizeScriptForTts = async (script, logFn) => {
+        const key = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!key) { logFn?.('⚠️ Gemini 키 없음 — 최적화 건너뜀'); return script; }
+        const prompt = `너는 한국어 팟캐스트 대본을 TTS 음성 합성에 최적화하는 전문가야.
+아래 JSON 대본을 받아서, TTS가 자연스럽고 명확하게 읽을 수 있도록 text 필드만 수정해.
+
+━━━ 절대 규칙 ━━━
+① speaker 필드 절대 변경 금지
+② 턴 수 절대 변경 금지 (추가·삭제·병합 불가)
+③ 내용·유머·핵심 메시지 100% 유지
+④ 괄호 지시문 추가 절대 금지 — (웃음), (한숨), (행동묘사) 등 일절 넣지 마
+⑤ 원본에 없는 새 내용 추가 금지
+
+━━━ text 수정 규칙 ━━━
+
+[문장 길이]
+- 한 호흡에 읽기 어려운 긴 문장은 짧게 끊어라
+- 기준: 쉼표 없이 30자 이상 이어지면 끊어야 함
+- 끊을 때는 의미 단위로 끊고, 자연스러운 구어체 흐름 유지
+  나쁜 예: "셀던이 계산해보니까 이대로 가면 3만 년짜리 암흑기가 오고 문명이 통째로 리셋된다는 거야."
+  좋은 예: "셀던이 계산해봤더니, 이대로 가면 삼만 년 암흑기가 온대. 문명이 통째로 리셋되는 거지."
+
+[숫자·영어 한글 변환]
+- 모든 숫자를 한글 발음으로 변환: 3만→삼만 / 1천→천 / 80년→팔십 년 / 2024→이천이십사
+- 영어 약어를 발음 표기로 변환: CEO→씨이오 / SNS→에스엔에스 / SF→에스에프 / USB→유에스비
+
+[TTS가 이상하게 읽는 표기 제거]
+- ㅋㅋㅋ, ㅎㅎ → 완전히 삭제 (웃음의 맥락은 문장 톤으로 유지)
+- ... → 마침표(.) 또는 쉼표(,)로 교체
+- ~ → 삭제 또는 문장 끝에 "." 처리
+- !! 연속 → ! 하나로 통일
+
+[구어체 유지]
+- "~잖아요" "~거든요" "~거야" 같은 구어체 말투 절대 격식체로 바꾸지 마
+- 직장인 유머·비유·위트 100% 살릴 것
+- "어", "근데", "아" 같은 자연스러운 추임새 유지
+
+반환 형식: 입력과 동일한 JSON 배열 [{speaker, text}, ...]
+JSON 외 다른 텍스트 절대 출력하지 마.
+
+[대본]
+${JSON.stringify(script)}`;
+        try {
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } })
+                }
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const match = raw.match(/\[[\s\S]*\]/);
+            if (!match) throw new Error('JSON 파싱 실패');
+            const optimized = JSON.parse(match[0]);
+            if (optimized.length !== script.length) throw new Error(`턴 수 불일치: ${optimized.length} vs ${script.length}`);
+            logFn?.(`✅ TTS 최적화 완료 (${script.length}턴)`);
+            return optimized;
+        } catch (e) {
+            logFn?.(`⚠️ TTS 최적화 실패 (원본 사용): ${e.message}`);
+            return script;
+        }
+    };
+
     const handleRunTts = async () => {
         if (!generatedScript.length) return alert('먼저 대본을 생성하세요.');
 
@@ -904,9 +971,17 @@ export default function AdminDashboard() {
             return speakerA;
         };
 
+        // TTS 최적화 (Gemini Flash) — 문장 분리·숫자 한글화·불필요 표기 제거
+        setIsTtsRunning(true);
+        setTtsLogs(['✏️ TTS 최적화 중 (Gemini Flash)...']);
+        const ttsReadyScript = await optimizeScriptForTts(
+            generatedScript,
+            (msg) => setTtsLogs(prev => [...prev, msg])
+        );
+
         // 상황극 구간 감정 태그 삽입 + 화자 이름 정규화
         const situationScene = selectedSituation?.scene || '';
-        const preprocessScript = generatedScript.map((line, idx) => {
+        const preprocessScript = ttsReadyScript.map((line, idx) => {
             const turn = idx + 1;
             const normalizedSpeaker = normalizeSpk(line.speaker);
             let text = line.text;
@@ -925,8 +1000,7 @@ export default function AdminDashboard() {
         for (let i = 0; i < preprocessScript.length; i += BATCH) batches.push(preprocessScript.slice(i, i + BATCH));
 
         // IndexedDB에서 이전 배치 버퍼 로드 (세션 넘어도 유지)
-        setIsTtsRunning(true);
-        setTtsLogs([`🔍 이전 진행 상황 확인 중...`]);
+        setTtsLogs(prev => [...prev, `🔍 이전 진행 상황 확인 중...`]);
         const pcmBuffers = new Array(batches.length).fill(null);
         let resumeCount = 0;
         for (let b = 0; b < batches.length; b++) {
@@ -1177,9 +1251,13 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         const modelId = ttsModel === 'pro' ? 'gemini-2.5-pro-preview-tts' : 'gemini-2.5-flash-preview-tts';
         const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
 
+        // TTS 최적화 (Gemini Flash)
+        addBatchLog(`✏️ [${bookId}] TTS 최적화 중 (Gemini Flash)...`);
+        const ttsReadyScript = await optimizeScriptForTts(script, addBatchLog);
+
         const batches = [];
-        for (let i = 0; i < script.length; i += BATCH) batches.push(script.slice(i, i + BATCH));
-        addBatchLog(`🎙️ [${bookId}] TTS 시작 — ${script.length}턴 · ${modelLabel}`);
+        for (let i = 0; i < ttsReadyScript.length; i += BATCH) batches.push(ttsReadyScript.slice(i, i + BATCH));
+        addBatchLog(`🎙️ [${bookId}] TTS 시작 — ${ttsReadyScript.length}턴 · ${modelLabel}`);
 
         const pcmBuffers = new Array(batches.length).fill(null);
 
@@ -1307,7 +1385,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         setBatchBookStatuses(initialStatuses);
 
         const addLog = (msg) => setBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-        addLog(`🚀 배치 시작 — ${selectedBatchBooks.length}권 · 모드: ${mode === 'full' ? '풀 배치' : 'TTS 전용'}`);
+        const modeLabel = mode === 'full' ? '풀 배치' : mode === 'tts-only' ? 'TTS 전용' : '대본 최적화';
+        addLog(`🚀 배치 시작 — ${selectedBatchBooks.length}권 · 모드: ${modeLabel}`);
 
         for (let i = 0; i < selectedBatchBooks.length; i++) {
             const bookId = selectedBatchBooks[i];
@@ -1337,6 +1416,27 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     if (!script) throw new Error('대본 생성 실패');
                     addLog(`✅ [${bookId}] 대본 생성 완료 (${script.length}턴)`);
                     setBatchScriptStatuses(prev => ({ ...prev, [bookId]: true }));
+                } else if (mode === 'optimize-only') {
+                    // 최적화 전용: Firestore에서 불러와서 Gemini Flash로 교정 후 다시 저장
+                    const snap = await getDoc(doc(db, 'scripts', bookId));
+                    if (!snap.exists()) {
+                        addLog(`⏭️ [${bookId}] 대본 없음 — 스킵`);
+                        setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'skipped' }));
+                        continue;
+                    }
+                    const data = snap.data();
+                    const stored = data.script || data.lines || data.content || null;
+                    if (!stored || !Array.isArray(stored) || stored.length === 0) {
+                        addLog(`⏭️ [${bookId}] 대본 비어있음 — 스킵`);
+                        setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'skipped' }));
+                        continue;
+                    }
+                    addLog(`📂 [${bookId}] 기존 대본 불러옴 (${stored.length}턴)`);
+                    setBatchBookStatuses(prev => ({ ...prev, [bookId]: 'generating' }));
+                    const optimized = await optimizeScriptForTts(stored, addLog);
+                    await setDoc(doc(db, 'scripts', bookId), { script: optimized, updatedAt: new Date().toISOString() }, { merge: true });
+                    addLog(`💾 [${bookId}] 최적화 완료 → Firestore 저장됨 (${optimized.length}턴)`);
+                    script = optimized; // TTS로 이어짐
                 } else {
                     // TTS 전용: Firestore 대본 불러오기
                     const snap = await getDoc(doc(db, 'scripts', bookId));
@@ -4666,7 +4766,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                     {/* 모드 선택 */}
                                     <div className="bg-white/3 border border-white/8 rounded-[20px] p-5">
                                         <p className="text-violet-400 text-xs font-black uppercase tracking-widest mb-4">실행 모드 선택</p>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-3 gap-3">
                                             <button
                                                 onClick={() => setBatchMode('full')}
                                                 disabled={isBatchRunning}
@@ -4674,7 +4774,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                             >
                                                 <span className="material-symbols-outlined text-2xl block mb-2">auto_awesome</span>
                                                 <p className="font-black text-sm">풀 배치</p>
-                                                <p className="text-xs mt-1 opacity-70">대본 없으면 생성 → TTS<br/>대본 있으면 TTS만</p>
+                                                <p className="text-xs mt-1 opacity-70">대본 생성 → TTS<br/>→ WAV</p>
                                             </button>
                                             <button
                                                 onClick={() => setBatchMode('tts-only')}
@@ -4684,6 +4784,15 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                 <span className="material-symbols-outlined text-2xl block mb-2">record_voice_over</span>
                                                 <p className="font-black text-sm">TTS 전용</p>
                                                 <p className="text-xs mt-1 opacity-70">대본 있는 도서만<br/>TTS → WAV</p>
+                                            </button>
+                                            <button
+                                                onClick={() => setBatchMode('optimize-only')}
+                                                disabled={isBatchRunning}
+                                                className={`p-4 rounded-2xl border-2 text-left transition-all ${batchMode === 'optimize-only' ? 'bg-amber-500/20 border-amber-500/50 text-white' : 'bg-black/20 border-white/10 text-slate-500 hover:border-white/20'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-2">spellcheck</span>
+                                                <p className="font-black text-sm">대본 최적화</p>
+                                                <p className="text-xs mt-1 opacity-70">교정 → 저장<br/>→ TTS → WAV</p>
                                             </button>
                                         </div>
                                     </div>
@@ -4698,7 +4807,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                         <div className="flex gap-2 mb-2">
                                             <button
                                                 onClick={() => {
-                                                    if (batchMode === 'tts-only') {
+                                                    if (batchMode === 'tts-only' || batchMode === 'optimize-only') {
                                                         setSelectedBatchBooks(realBooks.filter(b => batchScriptStatuses[b.id] === true).map(b => b.id));
                                                     } else {
                                                         setSelectedBatchBooks(realBooks.map(b => b.id));
@@ -4718,7 +4827,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                             {realBooks.map(book => {
                                                 const hasScript = batchScriptStatuses[book.id] === true;
                                                 const status = batchBookStatuses[book.id];
-                                                const isDisabled = isBatchRunning || (batchMode === 'tts-only' && !hasScript);
+                                                const isDisabled = isBatchRunning || ((batchMode === 'tts-only' || batchMode === 'optimize-only') && !hasScript);
                                                 const statusColors = {
                                                     pending: 'text-slate-500',
                                                     generating: 'text-yellow-400 animate-pulse',
@@ -4802,7 +4911,9 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                 ? 'bg-white/5 text-slate-500 cursor-not-allowed'
                                                 : batchMode === 'full'
                                                     ? 'bg-violet-500 text-white hover:bg-violet-400 hover:scale-[1.02] shadow-xl shadow-violet-500/20'
-                                                    : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] shadow-xl shadow-emerald-500/20'
+                                                    : batchMode === 'tts-only'
+                                                        ? 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] shadow-xl shadow-emerald-500/20'
+                                                        : 'bg-amber-500 text-black hover:bg-amber-400 hover:scale-[1.02] shadow-xl shadow-amber-500/20'
                                         }`}
                                     >
                                         {isBatchRunning ? (
@@ -4813,9 +4924,9 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                         ) : (
                                             <>
                                                 <span className="material-symbols-outlined text-2xl">
-                                                    {batchMode === 'full' ? 'auto_awesome' : 'record_voice_over'}
+                                                    {batchMode === 'full' ? 'auto_awesome' : batchMode === 'tts-only' ? 'record_voice_over' : 'spellcheck'}
                                                 </span>
-                                                {batchMode === 'full' ? `풀 배치 실행 (${selectedBatchBooks.length}권)` : `TTS 전용 배치 (${selectedBatchBooks.length}권)`}
+                                                {batchMode === 'full' ? `풀 배치 실행 (${selectedBatchBooks.length}권)` : batchMode === 'tts-only' ? `TTS 전용 배치 (${selectedBatchBooks.length}권)` : `대본 최적화 실행 (${selectedBatchBooks.length}권)`}
                                             </>
                                         )}
                                     </button>
