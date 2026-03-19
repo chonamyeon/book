@@ -29,84 +29,141 @@ function normalizeBrTags(html) {
     return html.replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '</p><p>');
 }
 
-// DOM 실제 높이 측정으로 페이지 분할 (오버플로우 방지)
-function splitPageByHeight(html, div, maxH) {
+// 모바일 가독성을 위해 긴 문단을 3문장 단위로 강제 분할
+function optimizeParagraphs(html) {
+    if (!html || window.innerWidth > 600) return html;
+    
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const ps = Array.from(doc.querySelectorAll('p'));
+    
+    ps.forEach(p => {
+        const inner = p.innerHTML;
+        // 마침표, 물음표, 느낌표 뒤에 공백이 있는 경우를 문장의 끝으로 간주
+        const parts = inner.replace(/([.?!。？！])\s+/g, '$1\x00').split('\x00').filter(s => s.trim());
+        
+        if (parts.length > 3) {
+            let newHtml = '';
+            for (let i = 0; i < parts.length; i++) {
+                newHtml += parts[i] + ' ';
+                // 3문장마다 새로운 문단으로 나눔
+                if ((i + 1) % 3 === 0 && i !== parts.length - 1) {
+                    newHtml += '</p><p>';
+                }
+            }
+            p.outerHTML = `<p>${newHtml.trim()}</p>`;
+        }
+    });
+    return doc.body.innerHTML;
+}
+
+// 재귀적으로 긴 HTML 노드를 쪼개고 묶어서 빈 공간 없이 페이지를 최적화
+function reflowHtmlToPages(htmlStr, div, maxH) {
+    div.innerHTML = htmlStr;
+    const allChildren = Array.from(div.children);
+    
+    const pages = [];
+    let curHtml = '';
+    
+    const pushCurrent = () => {
+        if (!curHtml.replace(/<[^>]*>/g, '').trim()) {
+            curHtml = '';
+            return; // completely empty text (ignore)
+        }
+        pages.push(curHtml.trim());
+        curHtml = '';
+    };
+
+    for (const child of allChildren) {
+        // 빈 태그 무시 (단, 브레이크나 이미지는 시각적으로 중요할 수 있으나 이북 본문엔 img가 없을 확률이 높음)
+        if (!child.textContent.trim() && !['BR', 'IMG', 'HR'].includes(child.tagName)) {
+            continue;
+        }
+
+        const testHtml = curHtml + child.outerHTML;
+        div.innerHTML = testHtml;
+        
+        if (div.scrollHeight > maxH) {
+            if (curHtml) {
+                pushCurrent();
+                // 남은 child 하나 담았을 때도 넘치는지 체크
+                div.innerHTML = child.outerHTML;
+                if (div.scrollHeight > maxH) {
+                    pages.push(...splitSingleLargeElement(child.outerHTML, div, maxH));
+                } else {
+                    curHtml = child.outerHTML;
+                }
+            } else {
+                // 부모 없이 단일 child만으로 넘치는 경우
+                pages.push(...splitSingleLargeElement(child.outerHTML, div, maxH));
+            }
+        } else {
+            curHtml = testHtml;
+        }
+    }
+    
+    if (curHtml) {
+        pushCurrent();
+    }
+    return pages.length > 0 ? pages : [htmlStr];
+}
+
+function splitSingleLargeElement(html, div, maxH) {
     div.innerHTML = html;
     if (div.scrollHeight <= maxH) return [html];
 
-    const children = Array.from(div.children);
+    const m = html.match(/^(<[a-zA-Z0-9]+[^>]*>)([\s\S]*?)(<\/[a-zA-Z0-9]+>)$/i);
+    if (!m) return [html];
 
-    // 단일 <p> 요소: 문장 단위로 분할 시도
-    if (children.length <= 1) {
-        const m = html.match(/^(<p[^>]*>)([\s\S]*?)(<\/p>)$/i);
-        if (m) {
-            const [, open, text, close] = m;
-            const parts = text.replace(/([.?!。？！])\s+/g, '$1\x00').split('\x00').filter(Boolean);
-            if (parts.length > 1) {
-                const pages = [];
-                let cur = '';
-                for (const s of parts) {
-                    const test = open + cur + s + ' ' + close;
-                    div.innerHTML = test;
-                    if (cur && div.scrollHeight > maxH) {
-                        pages.push(open + cur.trimEnd() + close);
-                        cur = s + ' ';
-                    } else {
-                        cur += s + ' ';
-                    }
-                }
-                if (cur.trim()) pages.push(open + cur.trim() + close);
-                if (pages.length > 1) return pages;
-            }
-        }
-        return [html];
-    }
+    const [, open, text, close] = m;
+    const parts = text.replace(/([.?!。？！])\s+/g, '$1\x00').split('\x00').filter(Boolean);
+    
+    if (parts.length <= 1) return [html];
 
-    // 복수 요소: 요소 단위로 분할
     const pages = [];
-    let curHtml = '';
-    for (const child of children) {
-        const test = curHtml + child.outerHTML;
+    let cur = '';
+    
+    for (const s of parts) {
+        const test = open + cur + s + ' ' + close;
         div.innerHTML = test;
-        if (curHtml && div.scrollHeight > maxH) {
-            pages.push(curHtml.trim());
-            curHtml = child.outerHTML;
+        if (cur && div.scrollHeight > maxH) {
+            pages.push((open + cur.trimEnd() + close).trim());
+            cur = s + ' ';
         } else {
-            curHtml = test;
+            cur += s + ' ';
         }
     }
-    if (curHtml.trim()) {
-        pages.push(...splitPageByHeight(curHtml.trim(), div, maxH));
+    if (cur.trim()) {
+        pages.push((open + cur.trim() + close).trim());
     }
     return pages.length > 0 ? pages : [html];
 }
 
-// 모바일 전용: DOM 측정으로 rawPages를 재분할
+// 단말기 및 웹 뷰(리액트 페이지플립) 크기에 맞춘 DOM 측정으로 rawPages를 재분할
 async function measureAndResplitPages(rawPages) {
-    if (window.innerWidth > 600) return rawPages;
     try { await document.fonts.ready; } catch (_) {}
 
-    // CSS 모바일 마스터 블록 기준 높이 계산 (안전 마진 8% 포함)
-    // FlipBook: innerHeight-96, sheet padding: 24+28, header: ~27, footer: ~20
-    const bodyH = (window.innerHeight - 96 - 52 - 47) * 0.88;
-    const bodyW = window.innerWidth - 40;
+    const isPC = window.innerWidth > 600;
+    
+    // 모바일은 전체화면 기준, PC는 HTMLFlipBook 사이즈(400x600) 기준
+    const bodyH = isPC ? 600 - 170 : window.innerHeight - 170;
+    const bodyW = isPC ? 400 - 40  : window.innerWidth - 40;
 
     const div = document.createElement('div');
     div.id = '__ebk_m__';
-    div.style.cssText = `position:fixed;top:-9999px;left:0;width:${bodyW}px;overflow:visible;visibility:hidden;font-family:'Noto Serif KR',Georgia,serif;font-size:13px;line-height:1.88;word-break:break-word;overflow-wrap:anywhere;`;
+    div.style.cssText = `position:fixed;top:-9999px;left:0;width:${bodyW}px;overflow:visible;visibility:hidden;font-family:'Noto Serif KR',Georgia,serif;font-size:20px;line-height:1.75;word-break:keep-all;overflow-wrap:break-word;letter-spacing:-0.2px;`;
 
     const sty = document.createElement('style');
     sty.id = '__ebk_s__';
-    sty.textContent = `#__ebk_m__ p{margin-bottom:0.75em;margin-top:0;} #__ebk_m__ h1{font-size:1.05rem;margin:0 0 1rem;font-weight:700;} #__ebk_m__ h2{font-size:0.92rem;margin:1.2rem 0 0.5rem;font-weight:700;} #__ebk_m__ h3{font-size:0.88rem;margin:1rem 0 0.4rem;} #__ebk_m__ blockquote{margin:1rem 0;padding:1rem 0.7rem 0.9rem;border-left:3px solid #c8a870;} #__ebk_m__ blockquote p{font-size:0.88rem;margin-bottom:0;}`;
+    sty.textContent = `#__ebk_m__ p{margin-bottom:1.35em;margin-top:0;text-indent:0.4em;} #__ebk_m__ h1{font-size:1em;padding:1.2em 0.5em;margin:0 0 1.5em;font-weight:800;} #__ebk_m__ h2{font-size:1.15em;margin:1.5em 0 0.8em;font-weight:600;} #__ebk_m__ h3{font-size:1.1em;margin:1.2em 0 0.4em;} #__ebk_m__ blockquote{margin:1.5em 0;padding:1.2em 1.2em 1.2em 1.8em;} #__ebk_m__ blockquote p{font-size:0.95em;margin-bottom:0;text-indent:0;}`;
 
     document.head.appendChild(sty);
     document.body.appendChild(div);
 
     const result = [];
     try {
-        for (const page of rawPages) {
-            result.push(...splitPageByHeight(page, div, bodyH));
-        }
+        const fullHtml = rawPages.join('');
+        result.push(...reflowHtmlToPages(fullHtml, div, bodyH));
     } finally {
         document.body.removeChild(div);
         document.head.removeChild(sty);
@@ -368,6 +425,22 @@ export default function ReviewDetail() {
     const initialTab = searchParams.get('tab');
     const [activeTab, setActiveTab] = useState(initialTab || 'ebook');
 
+    // ── 모바일 주소창 자동 숨김 (눈속임 기법) ──
+    useEffect(() => {
+        const hideAddressBar = () => {
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 100);
+        };
+        
+        if (document.readyState === 'complete') {
+            hideAddressBar();
+        } else {
+            window.addEventListener('load', hideAddressBar);
+            return () => window.removeEventListener('load', hideAddressBar);
+        }
+    }, []);
+
     // ── Overlay Arrow Visibility (모바일 탭 시 잠깐 표시) ──
     const [showArrows, setShowArrows] = useState(false);
     const arrowFadeRef = useRef(null);
@@ -375,6 +448,15 @@ export default function ReviewDetail() {
         setShowArrows(true);
         clearTimeout(arrowFadeRef.current);
         arrowFadeRef.current = setTimeout(() => setShowArrows(false), 2500);
+
+        try {
+            // 안드로이드 모바일 등에서 화면 터치 시 브라우저 UI(주소창)를 전체화면 모드로 숨김
+            if (window.innerWidth <= 600 && document.documentElement.requestFullscreen) {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+            }
+        } catch (e) {}
     };
 
     // ── Insight Chat State ─────────────────────────────────
@@ -467,7 +549,7 @@ export default function ReviewDetail() {
                 const mc = getMobileMaxChars();
                 let rawPages = null;
                 if (data.pages && Array.isArray(data.pages)) {
-                    rawPages = data.pages.flatMap(p => splitEbookSection(normalizeBrTags(p), mc));
+                    rawPages = data.pages.flatMap(p => splitEbookSection(optimizeParagraphs(normalizeBrTags(p)), mc));
                 } else if (data.content) {
                     // Split content by <section class="ebook-page">
                     const content = data.content;
@@ -477,9 +559,9 @@ export default function ReviewDetail() {
                         .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
 
                     if (validSections.length > 0) {
-                        rawPages = validSections.flatMap(s => splitEbookSection(normalizeBrTags(s || ''), mc));
+                        rawPages = validSections.flatMap(s => splitEbookSection(optimizeParagraphs(normalizeBrTags(s || '')), mc));
                     } else {
-                        rawPages = splitEbookSection(normalizeBrTags(content || ''), mc);
+                        rawPages = splitEbookSection(optimizeParagraphs(normalizeBrTags(content || '')), mc);
                     }
                 }
                 if (rawPages) {
@@ -703,11 +785,13 @@ ${scriptContext}
                     <span className="rv-topbar-title">{book.title}</span>
                     <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
                 </div>
-                <div className="rv-topbar-right" />
+                <button className="rv-close-btn" onClick={() => navigate('/')}>
+                    <span className="material-symbols-outlined">home</span>
+                </button>
             </div>
 
             {/* ── Tab Bar ── */}
-            <div className="rv-tab-bar">
+            <div className={`rv-tab-bar ${showUI ? 'visible' : 'hidden'}`}>
                 <button
                     className={`rv-tab ${activeTab === 'ebook' || activeTab === 'review' ? 'active' : ''}`}
                     onClick={() => setActiveTab('ebook')}
@@ -750,12 +834,12 @@ ${scriptContext}
                             key={`flipbook-${hasEbook ? 'ebook' : 'review'}`}
                             ref={hasEbook ? ebookFlipBook : reviewFlipBook}
                             width={window.innerWidth > 600 ? 520 : window.innerWidth}
-                            height={window.innerWidth > 600 ? 740 : window.innerHeight - 96}
-                            size="stretch"
+                            height={window.innerWidth > 600 ? 740 : window.innerHeight}
+                            size="fixed"
                             minWidth={280}
                             maxWidth={window.innerWidth > 600 ? 520 : window.innerWidth}
                             minHeight={400}
-                            maxHeight={window.innerWidth > 600 ? 740 : window.innerHeight - 96}
+                            maxHeight={window.innerWidth > 600 ? 740 : window.innerHeight}
                             maxShadowOpacity={0.4}
                             showCover={!hasEbook}
                             usePortrait={true}
@@ -765,7 +849,7 @@ ${scriptContext}
                             className="rv-flipbook"
                             drawShadow={true}
                             flippingTime={800}
-                            autoSize={hasEbook}
+                            autoSize={false}
                         >
                             {hasEbook ? (
                                 // --- Ebook Layout Content ---
@@ -815,32 +899,28 @@ ${scriptContext}
                                                     <span className="rv-ebook-final-brand-name">THE ARCHIVIEW</span>
                                                     <span className="rv-ebook-final-ornament">✦</span>
                                                 </div>
-                                                <p className="rv-ebook-final-essay-tag">INSIGHT ESSAY</p>
-                                                <h2 className="rv-ebook-final-booktitle">{book.title}</h2>
+                                                <h2 className="rv-ebook-final-booktitle" style={{marginBottom:'16px'}}>{book.title}</h2>
                                                 <div className="rv-ebook-final-rule"></div>
-                                                <div className="rv-ebook-final-meta">
-                                                    <div className="rv-ebook-final-meta-row">
-                                                        <span className="rv-ebook-final-meta-key">저  자</span>
-                                                        <span className="rv-ebook-final-meta-val">{book.author}</span>
-                                                    </div>
-                                                    {book.publisher && (
-                                                        <div className="rv-ebook-final-meta-row">
-                                                            <span className="rv-ebook-final-meta-key">출판사</span>
-                                                            <span className="rv-ebook-final-meta-val">{book.publisher}</span>
+                                            </div>
+                                            {book.actionGuide?.length > 0 && (
+                                                <div className="rv-ebook-final-action">
+                                                    <div className="rv-ebook-inline-action-header">✦ 오늘의 실전기록노트</div>
+                                                    {book.actionGuide.map((item, idx) => (
+                                                        <div key={idx} className="rv-ebook-inline-action-box">
+                                                            <span className="rv-ebook-inline-action-num">{idx + 1}</span>
+                                                            <div className="rv-ebook-inline-action-body">
+                                                                <p className="rv-ebook-inline-action-title">{item.title}</p>
+                                                                <p className="rv-ebook-inline-action-desc">{item.description}</p>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    <div className="rv-ebook-final-meta-row">
-                                                        <span className="rv-ebook-final-meta-key">발  행</span>
-                                                        <span className="rv-ebook-final-meta-val">The Archiview</span>
-                                                    </div>
+                                                    ))}
+                                                    <button className="rv-ebook-inline-action-btn" onClick={(e) => { e.stopPropagation(); navigate(`/reading-notes?bookId=${book.id}`); }}>
+                                                        기록노트 바로가기 →
+                                                    </button>
                                                 </div>
-                                            </div>
-                                            <div className="rv-ebook-final-cta">
-                                                <span className="material-symbols-outlined rv-ebook-final-cta-icon">menu_book</span>
-                                                <p className="rv-ebook-final-cta-text">더 깊은 이야기가 궁금하다면<br/><strong>지금 서점으로 떠나보세요</strong></p>
-                                            </div>
+                                            )}
                                             <div className="rv-ebook-final-bottom">
-                                                <p className="rv-ebook-final-copyright">본 콘텐츠는 독자의 인사이트를 담은 창작 에세이이며, 원저작물의 저작권은 저자 및 출판사에 귀속됩니다.</p>
+                                                <p className="rv-ebook-final-copyright">본 콘텐츠는 독자의 인사이트를 담은 창작 에세이 리뷰이며, 더 풍부한 내용은 가까운 서점이나 온라인 서점에서 구매하여 보시기 바랍니다.</p>
                                                 <p className="rv-ebook-final-copyright-mark">© The Archiview — All Rights Reserved</p>
                                             </div>
                                         </div>

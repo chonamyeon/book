@@ -58,7 +58,6 @@ export default function InsightBanner() {
                                 {/* Header Row */}
                                 <div className="flex items-center justify-between pr-8">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-lg">🧠</span>
                                         <h3 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 인사이트 타임</h3>
                                     </div>
                                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-none bg-orange-500/10 border border-orange-500/20">
@@ -89,7 +88,6 @@ export default function InsightBanner() {
                                     </div>
                                     <div className="flex justify-between items-center pt-2 border-t border-white/5 mt-1">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">🔥</span>
                                             <span className="text-[12px] font-black text-white/70 tracking-tight">{streak}일 연속 달성 중</span>
                                         </div>
                                         <span className="text-[9px] font-black text-orange-500/50 uppercase tracking-[0.2em]">Growing Daily</span>

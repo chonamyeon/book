@@ -77,6 +77,24 @@ export default function Editorial() {
         return getAllBooks();
     }, [getAllBooks]);
 
+    // 카테고리 필터링 메모이제이션: 탭 변경 / showAll 변경 시에만 재계산
+    const filteredBooks = useMemo(() => {
+        return allBooks.filter(book => {
+            const bCat = (book.category || '').toLowerCase();
+            if (selectedCategoryId === 'SELF_DEV') return bCat.includes('자기계발');
+            if (selectedCategoryId === 'ECONOMY') return bCat.includes('경제');
+            if (selectedCategoryId === 'MANAGEMENT') return bCat.includes('경영');
+            if (selectedCategoryId === 'HUMANITIES') return bCat.includes('인문') || bCat.includes('역사');
+            if (selectedCategoryId === 'PSYCHOLOGY') return bCat.includes('심리');
+            return false;
+        });
+    }, [allBooks, selectedCategoryId]);
+
+    const visibleBooks = useMemo(
+        () => showAllBooks ? filteredBooks : filteredBooks.slice(0, 10),
+        [filteredBooks, showAllBooks]
+    );
+
     useEffect(() => {
         setShowAllBooks(false);
     }, [selectedCategoryId]);
@@ -94,22 +112,6 @@ export default function Editorial() {
         }, 3500);
         return () => clearInterval(interval);
     }, []);
-
-    const filterBooksByCategory = (catId) => {
-        const filtered = allBooks
-            .filter(book => {
-                const bCat = (book.category || '').toLowerCase();
-                const bSec = (book.section || '').toUpperCase();
-                if (catId === 'SELF_DEV') return bCat.includes('자기계발') || bSec === 'WEALTH';
-                if (catId === 'ECONOMY') return bCat.includes('경제') || bSec === 'WEALTH';
-                if (catId === 'MANAGEMENT') return bCat.includes('경영');
-                if (catId === 'HUMANITIES') return bCat.includes('인문') || bCat.includes('역사') || bSec === 'PHILOSOPHY';
-                if (catId === 'PSYCHOLOGY') return bCat.includes('심리') || bSec === 'HEALING';
-                return false;
-            });
-
-        return showAllBooks ? filtered : filtered.slice(0, 5);
-    };
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -147,6 +149,7 @@ export default function Editorial() {
                             loop
                             muted
                             playsInline
+                            preload="none"
                             className="absolute inset-0 w-full h-full object-cover"
                             style={{ transform: 'scale(1.1) translateX(30px)' }}
                         />
@@ -236,7 +239,7 @@ export default function Editorial() {
                                             <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-none flex items-center justify-center font-black text-xs">
                                                 0{idx + 1}
                                             </div>
-                                            <img src={item.img} alt={item.label} className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+                                            <img src={item.img} alt={item.label} loading="lazy" decoding="async" className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                         <h4 className="font-black text-[15px] tracking-tighter truncate leading-snug">{item.label}</h4>
@@ -269,36 +272,27 @@ export default function Editorial() {
                     <section className="px-6 space-y-20 mb-20 animate-fade-in">
                         {(() => {
                             const cat = categoriesInfo.find(c => c.id === selectedCategoryId);
-                            const books = filterBooksByCategory(cat.id);
+                            const books = visibleBooks;
                             return (
                                 <article key={cat.id} id={`section-${cat.id}`} className="flex flex-col space-y-8 scroll-mt-36">
                                     {/* Category Header (Article Style) */}
                                     <div className="space-y-6">
                                         <div className="relative w-full aspect-[16/9] rounded-none overflow-hidden group shadow-2xl border border-white/5 cursor-pointer" onClick={() => navigate(`/category/${cat.id}`)}>
-                                            <img src={cat.img} alt={cat.label} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                                            <img src={cat.img} alt={cat.label} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                                             <div className="absolute top-4 right-4 bg-[#0e1015]/80 backdrop-blur-md px-4 py-1.5 rounded-none border border-white/10 shadow-lg">
                                                 <span className="text-[10px] text-orange-500 font-black tracking-widest uppercase">{cat.label}</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
 
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1">
-                                                <h3 className="text-2xl font-black leading-tight tracking-tight mb-3">『{cat.label}』 {cat.title}</h3>
-                                                <p className="text-white/40 text-[13px] leading-relaxed line-clamp-2 mb-4">{cat.sub}</p>
-                                                <div className="flex items-center gap-4 text-[10px] font-black text-white/20 uppercase tracking-[0.1em]">
-                                                    <span>{cat.readTime}</span>
-                                                    <span className="w-1 h-1 rounded-none bg-orange-500/40"></span>
-                                                    <span>BY {cat.author}</span>
-                                                </div>
+                                        <div className="w-full">
+                                            <h3 className="text-2xl font-black leading-tight tracking-tight mb-3">『{cat.label}』 {cat.title}</h3>
+                                            <p className="text-white/40 text-[13px] leading-relaxed mb-4">{cat.sub}</p>
+                                            <div className="flex items-center gap-4 text-[10px] font-black text-white/20 uppercase tracking-[0.1em]">
+                                                <span>{cat.readTime}</span>
+                                                <span className="w-1 h-1 rounded-none bg-orange-500/40"></span>
+                                                <span>BY {cat.author}</span>
                                             </div>
-                                            <button
-                                                onClick={() => navigate(`/category/${cat.id}`)}
-                                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-3 rounded-none flex items-center gap-2 shadow-xl shadow-orange-600/20 active:scale-95 transition-all shrink-0"
-                                            >
-                                                <span className="material-symbols-outlined !text-xl fill-1">play_arrow</span>
-                                                <span className="font-bold text-sm tracking-tight">Listen</span>
-                                            </button>
                                         </div>
                                     </div>
 
@@ -306,7 +300,7 @@ export default function Editorial() {
                                     <div className="bg-white/5 rounded-none p-6 space-y-10 border border-white/5">
                                         <div className="flex items-center justify-between mb-2">
                                             <h4 className="text-xs font-black text-orange-500 uppercase tracking-widest">Recommended Books</h4>
-                                            <span className="text-[10px] text-white/30 font-bold uppercase">5 Picked</span>
+                                            <span className="text-[10px] text-white/30 font-bold uppercase">10 Picked</span>
                                         </div>
                                         {books.map((item, idx) => {
                                             const audioFileName = `${item.id}.mp3`;
@@ -325,7 +319,7 @@ export default function Editorial() {
                                                 >
                                                     <div className="flex gap-4 group items-start">
                                                         <div className="w-[100px] aspect-[3/4.2] rounded-none overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-[#1a1d24] cursor-pointer" onClick={() => navigate(`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`)}>
-                                                            <img src={item.cover} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                            <img src={item.cover} alt={item.title} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                             {item.isPodcast && (
                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
@@ -339,17 +333,7 @@ export default function Editorial() {
                                                                 <p className="text-white/40 text-[11px] font-medium italic line-clamp-1 opacity-80">{item.desc || item.author}</p>
                                                             </div>
 
-                                                            {/* Listen / Read Time Indicators */}
-                                                            <div className="flex items-center gap-2 mb-3">
-                                                                <div className="flex gap-1 bg-orange-500/10 px-2 py-0.5 rounded-none items-center">
-                                                                    <span className="text-[10px]">🎧</span>
-                                                                    <span className="text-orange-500 text-[10px] font-black">{durationMin}분</span>
-                                                                </div>
-                                                                <div className="flex gap-1 bg-white/5 px-2 py-0.5 rounded-none items-center">
-                                                                    <span className="text-[10px]">📖</span>
-                                                                    <span className="text-white/60 text-[10px] font-black">{readTimeMin}분</span>
-                                                                </div>
-                                                            </div>
+
 
                                                             <BookCardActions book={item} className="mt-auto" />
                                                         </div>

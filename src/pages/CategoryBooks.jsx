@@ -5,6 +5,8 @@ import { useBookData } from '../hooks/useBookData';
 import TopNavigation from '../components/TopNavigation';
 import { useAudio } from '../contexts/AudioContext';
 import BookCardActions from '../components/BookCardActions';
+import Footer from '../components/Footer';
+import BottomNavigation from '../components/BottomNavigation';
 
 const categoriesInfo = [
     { label: "내 성장을 가속화하고 싶을 때", subLabel: "자기계발 & 성공학", id: 'SELF_DEV', img: '/images/cat_success.png', seq: "01", accent: "orange-500", search: "자기계발" },
@@ -36,18 +38,18 @@ export default function CategoryBooks() {
                 const cat = (book.category || '').toLowerCase();
 
                 if (categoryInfo.id === 'SELF_DEV') return cat.includes('자기계발');
-                if (categoryInfo.id === 'ECONOMY') return cat.includes('경제') || cat.includes('부자');
+                if (categoryInfo.id === 'ECONOMY') return cat.includes('경제');
                 if (categoryInfo.id === 'MANAGEMENT') return cat.includes('경영');
                 if (categoryInfo.id === 'HUMANITIES') return cat.includes('인문');
                 if (categoryInfo.id === 'PSYCHOLOGY') return cat.includes('심리');
                 
-                // BURNOUT is both a legacy section and a category
+                // Keep BURNOUT mapping to old sections to not break completely if accessed
                 if (categoryInfo.id === 'BURNOUT') return cat.includes('커리어') || sec === 'BURNOUT';
-
-                // Legacy IDs support
-                if (categoryInfo.id === 'WEALTH') return cat.includes('부자') || sec === 'WEALTH';
-                if (categoryInfo.id === 'HEALING') return cat.includes('심리') || sec === 'HEALING';
-                if (categoryInfo.id === 'PHILOSOPHY') return cat.includes('인문') || sec === 'PHILOSOPHY';
+                
+                // Keep Legacy Mappings so admin definitions still work
+                if (categoryInfo.id === 'HEALING') return sec === 'HEALING';
+                if (categoryInfo.id === 'WEALTH') return sec === 'WEALTH';
+                if (categoryInfo.id === 'PHILOSOPHY') return sec === 'PHILOSOPHY';
 
                 return false;
             })
@@ -142,7 +144,7 @@ export default function CategoryBooks() {
                                         <div className="flex gap-6">
                                             {/* Smaller, refined book cover */}
                                             <div className="w-28 h-40 shrink-0 rounded-lg overflow-hidden shadow-2xl relative bg-zinc-800 border border-white/5">
-                                                <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                                                <img src={book.cover} alt={book.title} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                                 {book.celebritySlug === 'archiview_original' && (
                                                     <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-emerald-500 text-[8px] font-black text-white shadow-lg">
                                                         ORIGINAL
@@ -196,25 +198,11 @@ export default function CategoryBooks() {
                         </div>
                     </section>
                 </motion.div>
+                
+                <Footer />
             </main>
 
-            {/* 📍 Bottom Navigation Fixed */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] flex justify-center pb-8 pointer-events-none">
-                <div className="flex items-center gap-8 px-8 py-4 glass-card rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-black/20 pointer-events-auto">
-                    <Link to="/" className="text-zinc-600 hover:text-white transition-colors">
-                        <span className="material-symbols-outlined text-[24px]">home</span>
-                    </Link>
-                    <Link to="/editorial" className="text-orange-500">
-                        <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>explore</span>
-                    </Link>
-                    <Link to="/library" className="text-zinc-600 hover:text-white transition-colors">
-                        <span className="material-symbols-outlined text-[24px]">auto_stories</span>
-                    </Link>
-                    <Link to="/profile" className="text-zinc-600 hover:text-white transition-colors">
-                        <span className="material-symbols-outlined text-[24px]">person</span>
-                    </Link>
-                </div>
-            </nav>
+            <BottomNavigation />
         </div>
     );
 }

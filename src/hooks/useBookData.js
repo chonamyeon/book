@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { onSnapshot, collection } from 'firebase/firestore';
-import { celebrities } from '../data/celebrities';
 import { availableAudio } from '../data/availableAudio';
 
 const CACHE_KEY = 'archiview_book_overrides_cache';
@@ -24,9 +23,17 @@ const saveCache = (data) => {
 };
 
 export const useBookData = () => {
-    // 캐시에서 즉시 초기값 로드 → Weekly Focus 등이 첫 렌더에서 바로 표시됨
+    // celebrities.js (436KB)를 동적 임포트로 지연 로딩 → 초기 번들에서 제외
+    const [celebrities, setCelebrities] = useState([]);
     const [overrides, setOverrides] = useState(() => loadCache());
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        import('../data/celebrities').then(m => {
+            setCelebrities(m.celebrities || []);
+            setLoading(false);
+        });
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -39,21 +46,17 @@ export const useBookData = () => {
                 saveCache(data);
             } catch (e) {
                 console.error("Firestore parse error:", e);
-            } finally {
-                if (isMounted) setLoading(false);
             }
         }, (err) => {
             console.warn("Firestore offline — using cached data:", err.code);
-            // 캐시된 데이터로 계속 동작 (네트워크 없어도 흰화면 방지)
             if (isMounted) setLoading(false);
         });
 
         return () => { isMounted = false; unsubscribe(); };
     }, []);
 
-    // 특정 도서 데이터 안전하게 가져오기
     const getBook = useCallback((bookId) => {
-        const localBook = (celebrities || []).flatMap(c => c.books || []).find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bookId);
+        const localBook = celebrities.flatMap(c => c.books || []).find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bookId);
         const override = overrides[bookId];
 
         if (!localBook && !override) return null;
@@ -69,11 +72,10 @@ export const useBookData = () => {
             audioPath: override?.audioPath || localBook?.audioPath || `/audio/${bookId}.mp3`,
             podcastScript: override?.podcastScript || ''
         };
-    }, [overrides]);
+    }, [overrides, celebrities]);
 
-    // 모든 도서 목록 안전하게 가져오기 (adminMode=true 시 비공개 도서도 포함)
     const getAllBooks = useCallback((adminMode = false) => {
-        const allLocalBooks = (celebrities || []).flatMap(celeb =>
+        const allLocalBooks = celebrities.flatMap(celeb =>
             (celeb.books || []).map(book => ({
                 ...book,
                 celebName: celeb.name
@@ -85,7 +87,6 @@ export const useBookData = () => {
             const id = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
             const override = overrides[id];
 
-            // 삭제된 도서 필터링 (오버라이드에 isDeleted가 있으면 제외)
             if (override?.isDeleted) return;
 
             const fileName = `${id}.mp3`;
@@ -102,9 +103,8 @@ export const useBookData = () => {
             });
         });
 
-        // Firestore에만 존재하는 신규 도서 추가
         Object.entries(overrides).forEach(([id, data]) => {
-            if (data.isDeleted) return; // 삭제된 도서 제외
+            if (data.isDeleted) return;
 
             if (!bookMap.has(id) && data.title && (adminMode || data.isPublic === true)) {
                 bookMap.set(id, {
@@ -126,7 +126,7 @@ export const useBookData = () => {
         });
 
         return Array.from(bookMap.values());
-    }, [overrides]);
+    }, [overrides, celebrities]);
 
     return { getBook, getAllBooks, loading, overrides };
 };

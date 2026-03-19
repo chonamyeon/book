@@ -86,7 +86,7 @@ export const recommendations = {
             {
                 place: "뉴욕",
                 country: "미국",
-                image: "https://images.unsplash.com/photo-1496442226666-8d4a0e62e6e9?q=80&w=800&auto=format&fit=crop",
+                image: "https://loremflickr.com/800/600/newyork,city",
                 desc: "끊임없이 변화하고 경쟁하는 세계 경제의 중심에서의 강렬한 자극"
             },
             {
@@ -104,7 +104,7 @@ export const recommendations = {
             {
                 place: "두바이",
                 country: "UAE",
-                image: "https://images.unsplash.com/photo-1512453979798-5ea936a7d40c?q=80&w=800&auto=format&fit=crop",
+                image: "https://loremflickr.com/800/600/dubai,city",
                 desc: "상상을 현실로 만드는 불가능 도전의 현장, 사막 위의 기적"
             }
         ]
@@ -236,13 +236,13 @@ export const recommendations = {
             {
                 place: "피렌체",
                 country: "이탈리아",
-                image: "https://images.unsplash.com/photo-1534429776-27727e242d33?q=80&w=800&auto=format&fit=crop",
+                image: "https://loremflickr.com/800/600/florence,italy",
                 desc: "르네상스의 숨결이 살아있는 골목마다 느껴지는 인간에 대한 찬사"
             },
             {
                 place: "치앙마이",
                 country: "태국",
-                image: "https://images.unsplash.com/photo-1546708973-b339540b5104?q=80&w=800&auto=format&fit=crop",
+                image: "https://loremflickr.com/800/600/chiangmai,thailand",
                 desc: "느린 호흡으로 살아가며 현지인들과 따뜻하게 교감하는 시간"
             },
             {

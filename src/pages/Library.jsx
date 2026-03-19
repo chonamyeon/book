@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import { resultData } from '../data/resultData';
 import { recommendations } from '../data/recommendations';
 import { useAuth } from '../hooks/useAuth';
+import BookCardActions from '../components/BookCardActions';
 
 export default function Library() {
     const { user } = useAuth();
@@ -139,34 +140,46 @@ export default function Library() {
                                 <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
                                 맞춤 추천
                             </h3>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {/* Finder Results */}
                                 {finderRecs.length > 0 && finderRecs.map((book, idx) => (
                                     <div key={`finder-${idx}`} className="flex gap-4 p-4 glass-card bg-orange-500/5 rounded-sm border border-orange-500/20 hover:bg-orange-500/10 transition-colors relative group">
                                         <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-80">
                                             <span className="text-orange-500 text-[8px] font-black uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-sm border border-orange-500/20">FOUND</span>
                                         </div>
-                                        <div className="w-16 h-24 shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden shadow-lg object-cover">
-                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover" />
+                                        <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden shadow-lg object-cover">
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                            {book.isPodcast && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                    <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-center">
-                                            <h4 className="text-white text-[13px] font-black truncate mb-1">{book.title}</h4>
-                                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
-                                            <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep">"{book.desc || '당신을 위해 특별히 찾아낸 도서입니다.'}"</p>
+                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
+                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                            <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
+                                            <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc || '당신을 위해 특별히 찾아낸 도서입니다.'}"</p>
+                                            <BookCardActions book={book} className="mt-auto" />
                                         </div>
                                     </div>
                                 ))}
 
                                 {/* Persona Results */}
                                 {myRecs.map((book, idx) => (
-                                    <div key={`persona-${idx}`} className="flex gap-4 p-4 glass-card bg-white/[0.02] rounded-sm border border-white/5 hover:bg-white/[0.05] transition-colors">
-                                        <div className="w-16 h-24 shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden object-cover">
-                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover" />
+                                    <div key={`persona-${idx}`} className="flex gap-4 p-4 glass-card bg-white/[0.02] rounded-sm border border-white/5 hover:bg-white/[0.05] transition-colors relative group">
+                                        <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden object-cover">
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                            {book.isPodcast && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                    <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-center">
-                                            <h4 className="text-white text-[13px] font-black truncate mb-1">{book.title}</h4>
-                                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
-                                            <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep">"{book.desc}"</p>
+                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
+                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                            <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
+                                            <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc}"</p>
+                                            <BookCardActions book={book} className="mt-auto" />
                                         </div>
                                     </div>
                                 ))}
@@ -184,39 +197,30 @@ export default function Library() {
                         </div>
 
                         {savedBooks.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-4">
                                 {savedBooks.map((book, idx) => (
-                                    <div key={idx} className="group relative">
-                                        <div className="relative aspect-[2/3] bg-white/[0.02] rounded-sm overflow-hidden border border-white/5 shadow-lg mb-2.5">
-                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-105" />
+                                    <div key={`saved-${idx}`} className="flex gap-4 p-4 glass-card bg-white/[0.02] rounded-sm border border-white/5 hover:bg-white/[0.05] transition-colors relative group">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); removeSavedBook(book.title); }}
+                                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500/10 text-red-500/70 border border-transparent hover:border-red-500/30 flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all z-10"
+                                            title="서재에서 삭제"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px] font-medium">close</span>
+                                        </button>
 
-                                            {/* Overlay Actions */}
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
-                                                <Link
-                                                    to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}?tab=review`}
-                                                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px] font-black">visibility</span>
-                                                </Link>
-
-                                                <a
-                                                    href={`https://www.coupang.com/np/search?component=&q=${encodeURIComponent(book.title)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-orange-500 hover:text-white transition-colors shadow-xl"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px] font-black">shopping_bag</span>
-                                                </a>
-                                                <button
-                                                    onClick={() => removeSavedBook(book.title)}
-                                                    className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-xl"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px] font-black">delete</span>
-                                                </button>
-                                            </div>
+                                        <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden shadow-lg object-cover relative">
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                            {book.isPodcast && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                    <span className="material-symbols-outlined text-white text-2xl">play_circle</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <h3 className="text-white text-[12px] font-black truncate pr-2 tracking-tight">{book.title}</h3>
-                                        <p className="text-white/40 text-[10px] uppercase font-bold tracking-wider truncate mt-0.5">{book.author}</p>
+                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
+                                            <h4 className="text-white text-[15px] font-black truncate pr-6 mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                            <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
+                                            <BookCardActions book={book} className="mt-auto" />
+                                        </div>
                                     </div>
                                 ))}
                             </div>

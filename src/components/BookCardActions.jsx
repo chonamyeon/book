@@ -1,16 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { availableAudio } from '../data/availableAudio';
+
+const KAKAO_KEY = '91e847c5035f8d9758712395669f6927';
+const SITE_ORIGIN = 'https://archiview.store';
+
+// Instagram SVG icon
+const InstagramIcon = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+);
+
+// KakaoTalk SVG icon (speech bubble)
+const KakaoIcon = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.698 1.524 5.08 3.84 6.56l-.96 3.52 4.16-2.24c.95.22 1.93.36 2.96.36 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
+    </svg>
+);
 
 /**
  * 공유 북카드 액션 버튼 컴포넌트
  * 4개 버튼: 리뷰 디테일 | ▶ 재생 | 서재 추가 | 도서 구매
+ * + 공유 버튼: 인스타그램 | 카카오톡 | 링크 복사
  * 이 컴포넌트를 수정하면 모든 페이지에 동시 적용됩니다.
  */
 export default function BookCardActions({ book, className = '' }) {
+    const [toast, setToast] = useState('');
+
     const purchaseUrl = book.purchaseLink ||
         `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=All&SearchWord=${encodeURIComponent(book.title)}`;
 
     const safeId = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
+    const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+
+    const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(''), 2000);
+    };
 
     const addToLibrary = (e) => {
         e.stopPropagation();
@@ -25,13 +54,145 @@ export default function BookCardActions({ book, className = '' }) {
         alert('서재에 보관되었습니다. ✅');
     };
 
+    const handleLinkCopy = (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('링크 복사됨! 📋');
+        }).catch(() => {
+            showToast('복사 실패');
+        });
+    };
+
+    const handleKakaoShare = (e) => {
+        e.stopPropagation();
+        try {
+            if (!window.Kakao) throw new Error('no sdk');
+            if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY);
+            window.Kakao.Share.sendDefault({
+                objectType: 'feed',
+                content: {
+                    title: book.title,
+                    description: book.desc || book.description || 'The Archiview에서 확인하세요.',
+                    imageUrl: book.cover || '',
+                    link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+                },
+                buttons: [
+                    { title: '리뷰 보기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
+                ],
+            });
+        } catch {
+            // SDK 도메인 미등록 등 오류 시 → 카카오 공유 URL로 직접 이동
+            const kakaoShareUrl = `https://sharer.kakao.com/talk/friends/picker/easylink?app_key=${KAKAO_KEY}&link_ver=4.0&template_id=&url=${encodeURIComponent(shareUrl)}`;
+            if (navigator.share) {
+                navigator.share({
+                    title: book.title,
+                    text: `📚 『${book.title}』 - The Archiview에서 확인하세요!`,
+                    url: shareUrl,
+                }).catch(() => {
+                    navigator.clipboard.writeText(shareUrl).then(() => showToast('링크 복사됨! 카카오톡에 붙여넣기 하세요'));
+                });
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => showToast('링크 복사됨! 카카오톡에 붙여넣기 하세요'));
+            }
+        }
+    };
+
+    const handleInstagramShare = (e) => {
+        e.stopPropagation();
+        // 모바일: 네이티브 공유 시트 (인스타그램 포함)
+        if (navigator.share) {
+            navigator.share({
+                title: book.title,
+                text: `📚 『${book.title}』 - The Archiview에서 확인하세요!`,
+                url: shareUrl,
+            }).catch(() => {});
+        } else {
+            // PC: 링크 복사 후 인스타그램 열기
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showToast('링크 복사됨! 인스타그램에 붙여넣기 하세요 📸');
+                setTimeout(() => window.open('https://www.instagram.com/', '_blank'), 800);
+            });
+        }
+    };
+
+    const getAudioDurationMin = (podcastFile) => {
+        if (!podcastFile) return 15;
+        const fileName = podcastFile.split('/').pop();
+        const duration = availableAudio[fileName];
+        return Math.ceil((duration || 900) / 60);
+    };
+
+    const getAudioDurationFormatted = (bookData) => {
+        if (!bookData) return "15:00";
+        let duration = null;
+
+        const findDuration = (filename) => {
+            if (!filename) return null;
+            const key = String(filename).toLowerCase();
+            return availableAudio[key] || availableAudio[`${key}.mp3`];
+        };
+
+        if (bookData.podcastFile) duration = findDuration(bookData.podcastFile.split('/').pop());
+        if (!duration && bookData.audioPath) duration = findDuration(bookData.audioPath.split('/').pop());
+        if (!duration && bookData.voiceAudioUrl) duration = findDuration(bookData.voiceAudioUrl.split('/').pop());
+        if (!duration && bookData.audioUrl) duration = findDuration(bookData.audioUrl.split('/').pop());
+        if (!duration && bookData.id) duration = findDuration(bookData.id);
+
+        if (!duration) return "15:00";
+
+        const m = Math.floor(duration / 60);
+        const s = Math.floor(duration % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     return (
-        <div className={`grid grid-cols-2 gap-1.5 ${className}`}>
+        <div className={`w-full relative ${className}`}>
+            {/* 토스트 알림 */}
+            {toast && (
+                <div className="absolute -top-7 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                    <span className="bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        {toast}
+                    </span>
+                </div>
+            )}
+
+            {/* 시간/페이지 뱃지 + 공유 아이콘 (한 줄) */}
+            <div className="flex gap-2 items-center mb-3">
+                <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">
+                    <span>🎧</span>
+                    <span>{book.isPodcast ? getAudioDurationFormatted(book) : '15:00'}</span>
+                </div>
+                {(book.youtubeUrl || book.videoUrl || book.videoId || book.videoLength || book.videoTime || book.isYoutube) && (
+                    <div className="flex items-center gap-1 text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
+                        <span>▶️</span>
+                        <span>{book.videoLength || book.videoTime || book.youtubeDuration || 5}분</span>
+                    </div>
+                )}
+
+                {/* 공유 아이콘 (오른쪽 정렬) */}
+                <div className="ml-auto flex items-center gap-1" style={{flexShrink:0}}>
+                    <span className="text-[10px] font-black text-white/90 tracking-wider whitespace-nowrap">공유</span>
+                    <button onClick={handleInstagramShare} title="인스타그램 공유"
+                        style={{width:26,height:26,minWidth:26,minHeight:26,borderRadius:'50%',flexShrink:0,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)'}}>
+                        <span style={{display:'flex',alignItems:'center',justifyContent:'center',color:'#ff4d88'}}><InstagramIcon /></span>
+                    </button>
+                    <button onClick={handleKakaoShare} title="카카오톡 공유"
+                        style={{width:26,height:26,minWidth:26,minHeight:26,borderRadius:'50%',flexShrink:0,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)'}}>
+                        <span style={{display:'flex',alignItems:'center',justifyContent:'center',color:'#FFE400'}}><KakaoIcon /></span>
+                    </button>
+                    <button onClick={handleLinkCopy} title="링크 복사"
+                        style={{width:26,height:26,minWidth:26,minHeight:26,borderRadius:'50%',flexShrink:0,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)'}}>
+                        <span style={{display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,1)'}} className="material-symbols-outlined text-[12px]">link</span>
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
             {/* 1. 리뷰 디테일 */}
             <Link
                 to={`/review/${safeId}?tab=ebook`}
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center gap-1 py-2 rounded-none bg-white/5 border border-white/10 text-[10px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
             >
                 <span className="material-symbols-outlined text-[14px]">menu_book</span>
                 리뷰 디테일
@@ -41,7 +202,7 @@ export default function BookCardActions({ book, className = '' }) {
             <Link
                 to={`/review/${safeId}?tab=podcast`}
                 onClick={(e) => e.stopPropagation()}
-                className="group flex items-center justify-center gap-1 py-2 rounded-none bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 text-[10px] font-black transition-all whitespace-nowrap"
+                className="group flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
             >
                 <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>
                 <div className="hidden group-hover:flex group-active:flex items-center justify-center gap-[1.5px] h-[14px] w-[14px]">
@@ -57,7 +218,7 @@ export default function BookCardActions({ book, className = '' }) {
             {/* 3. 서재 추가 */}
             <button
                 onClick={addToLibrary}
-                className="flex items-center justify-center gap-1 py-2 rounded-none bg-white/5 border border-white/10 text-[10px] font-black text-white/70 hover:text-white hover:bg-white/10 transition-all whitespace-nowrap"
+                className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
             >
                 <span className="material-symbols-outlined text-[14px]">bookmark_add</span>
                 서재 추가
@@ -69,11 +230,12 @@ export default function BookCardActions({ book, className = '' }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center gap-1 py-2 rounded-none bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[10px] font-black text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all whitespace-nowrap"
+                className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
             >
                 <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
                 도서 구매
             </a>
         </div>
+    </div>
     );
 }

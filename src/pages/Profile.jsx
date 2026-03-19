@@ -4,10 +4,19 @@ import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { logout } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useAudio } from '../contexts/AudioContext';
 import Footer from '../components/Footer';
+
+const formatTime = (sec) => {
+    if (!sec || isNaN(sec)) return '00:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
 
 export default function Profile() {
     const { user, loading } = useAuth();
+    const { dailyListenTime, dailyTarget, streak } = useAudio();
     const navigate = useNavigate();
 
     // Redirect to login if not authenticated
@@ -44,6 +53,10 @@ export default function Profile() {
 
     if (!user) return null;
 
+    const totalBlocks = 30;
+    const filledBlocks = Math.max(0, Math.min(totalBlocks, dailyTarget > 0 ? Math.floor(dailyListenTime / (dailyTarget / totalBlocks)) : 0));
+    const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(Math.max(0, totalBlocks - filledBlocks));
+
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
@@ -55,7 +68,7 @@ export default function Profile() {
                     <div className="relative w-full aspect-[1.58/1] rounded-none overflow-hidden shadow-2xl group">
                         {/* Background with texture */}
                         <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-black"></div>
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                        <div className="absolute inset-0 opacity-10" style={{backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.15)1px,transparent 1px)',backgroundSize:'12px 12px'}}></div>
                         <div className="absolute -top-24 -right-24 size-64 bg-gold/20 blur-[80px] rounded-none"></div>
 
                         {/* Card Content */}
@@ -73,7 +86,7 @@ export default function Profile() {
                             <div>
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="size-12 rounded-none bg-slate-700 border-2 border-gold/50 overflow-hidden shadow-lg">
-                                        <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=0D8ABC&color=fff`} alt={user.displayName} className="w-full h-full object-cover" />
+                                        <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=0D8ABC&color=fff`} alt={user.displayName} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                     </div>
                                     <div>
                                         <p className="text-white font-bold text-lg leading-none">{user.displayName}</p>
@@ -94,19 +107,50 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
-                            <span className="block text-2xl font-black text-white mb-1">12</span>
-                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Archived</span>
-                        </div>
-                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
-                            <span className="block text-2xl font-black text-white mb-1">85</span>
-                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Insights</span>
-                        </div>
-                        <div className="bg-white/5 rounded-none p-4 text-center border border-white/5">
-                            <span className="block text-2xl font-black text-white mb-1">4</span>
-                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Badges</span>
+                    {/* Insight Time Banner (Replacing Stats Row) */}
+                    <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm w-full">
+                        {/* Premium Glassmorphism Background */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none" />
+                        
+                        <div className="relative z-10 flex flex-col gap-4">
+                            {/* Header Row */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 인사이트 타임</h3>
+                                </div>
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-orange-500/10 border border-orange-500/20">
+                                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">ON AIR</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_5px_rgba(249,115,22,0.8)]" />
+                                </div>
+                            </div>
+
+                            {/* Stats Row */}
+                            <div className="flex items-baseline justify-between">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-[28px] font-black text-white tracking-tighter tabular-nums leading-none">
+                                        {formatTime(dailyListenTime)}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-white/40 tracking-tight uppercase">Min Listened</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[14px] font-bold text-white/60 tracking-tight">
+                                        / {formatTime(dailyTarget)} <span className="text-white/20 ml-1 font-black">GOAL</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Progress Row */}
+                            <div className="space-y-2">
+                                <div className="text-[14px] sm:text-[16px] font-mono tracking-[0.12em] text-orange-500/90 leading-none filter drop-shadow-[0_0_8px_rgba(249,115,22,0.4)] whitespace-nowrap overflow-hidden text-clip flex justify-center w-full">
+                                    {progressBar}
+                                </div>
+                                <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-1">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[12px] font-black text-white/70 tracking-tight">{streak}일 연속 달성 중</span>
+                                    </div>
+                                    <span className="text-[9px] font-black text-orange-500/50 uppercase tracking-[0.2em]">Growing Daily</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -129,7 +173,7 @@ export default function Profile() {
                                     <div className="size-8 rounded-none bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
                                         <span className="material-symbols-outlined text-lg">edit_note</span>
                                     </div>
-                                    <span className="text-sm text-slate-200 font-medium">독서 노트</span>
+                                    <span className="text-sm text-slate-200 font-medium">기록노트</span>
                                 </div>
                                 <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
                             </button>

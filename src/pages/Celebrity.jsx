@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
 import TopNavigation from '../components/TopNavigation';
 import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
-import { bookScripts } from '../data/bookScripts';
 import { useBookData } from '../hooks/useBookData';
 import BookCardActions from '../components/BookCardActions';
 
@@ -42,17 +41,27 @@ export default function Celebrity() {
         setExpandedReviews(prev => ({ ...prev, [index]: !prev[index] }));
     };
 
-    const cleanText = (t) => {
+    const cleanText = useCallback((t) => {
         if (!t) return "";
         return t.replace(/\[GEMINI [\d.]+ ANALYSIS\]/gi, '')
             .replace(/팟캐스트 대본 제작을 위한/g, '')
             .replace(/[#*]/g, '')
             .replace(/---/g, '')
             .replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
-    };
+    }, []);
+
+    // 각 도서의 desc/review 정제 텍스트를 미리 계산
+    const cleanedBooks = useMemo(() =>
+        allCelebBooks.map(book => ({
+            ...book,
+            _cleanDesc: cleanText(book.desc),
+            _cleanReview: cleanText(book.review) || cleanText(book.desc),
+        })),
+    [allCelebBooks, cleanText]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
+        setExpandedReviews({});
     }, [id]);
 
     return (
@@ -71,6 +80,8 @@ export default function Celebrity() {
                                     className="w-full h-full object-cover brightness-90 contrast-[1.15]"
                                     src={celeb.image}
                                     alt={celeb.name}
+                                    fetchpriority="high"
+                                    decoding="async"
                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544275039-35ed06764574?q=80&w=2000'; }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/30 to-transparent"></div>
@@ -113,6 +124,8 @@ export default function Celebrity() {
                                 <img
                                     src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
                                     alt="Library Background"
+                                    loading="lazy"
+                                    decoding="async"
                                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 />
                                 <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
@@ -138,11 +151,11 @@ export default function Celebrity() {
                         {/* Category: Pivot */}
                         <div>
                             <div className="flex items-center justify-between mb-8 border-b border-primary/30 pb-4">
-                                <h4 className="text-2xl font-light tracking-tight"><span className="text-accent mr-2">01.</span>인생의 책들</h4>
+                                <h4 className="text-2xl font-light tracking-tight"><span className="text-accent italic mr-1">{celeb.name}</span>의 인생 책들</h4>
                                 <span className="text-[10px] uppercase tracking-widest text-slate-500">추천 도서</span>
                             </div>
                             <div className="flex flex-col gap-12">
-                                {allCelebBooks.map((book, index) => (
+                                {cleanedBooks.map((book, index) => (
                                     <div key={index} className="flex flex-col gap-6 group">
                                         <div className="flex gap-6">
                                             <a
@@ -156,6 +169,9 @@ export default function Celebrity() {
                                                         className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110"
                                                         src={book.cover}
                                                         alt={book.title}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                                                     />
                                                     <div className="absolute inset-0 bg-black/0 group-hover/cover:bg-black/20 transition-colors flex items-center justify-center">
                                                         <span className="material-symbols-outlined text-white opacity-0 group-hover/cover:opacity-100 transition-opacity">{book.purchaseLink ? 'shopping_cart' : 'menu_book'}</span>
@@ -166,22 +182,21 @@ export default function Celebrity() {
                                                 <div>
                                                     <h5 className="text-xl font-bold leading-tight mb-1 text-white">{book.title}</h5>
                                                     <p className="text-xs text-slate-500 mb-3 italic">{book.author}</p>
-                                                    <p className="text-sm text-slate-400 font-light leading-snug line-clamp-3">{cleanText(book.desc)}</p>
+                                                    <p className="text-sm text-slate-400 font-light leading-snug line-clamp-3">{book._cleanDesc}</p>
                                                     {book.source && (
-                                                        <p className="text-[10px] text-gold/80 mt-3 flex items-center gap-1 font-bold tracking-wider uppercase">
-                                                            <span className="material-symbols-outlined text-[12px]">campaign</span>
-                                                            {book.source}
-                                                        </p>
+                                                        <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-gold/10 border border-gold/30 rounded-sm">
+                                                            <span className="text-[9px] text-slate-400 font-bold">출처</span>
+                                                            <span className="text-slate-500 text-[9px]">|</span>
+                                                            <span className="material-symbols-outlined text-[11px] text-gold">campaign</span>
+                                                            <span className="text-[9px] text-gold font-black uppercase tracking-wider">{book.source}</span>
+                                                        </div>
                                                     )}
-                                                </div>
-                                                <div className="mt-4">
-                                                    <span className="text-white font-black text-xl">{book.price}</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Detailed Review Section for AdSense */}
-                                        {book.review && (
+                                        {book._cleanReview && (
                                             <div className="bg-white/5 rounded-2xl p-6 border border-white/5 relative overflow-hidden transition-all duration-500">
                                                 <div className="absolute top-0 left-0 w-1 h-full bg-gold/50"></div>
                                                 <div className="flex items-center justify-between mb-4">
@@ -197,7 +212,7 @@ export default function Celebrity() {
                                                     </button>
                                                 </div>
                                                 <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-6'}`}>
-                                                    {cleanText(book.review)}
+                                                    {book._cleanReview}
                                                 </p>
                                             </div>
                                         )}

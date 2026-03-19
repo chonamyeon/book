@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAudio } from '../contexts/AudioContext';
 
 const fmt = (s) => {
@@ -11,6 +11,7 @@ const fmt = (s) => {
 
 export default function MiniPlayer() {
     const navigate = useNavigate();
+    const location = useLocation();
     const {
         podcastPlaying, podcastInfo, currentTime, duration,
         playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3
@@ -27,7 +28,9 @@ export default function MiniPlayer() {
     };
 
     // 바텀 네비 높이(약 56px) + safe area 위에 표시
-    const bottomNavH = 56;
+    // 리뷰(상세) 페이지에서는 바텀 네비가 없으므로 0으로 설정
+    const isReviewMode = location.pathname.startsWith('/review');
+    const bottomNavH = isReviewMode ? 0 : 56;
 
     return (
         <div style={{

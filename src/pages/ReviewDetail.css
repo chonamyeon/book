@@ -212,9 +212,8 @@
     max-width: 520px;
     height: 78vh;
     max-height: 740px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    overflow: hidden;
 }
 
 .rv-flipbook {
@@ -226,14 +225,14 @@
 /* 모바일 대응: 공간 최대한 활용 */
 @media (max-width: 600px) {
     .rv-stage {
-        padding: 155px 0 90px;
+        padding: 0;
     }
 
     .rv-book-container {
-        width: calc(100vw - 32px);
-        max-width: 380px;
-        height: calc(100vh - 265px);
-        max-height: 680px;
+        width: 100vw;
+        max-width: none;
+        height: 100dvh;
+        max-height: none;
     }
 }
 
@@ -247,7 +246,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background: #ffffff !important;
+    background: #111111 !important;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -258,7 +257,7 @@
 /* 하드 커버나 마지막 페이지는 제본선 다르게 처리할 수 있음 */
 .rv-cover-page .rv-sheet,
 .rv-final-page .rv-sheet {
-    background: #ffffff;
+    background: #111111;
 }
 
 /* ── Cover Page ─────────────────────────────────────── */
@@ -861,6 +860,19 @@
     border: 1px solid rgba(200, 168, 112, 0.22);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0,0,0,0.3);
     white-space: nowrap;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.rv-tab-bar.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(-20px);
+}
+
+.rv-tab-bar.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
 }
 
 .rv-tab {
@@ -1954,7 +1966,7 @@
 
 /* ── E-book FlipBook Premium Styles ─────────────────── */
 .rv-sheet {
-    background: #faf7f2 !important;
+    background: #111111 !important;
 }
 
 .rv-ebook-cover-page .rv-sheet {
@@ -2064,7 +2076,7 @@
 /* Content Page */
 .rv-ebook-content-page .rv-sheet {
     padding: 36px 40px 44px;
-    background: #faf7f2 !important;
+    background: #111111 !important;
 }
 
 .rv-ebook-page-header {
@@ -2073,7 +2085,7 @@
     align-items: center;
     margin-bottom: 22px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e2d8cc;
+    border-bottom: 1px solid #333333;
 }
 
 .rv-ebook-chapter-label {
@@ -2106,16 +2118,16 @@
 }
 
 .rv-ebook-body-html {
-    font-size: 14.5px;
-    line-height: 1.95;
-    color: #2a2018;
-    padding-bottom: 16px;
+    font-size: 20px;
+    line-height: 1.75;
+    color: #e4e0d8;
+    padding-bottom: 24px;
     width: 100%;
     box-sizing: border-box;
     font-family: 'Noto Serif KR', Georgia, serif;
     word-break: keep-all;
     overflow-wrap: break-word;
-    letter-spacing: 0.1px;
+    letter-spacing: -0.2px;
 }
 
 .rv-ebook-body-html * {
@@ -2127,63 +2139,67 @@
 }
 
 .rv-ebook-body-html h1 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1a1208;
-    margin: 0 0 1.4rem;
-    line-height: 1.45;
-    letter-spacing: -0.3px;
+    font-size: 1em;
+    font-weight: 800;
+    color: #f2ebd9;
+    margin: 0 0 1.5em;
+    line-height: 1.5;
+    letter-spacing: -0.5px;
     font-family: 'Noto Serif KR', 'Playfair Display', serif;
     text-align: center;
-    padding-bottom: 0.8rem;
-    border-bottom: 2px solid #c8a870;
+    padding: 1.2em 0.5em;
+    border-top: 1px solid rgba(200,168,112,0.25);
+    border-bottom: 1px solid rgba(200,168,112,0.25);
+    background: rgba(200, 168, 112, 0.03);
 }
 
 .rv-ebook-body-html h2 {
-    font-size: 1rem;
+    font-size: 1.25em;
     font-weight: 600;
-    color: #4a3220;
-    margin: 1.6rem 0 0.7rem;
+    color: #e0d8cc;
+    margin: 1.5em 0 0.8em;
     line-height: 1.5;
     font-family: 'Noto Serif KR', serif;
-    padding-left: 0.7rem;
-    border-left: 2px solid #c8a870;
+    padding-left: 0.8em;
+    border-left: 2.5px solid #c8a870;
     letter-spacing: 0.2px;
 }
 
 .rv-ebook-body-html h3 {
-    font-size: 0.9rem;
+    font-size: 1.1em;
     font-weight: 600;
-    color: #6a5040;
-    margin: 1.2rem 0 0.5rem;
+    color: #cdbda8;
+    margin: 1.2em 0 0.6em;
     font-family: 'Pretendard', sans-serif;
     letter-spacing: 0.5px;
 }
 
 .rv-ebook-body-html p {
-    margin-bottom: 1em;
+    margin-bottom: 1.35em;
     text-align: justify;
     word-break: keep-all;
-    color: #2a2018;
+    color: #e6e1d6;
+    text-indent: 0.4em;
 }
 
 .rv-ebook-body-html b, .rv-ebook-body-html strong {
-    color: #7a4e20;
+    color: #d1b789;
     font-weight: 700;
 }
 
 .rv-ebook-body-html em {
-    color: #5a4030;
+    color: #b5a48f;
     font-style: italic;
 }
 
 /* 핵심 문장 강조 (★ mark) */
 /* text-decoration은 * { text-decoration: none !important } 전역 리셋에 막혀 border-bottom 사용 */
 .rv-ebook-body-html mark {
-    background: transparent;
-    color: #2a2018;
-    border-bottom: 1.5px solid #c8a870;
-    padding-bottom: 1px;
+    background: linear-gradient(120deg, rgba(200, 168, 112, 0.25) 0%, rgba(200, 168, 112, 0) 100%);
+    color: #ffffff;
+    border-bottom: 1px solid rgba(200, 168, 112, 0.8);
+    padding: 0px 4px 1px;
+    border-radius: 2px;
     font-weight: 600;
 }
 
@@ -2207,14 +2223,13 @@
 /* Blockquote (인용구) */
 .rv-ebook-body-html blockquote {
     position: relative;
-    text-align: center;
-    margin: 1.6rem 0;
-    padding: 1.6rem 1.2rem 1.2rem;
-    background: linear-gradient(135deg, rgba(212,184,120,0.06), rgba(200,168,112,0.04));
-    border-top: 1px solid #d4b896;
-    border-bottom: 1px solid #d4b896;
-    border-left: none;
-    border-right: none;
+    text-align: left;
+    margin: 1.8rem 0;
+    padding: 1.4rem 1.4rem 1.4rem 2rem;
+    background: rgba(20, 18, 15, 0.4);
+    border-left: 3px solid #c8a870;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .rv-ebook-body-html blockquote::before {
@@ -2231,11 +2246,12 @@
 }
 
 .rv-ebook-body-html blockquote p {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: #2a1e10;
+    font-size: 0.95em;
+    line-height: 1.7;
+    color: #e0d8cc;
     font-style: italic;
     font-family: 'Noto Serif KR', 'Playfair Display', Georgia, serif;
+    text-indent: 0;
     margin: 0 0 0.6rem;
     text-align: center;
     letter-spacing: 0.3px;
@@ -2262,12 +2278,12 @@
     padding-top: 10px;
     margin-top: auto;
     text-align: center;
-    border-top: 1px solid #e2d8cc;
+    border-top: 1px solid #333333;
 }
 
 .rv-ebook-page-number {
     font-size: 10px;
-    color: #b8a898;
+    color: #666666;
     letter-spacing: 2.5px;
     font-family: 'Pretendard', sans-serif;
 }
@@ -2291,6 +2307,188 @@
     display: block;
 }
 
+/* Inline Action Guide (last ebook content page) */
+.rv-ebook-inline-action {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid #e2d8cc;
+}
+.rv-ebook-inline-action-header {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #c8a870;
+    margin-bottom: 10px;
+}
+.rv-ebook-inline-action-item {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+.rv-ebook-inline-action-box {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: rgba(200, 168, 112, 0.08);
+    border: 1px solid rgba(200, 168, 112, 0.3);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+.rv-ebook-inline-action-num {
+    font-size: 16px;
+    font-weight: 900;
+    color: #c8a870;
+    min-width: 18px;
+    line-height: 1.4;
+}
+.rv-ebook-inline-action-body { flex: 1; }
+.rv-ebook-inline-action-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 3px;
+    line-height: 1.4;
+    text-align: left;
+}
+.rv-ebook-inline-action-desc {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    line-height: 1.5;
+    text-align: left;
+}
+.rv-ebook-inline-action-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 8px 0;
+    background: #c8a870;
+    color: #1a1208;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+/* Action Guide Page */
+.rv-ebook-action-page,
+.rv-ebook-action-page .rv-sheet {
+    width: 100% !important;
+    height: 100% !important;
+}
+.rv-ebook-action-page .rv-sheet {
+    background: linear-gradient(160deg, #0d1117 0%, #0f1a14 55%, #0d1117 100%) !important;
+}
+.rv-ebook-action-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 18px 18px;
+    gap: 12px;
+    overflow: hidden;
+}
+.rv-ebook-action-header {
+    text-align: center;
+    margin-bottom: 4px;
+}
+.rv-ebook-action-badge {
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #c8a870;
+    opacity: 0.8;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+}
+.rv-ebook-action-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f5ead8;
+    font-family: 'Pretendard', sans-serif;
+    margin: 0 0 4px;
+}
+.rv-ebook-action-subtitle {
+    font-size: 8px;
+    color: rgba(200,168,112,0.6);
+    letter-spacing: 0.3px;
+    margin: 0;
+}
+.rv-ebook-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+.rv-ebook-action-card {
+    display: flex;
+    gap: 10px;
+    background: rgba(200,168,112,0.06);
+    border: 1px solid rgba(200,168,112,0.15);
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+.rv-ebook-action-card.completed {
+    background: rgba(34,197,94,0.06);
+    border-color: rgba(34,197,94,0.2);
+}
+.rv-ebook-action-num {
+    font-size: 16px;
+    font-weight: 900;
+    color: rgba(200,168,112,0.4);
+    line-height: 1;
+    min-width: 16px;
+    padding-top: 1px;
+}
+.rv-ebook-action-body {
+    flex: 1;
+}
+.rv-ebook-action-card-title {
+    font-size: 9px;
+    font-weight: 700;
+    color: #f0e0c0;
+    margin: 0 0 3px;
+    line-height: 1.4;
+}
+.rv-ebook-action-card-desc {
+    font-size: 7.5px;
+    color: rgba(200,168,112,0.6);
+    margin: 0 0 6px;
+    line-height: 1.5;
+}
+.rv-ebook-action-record-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(200,168,112,0.12);
+    border: 1px solid rgba(200,168,112,0.3);
+    border-radius: 3px;
+    color: #c8a870;
+    font-size: 7px;
+    font-weight: 700;
+    padding: 3px 7px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+}
+.rv-ebook-action-done {
+    font-size: 7px;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: 0.3px;
+}
+.rv-ebook-action-footer-text {
+    font-size: 7px;
+    color: rgba(200,168,112,0.4);
+    text-align: center;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
 /* Final Page — Premium Colophon */
 .rv-ebook-final-page .rv-sheet {
     background: linear-gradient(160deg, #120f08 0%, #2a2010 55%, #1a1508 100%) !important;
@@ -2301,9 +2499,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 32px 28px 28px;
+    justify-content: flex-start;
+    gap: 24px;
+    padding: 32px 28px 90px;
     text-align: center;
+    overflow-y: auto;
+}
+
+.rv-ebook-final-bottom {
+    margin-top: auto;
 }
 
 .rv-ebook-final-top {
@@ -2427,24 +2631,29 @@
     letter-spacing: 0.3px;
 }
 
+.rv-ebook-final-action {
+    width: 100%;
+    padding: 12px 0;
+    flex: 1;
+}
 .rv-ebook-final-bottom {
     width: 100%;
     text-align: center;
 }
 
 .rv-ebook-final-copyright {
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1.7;
-    color: rgba(200, 168, 112, 0.35);
+    color: rgba(255, 255, 255, 0.5);
     font-family: 'Pretendard', sans-serif;
     word-break: keep-all;
     margin-bottom: 5px;
 }
 
 .rv-ebook-final-copyright-mark {
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
-    color: rgba(200, 168, 112, 0.5);
+    color: rgba(255, 255, 255, 0.5);
     letter-spacing: 1.5px;
     font-family: 'Pretendard', sans-serif;
 }
@@ -2692,6 +2901,10 @@
         height: 100% !important;
         max-height: none !important;
         margin: 0 !important;
+        overflow: visible !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
     }
 
     /* ── 오버레이 화살표 모바일 위치 ── */
@@ -2710,35 +2923,47 @@
     }
 
     .rv-ebook-body-html {
-        font-size: 13px !important;
-        line-height: 1.88 !important;
+        font-size: 20px !important;
+        line-height: 1.75 !important;
         padding-bottom: 0 !important;
+        letter-spacing: -0.2px !important;
     }
 
     .rv-ebook-body-html p {
         text-align: left !important;
-        margin-bottom: 0.75em !important;
+        margin-bottom: 1.35em !important;
         word-break: break-word !important;
         overflow-wrap: anywhere !important;
+        text-indent: 0.4em !important;
     }
 
     .rv-ebook-body-html h1 {
-        font-size: 1.05rem !important;
-        margin-bottom: 1rem !important;
+        font-size: 1em !important;
+        margin: 0 0 1.5em !important;
+        padding: 1.2em 0.5em !important;
+        font-weight: 800 !important;
+        background: rgba(200, 168, 112, 0.03) !important;
+        border-top: 1px solid rgba(200,168,112,0.25) !important;
+        border-bottom: 1px solid rgba(200,168,112,0.25) !important;
     }
 
     .rv-ebook-body-html h2 {
-        font-size: 0.92rem !important;
-        margin: 1.2rem 0 0.5rem !important;
+        font-size: 1.15em !important;
+        margin: 1.5em 0 0.8em !important;
     }
 
     .rv-ebook-body-html blockquote {
-        margin: 1rem 0 !important;
-        padding: 1rem 0.7rem 0.9rem !important;
+        margin: 1.5em 0 !important;
+        padding: 1.2em 1.2em 1.2em 1.8em !important;
+        background: rgba(20, 18, 15, 0.4) !important;
+        border-left: 3px solid #c8a870 !important;
+        border-top: none !important;
+        border-bottom: none !important;
     }
 
     .rv-ebook-body-html blockquote p {
-        font-size: 0.88rem !important;
+        font-size: 0.95em !important;
+        text-indent: 0 !important;
     }
 
     .rv-ebook-page-header {

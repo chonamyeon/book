@@ -114,8 +114,7 @@ export default function Home() {
         '경제': 'ECONOMY',
         '경영': 'MANAGEMENT',
         '인문': 'HUMANITIES',
-        '심리학': 'PSYCHOLOGY',
-        '커리어': 'BURNOUT'
+        '심리': 'PSYCHOLOGY'
     };
 
     // Weekly FocusBooks - Sort by updatedAt desc (from Firestore)
@@ -258,8 +257,19 @@ export default function Home() {
                                 style={{ maxWidth: '60%' }}
                             >
                                 <h1 className="font-black leading-[1.3] mb-5 tracking-tight">
-                                    <span className="text-[26px]">출퇴근 15분,</span><br />
-                                    <span className="text-[20px]">성공한 사람들의<br />생각을 듣다 🎧</span>
+                                    <span className="text-[29px]">출퇴근 15분,</span><br />
+                                    <span className="text-[23px]">
+                                        성공한 사람들의<br />
+                                        <span className="flex items-center gap-[6px]">
+                                            생각을 듣다
+                                            <span className="inline-flex items-center gap-[2px] opacity-90 h-[24px]">
+                                                <motion.div animate={{ height: [8, 14, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-white rounded-sm" />
+                                                <motion.div animate={{ height: [14, 20, 14] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-white rounded-sm" />
+                                                <motion.div animate={{ height: [18, 10, 18] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-white rounded-sm" />
+                                                <motion.div animate={{ height: [10, 16, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-white rounded-sm" />
+                                            </span>
+                                        </span>
+                                    </span>
                                 </h1>
                                 <p className="text-gray-300 text-[11px] font-medium leading-relaxed">
                                     책 한 권 읽을 시간 없는 직장인을 위한<br />오디오 인사이트 플랫폼
@@ -268,15 +278,16 @@ export default function Home() {
                         </div>
 
                         {/* 🏷️ Category Chips */}
-                        <div className="relative z-10 px-6 pb-2">
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-2">
+                        <div className="relative z-10 px-5 pb-2">
+                            <div className="flex gap-2 w-full">
                                 {Object.keys(chipToIdMap).map((chip) => (
                                     <button
                                         key={chip}
                                         onClick={() => navigate(`/category/${chipToIdMap[chip]}`)}
-                                        className="px-5 py-2 rounded-none border bg-white/5 border-white/10 text-white/40 text-[12px] font-black whitespace-nowrap transition-all active:scale-95 shadow-lg hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500"
+                                        className="flex-1 py-1.5 flex items-center justify-center rounded-none border bg-white/5 border-white/10 text-white font-black whitespace-nowrap transition-all active:scale-95 shadow-lg hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500"
                                     >
-                                        #{chip}
+                                        <span className="text-[10px] opacity-70 mr-[1px]">#</span>
+                                        <span className="text-[13px]">{chip}</span>
                                     </button>
                                 ))}
                             </div>
@@ -301,7 +312,7 @@ export default function Home() {
                                             className="absolute inset-0 flex items-center justify-center px-2"
                                             style={{ pointerEvents: idx === reviewIndex ? 'auto' : 'none' }}
                                         >
-                                            <p className="text-white/40 text-[12px] font-bold leading-snug break-keep text-center">
+                                            <p className="text-white text-[12px] font-bold leading-snug break-keep text-center">
                                                 "{review.text}" <span className="text-orange-500/70 text-[11px] font-black whitespace-nowrap shrink-0 ml-1">- {review.name}</span>
                                             </p>
                                         </motion.div>
@@ -345,23 +356,14 @@ export default function Home() {
                                 return (
                                     <div key={idx} className="relative group">
                                         <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
-                                            <div className="w-[70px] h-[98px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
-                                                <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} />
+                                            <div className="w-[70px] h-[98px] mt-[30px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
+                                                <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                             </div>
                                             <div className="flex-grow min-w-0">
                                                 <h3 className="font-black text-[16px] mb-1.5 leading-snug truncate text-white">{book.title}</h3>
                                                 <p className="text-[11px] text-gray-400 mb-2 line-clamp-1 italic font-medium">{cleanText(book.desc) || '성공적인 인생을 위한 핵심 근력을 키워주는 방법론...'}</p>
 
-                                                <div className="flex gap-2 mb-3">
-                                                    <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">
-                                                        <span>🎧</span>
-                                                        <span>{book.isPodcast ? getAudioDurationFormatted(book) : '15:00'}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-[9px] font-black text-white/40 bg-white/5 px-1.5 py-0.5 rounded-xs">
-                                                        <span>📖</span>
-                                                        <span>{book.isPodcast ? Math.max(1, Math.round(getAudioDurationMin(book.podcastFile) / 2.5)) : 5}분</span>
-                                                    </div>
-                                                </div>
+
 
                                                 <BookCardActions book={book} />
                                             </div>
@@ -460,11 +462,11 @@ export default function Home() {
                         <div className="space-y-5">
                             {enrichedPopularArchives.map((item, i) => (
                                 <div key={i} className={`flex items-start gap-3 pb-5 ${i !== enrichedPopularArchives.length - 1 ? 'border-b border-white/5' : ''}`}>
-                                    <span className="text-3xl font-black text-white/10 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
+                                    <span className="text-3xl font-black text-white/50 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
                                     <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`} className="flex-shrink-0">
                                         <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
                                             {item.cover
-                                                ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
+                                                ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                                 : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-xl">menu_book</span></div>
                                             }
                                         </div>
@@ -475,14 +477,7 @@ export default function Home() {
                                         </Link>
                                         {item.author && <p className="text-gray-500 text-[10px] font-medium mt-0.5 truncate">{item.author}</p>}
                                         {item.listens && <p className="text-gray-600 text-[9px] font-black mt-0.5 uppercase tracking-[0.1em]">{item.listens} LISTENS</p>}
-                                        <div className="flex gap-2 my-1.5">
-                                            <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">🎧 {item.isPodcast ? getAudioDurationFormatted(item) : '15:00'}</span>
-                                            {(item.youtubeUrl || item.videoUrl || item.videoId || item.videoLength || item.videoTime || item.isYoutube) && (
-                                                <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
-                                                    ▶️ {item.videoLength || item.videoTime || item.youtubeDuration || 5}분
-                                                </span>
-                                            )}
-                                        </div>
+
                                         <BookCardActions book={item} />
                                     </div>
                                 </div>
@@ -529,6 +524,7 @@ export default function Home() {
                                                 src={content.cover}
                                                 alt={content.title}
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                                             />
                                         </div>
 
@@ -537,14 +533,7 @@ export default function Home() {
                                             <div className="space-y-1">
                                                 <h3 className="text-white font-black text-[15px] leading-tight break-keep line-clamp-2">{content.title}</h3>
                                                 <p className="text-gold text-[10px] font-black uppercase tracking-[0.15em] mb-1">아카이뷰 오리지널</p>
-                                                <div className="flex gap-2 mb-1">
-                                                    <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">🎧 {content.isPodcast ? getAudioDurationFormatted(content) : '18:00'}</span>
-                                                    {(content.youtubeUrl || content.videoUrl || content.videoId || content.videoLength || content.videoTime || content.isYoutube) && (
-                                                        <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
-                                                            ▶️ {content.videoLength || content.videoTime || content.youtubeDuration || 7}분
-                                                        </span>
-                                                    )}
-                                                </div>
+
                                             </div>
 
                                             <BookCardActions book={content} />

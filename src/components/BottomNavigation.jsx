@@ -125,6 +125,7 @@ export default function BottomNavigation() {
                 })}
 
                 {/* Floating Finder Button and Modal */}
+                {false && (
                 <div className="absolute -top-[72px] right-6">
                     <button
                         onClick={() => setIsFinderOpen(!isFinderOpen)}
@@ -328,6 +329,7 @@ export default function BottomNavigation() {
                         )}
                     </AnimatePresence>
                 </div>
+                )}
             </div>
         </nav>
     );

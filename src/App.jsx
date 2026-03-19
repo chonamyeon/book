@@ -8,32 +8,36 @@ import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// 청크 로드 실패 시 자동 새로고침 (1회) + 오류 fallback
+// 청크 로드 실패 시 자동 새로고침 (시간 기반 1회) + 오류 fallback
 const lazyWithRetry = (factory) =>
   lazy(() =>
     factory().catch((err) => {
       console.error('[Chunk load error]', err);
-      // 이미 새로고침 시도한 경우 fallback 컴포넌트 반환
-      if (sessionStorage.getItem('chunk_retry')) {
-        return { default: () => (
-          <div className="min-h-screen flex items-center justify-center bg-slate-950 px-6">
-            <div className="text-center space-y-4">
-              <p className="text-3xl">📡</p>
-              <h1 className="text-white font-black text-base">페이지를 불러올 수 없습니다</h1>
-              <p className="text-slate-500 text-sm">네트워크 연결을 확인하고 다시 시도해주세요</p>
-              <button
-                onClick={() => { sessionStorage.removeItem('chunk_retry'); window.location.reload(); }}
-                className="px-6 py-3 bg-amber-400 text-black font-black text-sm rounded-2xl"
-              >
-                다시 시도
-              </button>
-            </div>
-          </div>
-        )};
+      const now = Date.now();
+      const lastRetry = parseInt(sessionStorage.getItem('chunk_retry_at') || '0', 10);
+      // 마지막 retry로부터 8초 이상 지났으면 → 재시도 (캐시 우회 리로드)
+      if (now - lastRetry > 8000) {
+        sessionStorage.setItem('chunk_retry_at', String(now));
+        window.location.href = window.location.pathname + '?_r=' + now;
+        return new Promise(() => {});
       }
-      sessionStorage.setItem('chunk_retry', '1');
-      window.location.reload();
-      return new Promise(() => {}); // reload 대기
+      // 8초 이내 재실패 → 오류 화면
+      sessionStorage.removeItem('chunk_retry_at');
+      return { default: () => (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 px-6">
+          <div className="text-center space-y-4">
+            <p className="text-3xl">📡</p>
+            <h1 className="text-white font-black text-base">페이지를 불러올 수 없습니다</h1>
+            <p className="text-slate-500 text-sm">네트워크 연결을 확인하고 다시 시도해주세요</p>
+            <button
+              onClick={() => { sessionStorage.removeItem('chunk_retry_at'); window.location.href = window.location.pathname; }}
+              className="px-6 py-3 bg-amber-400 text-black font-black text-sm rounded-2xl"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      )};
     })
   );
 

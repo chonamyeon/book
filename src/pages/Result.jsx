@@ -4,6 +4,8 @@ import { recommendations } from '../data/recommendations';
 import { resultData } from '../data/resultData';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
+import TopNavigation from '../components/TopNavigation';
+import BookCardActions from '../components/BookCardActions';
 
 export default function Result() {
     const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
@@ -105,20 +107,7 @@ export default function Result() {
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-50 flex items-center justify-between bg-background-light/80 dark:bg-background-dark/80 px-4 py-4 backdrop-blur-md border-b border-primary/10 dark:border-white/10">
-                <Link to="/quiz" className="flex size-10 items-center justify-center rounded-none hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
-                    <span className="material-symbols-outlined text-2xl">arrow_back</span>
-                </Link>
-                <h1 className="text-lg font-bold tracking-tight">테스트 결과</h1>
-                <div className="flex gap-2">
-                    <button onClick={handleKakaoShare} className="flex size-10 items-center justify-center rounded-none bg-[#FEE500] text-[#3c1e1e] transition-colors">
-                        <span className="material-symbols-outlined text-2xl font-bold">chat_bubble</span>
-                    </button>
-                    <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-none hover:bg-primary/10 dark:hover:bg-white/10 transition-colors">
-                        <span className="material-symbols-outlined text-2xl">share</span>
-                    </button>
-                </div>
-            </header>
+            <TopNavigation type="sub" />
 
             <main className="flex-1 pb-24">
                 {/* Hero Section: Reading Persona */}
@@ -369,6 +358,7 @@ export default function Result() {
                                                     src={book.cover}
                                                     alt={book.title}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                                                 />
                                             </div>
                                             <div className="flex-1 flex flex-col justify-center">
@@ -376,36 +366,7 @@ export default function Result() {
                                                 <p className="text-xs text-slate-500 mb-1">{book.author}</p>
                                                 <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight line-clamp-2 mb-3">{book.desc}</p>
 
-                                                <div className="flex gap-2">
-                                                    <a
-                                                        href={book.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex-1 bg-gold hover:bg-gold-light text-primary text-[10px] font-bold py-2 rounded-none flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"
-                                                    >
-                                                        구매하기 <span className="material-symbols-outlined text-xs">shopping_cart</span>
-                                                    </a>
-                                                    <button
-                                                        onClick={() => {
-                                                            const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-                                                            const isSaved = saved.some(b => b.title === book.title);
-                                                            if (isSaved) {
-                                                                const filtered = saved.filter(b => b.title !== book.title);
-                                                                localStorage.setItem('savedBooks', JSON.stringify(filtered));
-                                                                window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                                alert('서재에서 삭제되었습니다.');
-                                                            } else {
-                                                                saved.push(book);
-                                                                localStorage.setItem('savedBooks', JSON.stringify(saved));
-                                                                window.dispatchEvent(new Event('savedBooksUpdated'));
-                                                                alert('서재에 추가되었습니다. ✅');
-                                                            }
-                                                        }}
-                                                        className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white text-[10px] font-bold py-2 rounded-none flex items-center justify-center gap-1 transition-all active:scale-95"
-                                                    >
-                                                        추천지정 <span className="material-symbols-outlined text-xs">bookmark</span>
-                                                    </button>
-                                                </div>
+                                                <BookCardActions book={book} className="mt-2" />
                                             </div>
                                         </div>
                                     ))}

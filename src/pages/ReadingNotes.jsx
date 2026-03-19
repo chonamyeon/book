@@ -457,7 +457,7 @@ export default function ReadingNotes() {
                                         animate={{ scale: 1, opacity: 1 }}
                                         className="relative"
                                     >
-                                         {/* Archive Tree Script Text */}
+                                        {/* Archiview Tree Script Text */}
                                          <div className="absolute top-[30px] left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-80 mt-1">
                                              <motion.span
                                                  initial={{ opacity: 0, y: -10 }}
@@ -466,7 +466,7 @@ export default function ReadingNotes() {
                                                  className="text-[#ffdf91] text-3xl font-normal tracking-wide"
                                                  style={{ fontFamily: "'Great Vibes', cursive", textShadow: "0 0 10px rgba(255,223,145,0.4)" }}
                                              >
-                                                 Archive Tree
+                                                 Archiview Tree
                                              </motion.span>
                                          </div>
 
@@ -562,9 +562,9 @@ export default function ReadingNotes() {
                                                                 delay: i * 0.2
                                                             }}
                                                             style={{ left: `${x}px`, top: `${y}px` }}
-                                                            className="absolute size-3.5 bg-gradient-to-br from-[#ffda79] via-[#ff9f43] to-[#ee5253] rounded-none border border-white/40 z-20 shadow-lg"
+                                                            className="absolute size-3.5 bg-gradient-to-br from-[#ffda79] via-[#ff9f43] to-[#ee5253] rounded-full border border-white/40 z-20 shadow-lg"
                                                         >
-                                                            <div className="absolute top-0.5 left-0.5 size-1 bg-white rounded-none opacity-70" />
+                                                            <div className="absolute top-0.5 left-0.5 size-1 bg-white rounded-full opacity-70" />
                                                         </motion.div>
                                                     );
                                                 })}
@@ -583,16 +583,10 @@ export default function ReadingNotes() {
                                             <h3 className="text-white font-bold text-sm tracking-wide">{totalThoughts}개의 기록 열매</h3>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className={`px-3 py-1.5 h-[28px] ${treeState.bg} ${treeState.color} border border-white/10 rounded-none flex items-center justify-center gap-1.5 shadow-lg`}>
-                                                <span className="text-[9px] font-black opacity-60">LV.{treeState.level}</span>
+                                            <div className={`px-3 py-1.5 ${treeState.bg} ${treeState.color} border border-white/10 rounded-none flex items-center justify-center gap-1.5 shadow-lg`}>
+                                                <span className="text-[10px] font-black opacity-60">LV.{treeState.level}</span>
                                                 <span className="text-[10px] font-black tracking-wider">{treeState.name}</span>
                                             </div>
-                                            <button
-                                                onClick={() => setShowBenefits(true)}
-                                                className="text-[10px] h-[28px] text-orange-500 font-black border border-orange-500/30 px-3 py-1.5 rounded-none hover:bg-orange-500/10 transition-all active:scale-95 bg-white/5 backdrop-blur-sm flex items-center justify-center"
-                                            >
-                                                레벨혜택보기
-                                            </button>
                                         </div>
                                     </div>
                                     <div className="h-1.5 w-full bg-white/5 rounded-none overflow-hidden border border-white/5">
