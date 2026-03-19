@@ -1391,6 +1391,9 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 `;
             const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
             const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000;
+            // 일괄 자동화 전용 목소리: 제임스=Charon, 스텔라=Kore (고정)
+            const batchVoiceA = 'Charon';
+            const batchVoiceB = 'Kore';
 
             let success = false;
             let attempts = 0;
@@ -1421,8 +1424,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                                     speechConfig: {
                                         multiSpeakerVoiceConfig: {
                                             speakerVoiceConfigs: [
-                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceA } } },
-                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceB } } },
+                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: batchVoiceA } } },
+                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: batchVoiceB } } },
                                             ]
                                         }
                                     }
@@ -1438,7 +1441,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     const data = await res.json();
                     const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                     if (!part) throw new Error('오디오 데이터 없음');
-                    pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+                    pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
                     clearInterval(timerInterval);
                     success = true;
                     addBatchLog(`✅ [${bookId}] 배치 ${b + 1}/${batches.length} 완료`);
