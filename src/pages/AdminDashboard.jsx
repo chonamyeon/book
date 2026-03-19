@@ -103,9 +103,6 @@ function createWavFromPcm(pcmBuffers, sampleRate = 24000, channels = 1, bitDepth
     for (const buf of pcmBuffers) { new Uint8Array(buffer).set(new Uint8Array(buf), offset); offset += buf.byteLength; }
     return buffer;
 }
-import { io } from 'socket.io-client';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loadTossPayments } from '@tosspayments/payment-sdk';
@@ -125,7 +122,47 @@ import {
     addDoc
 } from 'firebase/firestore';
 import { useBookData } from '../hooks/useBookData';
-import { bookScripts } from '../data/bookScripts';
+
+// 컴포넌트 외부 상수 — 매 렌더마다 재생성 방지
+const CELEB_LIST = [
+    { slug: 'bill-gates', name: '빌 게이츠' }, { slug: 'elon-musk', name: '일론 머스크' },
+    { slug: 'rm-bts', name: 'RM (BTS)' }, { slug: 'han-kang', name: '한강' },
+    { slug: 'haruki-murakami', name: '무라카미 하루키' }, { slug: 'oprah-winfrey', name: '오프라 윈프리' },
+    { slug: 'barack-obama', name: '오바마' }, { slug: 'warren-buffett', name: '워렌 버핏' },
+    { slug: 'steve-jobs', name: '스티브 잡스' }, { slug: 'emma-watson', name: '엠마 왓슨' },
+    { slug: 'stephen-king', name: '스티븐 킹' }, { slug: 'masayoshi-son', name: '손정의' },
+    { slug: 'mark-zuckerberg', name: '마크 저커버그' }, { slug: 'brene-brown', name: '브레네 브라운' },
+    { slug: 'jeff-bezos', name: '제프 베이조스' }, { slug: 'tim-cook', name: '팀 쿡' },
+    { slug: 'michelle-obama', name: '미셸 오바마' }, { slug: 'iu', name: '아이유' },
+    { slug: 'archiview-editor', name: '아카이뷰 에디터' },
+];
+const CATEGORIES = ['자기계발', '경제', '경영', '인문', '심리'];
+const SECTIONS = [
+    { id: 'WEEKLY_FOCUS', name: '위클리 포커스' },
+    { id: 'EDITORS_PICK', name: '에디터 픽' },
+    { id: 'GURU_CHOICE', name: '구루 초이스' },
+    { id: 'BURNOUT', name: '번아웃 & 커리어 슬럼프' },
+    { id: 'WEALTH', name: '연봉협상 & 경제적 자유' },
+    { id: 'HEALING', name: '우울 & 고독 & 치유' },
+    { id: 'PHILOSOPHY', name: '자아성찰 & 인생철학' },
+    { id: 'ARCHIVIEW_ORIGINAL', name: '아카이뷰 오리지널' }
+];
+const romanizeKorean = (str) => {
+    const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+    const VOWELS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+    const FINALS = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'p', 'l', 't', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
+    return str.split('').map(char => {
+        const code = char.charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+            const offset = code - 0xAC00;
+            const final = offset % 28;
+            const vowel = Math.floor(offset / 28) % 21;
+            const initial = Math.floor(offset / 28 / 21);
+            return INITIALS[initial] + VOWELS[vowel] + FINALS[final];
+        }
+        return char;
+    }).join('');
+};
 
 // 50가지 상황극 시나리오
 const SCRIPT_SITUATIONS = [
@@ -217,6 +254,8 @@ export default function AdminDashboard() {
     const [batchScriptPreview, setBatchScriptPreview] = useState(null);
     // { bookId, title, script: [{speaker, text}] } | null
     const { getAllBooks, loading: booksLoading, overrides } = useBookData();
+    // bookScripts — 대본 관련 탭 진입 시 동적 로드 (221KB 초기 번들 제외)
+    const [bookScripts, setBookScripts] = useState({});
 
     // 🆕 Password Check
     const handleAuth = (e) => {
@@ -435,6 +474,8 @@ export default function AdminDashboard() {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterCeleb, setFilterCeleb] = useState('');
+    const [booksPage, setBooksPage] = useState(0);
+    const BOOKS_PER_PAGE = 20;
 
     // 🆕 External Book Search State
     const [externalSearchQuery, setExternalSearchQuery] = useState('');
@@ -494,7 +535,7 @@ export default function AdminDashboard() {
     const [mergeOutroFile, setMergeOutroFile] = useState(null);
     const [merging, setMerging] = useState(false);
     const [mergeLog, setMergeLog] = useState('');
-    const ffmpegRef = React.useRef(new FFmpeg());
+    const ffmpegRef = React.useRef(null);
 
     // 🆕 Google Books API 검색
     const handleGoogleBooksSearch = async () => {
@@ -637,6 +678,9 @@ export default function AdminDashboard() {
         setMerging(true);
         setMergeLog('⏳ FFmpeg 로딩 중...');
         try {
+            const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+            const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+            if (!ffmpegRef.current) ffmpegRef.current = new FFmpeg();
             const ffmpeg = ffmpegRef.current;
             if (!ffmpeg.loaded) {
                 const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -722,6 +766,13 @@ export default function AdminDashboard() {
         };
         checkAll();
     }, [activeTab, realBooks.length]);
+
+    // bookScripts 동적 로드 — 대본/자동화/성우 탭 진입 시 204KB 청크 로드
+    useEffect(() => {
+        if (['script', 'automation', 'voice'].includes(activeTab) && Object.keys(bookScripts).length === 0) {
+            import('../data/bookScripts').then(m => setBookScripts(m.bookScripts || {}));
+        }
+    }, [activeTab]);
 
     // 대본 생성 중 브라우저 새로고침/탭 닫기 방지
     useEffect(() => {
@@ -2228,47 +2279,6 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
     const [newBookReg, setNewBookReg] = useState({ bookId: '', title: '', author: '', celebrity: '', customCeleb: '', category: 'NOVEL', customCategory: '', desc: '', purchaseLink: '', section: 'EDITORS_PICK' });
     const [isRegistering, setIsRegistering] = useState(false);
     const [autoGenScript, setAutoGenScript] = useState(true);
-    const CELEB_LIST = [
-        { slug: 'bill-gates', name: '빌 게이츠' }, { slug: 'elon-musk', name: '일론 머스크' },
-        { slug: 'rm-bts', name: 'RM (BTS)' }, { slug: 'han-kang', name: '한강' },
-        { slug: 'haruki-murakami', name: '무라카미 하루키' }, { slug: 'oprah-winfrey', name: '오프라 윈프리' },
-        { slug: 'barack-obama', name: '오바마' }, { slug: 'warren-buffett', name: '워렌 버핏' },
-        { slug: 'steve-jobs', name: '스티브 잡스' }, { slug: 'emma-watson', name: '엠마 왓슨' },
-        { slug: 'stephen-king', name: '스티븐 킹' }, { slug: 'masayoshi-son', name: '손정의' },
-        { slug: 'mark-zuckerberg', name: '마크 저커버그' }, { slug: 'brene-brown', name: '브레네 브라운' },
-        { slug: 'jeff-bezos', name: '제프 베이조스' }, { slug: 'tim-cook', name: '팀 쿡' },
-        { slug: 'michelle-obama', name: '미셸 오바마' }, { slug: 'iu', name: '아이유' },
-        { slug: 'archiview-editor', name: '아카이뷰 에디터' },
-    ];
-    const CATEGORIES = ['NOVEL', 'ECONOMY', 'PHILOSOPHY', 'PSYCHOLOGY', 'SCIENCE', 'SELF_HELP', 'HISTORY', 'ESSAY', 'BIOGRAPHY', 'POLITICS'];
-    const SECTIONS = [
-        { id: 'WEEKLY_FOCUS', name: '위클리 포커스' },
-        { id: 'EDITORS_PICK', name: '에디터 픽' },
-        { id: 'GURU_CHOICE', name: '구루 초이스' },
-        { id: 'BURNOUT', name: '번아웃 & 커리어 슬럼프' },
-        { id: 'WEALTH', name: '연봉협상 & 경제적 자유' },
-        { id: 'HEALING', name: '우울 & 고독 & 치유' },
-        { id: 'PHILOSOPHY', name: '자아성찰 & 인생철학' },
-        { id: 'ARCHIVIEW_ORIGINAL', name: '아카이뷰 오리지널' }
-    ];
-
-    // 한글 → 로마자 변환
-    const romanizeKorean = (str) => {
-        const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
-        const VOWELS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
-        const FINALS = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'p', 'l', 't', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
-        return str.split('').map(char => {
-            const code = char.charCodeAt(0);
-            if (code >= 0xAC00 && code <= 0xD7A3) {
-                const offset = code - 0xAC00;
-                const final = offset % 28;
-                const vowel = Math.floor(offset / 28) % 21;
-                const initial = Math.floor(offset / 28 / 21);
-                return INITIALS[initial] + VOWELS[vowel] + FINALS[final];
-            }
-            return char;
-        }).join('');
-    };
 
     // 제목 → Book ID 자동 생성
     const autoGenerateId = (title) => {
@@ -2351,72 +2361,67 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         }
     };
 
-    // Socket.io - 등록 완료 시 폼 리셋
+    // Socket.io - dynamic import (초기 번들에서 제외)
     useEffect(() => {
-        const socket = io('http://127.0.0.1:3001', {
-            reconnection: false,
-            timeout: 3000,
+        let socket;
+        import('socket.io-client').then(({ io }) => {
+            socket = io('http://127.0.0.1:3001', { reconnection: false, timeout: 3000 });
+            socket.on('connect_error', () => { });
+            socket.on('log', (data) => {
+                const msg = typeof data === 'string' ? data : data.message;
+                setLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+                if (msg?.includes('원스톱 등록 완료') || msg?.includes('등록 실패')) {
+                    setIsRegistering(false);
+                    setIsGenerating(false);
+                }
+            });
+            socket.on('progress', (data) => {
+                if (data.percent !== undefined) setPodcastProgress(data.percent);
+            });
+            socket.on('script-log', (data) => {
+                const msg = typeof data === 'string' ? data : data.message;
+                setScriptLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+                if (msg?.includes('완료') && msg?.includes('성우에게')) setIsGeneratingScript(false);
+                if (msg?.includes('❌')) setIsGeneratingScript(false);
+            });
+            socket.on('script-progress', (data) => {
+                if (data.percent !== undefined) setScriptProgress(data.percent);
+            });
+            socket.on('script-complete', (data) => {
+                if (data?.script && Array.isArray(data.script)) setGeneratedScript(data.script);
+                setIsGeneratingScript(false);
+            });
+            socket.on('voice-log', (data) => {
+                const msg = typeof data === 'string' ? data : data.message;
+                setVoiceLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+                if (msg?.includes('병합 완료') || msg?.includes('병합 실패')) setVoiceMerging(false);
+            });
+            socket.on('voice-progress', (data) => {
+                if (data.percent !== undefined) setVoiceProgress(data.percent);
+            });
+            socket.on('tts-log', ({ message }) => setTtsLogs(prev => [...prev, message]));
+            socket.on('tts-progress', ({ percent }) => setTtsProgress(percent));
+            socket.on('tts-complete', ({ bookId, audioPath }) => {
+                setTtsLogs(prev => [...prev, `🎉 완료! ${audioPath}`]);
+                setTtsProgress(100);
+                setIsTtsRunning(false);
+            });
+            socket.on('voice-complete', async ({ bookId, voiceAudioUrl }) => {
+                try {
+                    await setDoc(doc(db, 'book_overrides', bookId), {
+                        voiceAudioUrl,
+                        updatedAt: serverTimestamp(),
+                    }, { merge: true });
+                    setVoiceLogs(prev => [...prev, `[SAVED] Firestore 자동 저장 완료 → voiceAudioUrl: ${voiceAudioUrl}`]);
+                    setVoiceMerging(false);
+                    setVoiceFile(null);
+                } catch (e) {
+                    setVoiceLogs(prev => [...prev, `[ERROR] Firestore 저장 실패: ${e.message}`]);
+                    setVoiceMerging(false);
+                }
+            });
         });
-        socket.on('connect_error', () => { /* 로컬 서버 없으면 무시 */ });
-        socket.on('log', (data) => {
-            const msg = typeof data === 'string' ? data : data.message;
-            setLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
-            // 완료 또는 실패 시 버튼 리셋
-            if (msg?.includes('원스톱 등록 완료') || msg?.includes('등록 실패')) {
-                setIsRegistering(false);
-                setIsGenerating(false);
-            }
-        });
-        socket.on('progress', (data) => {
-            if (data.percent !== undefined) setPodcastProgress(data.percent);
-        });
-        // AI 대본 생성 이벤트
-        socket.on('script-log', (data) => {
-            const msg = typeof data === 'string' ? data : data.message;
-            setScriptLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
-            if (msg?.includes('완료') && msg?.includes('성우에게')) setIsGeneratingScript(false);
-            if (msg?.includes('❌')) setIsGeneratingScript(false);
-        });
-        socket.on('script-progress', (data) => {
-            if (data.percent !== undefined) setScriptProgress(data.percent);
-        });
-        socket.on('script-complete', (data) => {
-            if (data?.script && Array.isArray(data.script)) setGeneratedScript(data.script);
-            setIsGeneratingScript(false);
-        });
-        // 성우 다이렉트 이벤트
-        socket.on('voice-log', (data) => {
-            const msg = typeof data === 'string' ? data : data.message;
-            setVoiceLogs(prev => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`]);
-            if (msg?.includes('병합 완료') || msg?.includes('병합 실패')) setVoiceMerging(false);
-        });
-        socket.on('voice-progress', (data) => {
-            if (data.percent !== undefined) setVoiceProgress(data.percent);
-        });
-        // 병합 완료 → Firestore 자동 저장
-        socket.on('tts-log', ({ message }) => setTtsLogs(prev => [...prev, message]));
-        socket.on('tts-progress', ({ percent }) => setTtsProgress(percent));
-        socket.on('tts-complete', ({ bookId, audioPath }) => {
-            setTtsLogs(prev => [...prev, `🎉 완료! ${audioPath}`]);
-            setTtsProgress(100);
-            setIsTtsRunning(false);
-        });
-
-        socket.on('voice-complete', async ({ bookId, voiceAudioUrl }) => {
-            try {
-                await setDoc(doc(db, 'book_overrides', bookId), {
-                    voiceAudioUrl,
-                    updatedAt: serverTimestamp(),
-                }, { merge: true });
-                setVoiceLogs(prev => [...prev, `[SAVED] Firestore 자동 저장 완료 → voiceAudioUrl: ${voiceAudioUrl}`]);
-                setVoiceMerging(false);
-                setVoiceFile(null);
-            } catch (e) {
-                setVoiceLogs(prev => [...prev, `[ERROR] Firestore 저장 실패: ${e.message}`]);
-                setVoiceMerging(false);
-            }
-        });
-        return () => socket.disconnect();
+        return () => socket?.disconnect();
     }, []);
 
     // --- 원스톱 등록 UI (podcast 탭 내) ---
@@ -2924,14 +2929,14 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                         type="text"
                                         placeholder="도서명으로 검색..."
                                         value={bookSearchQuery}
-                                        onChange={(e) => setBookSearchQuery(e.target.value)}
+                                        onChange={(e) => { setBookSearchQuery(e.target.value); setBooksPage(0); }}
                                         className="flex-1 bg-transparent border-none text-white text-lg font-bold placeholder:text-slate-600 outline-none px-4"
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <select
                                         value={filterCategory}
-                                        onChange={(e) => setFilterCategory(e.target.value)}
+                                        onChange={(e) => { setFilterCategory(e.target.value); setBooksPage(0); }}
                                         className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-gold outline-none"
                                     >
                                         <option value="">모든 카테고리</option>
@@ -2939,7 +2944,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                     </select>
                                     <select
                                         value={filterSection}
-                                        onChange={(e) => setFilterSection(e.target.value)}
+                                        onChange={(e) => { setFilterSection(e.target.value); setBooksPage(0); }}
                                         className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-gold outline-none"
                                     >
                                         <option value="">모든 노출 섹션</option>
@@ -2947,7 +2952,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                     </select>
                                     <select
                                         value={filterCeleb}
-                                        onChange={(e) => setFilterCeleb(e.target.value)}
+                                        onChange={(e) => { setFilterCeleb(e.target.value); setBooksPage(0); }}
                                         className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-gold outline-none"
                                     >
                                         <option value="">모든 유명인사</option>
@@ -3005,17 +3010,31 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                 </form>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-10">
-                                {[...realBooks]
+                            {(() => {
+                                const filteredBooks = [...realBooks]
                                     .filter(book => {
                                         const matchSearch = book.title.toLowerCase().includes(bookSearchQuery.toLowerCase());
-                                        const matchCategory = filterCategory === '' || book.category === filterCategory;
+                                        const matchCategory = filterCategory === '' || (book.category || '').replace(/\s+/g, '') === filterCategory.replace(/\s+/g, '');
                                         const matchSection = filterSection === '' || book.section === filterSection;
                                         const matchCeleb = filterCeleb === '' || (book.celebName === filterCeleb || book.celebrity === filterCeleb);
                                         return matchSearch && matchCategory && matchSection && matchCeleb;
                                     })
-                                    .reverse()
-                                    .map((book) => {
+                                    .reverse();
+                                const totalPages = Math.ceil(filteredBooks.length / BOOKS_PER_PAGE);
+                                const pagedBooks = filteredBooks.slice(booksPage * BOOKS_PER_PAGE, (booksPage + 1) * BOOKS_PER_PAGE);
+                                return (<>
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-slate-500 text-sm font-bold">
+                                    {filteredBooks.length}권 중 {booksPage * BOOKS_PER_PAGE + 1}–{Math.min((booksPage + 1) * BOOKS_PER_PAGE, filteredBooks.length)}권 표시
+                                </p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setBooksPage(p => Math.max(0, p - 1))} disabled={booksPage === 0} className="px-4 py-2 bg-white/10 text-white text-xs font-black rounded-xl disabled:opacity-30 hover:bg-white/20 transition-all">← 이전</button>
+                                    <span className="px-4 py-2 text-gold text-xs font-black">{booksPage + 1} / {totalPages || 1}</span>
+                                    <button onClick={() => setBooksPage(p => Math.min(totalPages - 1, p + 1))} disabled={booksPage >= totalPages - 1} className="px-4 py-2 bg-white/10 text-white text-xs font-black rounded-xl disabled:opacity-30 hover:bg-white/20 transition-all">다음 →</button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-10">
+                                {pagedBooks.map((book) => {
                                         const bookKey = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
                                         return (
                                             <div key={bookKey} className="bg-white/5 p-10 rounded-[48px] border border-white/10 flex flex-col gap-8 group hover:bg-white/10 transition-all border-t-8 border-t-transparent hover:border-t-gold shadow-2xl relative overflow-hidden">
@@ -3260,6 +3279,8 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                         );
                                     })}
                             </div>
+                            </>);
+                            })()}
                         </div>
                     )}
 
