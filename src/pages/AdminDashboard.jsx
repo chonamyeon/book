@@ -287,6 +287,10 @@ export default function AdminDashboard() {
     const [popularList, setPopularList] = useState([]);
     const [popularSearch, setPopularSearch] = useState('');
     const [popularSaving, setPopularSaving] = useState(false);
+    const [popularSubTab, setPopularSubTab] = useState('popular');
+    const [sectionData, setSectionData] = useState({ weekly_focus: [], weekly_viewed: [], growth: [], economy: [], business: [], humanities: [], psychology: [] });
+    const [sectionSearch, setSectionSearch] = useState({ weekly_focus: '', weekly_viewed: '', growth: '', economy: '', business: '', humanities: '', psychology: '' });
+    const [sectionSaving, setSectionSaving] = useState({ weekly_focus: false, weekly_viewed: false, growth: false, economy: false, business: false, humanities: false, psychology: false });
 
 
     // 1. Listen for Users
@@ -329,6 +333,27 @@ export default function AdminDashboard() {
             if (snap.exists() && snap.data().books?.length) {
                 setPopularList(snap.data().books);
             }
+        });
+        return () => unsub();
+    }, []);
+
+    // 5. Listen for Section Rankings
+    useEffect(() => {
+        const SECTION_DB_MAP = { weekly_focus: 'weekly_focus', weekly_viewed: 'weekly_most_viewed', growth: 'category_growth', economy: 'category_economy', business: 'category_business', humanities: 'category_humanities', psychology: 'category_psychology' };
+        const unsubs = Object.entries(SECTION_DB_MAP).map(([key, dbKey]) =>
+            onSnapshot(doc(db, 'site_config', dbKey), (snap) => {
+                if (snap.exists() && snap.data().books?.length) setSectionData(prev => ({ ...prev, [key]: snap.data().books }));
+            })
+        );
+        return () => unsubs.forEach(u => u());
+    }, []);
+
+    // 6. Listen for YouTube Videos
+    useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'youtube_videos'), (snap) => {
+            const videos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            videos.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setYoutubeVideos(videos);
         });
         return () => unsub();
     }, []);
@@ -966,8 +991,18 @@ export default function AdminDashboard() {
 - 직장인 유머·비유·위트 100% 살릴 것
 - "어", "근데", "아" 같은 자연스러운 추임새 유지
 
-━━━ 구조 교정 규칙 (기존 대본 일관성) ━━━
+━━━ 화자 역할 교정 규칙 ━━━
 이 규칙들은 내용 변경이 허용되는 예외 구간이야.
+
+[스텔라 정체성 교정 — 최우선]
+스텔라는 이 책을 읽은 적 없고, 대화를 통해 처음 내용을 듣는 사람이야. 이 정체성이 처음부터 끝까지 유지되어야 해.
+- 스텔라 위반 표현 (즉시 교체 필수): "내가 이 책 읽었을 때", "이 부분이 좋았어", "나도 이거 읽어봤는데", "그 챕터에서", "읽으면서 느꼈는데" 등 책 내용을 직접 아는 것처럼 말하는 모든 표현
+  교체 방향: "그래? 그 부분 어떤 내용이야?", "처음 듣는 개념인데 신기하다", "진짜? 책에 그렇게 나와?" 식으로 처음 듣는 사람의 반응으로 교체
+- 제임스(책을 읽은 사람): "말로는 다 못 전달해", "직접 봐야 느낌이 달라" → 자연스러우므로 그대로 유지
+- 스텔라(책 처음 접하는 사람): "내가 설명해도 반도 안 와닿을 것 같아" → 스텔라가 설명하는 입장으로 둔갑하는 이 표현도 교정
+  교체: "그 느낌이 이제 좀 알 것 같아", "듣고 나니까 나도 보고 싶어졌어" 식으로 수정
+
+━━━ 구조 교정 규칙 (기존 대본 일관성) ━━━
 
 [오프닝·클로징 상황극 일치]
 - 첫 3~6턴을 분석해 어떤 장소·상황에서 시작하는지 파악해 (예: 카페, 한강, 등산 중 등)
@@ -1633,16 +1668,46 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                 return response.content[0].text;
             };
 
-            const situation = selectedSituation
-                ? `선택된 상황: ${selectedSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${selectedSituation.close}"`
-                : '스튜디오 안에서 팟캐스트 녹음 진행';
+            const _activeSituation = selectedSituation || SCRIPT_SITUATIONS[Math.floor(Math.random() * SCRIPT_SITUATIONS.length)];
+            const situation = `선택된 상황: ${_activeSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${_activeSituation.close}"`;
 
             addLog('✅ [1단계] Claude 4.5 Sonnet 초기 대본 생성 요청 중...');
             setScriptProgress(20);
 
             const systemPrompt1 = `[시스템 페르소나 및 핵심 제약사항]
-당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다. 
+당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다.
 두 명의 친한 친구(${speakerA}, ${speakerB})가 수다 떨듯이 쓰되, 절대 책 강의처럼 들리지 않게 하세요.
+
+[콘텐츠 비율 — 전체 대본의 절대 기준]
+📌 책 내용 30% : 직장인 인사이트 70%
+
+▶ 책 내용 30% (반드시 아래 규칙 준수)
+- 유저 메시지에 제공된 "책 소개"를 완전히 숙지 후, 그 내용만을 기반으로 작성
+- 책 소개에 명시된 핵심 주제·개념·메시지만 ${speakerA} 대사에 녹여낼 것
+- ⚠️ 책 소개에 없는 내용, 다른 책 개념을 임의로 지어내거나 섞는 것 절대 금지
+- ⚠️ 저작권 보호: 책 내용은 요약·발췌 수준(겉핥기)으로만 언급. 책 전체를 풀어주는 강의 방식 금지
+- ⚠️ 외부 인물 혼동 절대 금지: 이 책을 추천하거나 인용한 유튜버·작가·독자 등 외부 인물을 마치 책 안에 등장하는 것처럼 표현하는 것 절대 금지.
+  나쁜 예: "책에서 OOO이라는 사람 얘기가 나오는데..." → 그 인물이 책 저자·공동저자가 아니면 금지.
+  책 소개에 명시된 인물·사례·실험만 언급 가능. 학습 데이터 기반 추측 사용 금지.
+
+▶ 직장인 인사이트 70% (아래 4가지 요소를 균형 있게 포함)
+① 상황극: 오프닝 장소·상황 안에서 두 사람의 현실감 넘치는 대화
+② 직장생활 사례: 팀장, 동료, 야근, 회의, 보고서, 월급, 회식 등 생생한 직장 현실 소재
+③ 일상생활 공감: 다이어트 실패, 주말 순삭, 월요병, 탕비실 눈치 등 생활 밀착형 유머
+④ 직장 지침 3가지: 내일 당장 출근해서 써볼 수 있는 구체적·실천적 행동 지침 정확히 3개
+
+[실제 사례·수치 사용 규칙 — 저작권·명예훼손 방지 최우선]
+⚠️ 이 규칙을 어기면 저작권 침해·명예훼손 법적 리스크 발생. 반드시 준수.
+
+사례·수치를 쓸 수 있는 경우는 딱 2가지뿐:
+  1️⃣ 책 소개에 명시된 실험·연구·사례 → 그 내용 범위 안에서만 언급
+  2️⃣ "우리 팀장", "우리 회사", "내 동료", "한 직장인" 같은 완전 익명·가상 사례
+
+절대 금지 (위 2가지에 해당하지 않으면 모두 금지):
+- 실제 기업명 사용 (긍정이든 부정이든). 예: "삼성이", "카카오가", "OO기업이" → "한 대기업이", "어떤 IT회사가" 로 교체
+- 구체적 수치·통계 날조. 예: "XX%가 효과 봤대", "OO연구 결과 평균 3배" → 책 소개에 없으면 삭제
+- 실존 인물(CEO, 정치인, 연예인, 유튜버 등) 발언·행동 묘사. → 삭제 또는 익명 처리
+- 책 소개에 없는 연구·실험을 사실처럼 인용 → 삭제
 
 [절대 출력 형식]
 오직 아래 JSON 배열 형태만 최종 출력하세요. 그 외 어떤 글자도 쓰지 마세요.
@@ -1653,21 +1718,61 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 총 턴 수는 정확히 58턴으로 고정 (7분 30초~8분 분량 목표)
 
 [턴 구조 - 반드시 이 흐름으로만 작성]
-턴 1~6 : 주어진 상황만 수다. 책 언급 절대 금지. 현실적인 직장인 수다만.
-          단, 턴 4~6에서 나중에 책 주제와 연결될 수 있는 소재(직장 고민, 인간관계, 스트레스 등)를
-          자연스럽게 흘려둘 것. (예: 등산 중이면 "요즘 너무 지쳐있다", "팀장 때문에 머리 아파" 등)
+턴 1~6 : 주어진 상황 안에서 자연스러운 수다. 책 언급 절대 금지.
+  - 두 사람이 지금 있는 장소·상황을 충분히 묘사하며 시작할 것. (예: 등산 중이면 숨차는 묘사, 치킨집이면 메뉴 고르는 장면 등)
+  - 턴 3~6에서 자연스럽게 직장 고민·스트레스·인간관계 소재를 흘릴 것. 이게 나중에 책 주제로 연결되는 씨앗이 됨.
+  - ⚠️ 고민 소재가 억지로 꺼내진 느낌이면 안 됨. 상황 대화를 하다가 자연스럽게 나오는 것처럼.
 
-턴 7~9 : 책 전환 브릿지 — 반드시 3단계로 진행할 것. 절대 1턴에 갑자기 책 꺼내지 말 것.
-  [7턴] 앞 대화에서 나온 고민/공감대에 반응하며 "그러고 보니…", "야 근데 그거 관련해서…" 식으로 화제 연결
-  [8턴] 책을 직접 언급하지 말고 "나 요즘 그런 생각 하다가 뭔가 읽었는데", "어디서 봤는데 딱 그 얘기더라" 정도로 궁금증 유발
-  [9턴] 상대방이 "뭔데?" 하고 물으면 그때 자연스럽게 책 제목 등장
-  (나쁜 예: "야 어제 책 읽는다며?" "나 최근에 [책제목] 읽었는데" → 금지)
-  (좋은 예: "야 아까 그 팀장 얘기 하다 보니까 생각난 게 있는데… 요즘 그런 거 좀 찾아봤거든. 맞아 맞아, 그 책 있잖아…")
+턴 7~10 : 책으로 넘어가는 전환 — 공식처럼 딱딱하게 하지 말고 대화가 자연스럽게 흘러가듯 할 것.
+  핵심 원칙: 앞에서 나온 고민·소재에서 ${speakerA}의 뇌에 책이 떠오른 것처럼. 책을 꺼내려고 억지로 화제를 꺾는 게 아님.
 
-턴 10~35 : 책 핵심 개념 1~2개만 살짝 건드리며 수다. 구체 인용·요약 절대 금지.
-턴 36~45 : 현실 직장 사례 최소 2개 (우리 회사, 팀장, OO기업 등)
-턴 46~52 : 내일 당장 회사에서 써볼 수 있는 행동 인사이트 정확히 2개
-턴 53~58 : 텐션 낮추며 여운 주기 (자연스러운 추천 유도 정확히 1회 삽입)
+  좋은 흐름 예시:
+  - 치킨집 상황: "치킨 먹다가 → 야근 얘기 → 팀장 얘기 → '그러고 보니 그거 읽으면서 딱 그 생각 했는데' → '뭐?' → 책 제목"
+  - 등산 상황: "정상 보이는데 → 요즘 지친다는 얘기 → '근데 이상하게 그 얘기 들으니까 생각나는 게 있어' → '뭔데' → 책 제목"
+
+  [7~8턴] ${speakerA}가 앞 대화 흐름을 받아서 자연스럽게 생각이 연결된 것처럼 운을 뗌. 책 제목은 아직 안 나옴.
+    - "그러고 보니 나 요즘 그런 거 많이 생각하다가 뭔가 읽었는데", "아 갑자기 생각났는데 딱 그 얘기더라" 등
+    - 대화 흐름을 끊지 말고 앞 소재에서 자연스럽게 이어질 것
+  [9턴] ${speakerB}가 궁금해하며 물어봄 → ${speakerA}가 책 제목 꺼냄
+  [10턴] ${speakerB}가 처음 듣는 반응 ("그게 뭐야?", "처음 들어보는데") → ${speakerA}가 한 줄 설명
+
+  ⚠️ 절대 금지: "오늘은 이 책 얘기를 해볼게", "이 책이 딱 맞는 것 같아서", "이 책 알아?" 식으로 갑자기 방송 진행자처럼 책을 꺼내는 것.
+  ⚠️ 절대 금지: ${speakerB}가 책을 먼저 꺼내거나 소개하는 것.
+
+턴 10~35 : 책 핵심 개념 소개 — ${speakerA}가 책 내용을 설명하되, 매 2~3턴마다 반드시 직장인 현실 사례로 연결할 것.
+  ⚠️ 책 내용만 계속 나열하는 것 절대 금지. 개념 1개 설명 → 직장 사례 연결 → ${speakerB} 반박/공감 → 다음 개념 순서로 진행.
+  직장 사례 예시: "그게 딱 우리 회사 얘기야. 우리 팀장도...", "OO기업이 그래서 망했잖아", "야근하면서 느끼는 그 공허함이 딱 그거야"
+
+턴 36~45 : 직장인 현실 밀착 구간 — 책 개념을 직장 사례에 완전히 녹여낼 것.
+  ⚠️ 이 구간에서 책 내용 설명보다 직장 사례·현실 얘기가 더 많아야 함. 구체적인 회사 상황, 팀장, 동료, 야근, 월급, 회식 등 생생한 소재 최소 3개 이상.
+  ${speakerB}가 이 구간에서 반드시 본인 직장 경험을 꺼내며 반박 또는 자폭 고백할 것. (예: "근데 솔직히 나는 그게 잘 안 돼. 우리 팀은...")
+
+턴 46~52 : 직장 지침 3가지 구간 — 이 책 소개의 핵심 개념에서만 뽑아낸 고유한 직장인 실천 지침 정확히 3가지.
+
+  ⚠️ 지침 고유성 — 가장 중요한 규칙:
+  - 지침 3가지는 반드시 이 책 소개에 등장하는 개념·주제·사례에서 직접 도출할 것.
+  - 어느 책에나 쓸 수 있는 범용 조언 절대 금지. 이 책 소개를 보지 않고도 만들 수 있는 조언은 전부 금지.
+  - ❌ 범용 조언 예시 (책 종류 불문 반복되는 것들 — 절대 금지):
+      "메모하는 습관 들여봐" / "목록 작성해봐" / "상대방에게 주도권 줘봐" / "감사 일기 써봐" /
+      "아침 루틴 만들어봐" / "명상해봐" / "산책해봐" / "긍정적으로 생각해" / "작게 시작해봐"
+  - ✅ 이 책 고유 지침의 기준: 지침을 들었을 때 "아, 이게 [책 제목]에서 나온 거구나" 하고 바로 연결되어야 함.
+
+  ⚠️ 추상적인 조언 절대 금지. 반드시 내일 출근해서 바로 실천 가능한 구체적 행동으로.
+  나쁜 예: "자신을 더 이해해야 해" / "긍정적으로 생각해" / "마음을 열어봐"
+  좋은 예 (책 내용 기반): 책에서 '앵커링 효과'를 다룬다면 → "내일 회의에서 팀장이 숫자 먼저 던지면, 그게 내 판단 기준이 되기 전에 일단 3초 멈추고 내 의견 먼저 정리해봐."
+
+  ${speakerB}가 이 지침들에 대해 "그건 나는 좀 다르게 생각하는데" 식으로 본인 의견을 보태거나 현실적인 반박을 최소 1회 할 것.
+
+턴 53~끝 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 사봐야겠다" 식으로 읽고 싶다는 의사 표현 (추천 유도 1회).
+
+[화자 정체성 — 위반 시 전체 실패]
+⚠️ ${speakerA}: 책을 읽은 사람. 설명 + 직장 사례 연결하는 역할. 대사 충분히 길게(2~4문장).
+  - "이 책을 듣고 나서", "들어보니까" 등 청취 표현 절대 금지. 반드시 "읽고 나서", "읽어보니까", "책에서 봤는데" 등 독서 표현만 사용.
+⚠️ ${speakerB}: 책은 모르지만 **본인 직장 경험과 생각은 풍부하게 가진 사람**.
+  - 책 내용 설명 절대 금지 (읽은 적 없으니까)
+  - ⚠️ 단순 동의·질문만 하는 것도 금지. ${speakerB}는 매 3~4턴에 한 번씩 반드시 본인 생각·경험·반박을 꺼낼 것.
+    예: "근데 나는 그 부분은 좀 다르게 생각해. 우리 팀 경우엔..." / "그거 맞는 말인데, 근데 현실에서 그게 가능해? 우리 팀장은..." / "솔직히 나 그거 해봤는데 안 되더라고."
+  - 마지막 구간에서 "나도 한번 읽어봐야겠다" / "이거 사봐야겠는데" 식으로 마무리.
 
 [말투 철칙 — 위반 시 전체 실패]
 - 전 구간 100% 반말. 단 1턴도 예외 없음.
@@ -1677,18 +1782,25 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - 문장 끝은 반드시 완결형 ("~거야.", "~진짜.", "~건데.")
 - 대화 끊기 최소 3회, 스스로 정정 최소 2회, 딴소리 새기 최소 3회
 - 연속 동의·칭찬 금지. 누군가는 반드시 반박.
+- ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 "야 ${speakerB}", "${speakerA}야" 식으로 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지, 이름 없이 자연스럽게 말할 것.
+- ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨. 대체 표현: "정말", "완전", "너무", "대박", "어이없어", "말도 안 돼" 등 다양하게 활용.
 - ${speakerA}: 감정 공감 → 건조 개그
 - ${speakerB}: 날카로운 현실 반박 최소 5회 + 결국 본인 자폭 고백
 
 [대화 리듬 — 필수]
 실제 친구 대화처럼 대사 길이에 변화를 줘야 함. 매 턴이 비슷한 길이면 단조롭고 지루해져.
 
-- 모든 대사는 최소 2문장 이상 (한 문장짜리 단답 금지)
-  나쁜 예: "맞아." / "진짜?" / "그렇네." — 이런 단답 금지
-  좋은 예: "맞아, 나도 그 생각했어. 근데 실제로 하기가 너무 어렵잖아." / "진짜? 그게 그렇게 되는 거야? 신기하다."
-- 긴 대사(설명·인사이트)와 중간 대사(공감·리액션 2~3문장)를 번갈아 배치해 리듬 형성
-  나쁜 패턴 (금지): 긴대사 → 긴대사 → 긴대사 → 긴대사
-  좋은 패턴 (필수): 긴대사 → 짧은공감(2문장) → 긴대사 → 짧은공감(2문장)
+- 글자수 기준 (띄어쓰기 포함):
+  · ${speakerA} 설명 대사: 최소 50자 ~ 최대 80자 (책 내용·직장 사례 설명 구간)
+  · ${speakerB} 반응 대사: 최소 30자 ~ 최대 60자
+  · 클로징(턴 54~58): 최소 20자 ~ 최대 50자
+  · 한 문장짜리 단답 절대 금지: "맞아." / "그렇네." / "어?" 등 20자 미만 대사 금지
+- ⚠️ 추임새 남용 금지: "응.", "맞아.", "오.", "완전 공감.", "완전 신기하다.", "오 그렇구나.", "그러네." 같은 단순 동의·감탄만으로 이루어진 대사는 전체 대본에서 최대 3회 이하로 제한. 반드시 뒤에 구체적인 내용·질문·반박이 이어져야 함.
+  나쁜 예: "완전 공감." / "오, 그렇구나." / "맞아." (단독으로 끝나는 것)
+  좋은 예: "완전 공감. 나도 요즘 노트북 들고 집에서도 일하거든." / "오 그렇구나, 그럼 그다음엔 어떻게 됐어?"
+- 긴 대사(설명·인사이트)와 반응 대사(공감·질문)를 번갈아 배치해 리듬 형성
+  나쁜 패턴 (금지): 짧은대사 → 짧은대사 → 짧은대사 (내용 없이 핑퐁만 하는 것)
+  좋은 패턴 (필수): ${speakerA} 설명(50~80자) → ${speakerB} 반응(30~50자) → ${speakerA} 설명(50~80자)
 - 연속 3턴 이상 비슷한 길이 금지
 
 [유머 규칙]
@@ -1698,8 +1810,15 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - 억지 비유, 뜬금없는 농담, 대화 흐름을 끊는 개그 절대 금지.
 - 유머가 자연스럽게 안 나오는 구간은 그냥 진지하게 가도 됨. 억지로 웃기려 하지 말 것.
 
+[대화 논리 일관성 — 위반 시 전체 실패]
+- ⚠️ 각 대사는 직전 대사 내용과 반드시 논리적으로 연결되어야 함.
+- 직전에 언급한 소재(사물, 상황, 사건)를 갑자기 모순되게 사용하는 것 절대 금지.
+  나쁜 예: A가 "우리 회사 커피머신 너무 느리다"고 불평하다가 B가 "어 벌써 다 됐네" 라고 말하는 것 — 앞뒤가 안 맞음.
+  좋은 예: 커피머신이 느리다는 맥락을 이어가거나, 화제를 전환할 경우 자연스러운 브릿지("야 근데 그거 기다리는 동안에 말이야")를 쓸 것.
+- 시간적 흐름, 장소, 등장 소재가 연속성을 유지해야 함. 이전 턴과 충돌하면 반드시 수정.
+
 [저작권 & 추천 유도]
-책 내용은 겉핥기만. 후반부(턴 48~52 사이)에 추천 유도 정확히 1회 삽입.
+책 내용은 전체 대본의 30% 이하로 제한 — 소개 기반 겉핥기 수준만 허용. 후반부(턴 48~52 사이)에 추천 유도 정확히 1회 삽입.
 
 핵심 원칙: 추천 유도는 반드시 직전 대화 내용에서 자연스럽게 이어져야 함.
 방금 나온 인사이트나 직장 사례 얘기를 하다가 감탄하거나 공감하면서 슬쩍 흘리는 것.
@@ -1713,7 +1832,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 직접 "구매해라", "사라", "책값", "꼭 읽어라" 같은 판매성 표현 절대 사용 금지.
 
 [TTS 최적화 규칙 - 마지막 글자·음절 뭉개짐/끊김 특화 최종 버전]
-1. 모든 text (한 턴 전체) 띄어쓰기 포함 최대 30자 엄격 준수. 31자 이상이면 무조건 나누거나 줄여라.
+1. 모든 text 글자수 기준 (띄어쓰기 포함): 최소 30자 ~ 최대 80자. 30자 미만이면 내용을 보완해 늘릴 것. 81자 이상이면 나누거나 줄여라. 클로징(마지막 4턴)은 최소 20자.
 2. 한 턴에 문장 2개 이상이면 쉼표(,) 또는 마침표(.)로 반드시 구분
 3. 매 턴 text는 반드시 마침표(.) 또는 물음표(?) 또는 느낌표(!)로 끝
 4. 숫자는 무조건 한글로 (1+1 → 원 플러스 원, 20대 → 스무 살 대)
@@ -1727,19 +1846,28 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
    - 좋은 끝맺음 예시: "그게 제일 웃기더라. 진짜." / "우리 팀장도 그랬어.. " / "생각만 해도 빡세. 진짜로."
    - 나쁜 끝맺음 피하기: "그럴 거야" "맞아" "그러니까" (단독으로 끝날 때 특히 위험)
 10. 마지막 10자 구간에 쉼표(,)나 마침표(.) 최소 1개 이상 강제 배치
-11. 턴 55~58은 문장 더 짧게 (평균 18~24자 권장)
+11. 턴 55~58은 문장 더 짧게 (평균 30~40자 권장)
 
 [2단계 클로징 통합]
 58턴까지 작성 후 마지막 6턴은 자연 마무리:
 턴 54~55: 책 얘기 텐션 낮추기 — 갑자기 끊지 말고 "야 우리 얘기가 너무 길어졌다", "정신차려보니 시간이" 같은 브릿지 1~2턴 삽입. 책 → 상황 급전환 금지.
 턴 56: "오늘 얘기 진짜 좋았다" 뉘앙스
 턴 57: 오프닝에서 설정한 장소·상황 속 주변 묘사로 자연 복귀 (오프닝과 동일한 장소·상황이어야 함. 전혀 다른 장소나 상황으로 바뀌는 것 절대 금지)
-턴 58: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것. 임의로 바꾸거나 다른 멘트로 대체 금지.`;
+턴 58: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것. 임의로 바꾸거나 다른 멘트로 대체 금지.
+⚠️ 절대 금지 마무리 표현: "오늘 녹음 여기까지", "편안한 저녁 보내", "다음 시간에 또 만나", "오늘 방송 여기서 마칠게", "청취해주셔서 감사" 등 팟캐스트 방송 아웃로 형식의 표현. 마지막은 반드시 두 사람이 그 상황(장소·활동) 안에 있는 것처럼 자연스럽게 끝나야 함.
+⚠️ 클로징 시간 점프 절대 금지: 직전 턴에서 어떤 행동이 막 시작됐는데(예: "치킨 왔다", "탑승 시작한다", "출발하자") 바로 다음 턴에서 그 행동이 이미 끝난 것처럼 쓰는 것 금지.
+  나쁜 예: 턴 74 "치킨 왔다" → 턴 75 "치킨 다 먹었다"
+  좋은 예: 턴 74 "치킨 왔다" → 턴 75 "완전 배고팠는데, 얼른 먹자" → 턴 76(클로징멘트) "치킨 다 먹었다, 한 잔만 더 하고 가자"
+  클로징 복귀 멘트가 완료형(먹었다, 됐다, 끝났다)이면 그 이전 1~2턴에서 진행 중인 상황을 자연스럽게 묘사할 것.`;
 
             const prompt1 = `도서 정보:
 제목: ${title}
 저자: ${author}
-${themes ? '주제: ' + themes : ''}
+${themes ? `책 소개 (반드시 숙지 후 대본 작성):
+"""
+${themes}
+"""
+⚠️ 위 책 소개를 반드시 읽고, 실제 책 내용·주제·핵심 메시지를 기반으로 대본을 작성할 것. 책 소개에 없는 내용을 임의로 지어내거나 다른 책 내용을 섞는 것 절대 금지.` : ''}
 상황극: ${situation}`;
 
             const rawScript = await callClaude(systemPrompt1, prompt1, 0.7);
@@ -1755,43 +1883,178 @@ ${themes ? '주제: ' + themes : ''}
 - 이외의 말투·구어체·내용은 절대 변경 금지.
 오직 유효한 JSON 배열만 출력하세요.`;
             
-            const rawCorrected = await callClaude(systemPrompt2, rawScript, 0.2);
+            const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            const callGemini = async (systemPrompt, userContent, temperature = 0.2, thinking = false) => {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `${systemPrompt}\n\n${userContent}` }] }],
+                            generationConfig: {
+                                temperature,
+                                maxOutputTokens: 65536,
+                                ...(thinking ? { thinkingConfig: { thinkingBudget: 8000 } } : { thinkingConfig: { thinkingBudget: 0 } }),
+                            }
+                        })
+                    }
+                );
+                if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.error) throw new Error(`Gemini API 오류: ${data.error.message}`);
+                const parts = data.candidates?.[0]?.content?.parts || [];
+                return parts.filter(p => !p.thought).map(p => p.text || '').join('');
+            };
 
-            addLog('✅ [3단계] TTS 발음 최적화 리디렉팅 검토 요청 중...');
+            const rawCorrected = await callGemini(systemPrompt2, rawScript, 0.2, true);
+
+            addLog('✅ [3단계] 최종 품질 검수 요청 중...');
             setScriptProgress(80);
 
             const systemPrompt3 = `[4단계 최종 검토 에이전트 - 발음 & 자연스러움 특화]
 당신은 Perfect TTS Script Review Agent입니다.
 아래 JSON 배열 대본 전체를 재검토합니다.
 검토 항목 (모두 체크 후 미비 시 최소 수정만):
-0. ⚠️ 최우선 — 존댓말 어미 완전 제거: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 가 단 1개라도 있으면 즉시 반말로 교체. 이 항목이 통과되지 않으면 나머지 검토 의미 없음.
+0-A. ⚠️ 최우선 — 존댓말 어미 완전 제거: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 가 단 1개라도 있으면 즉시 반말로 교체.
+0-B. ⚠️ 최우선 — 이름 호칭: 턴 7 이후에 이름 호칭이 있으면 즉시 제거 (턴 1~6은 허용).
+0-B2. ⚠️ 최우선 — ${speakerA} 화자 역할: 턴 7 이후 책/콘텐츠를 소개하고 설명하는 것은 반드시 ${speakerA}. 만약 ${speakerB}가 책 내용을 먼저 꺼내거나 설명하는 구조라면 speaker를 ${speakerA}↔${speakerB} 전환 교체할 것.
+0-C. ⚠️ 최우선 — 대화 논리 일관성: 대본 전체를 순서대로 읽으면서 각 턴이 직전 턴과 논리적으로 연결되는지 확인. 직전에 언급한 소재(사물, 상황, 사건)를 모순되게 쓰는 경우 즉시 수정.
+  - 나쁜 예: 한 턴에서 "커피머신이 너무 느리다" → 다음 턴에서 "어 벌써 다 됐네"
+  - 나쁜 예: 한 턴에서 "밥 먹으러 가야지" → 다음 턴에서 갑자기 전혀 다른 장소 언급
+  - 수정 방법: 모순된 대사는 맥락에 맞게 교체하거나, 화제 전환이 필요하면 "야 근데 그거 기다리는 동안에 말인데" 같은 브릿지를 앞에 추가.
+0-D. ⚠️ 최우선 — ${speakerB} 화자 정체성: ${speakerB}는 이 책을 읽은 적 없는 사람. 아래 위반 표현이 하나라도 있으면 즉시 수정.
+  - 위반 표현: "내가 이 책 읽었을 때", "이 부분이 좋았어", "나도 이거 읽어봤는데", "그 챕터에서", 책 내용을 직접 아는 것처럼 말하는 모든 표현.
+  - 수정 방법: "그래? 그 부분 어떤 내용이야?", "처음 들어보는 개념인데", "진짜? 책에 그렇게 나와?" 식으로 처음 듣는 사람의 반응으로 교체.
+  - 턴 53~58 구간에서 ${speakerB}가 "나도 한번 읽어봐야겠다" / "이거 사봐야겠는데" 식으로 읽고 싶다는 의사를 표현했는가? 없으면 추가.
+  위 0-A, 0-B, 0-C, 0-D 항목이 모두 통과되지 않으면 나머지 검토 의미 없음.
 1. 턴 수 정확히 58개인가?
 2. 턴 1~6에서 책 언급이 없는가?
 3. 전환(턴 7~9)이 3단계 브릿지로 자연스럽게 이어지는가? 갑자기 책 제목이 등장하거나 "책 읽는다며?" 식의 뜬금 전환이면 수정. 턴 4~6의 대화 소재와 연결되어야 함.
 4. 유머와 리액션이 대화 맥락에서 자연스럽게 나오는가? 뜬금없이 끼워넣은 유머가 있으면 제거 또는 앞 대화와 연결되도록 수정.
 5. ${speakerB}의 현실 반박 5회 이상 + 자폭 고백이 있는가?
 6. 추천 유도 정확히 1회 (턴 48~52 사이)? + 판매성 표현 없음? + 매번 다른 표현?
-7. 매 턴 text 길이 30자 이하인가?
+7. 매 턴 text 길이: 30자 이상 80자 이하인가? 30자 미만 턴이 있으면 내용 보완해 늘릴 것 (클로징 마지막 4턴은 20자 이상).
 8. 모든 문장 끝에 마침표/물음표/느낌표가 있는가?
 9. 숫자·약어는 한글화되었나?
 10. 연속 자음/받침 구간 쉼표 처리되었나?
 11. 대화 끊기·정정·딴소리가 충분히 있는가?
 12. 마지막 3턴 마무리가 부드럽고 여운 있는가?
-13. 논리나 반복적인 부분에서 어색함이 없는가?
+13. 반복적인 패턴(같은 리액션이 여러 번 반복)이 없는가?
+13-B. ⚠️ "듣고 나서", "들어보니까", "들었는데" 등 청취 표현이 있으면 즉시 "읽고 나서", "읽어보니까", "읽었는데"로 교체. 이 팟캐스트는 책을 들은 게 아니라 읽은 것.
 14. 문장 끝 글자 뭉개짐 위험 체크: 받침 없는 짧은 글자로 끝나는 경우, "진짜." ".. " 등으로 교정.
 15. 마지막 10자 구간에 쉼표/마침표 1개 이상 있는가?
-16. 턴 58 마지막 대사가 주어진 [클로징 복귀 멘트]와 일치하는가?
+16. 턴 58 마지막 대사가 주어진 [클로징 복귀 멘트]와 일치하는가? 일치하지 않으면 클로징 복귀 멘트로 교체.
+    ⚠️ 절대 금지: "오늘 녹음 여기까지", "편안한 저녁 보내", "다음 시간에 또 만나", "오늘 방송 여기서 마칠게", "청취해주셔서 감사" 등 팟캐스트 방송 아웃로 형식의 표현. 있으면 즉시 상황에 맞는 클로징 복귀 멘트로 교체.
 17. 턴 56~58이 오프닝(턴 1~6)과 동일한 장소·상황인가? (전혀 다른 배경으로 바뀌었으면 수정)
 18. 책 얘기에서 클로징으로 전환이 급작스럽지 않은가? (브릿지 없이 뚝 끊기면 수정)
+18-B. ⚠️ 클로징 시간 점프 금지: 클로징 복귀 멘트(마지막 턴) 직전 1~2턴을 확인. 직전 턴에서 어떤 행동이 막 시작됐는데(예: "치킨 왔다", "자리 잡았다") 클로징 멘트에서 갑자기 그 행동이 끝난 것처럼("치킨 다 먹었다") 쓰여 있으면, 직전 턴을 그 행동이 진행 중인 자연스러운 대사로 수정할 것.
 19. 한 문장짜리 단답("맞아.", "진짜?", "그렇네." 등)이 있는가? 있으면 최소 2문장으로 늘릴 것.
+20. 이름 호칭: 턴 7 이후에 "${speakerA}" 또는 "${speakerB}" 이름을 부르는 표현이 있으면 즉시 제거.
+21. "진짜" 단어 횟수: 전체 대본에서 "진짜"가 3회 이상 등장하면 3번째부터 "정말", "완전", "너무", "대박" 등으로 교체.
 
 위 항목 중 하나라도 위반이면 가장 최소한의 단어/구두점/끝맺음만 수정하고, 특유의 말투·캐릭터성·내용은 절대 변경하지 마세요.
 모든 검토 완료 후 오직 완성된 58턴 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
 
-            let finalOutputRaw = await callClaude(systemPrompt3, rawCorrected, 0.2);
+            let afterPrompt3 = await callGemini(systemPrompt3, rawCorrected, 0.2, true);
+
+            addLog('✅ [4단계] 오류 탐지 중 (Gemini Thinking)...');
+            setScriptProgress(85);
+
+            const systemPrompt4 = `[4단계 — 오류 탐지 전용 에이전트]
+당신은 팟캐스트 대본에서 오류를 찾아내는 전문 검수자입니다.
+아래 대본 JSON을 처음부터 끝까지 꼼꼼히 읽고, 발견한 모든 오류를 목록으로 출력하세요.
+⚠️ 이 단계에서는 수정하지 마세요. 오직 오류 목록만 출력합니다.
+
+[탐지 항목 — 빠짐없이 모두 확인]
+
+A. 시간 점프: 행동이 막 시작됐는데 다음 턴에서 이미 완료된 경우.
+   예: 턴N "치킨 왔다" → 턴N+1 "치킨 다 먹었다"
+
+B. 사실 모순: 한 턴 내용이 앞·뒤 턴과 논리적으로 충돌하는 경우.
+   예: 턴N "커피머신 너무 느리다" → 턴N+1 "어 벌써 다 됐네"
+
+C. ${speakerB} 책 지식 오류: ${speakerB}가 이 책을 읽은 것처럼 아는 척하는 대사.
+   예: "내가 이 책 읽었을 때", "이 챕터에서", 책 내용을 직접 설명하는 대사.
+
+D. 외부 인물 혼동: 책 저자·공동저자가 아닌 인물(유튜버, 다른 작가, 독자 등)이 책 내용에 등장하는 것처럼 쓰인 경우.
+   예: "책에서 자청이라는 작가 얘기가 나오는데..."
+
+E. 저작권·명예훼손 위험:
+   - 실제 기업명을 부정적 맥락으로 언급 ("OO기업이 망했잖아" 등)
+   - 책 소개에 없는 수치·통계를 사실처럼 인용 ("실험에서 XX%가..." 등)
+   - 실존 인물 부정적 묘사 또는 발언 날조
+
+F. 화자 역할 역전: 턴 7 이후 ${speakerB}가 책 내용을 설명하거나 ${speakerA}가 모르는 척 묻는 구조.
+
+G. 존댓말 잔존: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 가 있는 턴.
+
+H. 이름 호칭: 턴 7 이후에 "${speakerA}" 또는 "${speakerB}" 이름을 부르는 대사.
+
+I. "진짜" 단어가 대본 전체에서 3회 이상 등장하는 경우 — 3번째부터 해당 턴 번호 모두 나열.
+
+J. 30자 미만 단답 대사 (클로징 마지막 4턴 제외).
+
+K. 단순 추임새 단독 대사 ("응.", "맞아.", "오.", "완전 공감.", "그러네." 등 내용 없이 끝나는 대사) 가 4개 이상인 경우.
+
+L. 청취 표현 오류: "듣고 나서", "들어보니까", "들었는데", "들어보면" 등 책을 듣는 것처럼 표현한 대사. (이 팟캐스트는 책을 읽은 것. "읽고 나서", "읽어보니까" 로 바꿔야 함.)
+
+M. 범용 행동 지침 오류: 직장 지침 3가지 구간(턴 46~52)에서 아래 범용 조언이 하나라도 등장하면 오류.
+   금지 표현: "메모하는 습관", "목록 작성", "상대방에게 주도권", "감사 일기", "아침 루틴", "명상", "산책", "긍정적으로", "작게 시작"
+   기준: 이 책 소개를 보지 않고도 만들 수 있는 조언이면 범용 조언으로 판단.
+
+[출력 형식 — 반드시 아래 형식으로만]
+오류가 있으면:
+- [A] 턴 N→N+1: (오류 내용 한 줄 설명)
+- [C] 턴 N: (오류 내용 한 줄 설명)
+...
+
+오류가 없으면: "오류 없음"
+
+설명·마크다운·JSON 절대 출력 금지. 오류 목록만 출력.`;
+
+            const errorList = await callGemini(systemPrompt4, afterPrompt3, 0.1, true); // Thinking으로 탐지
+            addLog(`🔍 탐지된 오류:\n${errorList}`);
+
+            addLog('✅ [5단계] 오류 수정 중...');
+            setScriptProgress(93);
+
+            const systemPrompt5 = `[5단계 — 오류 수정 전용 에이전트]
+당신은 팟캐스트 대본 수정 전문가입니다.
+아래에 원본 대본 JSON과 검수자가 찾아낸 오류 목록이 주어집니다.
+오류 목록에 있는 항목만 최소한으로 수정하세요. 오류 목록에 없는 부분은 절대 건드리지 마세요.
+
+[수정 기준]
+- [A] 시간 점프: 완료형 직전 턴을 진행 중인 자연스러운 대사로 교체.
+- [B] 사실 모순: 충돌하는 턴 text를 맥락에 맞게 교체.
+- [C] ${speakerB} 책 지식 오류: "그래서 어떻게 돼?", "그 내용 좀 더 얘기해봐" 식 처음 듣는 반응으로 교체.
+- [D] 외부 인물 혼동: 해당 대사 삭제 또는 책 소개 기반 사례로 대체.
+- [E] 저작권·명예훼손: 기업명→"한 회사가", 수치→삭제 또는 모호하게, 실존 인물→익명 처리.
+- [F] 화자 역할 역전: speaker 값을 ${speakerA}↔${speakerB} 교체.
+- [G] 존댓말: 반말 어미로 교체.
+- [H] 이름 호칭: 해당 이름 호칭 부분만 삭제.
+- [I] "진짜" 초과: 3번째 이후 등장분을 "정말", "완전", "너무", "대박" 등으로 교체.
+- [J] 단답 30자 미만: 내용 보완해 30자 이상으로 늘릴 것.
+- [K] 추임새 단독 대사 초과: 4번째 이후 추임새 대사에 구체적 내용·질문을 이어 붙일 것.
+- [L] 청취 표현: "듣고 나서"→"읽고 나서", "들어보니까"→"읽어보니까", "들었는데"→"읽었는데" 로 교체.
+- [M] 범용 행동 지침: 해당 지침을 이 책 소개의 핵심 개념과 직접 연결된 구체적 행동으로 교체. 책 소개에서 관련 개념을 찾아 "이 책에서 OO 개념을 다루는데, 내일 직장에서 OO하게 해봐" 식으로 재작성.
+
+[입력 형식]
+=== 오류 목록 ===
+{오류목록}
+
+=== 원본 대본 JSON ===
+{대본JSON}
+
+[출력]
+수정 완료된 JSON 배열만 출력. 설명·코멘트·마크다운 절대 금지.
+speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
+
+            const fixInput = `=== 오류 목록 ===\n${errorList}\n\n=== 원본 대본 JSON ===\n${afterPrompt3}`;
+            let finalOutputRaw = await callGemini(systemPrompt5, fixInput, 0.1, true);
 
             addLog('✅ 대본 파싱 및 검증 완료');
-            setScriptProgress(95);
+            setScriptProgress(97);
 
             let cleanJson = finalOutputRaw.replace(/\`\`\`(json)?/gi, '').trim();
             const finalScript = tryLooseParseJSON(cleanJson);
@@ -2156,6 +2419,19 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
     const [voiceIntro, setVoiceIntro] = useState('default');
     const [voiceOutro, setVoiceOutro] = useState('default');
     const [voiceDragOver, setVoiceDragOver] = useState(false);
+
+    // ── YouTube 팟캐스트 상태 ─────────────────────────────────
+    const [youtubeUrl, setYoutubeUrl] = useState('');
+    const [youtubeTitle, setYoutubeTitle] = useState('');
+    const [youtubeChannel, setYoutubeChannel] = useState('');
+    const [youtubeAnalyzing, setYoutubeAnalyzing] = useState(false);
+    const [youtubeContent, setYoutubeContent] = useState('');
+    const [youtubeSaving, setYoutubeSaving] = useState(false);
+    const [youtubeVideos, setYoutubeVideos] = useState([]);
+    const [selectedYoutubeId, setSelectedYoutubeId] = useState('');
+    const [podcastSourceType, setPodcastSourceType] = useState('book'); // 'book' | 'youtube'
+    const [youtubeLogs, setYoutubeLogs] = useState([]);
+    const [youtubeScriptGenerating, setYoutubeScriptGenerating] = useState(false);
 
     // 선택 도서의 대본 (bookScripts 또는 Firestore)
     const [firestoreScript, setFirestoreScript] = useState([]);
@@ -2590,16 +2866,274 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         element.click();
     };
 
+    // ── YouTube 팟캐스트 함수 ─────────────────────────────────
+
+    const handleAnalyzeYoutube = async () => {
+        if (!youtubeUrl.trim()) return alert('YouTube URL을 입력해주세요.');
+        const ytPattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/;
+        if (!ytPattern.test(youtubeUrl)) return alert('올바른 YouTube URL 형식이 아닙니다.\n(예: https://www.youtube.com/watch?v=...)');
+
+        setYoutubeAnalyzing(true);
+        setYoutubeContent('');
+        setYoutubeLogs(['[START] YouTube 영상 분석 시작...']);
+
+        const geminiKey = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+        ].filter(Boolean)[0];
+
+        try {
+            if (!geminiKey) throw new Error('Gemini API 키가 없습니다. 환경변수를 확인하세요.');
+            setYoutubeLogs(prev => [...prev, '[GEMINI] 영상 내용 분석 중... (최대 2~3분 소요)']);
+
+            const analysisPrompt = `이 유튜브 영상을 분석해서 다음 형식으로 한국어로 상세하게 정리해주세요:
+
+[제목]
+영상 제목 (한국어 번역 포함)
+
+[발표자/채널]
+발표자 이름, 채널명, 배경 정보
+
+[핵심 주제]
+3~5개의 핵심 주제를 bullet point로
+
+[주요 메시지]
+영상의 가장 중요한 메시지와 인사이트 (구체적 발언 포함)
+
+[내용 상세 요약]
+영상 전체 내용을 섹션별로 자세히 요약 (전체 내용의 80% 이상 커버)
+
+[실용적 교훈]
+직장인들이 바로 활용할 수 있는 실용적 교훈 3~5개
+
+[인상적인 발언 & 명언]
+영상에서 가장 인상적인 발언이나 명언 3~5개 (원문 + 한국어)`;
+
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${geminiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [
+                            { text: analysisPrompt },
+                            { fileData: { mimeType: 'video/*', fileUri: youtubeUrl.trim() } }
+                        ]}],
+                        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
+                    })
+                }
+            );
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`);
+            }
+
+            const data = await res.json();
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!content) throw new Error('응답 내용이 비어있습니다.');
+
+            // 제목 자동 추출
+            const titleMatch = content.match(/\[제목\]\s*\n(.*?)(?:\n|$)/);
+            if (titleMatch && !youtubeTitle) setYoutubeTitle(titleMatch[1].trim());
+            const channelMatch = content.match(/\[발표자\/채널\]\s*\n(.*?)(?:\n|$)/);
+            if (channelMatch && !youtubeChannel) setYoutubeChannel(channelMatch[1].trim());
+
+            setYoutubeContent(content);
+            setYoutubeLogs(prev => [...prev, `[DONE] 분석 완료! ${content.length}자 추출됨`]);
+        } catch (e) {
+            setYoutubeLogs(prev => [...prev, `[ERROR] ${e.message}`]);
+            alert('영상 분석 실패: ' + e.message);
+        } finally {
+            setYoutubeAnalyzing(false);
+        }
+    };
+
+    const handleSaveYoutubeVideo = async () => {
+        if (!youtubeContent) return alert('먼저 영상을 분석해주세요.');
+        if (!youtubeTitle.trim()) return alert('영상 제목을 입력해주세요.');
+
+        setYoutubeSaving(true);
+        try {
+            const videoIdMatch = youtubeUrl.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : `yt-${Date.now()}`;
+            await setDoc(doc(db, 'youtube_videos', videoId), {
+                url: youtubeUrl.trim(),
+                title: youtubeTitle.trim(),
+                channel: youtubeChannel.trim(),
+                content: youtubeContent,
+                createdAt: serverTimestamp()
+            });
+            setYoutubeLogs(prev => [...prev, `[SAVED] "${youtubeTitle}" Firestore 저장 완료`]);
+            setYoutubeUrl('');
+            setYoutubeTitle('');
+            setYoutubeChannel('');
+            setYoutubeContent('');
+            alert('유튜브 영상이 등록되었습니다!');
+        } catch (e) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setYoutubeSaving(false);
+        }
+    };
+
+    const handleDeleteYoutubeVideo = async (videoId) => {
+        if (!confirm('이 영상을 목록에서 삭제하시겠습니까?')) return;
+        try {
+            await deleteDoc(doc(db, 'youtube_videos', videoId));
+        } catch (e) {
+            alert('삭제 실패: ' + e.message);
+        }
+    };
+
+    const handleGenerateYoutubeScript = async () => {
+        if (!selectedYoutubeId) return alert('YouTube 영상을 선택해주세요.');
+        const video = youtubeVideos.find(v => v.id === selectedYoutubeId);
+        if (!video) return alert('선택한 영상 정보를 찾을 수 없습니다.');
+
+        const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || scriptApiKey;
+        if (!apiKey) return alert('Claude API 키가 필요합니다. AI 대본 생성 탭에서 먼저 입력하세요.');
+
+        setYoutubeScriptGenerating(true);
+        setLogs([`[YOUTUBE] "${video.title}" 팟캐스트 대본 생성 시작...`]);
+
+        try {
+            const { Anthropic } = await import('@anthropic-ai/sdk');
+            const anthropic = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+
+            const _ytActiveSituation = selectedSituation || SCRIPT_SITUATIONS[Math.floor(Math.random() * SCRIPT_SITUATIONS.length)];
+            const situation = `선택된 상황: ${_ytActiveSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${_ytActiveSituation.close}"`;
+
+            const speakerA = '제임스';
+            const speakerB = '스텔라';
+
+            setLogs(prev => [...prev, '[CLAUDE] 1단계: 대본 생성 중...']);
+
+            const systemPrompt = `[시스템 페르소나 및 핵심 제약사항]
+당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다.
+두 명의 친한 친구(${speakerA}, ${speakerB})가 수다 떨듯이 쓰되, 절대 강의처럼 들리지 않게 하세요.
+
+[절대 출력 형식]
+오직 아래 JSON 배열 형태만 최종 출력하세요. 그 외 어떤 글자도 쓰지 마세요.
+[
+  {"speaker": "${speakerA}", "text": "..."},
+  {"speaker": "${speakerB}", "text": "..."}
+]
+총 턴 수는 정확히 58턴으로 고정 (7분 30초~8분 분량 목표)
+
+[턴 구조 - 반드시 이 흐름으로만 작성]
+턴 1~6 : 주어진 상황만 수다. 영상/강연/유튜브 언급 절대 금지. 현실적인 직장인 수다만.
+          단, 턴 4~6에서 나중에 영상 주제와 연결될 수 있는 소재를 자연스럽게 흘려둘 것.
+턴 7~9 : 영상 전환 브릿지 — ⚠️ 7~9턴 모두 ${speakerA}가 먼저 말을 꺼내고 ${speakerB}가 반응하는 구조.
+          [7턴] ${speakerA}가 앞 대화 고민/공감대 받아서 "그러고 보니…", "근데 그거 관련해서 생각난 게 있는데" 식으로 연결
+          [8턴] ${speakerA}가 직접 언급 없이 "나 요즘 그런 생각 하다가 뭔가 봤는데" 궁금증 유발 → ${speakerB}가 "뭔데?" 반응
+          [9턴] ${speakerA}가 자연스럽게 영상/강연 제목 꺼냄 → ${speakerB}가 처음 듣는 반응
+          (나쁜 예: ${speakerB}가 영상/콘텐츠를 먼저 꺼내는 것 → 절대 금지)
+턴 10~52 : ${speakerA}가 영상 내용 설명, ${speakerB}가 듣고 질문·공감·반박하는 구조.
+  - ${speakerA}: 영상 내용 설명 + 직장 사례 연결 (대사 충분히 길게, 2~4문장)
+  - ${speakerB}: 처음 듣는 사람처럼 반응 (영상 내용 설명 절대 금지)
+  - 턴 36~45: 직장 사례 최소 2개
+  - 턴 46~52: 행동 인사이트 정확히 2개
+턴 53~58 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 봐야겠다" 식으로 처음으로 보고 싶다는 의사 표현 (추천 유도 1회)
+
+[말투 철칙]
+- 전 구간 100% 반말. 단 1턴도 예외 없음.
+- 존댓말 어미 절대 금지: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요 등 전부 반말로
+- ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지.
+- ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨. 대체 표현: "정말", "완전", "너무", "대박", "어이없어", "말도 안 돼" 등 다양하게 활용.
+- ⚠️ 대화 논리 일관성: 각 대사는 직전 대사와 반드시 논리적으로 연결되어야 함. 직전에 언급한 소재를 갑자기 모순되게 쓰는 것 절대 금지. 화제 전환 시 자연스러운 브릿지 사용.
+- 모든 대사는 최소 2문장 이상 (한 문장짜리 단답 금지)
+- 매 턴 text 길이 최대 80자 (초과 시 나누기)
+- 매 턴 마침표/물음표/느낌표로 끝
+- 숫자는 한글로 (1+1 → 원 플러스 원)
+
+[화자 역할 구분 — 반드시 준수]
+- ${speakerA}(제임스): 콘텐츠를 먼저 보고 설명하는 입장 → "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 같은 표현 자연스럽게 허용
+- ${speakerB}(스텔라): 듣고 반응하는 입장 → 스텔라 본인이 "이건 설명해도 안 와닿을 것 같아" 식으로 설명 포기하는 대사 절대 금지
+  이유: 스텔라는 콘텐츠를 직접 본 사람이 아니므로 "내가 설명을 못 하겠다"는 발언이 앞뒤 안 맞음
+  대신: "그 느낌이 이제 알 것 같아", "제임스 말 듣고 나니까 나도 보고 싶어졌어" 식으로 반응`;
+
+            const prompt = `유튜브 영상/강연 정보:
+제목: ${video.title}
+채널: ${video.channel || ''}
+URL: ${video.url}
+
+영상 내용 요약:
+${video.content}
+
+상황극: ${situation}
+
+위 유튜브 영상 내용을 바탕으로 직장인들이 공감할 수 있는 팟캐스트 대본을 58턴으로 작성해주세요.
+영상의 핵심 인사이트를 자연스럽게 녹여내되, 마치 두 친구가 이 강연/영상을 보고 나서 수다를 떠는 느낌으로 작성하세요.`;
+
+            const res1 = await anthropic.messages.create({
+                model: 'claude-sonnet-4-5',
+                max_tokens: 8192,
+                temperature: 0.7,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: prompt }]
+            });
+            const raw = res1.content[0].text;
+
+            setLogs(prev => [...prev, '[CLAUDE] 2단계: 맞춤법 교정 중...']);
+            const sys2 = `아래 대본 JSON 배열에서 맞춤법·띄어쓰기만 수정하고, 말투·내용은 절대 변경하지 마세요. 오직 유효한 JSON 배열만 출력하세요.`;
+            const res2 = await anthropic.messages.create({
+                model: 'claude-sonnet-4-5',
+                max_tokens: 8192,
+                temperature: 0.2,
+                system: sys2,
+                messages: [{ role: 'user', content: raw }]
+            });
+            const corrected = res2.content[0].text;
+
+            setLogs(prev => [...prev, '[CLAUDE] 3단계: TTS 최적화 검토 중...']);
+            const sys3 = `아래 JSON 배열 대본을 검토하세요. 존댓말 어미 제거, 30자 초과 턴 분리, 턴수 58개 확인, 문장 끝 마침표 확인. 추가로: 스텔라(Stella) 화자의 대사 중 "설명해도 안 와닿아", "이건 말로 표현이 안 돼" 처럼 스텔라 본인이 설명을 포기하는 표현은 "제임스 말 듣고 나니 나도 보고 싶어졌어" 식으로 교체. 단, 제임스(James) 화자의 "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 는 그대로 유지. ⚠️ 대사 중 상대방 이름 직접 호칭 제거: "야 스텔라", "스텔라야", "야 제임스", "제임스야" 등 이름을 부르는 표현이 있으면 이름 없이 자연스럽게 수정. ⚠️ 대화 논리 일관성: 직전 대사와 모순되는 내용(예: 느리다고 불평한 것을 바로 다음 턴에서 "벌써 됐네"라고 하는 것)이 있으면 즉시 수정. 오직 완성된 58턴 JSON 배열만 출력하세요.`;
+            const res3 = await anthropic.messages.create({
+                model: 'claude-sonnet-4-5',
+                max_tokens: 8192,
+                temperature: 0.2,
+                system: sys3,
+                messages: [{ role: 'user', content: corrected }]
+            });
+            let finalRaw = res3.content[0].text;
+
+            let cleanJson = finalRaw.replace(/```(json)?/gi, '').trim();
+            const finalScript = tryLooseParseJSON(cleanJson);
+            if (!Array.isArray(finalScript) || finalScript.length === 0) throw new Error('대본 파싱 실패');
+
+            // Firestore 저장
+            const scriptId = `yt-${selectedYoutubeId}`;
+            await setDoc(doc(db, 'scripts', scriptId), {
+                script: finalScript,
+                sourceType: 'youtube',
+                youtubeId: selectedYoutubeId,
+                youtubeTitle: video.title,
+                updatedAt: new Date().toISOString()
+            });
+
+            setGeneratedScript(finalScript);
+            setManualContent(JSON.stringify(finalScript, null, 2));
+            setInputMode('text');
+            setLogs(prev => [...prev, `[DONE] ✅ 대본 ${finalScript.length}턴 생성 완료! Firestore(scripts/${scriptId}) 저장됨`]);
+            alert(`대본 생성 완료! ${finalScript.length}턴\n이제 AI 팟캐스트 탭 → EXECUTE PRODUCTION으로 TTS를 생성하세요.`);
+        } catch (e) {
+            setLogs(prev => [...prev, `[ERROR] ${e.message}`]);
+            alert('대본 생성 실패: ' + e.message);
+        } finally {
+            setYoutubeScriptGenerating(false);
+        }
+    };
+
     const tabNames = {
-        'dashboard': '대시보드',
-        'automation': '일괄 자동화 ⚡',
         'members': '회원 관리',
         'books': '도서 관리',
         'popular': '인기 아카이뷰',
         'script': 'AI 대본 생성',
+        'automation': '일괄 자동화 ⚡',
         'ebook': 'E-BOOK 제작',
-        'podcast': 'AI 팟캐스트',
-        'voice': '성우 다이렉트',
+        'podcast': 'YouTube 팟캐스트',
+        'voice': 'YouTube 등록',
         'sales': '매출 관리',
         'payment': '결제 설정'
     };
@@ -2687,14 +3221,11 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`flex-1 py-4 px-6 rounded-xl text-sm font-black tracking-widest whitespace-nowrap transition-all flex items-center justify-center gap-3 ${activeTab === tab
+                                className={`flex-1 py-4 px-3 rounded-xl text-sm font-black tracking-widest whitespace-nowrap transition-all ${activeTab === tab
                                     ? 'bg-gold text-primary shadow-[0_10px_25px_rgba(212,175,55,0.3)] scale-[1.02] z-10'
                                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
-                                <span className="material-symbols-outlined text-xl">
-                                    {tab === 'dashboard' ? 'dashboard' : tab === 'members' ? 'group' : tab === 'books' ? 'menu_book' : tab === 'popular' ? 'trending_up' : tab === 'script' ? 'draw' : tab === 'ebook' ? 'auto_stories' : tab === 'podcast' ? 'podcasts' : tab === 'voice' ? 'record_voice_over' : tab === 'sales' ? 'payments' : tab === 'automation' ? 'smart_button' : 'settings'}
-                                </span>
                                 {tabNames[tab].toUpperCase()}
                             </button>
                         ))}
@@ -4169,410 +4700,457 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
 
                     {activeTab === 'podcast' && (
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 animate-fade-in items-start">
-                            <div className="space-y-12">
-                                {registrationUI}
-                                <div className="bg-black rounded-[48px] border-4 border-white/5 overflow-hidden flex flex-col h-[600px] shadow-[0_50px_100px_rgba(0,0,0,0.8)]">
-                                    <div className="bg-white/5 px-10 py-6 border-b border-white/10 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-3 rounded-full bg-red-500"></div>
-                                            <div className="size-3 rounded-full bg-amber-500"></div>
-                                            <div className="size-3 rounded-full bg-emerald-500"></div>
-                                            <span className="text-xs font-black font-mono text-slate-400 uppercase tracking-[0.4em] ml-4">System Core Log v4.0</span>
-                                        </div>
-                                        <span className="text-[10px] text-slate-600 font-mono">ENCRYPTED UPLINK: ACTIVE</span>
+                            {/* LEFT: 대본 생성 */}
+                            <div className="space-y-8">
+                                <div className="space-y-2">
+                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+                                        <span className="material-symbols-outlined text-red-400 text-sm">smart_display</span>
+                                        <span className="text-red-400 text-[10px] font-black uppercase tracking-widest">YouTube → Podcast Pipeline</span>
                                     </div>
-                                    <div className="p-10 font-mono text-sm text-emerald-400 overflow-y-auto space-y-4 flex-1 scrollbar-hide bg-[#050505]">
-                                        {logs.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center h-full text-slate-800 space-y-4">
-                                                <span className="material-symbols-outlined text-6xl animate-pulse">terminal</span>
-                                                <p className="text-sm font-black uppercase tracking-widest">Waiting for Engine Initialization...</p>
+                                    <h3 className="text-white font-black text-5xl italic tracking-tighter">AI 팟캐스트<br/>팩토리</h3>
+                                    <p className="text-slate-500 text-base font-medium">유튜브 영상을 제임스 & 스텔라의 팟캐스트로 자동 변환합니다.</p>
+                                </div>
+
+                                {/* STEP 1: 영상 선택 */}
+                                <div className="bg-white/5 rounded-[32px] border border-white/10 p-8 space-y-5">
+                                    <h4 className="text-white font-black text-lg flex items-center gap-3">
+                                        <span className="size-7 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-xs font-black text-red-400">1</span>
+                                        YouTube 영상 선택
+                                    </h4>
+                                    {youtubeVideos.length === 0 ? (
+                                        <div className="text-center py-8 space-y-3">
+                                            <span className="material-symbols-outlined text-4xl text-slate-700">smart_display</span>
+                                            <p className="text-slate-600 text-sm font-bold">등록된 YouTube 영상이 없습니다.</p>
+                                            <p className="text-slate-700 text-xs">「성우 다이렉트」 탭에서 먼저 영상을 등록하세요.</p>
+                                        </div>
+                                    ) : (
+                                        <select value={selectedYoutubeId} onChange={e => setSelectedYoutubeId(e.target.value)} className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-red-400/60 outline-none transition-all font-bold appearance-none cursor-pointer">
+                                            <option value="">영상을 선택하세요</option>
+                                            {youtubeVideos.map(v => (<option key={v.id} value={v.id}>{v.title}</option>))}
+                                        </select>
+                                    )}
+                                    {selectedYoutubeId && (() => {
+                                        const video = youtubeVideos.find(v => v.id === selectedYoutubeId);
+                                        return video ? (
+                                            <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/10 space-y-1">
+                                                <p className="text-red-300 text-xs font-black">{video.channel}</p>
+                                                <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-slate-600 text-[10px] hover:text-red-400 transition-colors truncate block">{video.url}</a>
                                             </div>
-                                        ) : (
-                                            logs.map((log, i) => (
-                                                <div key={i} className="animate-fade-in-shorter border-l-4 border-emerald-500/30 pl-6 py-1">
-                                                    <span className="text-emerald-900 mr-4">[{i + 1}]</span>
-                                                    {log}
+                                        ) : null;
+                                    })()}
+                                </div>
+
+                                {/* STEP 2: 상황극 선택 */}
+                                <div className="bg-white/5 rounded-[32px] border border-white/10 p-8 space-y-4">
+                                    <h4 className="text-white font-black text-lg flex items-center gap-3">
+                                        <span className="size-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-black text-amber-400">2</span>
+                                        상황극 선택 <span className="text-slate-600 text-sm font-normal ml-1">(선택 사항)</span>
+                                    </h4>
+                                    <select
+                                        value={selectedSituation ? SCRIPT_SITUATIONS.indexOf(selectedSituation) : ''}
+                                        onChange={e => setSelectedSituation(e.target.value === '' ? null : SCRIPT_SITUATIONS[parseInt(e.target.value)])}
+                                        className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-sm text-white focus:border-amber-400/60 outline-none transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">랜덤 / 스튜디오 기본 설정</option>
+                                        {SCRIPT_SITUATIONS.map((s, i) => (<option key={i} value={i}>{s.scene}</option>))}
+                                    </select>
+                                </div>
+
+                                {/* STEP 3: 대본 생성 버튼 */}
+                                <button
+                                    onClick={handleGenerateYoutubeScript}
+                                    disabled={youtubeScriptGenerating || !selectedYoutubeId}
+                                    className={`w-full py-7 rounded-[32px] font-black text-xl flex items-center justify-center gap-5 transition-all ${youtubeScriptGenerating || !selectedYoutubeId ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-red-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(239,68,68,0.3)]'}`}
+                                >
+                                    {youtubeScriptGenerating ? (<><span className="material-symbols-outlined animate-spin text-3xl">sync</span>Claude 대본 생성 중...</>) : (<><span className="material-symbols-outlined text-3xl">auto_awesome</span>Claude 대본 생성 (3단계)</>)}
+                                </button>
+
+                                {/* 생성된 대본 미리보기 */}
+                                {generatedScript.length > 0 && (
+                                    <div className="bg-black rounded-[32px] border border-white/10 overflow-hidden">
+                                        <div className="px-6 py-4 border-b border-white/10 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-emerald-400 text-base">check_circle</span>
+                                            <p className="text-white font-black text-sm">대본 생성 완료 ({generatedScript.length}턴)</p>
+                                        </div>
+                                        <div className="p-5 space-y-2 max-h-56 overflow-y-auto scrollbar-hide">
+                                            {generatedScript.slice(0, 8).map((line, i) => (
+                                                <div key={i} className={`flex gap-2 ${line.speaker === '스텔라' ? 'flex-row-reverse' : ''}`}>
+                                                    <div className={`shrink-0 size-5 rounded-full flex items-center justify-center text-[8px] font-black ${line.speaker === '제임스' ? 'bg-gold/20 text-gold' : 'bg-violet-500/20 text-violet-400'}`}>{line.speaker === '제임스' ? 'J' : 'S'}</div>
+                                                    <p className="text-xs text-slate-400 leading-relaxed max-w-[85%]">{line.text}</p>
                                                 </div>
-                                            ))
-                                        )}
+                                            ))}
+                                            {generatedScript.length > 8 && <p className="text-center text-slate-700 text-[10px] pt-2">+{generatedScript.length - 8}개 더...</p>}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 로그 터미널 */}
+                                <div className="bg-black rounded-[32px] border-4 border-white/5 overflow-hidden flex flex-col h-56 shadow-2xl">
+                                    <div className="bg-white/5 px-6 py-4 border-b border-white/10 flex items-center gap-3">
+                                        <div className="size-2.5 rounded-full bg-red-500"></div>
+                                        <div className="size-2.5 rounded-full bg-amber-500"></div>
+                                        <div className="size-2.5 rounded-full bg-emerald-500"></div>
+                                        <span className="text-[10px] font-mono text-slate-600 ml-2 uppercase tracking-widest">YouTube Podcast Log</span>
+                                    </div>
+                                    <div className="p-5 font-mono text-xs text-emerald-400 overflow-y-auto space-y-2 flex-1 scrollbar-hide bg-[#050505]">
+                                        {logs.length === 0 ? (
+                                            <div className="flex items-center justify-center h-full text-slate-800"><p className="text-xs font-black uppercase tracking-widest">Waiting for pipeline...</p></div>
+                                        ) : logs.map((log, i) => (
+                                            <div key={i} className="border-l-2 border-emerald-500/30 pl-3 animate-fade-in">
+                                                <span className="text-emerald-900 mr-2">[{i+1}]</span>{log}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white/5 border border-white/10 p-16 rounded-[64px] space-y-12 h-fit sticky top-32 shadow-3xl backdrop-blur-3xl">
-                                <div className="space-y-4">
-                                    <div className="inline-block px-4 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">Advanced AI Engine</div>
-                                    <h3 className="text-white font-black text-6xl italic flex items-center gap-6 tracking-tighter leading-none">
-                                        PODCAST<br />FACTORY
-                                    </h3>
-                                    <p className="text-slate-500 text-lg font-medium max-w-md">인공지능 제임스와 스텔라의 고품격 대담을 생성합니다. 도서를 선택하고 공정을 시작하세요.</p>
+                            {/* RIGHT: TTS 생성 패널 */}
+                            <div className="bg-white/5 border border-white/10 p-10 rounded-[48px] space-y-8 h-fit sticky top-32 shadow-3xl backdrop-blur-3xl">
+                                <div className="space-y-3">
+                                    <div className="inline-block px-4 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">Gemini TTS Engine</div>
+                                    <h3 className="text-white font-black text-4xl italic tracking-tighter leading-none">TTS<br/>PRODUCTION</h3>
+                                    <p className="text-slate-500 text-sm font-medium">대본 생성 후 TTS를 실행하여 팟캐스트 음성을 생성합니다.</p>
                                 </div>
-                                <div className="space-y-10">
-                                    <div className="space-y-4">
-                                        <label className="text-xs text-slate-400 font-black uppercase tracking-widest ml-2">Master Source Selector</label>
-                                        <select
-                                            value={selectedBookId}
-                                            onChange={e => setSelectedBookId(e.target.value)}
-                                            className="w-full bg-black/60 border-2 border-white/10 rounded-[24px] px-8 py-6 text-xl text-white focus:border-gold outline-none transition-all shadow-inner font-black appearance-none cursor-pointer"
-                                        >
-                                            <option value="">SELECT SOURCE 도서</option>
-                                            {realBooks.map(b => (
-                                                <option key={b.id || b.title} value={b.id || b.title}>{b.title.toUpperCase()}</option>
-                                            ))}
-                                        </select>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <button onClick={handleGenerateText} disabled={isGeneratingText} className={`py-6 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-4 border-2 ${isGeneratingText ? 'bg-slate-800 text-slate-500 border-white/5' : 'bg-gold text-primary border-gold hover:bg-white hover:border-white active:scale-95 shadow-xl'}`}>
-                                            <span className="material-symbols-outlined text-2xl">{isGeneratingText ? 'sync' : 'psychology'}</span>
-                                            {isGeneratingText ? 'GENERATING...' : 'AI SCRIPT GEN'}
-                                        </button>
-                                        <button onClick={handleDownloadTxt} className="py-6 bg-white/5 text-slate-300 border-2 border-white/10 rounded-2xl text-sm font-black hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center gap-4 uppercase tracking-widest">
-                                            <span className="material-symbols-outlined text-2xl">download</span>
-                                            Download .TXT
-                                        </button>
+                                {/* TTS 모델 선택 */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">TTS 모델</label>
+                                    <div className="flex bg-black/60 p-2 rounded-2xl gap-2">
+                                        {[['pro', 'Gemini 2.5 Pro'], ['flash', 'Gemini 2.5 Flash']].map(([val, label]) => (
+                                            <button key={val} onClick={() => setTtsModel(val)} className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${ttsModel === val ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}>{label}</button>
+                                        ))}
                                     </div>
+                                </div>
 
-                                    <div className="flex bg-black/60 p-2 rounded-2xl gap-3">
-                                        <button onClick={() => setInputMode('text')} className={`flex-1 py-4 text-xs font-black rounded-xl transition-all ${inputMode === 'text' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}>MANUAL EDITOR</button>
-                                        <button onClick={() => setInputMode('file')} className={`flex-1 py-4 text-xs font-black rounded-xl transition-all ${inputMode === 'file' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}>FILE UPLINK</button>
-                                    </div>
-
-                                    {inputMode === 'text' ? (
-                                        <textarea value={manualContent} onChange={e => setManualContent(e.target.value)} placeholder="분석할 도서의 텍스트나 핵심 내용을 여기에 붙여넣으세요..." className="w-full h-80 bg-black/60 border-2 border-white/10 rounded-[32px] px-8 py-8 text-base text-white focus:border-gold outline-none transition-all resize-none font-mono leading-relaxed shadow-inner" />
-                                    ) : (
-                                        <div className="bg-black/60 border-4 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center gap-6 group hover:border-gold/50 transition-all cursor-pointer">
-                                            <span className="material-symbols-outlined text-8xl text-slate-800 group-hover:text-gold transition-colors">upload_file</span>
-                                            <input type="file" accept=".txt" onChange={e => setUploadFile(e.target.files[0])} className="text-sm text-slate-600 font-black font-mono tracking-tighter" />
-                                            <p className="text-slate-700 font-bold uppercase text-xs">Drop source TXT file here</p>
+                                {/* 진행률 */}
+                                {isTtsRunning && (
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
+                                            <span>TTS 진행률</span><span>{ttsProgress}%</span>
                                         </div>
-                                    )}
+                                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-gradient-to-r from-gold to-amber-400 rounded-full transition-all duration-500" style={{ width: `${ttsProgress}%` }}></div>
+                                        </div>
+                                    </div>
+                                )}
 
-                                    <button onClick={handleGeneratePodcast} disabled={isGenerating} className={`w-full py-8 rounded-[32px] font-black text-2xl flex items-center justify-center gap-6 shadow-[0_30px_60px_rgba(212,175,55,0.2)] transition-all ${isGenerating ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gold text-primary hover:scale-[1.02] active:scale-[0.98] hover:shadow-[0_40px_80px_rgba(212,175,55,0.3)]'}`}>
-                                        {isGenerating ? (<><span className="material-symbols-outlined animate-spin text-4xl">settings_accent</span> MANUFACTURING ({podcastProgress}%)</>) : (<><span className="material-symbols-outlined text-4xl">rocket_launch</span> EXECUTE PRODUCTION</>)}
-                                    </button>
-                                </div>
+                                {/* TTS 실행 버튼 */}
+                                <button
+                                    onClick={handleRunTts}
+                                    disabled={isTtsRunning || generatedScript.length === 0}
+                                    className={`w-full py-7 rounded-[28px] font-black text-xl flex items-center justify-center gap-5 transition-all ${isTtsRunning || generatedScript.length === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gold text-primary hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(212,175,55,0.3)]'}`}
+                                >
+                                    {isTtsRunning ? (<><span className="material-symbols-outlined animate-spin text-3xl">settings_accent</span>TTS 생성 중... ({ttsProgress}%)</>) : (<><span className="material-symbols-outlined text-3xl">rocket_launch</span>TTS 음성 생성</>)}
+                                </button>
+
+                                {/* TTS 로그 */}
+                                {ttsLogs.length > 0 && (
+                                    <div className="bg-black rounded-2xl border border-white/5 overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-white/10">
+                                            <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">TTS Engine Log</span>
+                                        </div>
+                                        <div ref={ttsLogContainerRef} className="p-4 font-mono text-[10px] text-emerald-400 overflow-y-auto space-y-1.5 max-h-52 bg-[#050505] scrollbar-hide">
+                                            {ttsLogs.map((log, i) => <div key={i} className="border-l border-emerald-500/20 pl-2">{log}</div>)}
+                                            <div ref={ttsLogEndRef} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!isTtsRunning && generatedScript.length > 0 && (
+                                    <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 text-center space-y-1">
+                                        <p className="text-emerald-400 text-xs font-black">TTS 완료 후 WAV 파일이 자동 다운로드됩니다</p>
+                                        <p className="text-slate-600 text-[10px]">public/audio/ 폴더에 복사 후 관리자에서 경로 등록하세요</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {/* ── 성우 다이렉트 탭 ─────────────────────────────────── */}
+                    {/* ── 성우 다이렉트 탭 (YouTube 소스 등록) ─────────────── */}
                     {activeTab === 'voice' && (
-                        <div className="space-y-10 animate-fade-in">
-                            {/* 헤더 */}
-                            <div className="flex justify-between items-end">
+                        <>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 animate-fade-in items-start">
+                            {/* LEFT: 새 영상 등록 폼 */}
+                            <div className="space-y-8">
                                 <div className="space-y-2">
-                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20">
-                                        <div className="size-2 rounded-full bg-violet-400 animate-ping"></div>
-                                        <span className="text-violet-400 text-[10px] font-black uppercase tracking-widest">Voice Actor Direct Studio</span>
+                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+                                        <div className="size-2 rounded-full bg-red-400 animate-ping"></div>
+                                        <span className="text-red-400 text-[10px] font-black uppercase tracking-widest">YouTube Source Studio</span>
                                     </div>
-                                    <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">성우 다이렉트</h3>
-                                    <p className="text-slate-500 text-lg font-medium">AI TTS와 병행 · 성우가 직접 녹음한 MP3로 고품질 팟캐스트를 제작합니다</p>
-                                </div>
-                            </div>
-
-                            {/* 도서별 트랙 현황 */}
-                            <div className="bg-white/5 rounded-[40px] border border-white/10 p-8">
-                                <h4 className="text-white font-black text-lg mb-6 flex items-center gap-3">
-                                    <span className="material-symbols-outlined text-gold">bar_chart</span>
-                                    도서별 오디오 트랙 현황
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 max-h-52 overflow-y-auto scrollbar-hide pr-1">
-                                    {trackStatus.slice(0, 40).map(book => (
-                                        <div key={book.id} className="flex items-center justify-between bg-black/40 rounded-2xl px-4 py-3 border border-white/5 gap-2">
-                                            <span className="text-xs text-slate-300 font-bold truncate flex-1">{book.title}</span>
-                                            <div className="flex items-center gap-1.5 shrink-0">
-                                                <span title="AI TTS" className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${book.hasAI ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' : 'bg-white/5 text-slate-700 border-white/5'}`}>AI</span>
-                                                <span title="성우" className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${book.hasVoice ? 'bg-violet-500/15 text-violet-400 border-violet-500/25' : 'bg-white/5 text-slate-700 border-white/5'}`}>성우</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {trackStatus.length === 0 && (
-                                        <div className="col-span-full text-center text-slate-700 text-sm py-8">등록된 도서가 없습니다</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 메인 2컬럼 */}
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
-
-                                {/* LEFT — 도서 선택 + 대본 미리보기 */}
-                                <div className="space-y-6">
-                                    {/* 도서 선택 */}
-                                    <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-5">
-                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-violet-400">auto_stories</span>
-                                            STEP 1 · 도서 선택
-                                        </h4>
-                                        <select
-                                            value={voiceBook}
-                                            onChange={e => { setVoiceBook(e.target.value); setVoiceLogs([]); setVoiceProgress(0); }}
-                                            className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-lg text-white focus:border-violet-400 outline-none transition-all font-black appearance-none cursor-pointer"
-                                        >
-                                            <option value="">도서를 선택하세요</option>
-                                            {realBooks.map(b => {
-                                                const bid = b.id || b.title;
-                                                const hasLocal = !!bookScripts[bid];
-                                                const hasFirestore = !hasLocal && firestoreScript.length > 0 && voiceBook === bid;
-                                                return (
-                                                    <option key={bid} value={bid}>
-                                                        {b.title} {hasLocal ? '📄' : hasFirestore ? '☁️' : '⚠️'}
-                                                    </option>
-                                                );
-                                            })}
-                                        </select>
-                                        {voiceBook && !voiceScript.length && (
-                                            <p className="text-amber-400 text-xs font-bold flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-base">warning</span>
-                                                이 도서의 대본이 아직 없습니다. 팟캐스트 탭에서 먼저 대본을 생성하세요.
-                                            </p>
-                                        )}
-                                        {voiceScript.length > 0 && (
-                                            <div className="flex items-center justify-between p-4 bg-violet-500/10 rounded-2xl border border-violet-500/20">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-violet-400">check_circle</span>
-                                                    <div>
-                                                        <p className="text-violet-300 text-xs font-black">대본 확인됨</p>
-                                                        <p className="text-slate-500 text-[10px]">{voiceScript.length}개 대사 · 제임스 + 스텔라</p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={handleVoiceScriptDownload}
-                                                    className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 text-xs font-black rounded-xl border border-violet-500/30 transition-all"
-                                                >
-                                                    <span className="material-symbols-outlined text-base">download</span>
-                                                    대본 TXT 다운로드
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* 대본 미리보기 */}
-                                    {voiceScript.length > 0 && (
-                                        <div className="bg-white/5 rounded-[40px] border border-white/10 overflow-hidden">
-                                            <div className="px-8 py-5 border-b border-white/10 flex items-center justify-between">
-                                                <h4 className="text-white font-black flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-violet-400">article</span>
-                                                    STEP 2 · 대본 미리보기 <span className="text-slate-600 text-sm font-normal ml-2">(성우 참고용)</span>
-                                                </h4>
-                                                <span className="text-[10px] text-slate-600 font-mono">{voiceScript.length} lines</span>
-                                            </div>
-                                            <div className="p-6 space-y-3 max-h-[520px] overflow-y-auto scrollbar-hide">
-                                                {voiceScript.map((line, i) => (
-                                                    <div key={i} className={`flex gap-3 ${line.role === 'A' ? '' : 'flex-row-reverse'}`}>
-                                                        <div className={`shrink-0 size-7 rounded-full flex items-center justify-center text-[10px] font-black border ${line.role === 'A' ? 'bg-gold/10 text-gold border-gold/20' : 'bg-violet-500/10 text-violet-400 border-violet-500/20'}`}>
-                                                            {line.role === 'A' ? 'J' : 'S'}
-                                                        </div>
-                                                        <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${line.role === 'A' ? 'bg-white/5 text-slate-200 rounded-tl-sm' : 'bg-violet-500/10 text-violet-200 rounded-tr-sm'}`}>
-                                                            <p className={`text-[9px] font-black mb-1 ${line.role === 'A' ? 'text-gold/60' : 'text-violet-400/60'}`}>
-                                                                {line.role === 'A' ? '제임스' : '스텔라'}
-                                                            </p>
-                                                            {line.text}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
+                                    <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">유튜브<br/>소스 등록</h3>
+                                    <p className="text-slate-500 text-lg font-medium">TED · 강연 · 유명인 연설 → Gemini 분석 → 팟캐스트 소스로 등록</p>
                                 </div>
 
-                                {/* RIGHT — 업로드 + 설정 + 병합 + 로그 */}
-                                <div className="space-y-6 sticky top-32">
-                                    {/* MP3 업로드 */}
-                                    <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-5">
-                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-violet-400">mic</span>
-                                            STEP 3 · 성우 MP3 업로드
-                                        </h4>
-                                        <div
-                                            onDragOver={e => { e.preventDefault(); setVoiceDragOver(true); }}
-                                            onDragLeave={() => setVoiceDragOver(false)}
-                                            onDrop={handleVoiceDrop}
-                                            className={`relative border-4 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer ${voiceDragOver ? 'border-violet-400 bg-violet-500/10' : voiceFile ? 'border-violet-500/40 bg-violet-500/5' : 'border-white/10 hover:border-violet-400/40 hover:bg-white/5'}`}
-                                        >
-                                            {voiceFile ? (
-                                                <>
-                                                    <span className="material-symbols-outlined text-5xl text-violet-400">audio_file</span>
-                                                    <p className="text-violet-300 font-black text-sm">{voiceFile.name}</p>
-                                                    <p className="text-slate-500 text-xs">{(voiceFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                                                    <button onClick={() => setVoiceFile(null)} className="text-slate-600 hover:text-red-400 text-xs font-bold transition-colors">제거</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="material-symbols-outlined text-5xl text-slate-700">upload_file</span>
-                                                    <p className="text-slate-500 text-sm font-bold">MP3 파일을 여기에 드래그하거나</p>
-                                                    <label className="px-6 py-2.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 text-xs font-black rounded-xl border border-violet-500/30 transition-all cursor-pointer">
-                                                        파일 선택
-                                                        <input type="file" accept="audio/mpeg,audio/mp3,.mp3" className="hidden" onChange={e => {
-                                                            const f = e.target.files[0];
-                                                            if (f) { setVoiceFile(f); setVoiceLogs(prev => [...prev, `[FILE] ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB) 로드됨`]); }
-                                                        }} />
-                                                    </label>
-                                                    <p className="text-slate-700 text-[10px]">MP3 형식만 가능</p>
-                                                </>
-                                            )}
+                                <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-6">
+                                    <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-red-400">add_link</span>
+                                        새 영상 등록
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 block mb-2">YouTube URL *</label>
+                                            <input type="url" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-red-400/60 outline-none transition-all font-mono" />
                                         </div>
-                                    </div>
-
-                                    {/* 인트로 / 아웃트로 설정 */}
-                                    <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-5">
-                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-violet-400">tune</span>
-                                            STEP 4 · 인트로 / 아웃트로 설정
-                                        </h4>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">인트로</p>
-                                                {['default', 'none'].map(val => (
-                                                    <label key={val} className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${voiceIntro === val ? 'bg-violet-500/10 border-violet-500/30 text-violet-300' : 'bg-black/30 border-white/5 text-slate-500 hover:border-white/20'}`}>
-                                                        <input type="radio" name="intro" value={val} checked={voiceIntro === val} onChange={() => setVoiceIntro(val)} className="accent-violet-500" />
-                                                        <span className="text-xs font-bold">{val === 'default' ? '기본 인트로' : '인트로 없음'}</span>
-                                                    </label>
-                                                ))}
+                                            <div>
+                                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 block mb-2">영상 제목 *</label>
+                                                <input type="text" value={youtubeTitle} onChange={e => setYoutubeTitle(e.target.value)} placeholder="자동 추출 또는 직접 입력" className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:border-red-400/60 outline-none transition-all" />
                                             </div>
-                                            <div className="space-y-2">
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">아웃트로</p>
-                                                {['default', 'none'].map(val => (
-                                                    <label key={val} className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${voiceOutro === val ? 'bg-violet-500/10 border-violet-500/30 text-violet-300' : 'bg-black/30 border-white/5 text-slate-500 hover:border-white/20'}`}>
-                                                        <input type="radio" name="outro" value={val} checked={voiceOutro === val} onChange={() => setVoiceOutro(val)} className="accent-violet-500" />
-                                                        <span className="text-xs font-bold">{val === 'default' ? '기본 아웃트로' : '아웃트로 없음'}</span>
-                                                    </label>
-                                                ))}
+                                            <div>
+                                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 block mb-2">채널 / 발표자</label>
+                                                <input type="text" value={youtubeChannel} onChange={e => setYoutubeChannel(e.target.value)} placeholder="TED, 발표자명 등" className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:border-red-400/60 outline-none transition-all" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* 병합 실행 버튼 */}
-                                    <button
-                                        onClick={handleVoiceMerge}
-                                        disabled={voiceMerging || !voiceBook || !voiceFile}
-                                        className={`w-full py-7 rounded-[32px] font-black text-xl flex items-center justify-center gap-5 transition-all shadow-2xl ${voiceMerging || !voiceBook || !voiceFile
-                                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                            : 'bg-violet-600 text-white hover:bg-violet-500 hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(139,92,246,0.3)]'
-                                            }`}
-                                    >
-                                        {voiceMerging ? (
-                                            <>
-                                                <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
-                                                병합 중... {voiceProgress > 0 ? `(${voiceProgress}%)` : ''}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="material-symbols-outlined text-3xl">merge</span>
-                                                인트로 + 성우 MP3 + 아웃트로 병합 실행
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {/* 진행률 바 */}
-                                    {voiceMerging && (
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
-                                                <span>병합 진행률</span>
-                                                <span>{voiceProgress}%</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${voiceProgress}%` }}></div>
-                                            </div>
+                                    {youtubeContent && (
+                                        <div className="bg-black/60 rounded-2xl border border-emerald-500/20 p-5 max-h-52 overflow-y-auto scrollbar-hide">
+                                            <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm">check_circle</span>Gemini 분석 완료
+                                            </p>
+                                            <pre className="text-slate-400 text-[11px] font-mono whitespace-pre-wrap leading-relaxed">{youtubeContent.slice(0, 1000)}{youtubeContent.length > 1000 ? '\n...(생략)' : ''}</pre>
                                         </div>
                                     )}
 
-                                    {/* 실시간 로그 터미널 */}
-                                    <div className="bg-black rounded-[40px] border-4 border-white/5 overflow-hidden h-64 flex flex-col shadow-[0_30px_60px_rgba(0,0,0,0.7)]">
-                                        <div className="bg-white/5 px-8 py-4 border-b border-white/10 flex items-center gap-3">
-                                            <div className="size-2.5 rounded-full bg-red-500"></div>
-                                            <div className="size-2.5 rounded-full bg-amber-500"></div>
-                                            <div className="size-2.5 rounded-full bg-violet-500"></div>
-                                            <span className="text-[10px] font-mono text-slate-600 ml-3 uppercase tracking-widest">Voice Merge Log</span>
+                                    {youtubeLogs.length > 0 && (
+                                        <div className="bg-black/80 rounded-2xl p-4 space-y-1.5 max-h-32 overflow-y-auto scrollbar-hide">
+                                            {youtubeLogs.map((log, i) => (
+                                                <p key={i} className={`text-[10px] font-mono ${log.includes('ERROR') ? 'text-red-400' : log.includes('DONE') ? 'text-emerald-400' : 'text-slate-400'}`}>{log}</p>
+                                            ))}
                                         </div>
-                                        <div className="p-6 font-mono text-xs text-violet-300 overflow-y-auto space-y-3 flex-1 scrollbar-hide bg-[#050505]">
-                                            {voiceLogs.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center h-full text-slate-800 space-y-3">
-                                                    <span className="material-symbols-outlined text-5xl animate-pulse">mic_none</span>
-                                                    <p className="text-xs font-black uppercase tracking-widest">Waiting for voice input...</p>
-                                                </div>
-                                            ) : voiceLogs.map((log, i) => (
-                                                <div key={i} className="border-l-2 border-violet-500/30 pl-4 py-0.5 animate-fade-in">
-                                                    <span className="text-violet-900 mr-3">[{i + 1}]</span>
-                                                    <span className={log.startsWith('[ERROR]') ? 'text-red-400' : log.startsWith('[FILE]') ? 'text-amber-400' : 'text-violet-300'}>{log}</span>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button onClick={handleAnalyzeYoutube} disabled={youtubeAnalyzing || !youtubeUrl.trim()} className={`py-6 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-3 border-2 ${youtubeAnalyzing || !youtubeUrl.trim() ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed' : 'bg-red-500/15 text-red-300 border-red-500/30 hover:bg-red-500/25 active:scale-95'}`}>
+                                            <span className="material-symbols-outlined text-xl">{youtubeAnalyzing ? 'sync' : 'psychology'}</span>
+                                            {youtubeAnalyzing ? '분석 중...' : 'Gemini 분석'}
+                                        </button>
+                                        <button onClick={handleSaveYoutubeVideo} disabled={youtubeSaving || !youtubeContent || !youtubeTitle.trim()} className={`py-6 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-3 border-2 ${youtubeSaving || !youtubeContent || !youtubeTitle.trim() ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 active:scale-95'}`}>
+                                            <span className="material-symbols-outlined text-xl">{youtubeSaving ? 'sync' : 'save'}</span>
+                                            {youtubeSaving ? '저장 중...' : '등록하기'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RIGHT: 등록된 영상 목록 */}
+                            <div className="sticky top-32">
+                                <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-red-400">playlist_play</span>
+                                            등록된 YouTube 영상
+                                        </h4>
+                                        <span className="text-red-400 font-black text-2xl">{youtubeVideos.length}</span>
+                                    </div>
+                                    {youtubeVideos.length === 0 ? (
+                                        <div className="text-center py-16 space-y-4">
+                                            <span className="material-symbols-outlined text-6xl text-slate-800 animate-pulse">smart_display</span>
+                                            <p className="text-slate-600 text-sm font-bold">등록된 영상이 없습니다</p>
+                                            <p className="text-slate-700 text-xs">왼쪽에서 YouTube URL을 입력하고 등록하세요</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 max-h-[640px] overflow-y-auto scrollbar-hide pr-1">
+                                            {youtubeVideos.map(v => (
+                                                <div key={v.id} className="group bg-black/40 rounded-3xl border border-white/5 p-5 hover:border-red-500/20 transition-all space-y-3">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="size-10 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                                                            <span className="material-symbols-outlined text-red-400 text-lg">smart_display</span>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white font-black text-sm leading-tight mb-1">{v.title}</p>
+                                                            {v.channel && <p className="text-red-400/70 text-[10px] font-bold mb-1">{v.channel}</p>}
+                                                            <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-slate-700 text-[10px] hover:text-red-400 transition-colors truncate block">{v.url}</a>
+                                                        </div>
+                                                        <button onClick={() => handleDeleteYoutubeVideo(v.id)} className="shrink-0 size-8 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-600 hover:text-red-400 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <span className="material-symbols-outlined text-base">delete</span>
+                                                        </button>
+                                                    </div>
+                                                    {v.content && (
+                                                        <p className="text-slate-600 text-[10px] leading-relaxed line-clamp-2 pl-14">{v.content.slice(0, 150)}...</p>
+                                                    )}
+                                                    <div className="pl-14">
+                                                        <button onClick={() => { setSelectedYoutubeId(v.id); setActiveTab('podcast'); }} className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black hover:bg-red-500/20 transition-all">
+                                                            이 영상으로 팟캐스트 제작 →
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-
-                                    {/* MP3 직접 업로드 → 팟캐스트 등록 */}
-                                    <div className="bg-black/40 border border-white/8 rounded-2xl p-4 space-y-3">
-                                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">MP3 업로드 → 팟캐스트 등록</p>
-                                        <label className="flex items-center gap-3 cursor-pointer bg-black/40 border border-white/10 rounded-xl px-4 py-3 hover:border-white/20 transition-all">
-                                            <span className="material-symbols-outlined text-slate-400 text-xl">audio_file</span>
-                                            <span className="text-sm text-slate-400 flex-1 truncate">{mp3UploadFile ? mp3UploadFile.name : 'MP3 파일 선택'}</span>
-                                            <input type="file" accept=".mp3,audio/mpeg" className="hidden" onChange={e => { setMp3UploadFile(e.target.files[0] || null); setMp3UploadLog(''); }} />
-                                        </label>
-                                        <button
-                                            onClick={handleMp3Upload}
-                                            disabled={mp3Uploading || !mp3UploadFile || !voiceBook}
-                                            className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mp3Uploading || !mp3UploadFile || !voiceBook ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30'}`}
-                                        >
-                                            <span className="material-symbols-outlined text-base">{mp3Uploading ? 'sync' : 'cloud_upload'}</span>
-                                            {mp3Uploading ? '업로드 중...' : '업로드 & 팟캐스트 활성화'}
-                                        </button>
-                                        {mp3UploadLog && (
-                                            <p className={`text-xs font-mono ${mp3UploadLog.includes('❌') ? 'text-red-400' : mp3UploadLog.includes('✅') ? 'text-emerald-400' : 'text-slate-400'}`}>{mp3UploadLog}</p>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
+
+                        {/* 추천 채널 레퍼런스 */}
+                        <div className="mt-12 bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-8">
+                            <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-red-400">bookmarks</span>
+                                <h4 className="text-white font-black text-xl">추천 채널 레퍼런스</h4>
+                                <span className="text-slate-600 text-xs font-mono ml-auto">클릭 → 새 탭 열림</span>
+                            </div>
+                            {[
+                                {
+                                    category: '자기계발 / 비즈니스',
+                                    color: 'blue',
+                                    channels: [
+                                        { name: '세바시', desc: '한국판 TED, 15분 강연', url: 'https://www.youtube.com/@sebasi15' },
+                                        { name: '체인지그라운드', desc: '동기부여, 자기계발', url: 'https://www.youtube.com/@changeground' },
+                                        { name: 'TED', desc: '영어 강연, 18분 이내', url: 'https://www.youtube.com/@TED' },
+                                        { name: 'Lex Fridman', desc: '명사 장시간 인터뷰', url: 'https://www.youtube.com/@lexfridman' },
+                                        { name: 'Simon Sinek', desc: '리더십, 동기부여 명강연', url: 'https://www.youtube.com/@simonsinek' },
+                                        { name: 'Andrew Huberman', desc: '뇌과학 기반 생산성', url: 'https://www.youtube.com/@hubermanlab' },
+                                    ]
+                                },
+                                {
+                                    category: '경제 / 재테크',
+                                    color: 'emerald',
+                                    channels: [
+                                        { name: '슈카월드', desc: '한국 최대 경제 채널', url: 'https://www.youtube.com/@ShukaWorld' },
+                                        { name: '삼프로TV', desc: '주식/경제 전문', url: 'https://www.youtube.com/@3pro_tv' },
+                                        { name: 'Graham Stephan', desc: '영어 재테크', url: 'https://www.youtube.com/@GrahamStephan' },
+                                        { name: 'Big Think', desc: '학자/작가/CEO 심층 인터뷰', url: 'https://www.youtube.com/@bigthink' },
+                                    ]
+                                },
+                                {
+                                    category: '심리학 / 철학',
+                                    color: 'purple',
+                                    channels: [
+                                        { name: '이연', desc: '심리/철학 에세이, 한국어', url: 'https://www.youtube.com/@yiyeon' },
+                                        { name: 'The School of Life', desc: '철학 기반 심리', url: 'https://www.youtube.com/@theschooloflifetv' },
+                                        { name: '사피엔스 스튜디오', desc: '철학/인문학 한국어', url: 'https://www.youtube.com/@SapiensStudio' },
+                                        { name: 'Einzelgänger', desc: '스토아 철학, 마음챙김', url: 'https://www.youtube.com/@Einzelganger' },
+                                    ]
+                                },
+                                {
+                                    category: '과학 / 지식',
+                                    color: 'amber',
+                                    channels: [
+                                        { name: 'Kurzgesagt', desc: '과학 애니메이션, 최고 퀄리티', url: 'https://www.youtube.com/@kurzgesagt' },
+                                        { name: 'Veritasium', desc: '물리/심리 실험', url: 'https://www.youtube.com/@veritasium' },
+                                        { name: '김창옥 포럼', desc: '소통/인간관계, 공감 1위', url: 'https://www.youtube.com/@kimchangokforum' },
+                                        { name: 'EBS 다큐', desc: '권위 있는 한국어 콘텐츠', url: 'https://www.youtube.com/@ebsdocumentary' },
+                                    ]
+                                },
+                                {
+                                    category: '명사 인터뷰 / 북토크',
+                                    color: 'rose',
+                                    channels: [
+                                        { name: '김작가 TV', desc: '작가/명사 인터뷰', url: 'https://www.youtube.com/@kimjagga' },
+                                        { name: 'Talks at Google', desc: '베스트셀러 저자 강연', url: 'https://www.youtube.com/@talksatgoogle' },
+                                        { name: 'Stanford GSB', desc: '스탠퍼드 경영 강연', url: 'https://www.youtube.com/@stanfordgsb' },
+                                        { name: 'Big Think', desc: '지식인 심층 인터뷰', url: 'https://www.youtube.com/@bigthink' },
+                                    ]
+                                },
+                            ].map(({ category, color, channels }) => (
+                                <div key={category}>
+                                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 text-${color}-400`}>{category}</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                        {channels.map(ch => (
+                                            <a key={ch.name} href={ch.url} target="_blank" rel="noopener noreferrer"
+                                                className={`group flex flex-col gap-1 p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-${color}-500/30 hover:bg-${color}-500/5 transition-all`}>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-white font-black text-sm group-hover:text-white transition-colors">{ch.name}</span>
+                                                    <span className={`material-symbols-outlined text-slate-700 group-hover:text-${color}-400 text-sm transition-colors`}>open_in_new</span>
+                                                </div>
+                                                <span className="text-slate-600 text-[10px] leading-snug">{ch.desc}</span>
+                                                <span className={`text-[9px] font-mono text-slate-700 group-hover:text-${color}-500 transition-colors truncate mt-1`}>{ch.url.replace('https://www.youtube.com/', '')}</span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        </>
                     )}
                     {/* ─────────────────────────────────────────────────────── */}
 
                     {/* 인기 아카이뷰 관리 */}
+                    {/* ─────────────────────────────────────────────────────── */}
+
+                    {/* 인기 아카이뷰 관리 */}
                     {activeTab === 'popular' && (() => {
-                        const filteredBooks = popularSearch.trim()
-                            ? realBooks.filter(b => b.title?.includes(popularSearch) || b.author?.includes(popularSearch))
+                        const SECTIONS = [
+                            { id: 'popular',       label: '인기아카이뷰',  dbKey: 'popular_archives',      max: 5 },
+                            { id: 'weekly_focus',  label: '위클리포커스',  dbKey: 'weekly_focus',          max: 5 },
+                            { id: 'weekly_viewed', label: '주간 최다조회', dbKey: 'weekly_most_viewed',     max: 8 },
+                            { id: 'growth',        label: '자기계발',      dbKey: 'category_growth',       max: 8 },
+                            { id: 'economy',       label: '경제',          dbKey: 'category_economy',      max: 8 },
+                            { id: 'business',      label: '경영',          dbKey: 'category_business',     max: 8 },
+                            { id: 'humanities',    label: '인문',          dbKey: 'category_humanities',   max: 8 },
+                            { id: 'psychology',    label: '심리',          dbKey: 'category_psychology',   max: 8 },
+                        ];
+                        const curSection = SECTIONS.find(s => s.id === popularSubTab);
+                        const curList    = popularSubTab === 'popular' ? popularList : (sectionData[popularSubTab] || []);
+                        const setCurList = popularSubTab === 'popular'
+                            ? setPopularList
+                            : (fn) => setSectionData(prev => ({ ...prev, [popularSubTab]: typeof fn === 'function' ? fn(prev[popularSubTab] || []) : fn }));
+                        const curSearch    = popularSubTab === 'popular' ? popularSearch : (sectionSearch[popularSubTab] || '');
+                        const setCurSearch = popularSubTab === 'popular'
+                            ? setPopularSearch
+                            : (val) => setSectionSearch(prev => ({ ...prev, [popularSubTab]: val }));
+                        const curSaving = popularSubTab === 'popular' ? popularSaving : (sectionSaving[popularSubTab] || false);
+                        const filteredBooks = curSearch.trim()
+                            ? realBooks.filter(b => b.title?.includes(curSearch) || b.author?.includes(curSearch))
                             : [];
-                        const savePopular = async () => {
-                            if (popularList.length === 0) { alert('등록된 도서가 없습니다.'); return; }
-                            setPopularSaving(true);
-                            try {
-                                await setDoc(doc(db, 'site_config', 'popular_archives'), { books: popularList.slice(0, 5) });
-                                alert('저장 완료! 메인 화면에 반영되었습니다. ✅');
-                            } catch (e) { alert('저장 실패: ' + e.message); }
-                            setPopularSaving(false);
+                        const saveSection = async () => {
+                            if (curList.length === 0) { alert('등록된 도서가 없습니다.'); return; }
+                            if (popularSubTab === 'popular') {
+                                setPopularSaving(true);
+                                try { await setDoc(doc(db, 'site_config', 'popular_archives'), { books: curList.slice(0, curSection.max) }); alert('저장 완료! ✅'); }
+                                catch (e) { alert('저장 실패: ' + e.message); }
+                                setPopularSaving(false);
+                            } else {
+                                setSectionSaving(prev => ({ ...prev, [popularSubTab]: true }));
+                                try { await setDoc(doc(db, 'site_config', curSection.dbKey), { books: curList.slice(0, curSection.max) }); alert('저장 완료! ✅'); }
+                                catch (e) { alert('저장 실패: ' + e.message); }
+                                setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));
+                            }
                         };
-                        const addToPopular = (book) => {
-                            if (popularList.length >= 5) { alert('최대 5개까지 등록 가능합니다.'); return; }
-                            if (popularList.some(b => b.id === book.id)) { alert('이미 등록된 도서입니다.'); return; }
-                            setPopularList(prev => [...prev, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '' }]);
-                            setPopularSearch('');
+                        const addToList     = (book) => {
+                            if (curList.length >= curSection.max) { alert(`최대 ${curSection.max}개까지 등록 가능합니다.`); return; }
+                            if (curList.some(b => b.id === book.id)) { alert('이미 등록된 도서입니다.'); return; }
+                            setCurList(prev => [...prev, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '' }]);
+                            setCurSearch('');
                         };
-                        const removeFromPopular = (id) => setPopularList(prev => prev.filter(b => b.id !== id));
-                        const moveUp = (i) => { if (i === 0) return; const arr = [...popularList];[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; setPopularList(arr); };
-                        const moveDown = (i) => { if (i === popularList.length - 1) return; const arr = [...popularList];[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]; setPopularList(arr); };
+                        const removeFromList = (id) => setCurList(prev => prev.filter(b => b.id !== id));
+                        const moveUp         = (i) => { if (i === 0) return; setCurList(prev => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; }); };
+                        const moveDown       = (i) => { if (i === curList.length - 1) return; setCurList(prev => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; }); };
                         return (
-                            <div className="space-y-10">
+                            <div className="space-y-8">
                                 <div className="flex justify-between items-center">
                                     <div className="space-y-3">
                                         <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">Popular Archives</h3>
-                                        <p className="text-slate-500 text-xl font-medium italic">메인 화면에 표시될 인기 아카이뷰 5개를 설정합니다.</p>
+                                        <p className="text-slate-500 text-xl font-medium italic">메인 화면 각 섹션의 도서 순위를 관리합니다.</p>
                                     </div>
-                                    <button onClick={savePopular} disabled={popularSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
-                                        <span className="material-symbols-outlined text-2xl">{popularSaving ? 'sync' : 'save'}</span>
-                                        {popularSaving ? '저장 중...' : '메인에 저장'}
+                                    <button onClick={saveSection} disabled={curSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
+                                        <span className="material-symbols-outlined text-2xl">{curSaving ? 'sync' : 'save'}</span>
+                                        {curSaving ? '저장 중...' : '메인에 저장'}
                                     </button>
+                                </div>
+
+                                {/* 8개 섹션 서브탭 */}
+                                <div className="flex gap-2 flex-wrap">
+                                    {SECTIONS.map(s => (
+                                        <button key={s.id} onClick={() => setPopularSubTab(s.id)}
+                                            className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all whitespace-nowrap ${popularSubTab === s.id ? 'bg-gold text-primary shadow-lg' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white'}`}>
+                                            {s.label.toUpperCase()}
+                                            <span className="ml-2 opacity-50 text-[10px]">{(popularSubTab === s.id ? curList : (s.id === 'popular' ? popularList : (sectionData[s.id] || []))).length}/{s.max}</span>
+                                        </button>
+                                    ))}
                                 </div>
 
                                 {/* 현재 등록된 목록 */}
                                 <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
                                     <h4 className="text-white font-black text-xl flex items-center gap-3">
                                         <span className="material-symbols-outlined text-gold">format_list_numbered</span>
-                                        현재 등록 목록 ({popularList.length}/5)
+                                        {curSection.label} 등록 목록 ({curList.length}/{curSection.max})
                                     </h4>
-                                    {popularList.length === 0 && (
+                                    {curList.length === 0 && (
                                         <p className="text-slate-500 text-sm text-center py-8">아직 등록된 도서가 없습니다. 아래에서 도서를 검색해 추가하세요.</p>
                                     )}
                                     <div className="space-y-3">
-                                        {popularList.map((book, i) => (
+                                        {curList.map((book, i) => (
                                             <div key={book.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5">
                                                 <span className="text-2xl font-black text-gold/50 w-8 text-center">{i + 1}</span>
                                                 <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
@@ -4581,18 +5159,16 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-white font-black text-sm truncate">{book.title}</p>
                                                     <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
-                                                    <div className="mt-1.5 flex items-center gap-2">
-                                                        <span className="text-slate-600 text-[10px] font-mono">{book.id}</span>
-                                                    </div>
+                                                    <span className="text-slate-700 text-[10px] font-mono">{book.id}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button onClick={() => moveUp(i)} disabled={i === 0} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
                                                         <span className="material-symbols-outlined text-sm text-white">arrow_upward</span>
                                                     </button>
-                                                    <button onClick={() => moveDown(i)} disabled={i === popularList.length - 1} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
+                                                    <button onClick={() => moveDown(i)} disabled={i === curList.length - 1} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
                                                         <span className="material-symbols-outlined text-sm text-white">arrow_downward</span>
                                                     </button>
-                                                    <button onClick={() => removeFromPopular(book.id)} className="size-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
+                                                    <button onClick={() => removeFromList(book.id)} className="size-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
                                                         <span className="material-symbols-outlined text-sm text-red-400">delete</span>
                                                     </button>
                                                 </div>
@@ -4607,19 +5183,13 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                         <span className="material-symbols-outlined text-blue-400">search</span>
                                         도서 검색 & 추가
                                     </h4>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors flex items-center px-4">
-                                            <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
-                                            <input
-                                                type="text"
-                                                placeholder="도서 제목 또는 저자 검색..."
-                                                value={popularSearch}
-                                                onChange={(e) => setPopularSearch(e.target.value)}
-                                                className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold"
-                                            />
-                                        </div>
+                                    <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors flex items-center px-4">
+                                        <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
+                                        <input type="text" placeholder="도서 제목 또는 저자 검색..."
+                                            value={curSearch} onChange={(e) => setCurSearch(e.target.value)}
+                                            className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
                                     </div>
-                                    {popularSearch.trim() && (
+                                    {curSearch.trim() && (
                                         <div className="space-y-2 max-h-96 overflow-y-auto">
                                             {filteredBooks.length === 0 && <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>}
                                             {filteredBooks.slice(0, 20).map((book) => (
@@ -4631,12 +5201,10 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
                                                         <p className="text-white font-black text-sm truncate">{book.title}</p>
                                                         <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
                                                     </div>
-                                                    <button
-                                                        onClick={() => addToPopular(book)}
-                                                        disabled={popularList.some(b => b.id === book.id) || popularList.length >= 5}
-                                                        className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
-                                                    >
-                                                        {popularList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
+                                                    <button onClick={() => addToList(book)}
+                                                        disabled={curList.some(b => b.id === book.id) || curList.length >= curSection.max}
+                                                        className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
+                                                        {curList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
                                                     </button>
                                                 </div>
                                             ))}
