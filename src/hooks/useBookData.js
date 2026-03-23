@@ -26,6 +26,7 @@ export const useBookData = () => {
     // celebrities.js (436KB)를 동적 임포트로 지연 로딩 → 초기 번들에서 제외
     const [celebrities, setCelebrities] = useState([]);
     const [overrides, setOverrides] = useState(() => loadCache());
+    const [ebooks, setEbooks] = useState({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -37,7 +38,7 @@ export const useBookData = () => {
 
     useEffect(() => {
         let isMounted = true;
-        const unsubscribe = onSnapshot(collection(db, "book_overrides"), (snapshot) => {
+        const unsubscribeOverrides = onSnapshot(collection(db, "book_overrides"), (snapshot) => {
             if (!isMounted) return;
             try {
                 const data = {};
@@ -48,11 +49,28 @@ export const useBookData = () => {
                 console.error("Firestore parse error:", e);
             }
         }, (err) => {
-            console.warn("Firestore offline — using cached data:", err.code);
+            console.warn("Firestore offline (overrides):", err.code);
             if (isMounted) setLoading(false);
         });
 
-        return () => { isMounted = false; unsubscribe(); };
+        const unsubscribeEbooks = onSnapshot(collection(db, "ebooks"), (snapshot) => {
+            if (!isMounted) return;
+            try {
+                const data = {};
+                snapshot.forEach(doc => { data[doc.id] = doc.data(); });
+                setEbooks(data);
+            } catch (e) {
+                console.error("Firestore parse error:", e);
+            }
+        }, (err) => {
+            console.warn("Firestore offline (ebooks):", err.code);
+        });
+
+        return () => { 
+            isMounted = false; 
+            unsubscribeOverrides(); 
+            unsubscribeEbooks();
+        };
     }, []);
 
     const getBook = useCallback((bookId) => {
@@ -64,15 +82,18 @@ export const useBookData = () => {
         const fileName = `${bookId}.mp3`;
         const hasAudioFile = !!availableAudio[fileName];
 
+        const ebook = ebooks[bookId];
+
         return {
             ...(localBook || {}),
             ...(override || {}),
             isPodcast: override?.isPodcast || localBook?.isPodcast || hasAudioFile,
             cover: override?.cover || localBook?.cover,
             audioPath: override?.audioPath || localBook?.audioPath || `/audio/${bookId}.mp3`,
-            podcastScript: override?.podcastScript || ''
+            podcastScript: override?.podcastScript || '',
+            ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
         };
-    }, [overrides, celebrities]);
+    }, [overrides, celebrities, ebooks]);
 
     const getAllBooks = useCallback((adminMode = false) => {
         const allLocalBooks = celebrities.flatMap(celeb =>
@@ -92,6 +113,8 @@ export const useBookData = () => {
             const fileName = `${id}.mp3`;
             const hasAudioFile = !!availableAudio[fileName];
 
+            const ebook = ebooks[id];
+
             bookMap.set(id, {
                 ...book,
                 id: id,
@@ -100,6 +123,7 @@ export const useBookData = () => {
                 cover: override?.cover || book.cover,
                 purchaseLink: override?.purchaseLink || book.purchaseLink || '',
                 isPublic: override?.isPublic !== undefined ? override.isPublic : true,
+                ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
             });
         });
 
@@ -107,6 +131,7 @@ export const useBookData = () => {
             if (data.isDeleted) return;
 
             if (!bookMap.has(id) && data.title && (adminMode || data.isPublic === true)) {
+                const ebook = ebooks[id];
                 bookMap.set(id, {
                     id,
                     title: data.title,
@@ -121,12 +146,13 @@ export const useBookData = () => {
                     audioUrl: data.audioUrl || '',
                     voiceAudioUrl: data.voiceAudioUrl || '',
                     ...data,
+                    ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
                 });
             }
         });
 
         return Array.from(bookMap.values());
-    }, [overrides, celebrities]);
+    }, [overrides, celebrities, ebooks]);
 
-    return { getBook, getAllBooks, loading, overrides };
+    return { getBook, getAllBooks, loading, overrides, ebooks };
 };

@@ -11,7 +11,7 @@ export const availableAudio = {
   "project-hail-mary.mp3": 522.850975,
   "sapiens.mp3": 521.770975,
   "security-analysis.mp3": 431.970975,
-  "stoner.mp3": 575.010975,
+  "top70-그로스-해킹.mp3": 506.330975,
   "ubermensch.mp3": 385.250975,
   "내가아직-아이였을때.mp3": 447.850975,
   "네가-누구든-얼마나-외롭든.mp3": 442.130975,

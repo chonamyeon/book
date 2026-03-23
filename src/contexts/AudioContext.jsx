@@ -94,9 +94,11 @@ export const AudioProvider = ({ children }) => {
         const onTime = () => setCurrentTime(pa.currentTime);
         const onMeta = () => setDuration(pa.duration);
         const onEnded = () => { setPodcastPlaying(false); setCurrentTime(0); };
+        const onError = () => { setPodcastPlaying(false); };
         pa.addEventListener('timeupdate', onTime);
         pa.addEventListener('loadedmetadata', onMeta);
         pa.addEventListener('ended', onEnded);
+        pa.addEventListener('error', onError);
 
         const unlock = () => {
             [speechAudio.current, musicAudio.current].forEach(a => {
@@ -112,6 +114,7 @@ export const AudioProvider = ({ children }) => {
             pa.removeEventListener('timeupdate', onTime);
             pa.removeEventListener('loadedmetadata', onMeta);
             pa.removeEventListener('ended', onEnded);
+            pa.removeEventListener('error', onError);
         };
     }, []);
 
@@ -174,6 +177,10 @@ export const AudioProvider = ({ children }) => {
         if (!pa) return;
 
         if (podcastInfo?.src === src) {
+            // 커버가 새로 로드됐으면 업데이트
+            if (cover && cover !== podcastInfo?.cover) {
+                setPodcastInfo(prev => ({ ...prev, cover }));
+            }
             if (podcastPlaying) {
                 pa.pause();
                 setPodcastPlaying(false);
@@ -188,9 +195,9 @@ export const AudioProvider = ({ children }) => {
             stopAll();
             pa.src = src;
             pa.load();
-            pa.play().catch(() => { });
             setPodcastPlaying(true);
             setPodcastInfo({ src, title, cover, id });
+            pa.play().catch(() => { setPodcastPlaying(false); });
         }
     }, [podcastInfo, podcastPlaying, stopAll]);
 
@@ -215,6 +222,13 @@ export const AudioProvider = ({ children }) => {
         setDuration(0);
     }, []);
 
+    // 커버만 업데이트 (재생 중단 없이)
+    const updatePodcastCover = useCallback((bookId, cover) => {
+        if (cover && podcastInfo?.id === bookId) {
+            setPodcastInfo(prev => ({ ...prev, cover }));
+        }
+    }, [podcastInfo?.id]);
+
     const openScriptModal = useCallback((bookId, src, title, cover) => {
         setScriptModalBookId(bookId);
         setScriptModalOpen(true);
@@ -231,6 +245,7 @@ export const AudioProvider = ({ children }) => {
             podcastPlaying, podcastInfo, currentTime, duration,
             dailyListenTime, dailyTarget, streak,
             playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3,
+            updatePodcastCover,
             scriptModalOpen, scriptModalBookId, openScriptModal, closeScriptModal
         }}>
             {children}

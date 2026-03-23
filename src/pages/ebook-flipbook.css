@@ -227,15 +227,27 @@
 }
 
 .rv-ebook-body-html h2 {
+    position: relative;
     font-size: 1rem;
     font-weight: 600;
     color: #4a3220;
     margin: 1.6rem 0 0.7rem;
     line-height: 1.5;
     font-family: 'Noto Serif KR', serif;
-    padding-left: 0.7rem;
-    border-left: 2px solid #c8a870;
+    padding-left: 0.8rem;
     letter-spacing: 0.2px;
+}
+
+.rv-ebook-body-html h2::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: calc(100% - 0.4em);
+    width: 3px;
+    background-color: #c8a870;
+    border-radius: 2px;
 }
 
 .rv-ebook-body-html h3 {
@@ -249,7 +261,7 @@
 
 .rv-ebook-body-html p {
     margin-bottom: 1em;
-    text-align: justify;
+    text-align: left;
     word-break: keep-all;
     color: #2a2018;
 }
@@ -307,17 +319,26 @@
     border-right: none;
 }
 
-.rv-ebook-body-html blockquote::before {
+.rv-ebook-body-html blockquote p::before {
     content: '\201C';
     font-family: 'Playfair Display', 'Georgia', serif;
-    font-size: 4.5rem;
+    font-size: 2.5rem;
     color: #c8a870;
-    opacity: 0.22;
-    position: absolute;
-    top: -1rem;
-    left: 0.6rem;
-    line-height: 1;
-    pointer-events: none;
+    opacity: 0.5;
+    line-height: 0;
+    vertical-align: -0.2em;
+    margin-right: 0.2rem;
+}
+
+.rv-ebook-body-html blockquote p::after {
+    content: '\201D';
+    font-family: 'Playfair Display', 'Georgia', serif;
+    font-size: 2.5rem;
+    color: #c8a870;
+    opacity: 0.5;
+    line-height: 0;
+    vertical-align: -0.2em;
+    margin-left: 0.1rem;
 }
 
 .rv-ebook-body-html blockquote p {
@@ -350,17 +371,11 @@
 
 /* ── Page Footer ─────────────────────────────────────── */
 .rv-ebook-page-footer {
-    padding-top: 10px;
-    margin-top: auto;
-    text-align: center;
-    border-top: 1px solid #e2d8cc;
+    display: none;
 }
 
 .rv-ebook-page-number {
-    font-size: 10px;
-    color: #b8a898;
-    letter-spacing: 2.5px;
-    font-family: 'Pretendard', sans-serif;
+    display: none;
 }
 
 /* First content page book cover thumbnail */

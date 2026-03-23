@@ -119,7 +119,8 @@ import {
     deleteDoc,
     updateDoc,
     serverTimestamp,
-    addDoc
+    addDoc,
+    Timestamp
 } from 'firebase/firestore';
 import { useBookData } from '../hooks/useBookData';
 
@@ -411,12 +412,369 @@ export default function AdminDashboard() {
         }
     };
 
+    // ── AssemblyAI STT 헬퍼 ─────────────────────────────────────────────────
+    const transcribeWithAssemblyAI = async (audioBuffer, aaiKey, onLog) => {
+        // 1. 업로드
+        onLog('☁️ AssemblyAI 업로드 중...');
+        const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
+            method: 'POST',
+            headers: { 'authorization': aaiKey, 'content-type': 'application/octet-stream' },
+            body: audioBuffer
+        });
+        if (!uploadRes.ok) {
+            const errText = await uploadRes.text();
+            throw new Error(`AssemblyAI 업로드 실패 (${uploadRes.status}): ${errText}`);
+        }
+        const uploadJson = await uploadRes.json();
+        const upload_url = uploadJson.upload_url;
+        onLog(`✅ 업로드 완료: ${upload_url ? upload_url.slice(0, 60) + '...' : '(url 없음)'}`);
+        if (!upload_url) throw new Error('AssemblyAI upload_url 없음: ' + JSON.stringify(uploadJson));
+
+        // 2. 전사 요청
+        onLog('🎙️ 전사 요청 중... (한국어)');
+        const transcriptBody = { audio_url: upload_url, language_detection: true, speech_models: ['universal-2'] };
+        const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+            method: 'POST',
+            headers: { 'authorization': aaiKey, 'content-type': 'application/json' },
+            body: JSON.stringify(transcriptBody)
+        });
+        if (!transcriptRes.ok) {
+            const errText = await transcriptRes.text();
+            throw new Error(`전사 요청 실패 (${transcriptRes.status}): ${errText}`);
+        }
+        const { id } = await transcriptRes.json();
+
+        // 3. 완료 폴링
+        onLog('⏳ 전사 완료 대기 중...');
+        for (let i = 0; i < 60; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+                headers: { 'authorization': aaiKey }
+            });
+            const result = await poll.json();
+            if (result.status === 'completed') {
+                onLog(`✅ 전사 완료 (${result.words?.length || 0}단어, 신뢰도 ${result.confidence != null ? (result.confidence * 100).toFixed(0) + '%' : 'N/A'})`);
+                return { text: result.text || '', confidence: result.confidence ?? null, words: result.words || [] };
+            }
+            if (result.status === 'error') throw new Error(`전사 오류: ${result.error}`);
+        }
+        throw new Error('전사 타임아웃 (3분 초과)');
+    };
+
+    // ── AssemblyAI words → 턴별 타임스탬프 생성 (텍스트 매칭) ───────────────
+    const generateTurnSegments = (scriptLines, aaiWords) => {
+        if (!aaiWords?.length || !scriptLines?.length) return null;
+        const norm = (t) => t.replace(/[^\uAC00-\uD7A3a-zA-Z0-9]/g, '').toLowerCase();
+        const normAai = aaiWords.map(w => norm(w.text));
+
+        const segments = [];
+        let searchStart = 0;
+
+        for (let i = 0; i < scriptLines.length; i++) {
+            const turnWords = scriptLines[i].text.split(/\s+/).map(norm).filter(w => w.length > 0);
+            const matchLen = Math.min(3, turnWords.length);
+            let bestIdx = -1;
+
+            // 앞 3단어 시퀀스 매칭으로 턴 시작 위치 탐색
+            for (let j = searchStart; j < normAai.length - matchLen + 1; j++) {
+                let hits = 0;
+                for (let k = 0; k < matchLen; k++) {
+                    if (normAai[j + k] === turnWords[k]) hits++;
+                }
+                if (hits >= Math.ceil(matchLen * 0.6)) { bestIdx = j; break; }
+            }
+
+            // 매칭 실패 시 비례 추정으로 폴백
+            if (bestIdx === -1) {
+                const frac = i / scriptLines.length;
+                bestIdx = Math.max(searchStart, Math.min(Math.round(frac * (normAai.length - 1)), normAai.length - 1));
+            }
+
+            // 턴 종료: 예상 단어 수만큼 전진
+            const endIdx = Math.min(bestIdx + turnWords.length, normAai.length - 1);
+
+            // 안전 guards — 인덱스 범위 벗어날 경우 이전 세그먼트 기반 추정
+            const wordStart = aaiWords[bestIdx];
+            const wordEnd = aaiWords[endIdx];
+            const prevEnd = segments.length > 0 ? segments[segments.length - 1].end : 0;
+            segments.push({
+                start: wordStart ? parseFloat((wordStart.start / 1000).toFixed(3)) : prevEnd,
+                end: wordEnd ? parseFloat((wordEnd.end / 1000).toFixed(3)) : prevEnd + 5
+            });
+
+            searchStart = Math.max(bestIdx + 1, endIdx - 2);
+        }
+
+        return segments;
+    };
+
+    // ── 대본 vs 전사 텍스트 점수 계산 ───────────────────────────────────────
+    const scoreTranscript = (lines, transcribeResult) => {
+        // transcribeResult: { text, confidence, words } or legacy string
+        const { text: transcribedText, confidence: aaiConfidence } =
+            typeof transcribeResult === 'string'
+                ? { text: transcribeResult, confidence: null }
+                : (transcribeResult || { text: '', confidence: null });
+
+        const originalText = lines.map(l => l.text).join(' ').replace(/\s+/g, ' ').trim();
+        const transcribed = (transcribedText || '').replace(/\s+/g, ' ').trim();
+
+        // 한국어 단어 정규화: 특수문자·공백 제거, 소문자 통일
+        const normalizeWord = (w) => w.replace(/[^\uAC00-\uD7A3a-zA-Z0-9]/g, '').toLowerCase();
+
+        const origWords = originalText.split(/\s+/).map(normalizeWord).filter(w => w.length > 1);
+        const transWords = transcribed.split(/\s+/).map(normalizeWord).filter(w => w.length > 1);
+        const transSet = new Set(transWords);
+        const origSet = new Set(origWords);
+
+        // 1. 대본 단어 중 전사에 있는 비율
+        const matchedWords = origWords.filter(w => transSet.has(w));
+        const missingWords = origWords.filter(w => !transSet.has(w));
+        const matchRate = origWords.length > 0 ? matchedWords.length / origWords.length : 0;
+        const missingRate = missingWords.length / Math.max(origWords.length, 1);
+
+        // 2. 전사에만 있는 단어 (환각/추가 텍스트)
+        const extraWords = transWords.filter(w => !origSet.has(w));
+        const extraRate = transWords.length > 0 ? extraWords.length / transWords.length : 0;
+
+        // ── 점수 계산 (총 100점) ─────────────────────────────────────────────
+        // 발음신뢰도 (30점): AssemblyAI confidence 직접 사용, 없으면 matchRate 대체
+        const 발음신뢰도 = aaiConfidence != null
+            ? Math.round(aaiConfidence * 30)
+            : Math.round(matchRate * 30);
+
+        // 대본일치율 (40점): 정규화된 단어 매칭 비율
+        const 대본일치율 = Math.round(matchRate * 40);
+
+        // 누락오류 (20점): 누락 단어 비율에 따른 감점
+        // missingRate 50% → 0점, 0% → 20점
+        const 누락오류 = Math.round(Math.max(0, 20 * (1 - missingRate * 2)));
+
+        // 추가오류 (10점): 환각/추가 단어 비율에 따른 감점
+        // extraRate 50% → 0점, 0% → 10점
+        const 추가오류 = Math.round(Math.max(0, 10 * (1 - extraRate * 2)));
+
+        const 총점 = Math.min(100, 발음신뢰도 + 대본일치율 + 누락오류 + 추가오류);
+
+        // 오류 목록
+        const 오류목록 = [
+            ...missingWords.slice(0, 15).map(w => `누락: "${w}"`),
+            ...(extraRate > 0.3 ? [`과도한 추가 텍스트 감지 (전사의 ${Math.round(extraRate * 100)}%가 대본에 없음)`] : [])
+        ];
+
+        const confStr = aaiConfidence != null ? `신뢰도 ${(aaiConfidence * 100).toFixed(0)}%` : '신뢰도 N/A';
+        return {
+            총점, 발음신뢰도, 대본일치율, 누락오류, 추가오류,
+            업로드권장: 총점 >= 85,
+            오류목록,
+            총평: `대본 일치율 ${(matchRate * 100).toFixed(1)}% | 누락 단어 ${missingWords.length}개 | ${confStr}`,
+            _transcribed: transcribed.substring(0, 200)
+        };
+    };
+
+    // ── TTS WAV 검증 (AssemblyAI) ────────────────────────────────────────────
+    const handleTtsVerify = async () => {
+        const bookId = verifyBookId.trim();
+        const wavUrl = verifyWavUrl.trim();
+        if (!bookId) return alert('도서를 선택하세요.');
+        if (!wavUrl) return alert('WAV 파일을 선택하세요.');
+        const aaiKey = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
+        if (!aaiKey) return alert('VITE_ASSEMBLYAI_API_KEY가 없습니다.');
+
+        setVerifyLoading(true);
+        setVerifyResult('');
+        setVerifyLogs([]);
+        const addLog = (msg) => setVerifyLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+
+        try {
+            // 1. Firestore 대본
+            addLog('📂 Firestore에서 대본 불러오는 중...');
+            const snap = await getDoc(doc(db, 'scripts', bookId));
+            if (!snap.exists()) throw new Error(`scripts/${bookId} 문서가 없습니다.`);
+            const data = snap.data();
+            const lines = data.script || data.lines || [];
+            if (!lines.length) throw new Error('대본이 비어있습니다.');
+            addLog(`✅ 대본 불러옴 (${lines.length}턴)`);
+
+            // 2. WAV fetch
+            addLog('📥 WAV 파일 읽는 중...');
+            const audioRes = await fetch(wavUrl);
+            if (!audioRes.ok) throw new Error(`WAV fetch 실패: ${audioRes.status}`);
+            const audioBuffer = await audioRes.arrayBuffer();
+            addLog(`✅ WAV 준비 완료 (${(audioBuffer.byteLength/1024/1024).toFixed(1)} MB)`);
+
+            // 3. AssemblyAI 전사
+            const transcribed = await transcribeWithAssemblyAI(audioBuffer, aaiKey, addLog);
+
+            // 4. 점수 계산
+            addLog('📊 점수 계산 중...');
+            const scored = scoreTranscript(lines, transcribed);
+            addLog(`✅ 완료 — 총점 ${scored.총점}점`);
+            setVerifyResult(JSON.stringify(scored));
+
+            // 5. 턴별 타임스탬프 → Firestore 저장
+            const segments = generateTurnSegments(lines, transcribed.words);
+            if (segments && segments.length === lines.length) {
+                await setDoc(doc(db, 'timestamps', bookId), {
+                    segments,
+                    generatedAt: new Date().toISOString(),
+                    source: 'assemblyai',
+                    confidence: transcribed.confidence
+                });
+                addLog(`🕐 타임스탬프 저장 완료 → Firestore timestamps/${bookId} (${segments.length}턴)`);
+            }
+
+        } catch (e) {
+            addLog(`❌ 오류: ${e.message}`);
+            setVerifyResult(`오류 발생: ${e.message}`);
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
+
+    // ── TTS 일괄 검증 (AssemblyAI) ───────────────────────────────────────────
+    const handleBatchVerify = async () => {
+        if (batchVerifyIds.length === 0) return alert('검증할 도서를 선택하세요.');
+        const aaiKey = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
+        if (!aaiKey) return alert('VITE_ASSEMBLYAI_API_KEY가 없습니다.');
+        setBatchVerifyRunning(true);
+        setBatchVerifyResults({});
+
+        const runOne = async (bookId) => {
+            setBatchVerifyCurrent(bookId);
+            try {
+                // Firestore 대본
+                const snap = await getDoc(doc(db, 'scripts', bookId));
+                if (!snap.exists()) return { 총점: null, 오류: `scripts/${bookId} 없음` };
+                const data = snap.data();
+                const lines = data.script || data.lines || [];
+                if (!lines.length) return { 총점: null, 오류: '대본 비어있음' };
+
+                // WAV 매칭
+                const idLower = bookId.toLowerCase();
+                const wavName = Object.keys(localWavFileMap).find(n => {
+                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                    return base === idLower || base.includes(idLower) || idLower.includes(base);
+                });
+                if (!wavName) return { 총점: null, 오류: 'WAV 파일 없음 (스킵)' };
+
+                // WAV → ArrayBuffer
+                const wavUrl = URL.createObjectURL(localWavFileMap[wavName]);
+                const audioRes = await fetch(wavUrl);
+                URL.revokeObjectURL(wavUrl);
+                if (!audioRes.ok) return { 총점: null, 오류: `WAV 읽기 실패` };
+                const audioBuffer = await audioRes.arrayBuffer();
+
+                // AssemblyAI 전사
+                const transcribed = await transcribeWithAssemblyAI(audioBuffer, aaiKey, () => {});
+
+                // 점수 계산
+                const result = scoreTranscript(lines, transcribed);
+
+                // 턴별 타임스탬프 → Firestore 저장
+                const segments = generateTurnSegments(lines, transcribed.words);
+                if (segments && segments.length === lines.length) {
+                    await setDoc(doc(db, 'timestamps', bookId), {
+                        segments,
+                        generatedAt: new Date().toISOString(),
+                        source: 'assemblyai',
+                        confidence: transcribed.confidence
+                    });
+                }
+
+                return result;
+            } catch (e) {
+                return { 총점: null, 오류: e.message };
+            }
+        };
+
+        for (const bookId of batchVerifyIds) {
+            const result = await runOne(bookId);
+            setBatchVerifyResults(prev => ({ ...prev, [bookId]: result }));
+        }
+        setBatchVerifyRunning(false);
+        setBatchVerifyCurrent('');
+    };
+
     const handleUpdateUserStatus = async (userId, status) => {
         try {
             await updateDoc(doc(db, "users", userId), { status });
         } catch (error) {
             console.error("Error updating user:", error);
         }
+    };
+
+    // 프리미엄 설정: days=null이면 영구, days=숫자면 N일
+    const handleSetPremium = async (userId, days) => {
+        try {
+            const data = { isPremium: true, updatedAt: serverTimestamp() };
+            if (days !== null) {
+                const end = new Date();
+                end.setDate(end.getDate() + days);
+                data.premiumEndDate = Timestamp.fromDate(end);
+            } else {
+                data.premiumEndDate = null;
+            }
+            await updateDoc(doc(db, "users", userId), data);
+            alert(`✅ 프리미엄 ${days ? days + '일' : '영구'} 설정 완료`);
+        } catch (error) {
+            alert('❌ 업데이트 실패: ' + error.message);
+        }
+    };
+
+    // 무료회원으로 변경 (프리미엄 해제)
+    const handleRevokePremium = async (userId) => {
+        if (!window.confirm('프리미엄을 해제하고 무료회원으로 변경하시겠습니까?')) return;
+        try {
+            await updateDoc(doc(db, "users", userId), {
+                isPremium: false,
+                premiumEndDate: null,
+                updatedAt: serverTimestamp()
+            });
+            alert('✅ 무료회원으로 변경 완료');
+        } catch (error) {
+            alert('❌ 업데이트 실패: ' + error.message);
+        }
+    };
+
+    // 7일 무료 체험 재시작
+    const handleResetTrial = async (userId) => {
+        if (!window.confirm('7일 무료 체험을 재시작하시겠습니까?')) return;
+        try {
+            await updateDoc(doc(db, "users", userId), {
+                trialStartDate: Timestamp.fromDate(new Date()),
+                isPremium: false,
+                premiumEndDate: null,
+                updatedAt: serverTimestamp()
+            });
+            alert('✅ 7일 무료 체험 재시작 완료');
+        } catch (error) {
+            alert('❌ 업데이트 실패: ' + error.message);
+        }
+    };
+
+    // 구독 상태 계산 헬퍼
+    const getMembershipStatus = (user) => {
+        if (user.isPremium) {
+            if (user.premiumEndDate) {
+                const end = user.premiumEndDate.toDate ? user.premiumEndDate.toDate() : new Date(user.premiumEndDate);
+                if (new Date() > end) return { label: '만료', color: 'text-red-400 border-red-500/30' };
+                const days = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+                return { label: `프리미엄 D-${days}`, color: 'text-gold border-gold/30' };
+            }
+            return { label: '프리미엄 (영구)', color: 'text-gold border-gold/30' };
+        }
+        if (user.trialStartDate) {
+            const start = user.trialStartDate.toDate ? user.trialStartDate.toDate() : new Date(user.trialStartDate);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 7);
+            if (new Date() < end) {
+                const days = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+                return { label: `무료체험 D-${days}`, color: 'text-emerald-400 border-emerald-500/30' };
+            }
+            return { label: '체험 만료', color: 'text-red-400 border-red-500/30' };
+        }
+        return { label: '미가입', color: 'text-slate-500 border-slate-700' };
     };
 
     const handleUpdateCoverPath = async (bookId, path) => {
@@ -537,6 +895,22 @@ export default function AdminDashboard() {
     const [isCheckingQuota, setIsCheckingQuota] = useState(false);
     const [existingScript, setExistingScript] = useState(null); // Firestore 기존 대본
     const [selectedSituation, setSelectedSituation] = useState(null); // 선택된 상황극 시나리오
+    // ── Gemini 대본 탭 전용 상태 ─────────────────────────────────────────
+    const [geminiScriptLogs, setGeminiScriptLogs] = useState([]);
+    const [geminiScriptProgress, setGeminiScriptProgress] = useState(0);
+    const [isGeneratingGeminiScript, setIsGeneratingGeminiScript] = useState(false);
+    const [geminiGeneratedScript, setGeminiGeneratedScript] = useState([]);
+    const [geminiSelectedSituation, setGeminiSelectedSituation] = useState(null);
+    const [claudeTtsBatchBooks, setClaudeTtsBatchBooks] = useState([]);
+    const [isClaudeTtsBatchRunning, setIsClaudeTtsBatchRunning] = useState(false);
+    const [claudeTtsBatchStatuses, setClaudeTtsBatchStatuses] = useState({});
+    const [claudeTtsBatchProgress, setClaudeTtsBatchProgress] = useState({ current: 0, total: 0 });
+    const [claudeTtsBatchLogs, setClaudeTtsBatchLogs] = useState([]);
+    const [geminiSelectedBatchBooks, setGeminiSelectedBatchBooks] = useState([]);
+    const [isGeminiBatchRunning, setIsGeminiBatchRunning] = useState(false);
+    const [geminiBatchStatuses, setGeminiBatchStatuses] = useState({});
+    const [geminiBatchProgress, setGeminiBatchProgress] = useState({ current: 0, total: 0 });
+    const [geminiBatchLogs, setGeminiBatchLogs] = useState([]);
     const [isLoadingScript, setIsLoadingScript] = useState(false);
     const [isScriptEditorOpen, setIsScriptEditorOpen] = useState(false);
     // 이어받기: 배치별 PCM 버퍼 저장 (null = 미완료)
@@ -544,7 +918,25 @@ export default function AdminDashboard() {
     const [failedBatches, setFailedBatches] = useState([]);
     const [wavFileName, setWavFileName] = useState('');
     const [wavUploading, setWavUploading] = useState(false);
+    // TTS 검증
+    const [verifyBookId, setVerifyBookId] = useState('');
+    const [verifyWavUrl, setVerifyWavUrl] = useState('');
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyResult, setVerifyResult] = useState('');
+    const [verifyLogs, setVerifyLogs] = useState([]);
     const [wavUploadLog, setWavUploadLog] = useState('');
+    const [localWavFiles, setLocalWavFiles] = useState([]);
+    const [localWavFileMap, setLocalWavFileMap] = useState({});
+    const [selectedWavName, setSelectedWavName] = useState('');
+    const [batchVerifyIds, setBatchVerifyIds] = useState([]);
+    const [batchVerifyResults, setBatchVerifyResults] = useState({});
+    const [batchVerifyRunning, setBatchVerifyRunning] = useState(false);
+    const [batchVerifyCurrent, setBatchVerifyCurrent] = useState('');
+    const [batchExpandedId, setBatchExpandedId] = useState(null);
+    // 수동 타임스탬프 편집
+    const [tsScript, setTsScript] = useState([]); // Firestore scripts/{id} 대본
+    const [tsTimestamps, setTsTimestamps] = useState([]); // [seconds, ...]
+    const [tsSaving, setTsSaving] = useState(false);
 
     // ── E-book 생성 탭 상태 ─────────────────────────────────
     const [isGeneratingEbook, setIsGeneratingEbook] = useState(false);
@@ -763,9 +1155,9 @@ export default function AdminDashboard() {
         };
     }, []);
 
-    // automation 탭 진입 시 Firestore 대본 존재 여부 일괄 조회
+    // automation / gemini-script 탭 진입 시 Firestore 대본 존재 여부 일괄 조회
     useEffect(() => {
-        if (activeTab !== 'automation' || !realBooks.length) return;
+        if ((activeTab !== 'automation' && activeTab !== 'gemini-script') || !realBooks.length) return;
         const checkAll = async () => {
             const results = {};
             const optimized = {};
@@ -794,10 +1186,32 @@ export default function AdminDashboard() {
 
     // bookScripts 동적 로드 — 대본/자동화/성우 탭 진입 시 204KB 청크 로드
     useEffect(() => {
-        if (['script', 'automation', 'voice'].includes(activeTab) && Object.keys(bookScripts).length === 0) {
+        if (['script', 'automation', 'voice', 'tts-verify'].includes(activeTab) && Object.keys(bookScripts).length === 0) {
             import('../data/bookScripts').then(m => setBookScripts(m.bookScripts || {}));
         }
     }, [activeTab]);
+
+    // verifyBookId 바뀌면 Firestore scripts/{id}에서 대본 불러오고 타임스탬프 초기화
+    useEffect(() => {
+        if (!verifyBookId) { setTsScript([]); setTsTimestamps([]); return; }
+        // 1. Firestore 대본 로드
+        getDoc(doc(db, 'scripts', verifyBookId)).then(async snap => {
+            const script = (snap.exists() ? snap.data().script : null) || [];
+            setTsScript(script);
+            if (script.length === 0) { setTsTimestamps([]); return; }
+            // 2. 기존 타임스탬프 로드
+            try {
+                const tsSnap = await getDoc(doc(db, 'timestamps', verifyBookId));
+                if (tsSnap.exists() && tsSnap.data().segments?.length === script.length) {
+                    setTsTimestamps(tsSnap.data().segments.map(s => s.start));
+                } else {
+                    setTsTimestamps(script.map((_, i) => i === 0 ? 5 : 0));
+                }
+            } catch {
+                setTsTimestamps(script.map((_, i) => i === 0 ? 5 : 0));
+            }
+        }).catch(() => { setTsScript([]); setTsTimestamps([]); });
+    }, [verifyBookId]);
 
     // 대본 생성 중 브라우저 새로고침/탭 닫기 방지
     useEffect(() => {
@@ -1156,9 +1570,10 @@ ${JSON.stringify(script)}`;
 - "${speakerA}"의 대사를 "${speakerB}" 목소리로, 또는 그 반대로 읽는 것은 치명적 오류입니다.
 
 ⚠️ 속도 & 발음 절대 규칙 (최우선):
-- 전체 발화 속도를 평소보다 20~25% 느리게 유지할 것. 절대 빠르게 읽지 말 것.
-- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것.
-- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
+- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
+- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
+- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
 - 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
 - 청취자가 이해할 수 있도록 여유 있는 페이스를 끝까지 유지할 것.
 
@@ -1357,8 +1772,283 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         }
     };
 
+    // ── Gemini 대본 탭 전용 TTS (geminiGeneratedScript 사용) ──────────────
+    const handleRunGeminiTts = async () => {
+        if (!geminiGeneratedScript.length) return alert('먼저 대본을 생성하세요.');
+
+        const geminiKeys = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+            import.meta.env.VITE_GEMINI_API_KEY4,
+            import.meta.env.VITE_GEMINI_API_KEY5,
+            import.meta.env.VITE_GEMINI_API_KEY6,
+            import.meta.env.VITE_GEMINI_API_KEY7,
+            import.meta.env.VITE_GEMINI_API_KEY8,
+        ].filter(Boolean);
+
+        const BATCH = 100;
+        const totalTurns = geminiGeneratedScript.length;
+
+        const speakerA = scriptForm.speakerA || '제임스';
+        const speakerB = scriptForm.speakerB || '스텔라';
+        const modelId = ttsModel === 'pro'
+            ? 'gemini-2.5-pro-preview-tts'
+            : 'gemini-2.5-flash-preview-tts';
+        const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
+
+        const speakerAAliases = [speakerA.toLowerCase(), 'james', '제임스', 'a', '남성'];
+        const speakerBAliases = [speakerB.toLowerCase(), 'stella', '스텔라', 'b', '여성'];
+        const normalizeSpk = (spk) => {
+            const s = String(spk || '').trim().toLowerCase();
+            if (speakerAAliases.includes(s)) return speakerA;
+            if (speakerBAliases.includes(s)) return speakerB;
+            if (speakerAAliases.some(a => s.includes(a) || a.includes(s))) return speakerA;
+            if (speakerBAliases.some(b => s.includes(b) || b.includes(s))) return speakerB;
+            return speakerA;
+        };
+
+        setIsTtsRunning(true);
+        setTtsLogs(['✏️ TTS 최적화 중 (Gemini Flash)...']);
+        const ttsReadyScript = await optimizeScriptForTts(
+            geminiGeneratedScript,
+            (msg) => setTtsLogs(prev => [...prev, msg])
+        );
+
+        const situationScene = geminiSelectedSituation?.scene || '';
+        const preprocessScript = ttsReadyScript.map((line, idx) => {
+            const turn = idx + 1;
+            const normalizedSpeaker = normalizeSpk(line.speaker);
+            let text = line.text;
+            if (turn <= 4 && situationScene) {
+                text = `(${situationScene}에서, 자연스럽고 편하게) ${text}`;
+            } else if (turn >= totalTurns - 2) {
+                text = `(자리 마무리하며, 가볍게) ${text}`;
+            } else if (text.includes('하하') || text.includes('ㅋ') || text.includes('피식') || text.match(/근데 솔직히|진짜로|아 맞아|저만 그런|저도요/)) {
+                text = `(웃으며) ${text}`;
+            }
+            return { ...line, speaker: normalizedSpeaker, text };
+        });
+
+        const batches = [];
+        for (let i = 0; i < preprocessScript.length; i += BATCH) batches.push(preprocessScript.slice(i, i + BATCH));
+
+        setTtsLogs(prev => [...prev, `🔍 이전 진행 상황 확인 중...`]);
+        const pcmBuffers = new Array(batches.length).fill(null);
+        let resumeCount = 0;
+        for (let b = 0; b < batches.length; b++) {
+            const cached = await loadBatchBuffer(`${scriptForm.bookId}-gemini-${b}`);
+            if (cached) { pcmBuffers[b] = cached; resumeCount++; }
+        }
+        const newFailed = [];
+        const isResume = resumeCount > 0;
+
+        setTtsLogs([`🎙️ TTS ${isResume ? `이어받기 (${resumeCount}개 캐시 복원)` : '시작'} — ${geminiGeneratedScript.length}턴 · ${batches.length}번 호출 · ${modelLabel} 멀티스피커`]);
+        setTtsProgress(0);
+
+        for (let b = 0; b < batches.length; b++) {
+            if (pcmBuffers[b] !== null) {
+                setTtsLogs(prev => [...prev, `⏭️ 배치 [${b + 1}/${batches.length}] 스킵 (캐시 복원)`]);
+                continue;
+            }
+
+            const batch = batches[b];
+            setTtsProgress(Math.round((b / batches.length) * 90));
+            setTtsLogs(prev => {
+                const filtered = prev.filter(l => !l.startsWith('⏳'));
+                return [...filtered, `⏳ 배치 [${b + 1}/${batches.length}] — ${batch.length}턴 처리 중...`];
+            });
+
+            const situationContext = situationScene ? `지금 두 사람은 실제로 "${situationScene}" 상황에 있습니다. ` : '';
+            const ttsInstruction = `\
+⚠️⚠️ CRITICAL — 목소리 배정 절대 규칙 (위반 불가):
+- 화자 "${speakerA}" → 반드시 남성(MALE) 목소리만 사용. 여성 목소리 절대 사용 금지.
+- 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용. 남성 목소리 절대 사용 금지.
+- 대사마다 화자 이름을 확인 후 목소리를 즉시 전환할 것.
+
+⚠️ 속도 & 발음 절대 규칙 (최우선):
+- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
+- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
+- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
+
+⚠️ 이것은 낭독이 아닌 연기입니다!
+${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대화입니다.
+
+[전체 분위기]
+- 전반적으로 즐겁고 유쾌하고 발랄한 분위기. 에너지가 느껴져야 함.
+- 유머 대사는 실제로 웃기게. 억양과 타이밍으로 웃음 포인트를 살릴 것.
+
+[연기 핵심 규칙]
+- 유머·자폭·뼈 때리는 대사: 타이밍 살려서 생동감 있게.
+- 공감 폭발 대사("맞아!", "진짜?", "대박"): 올려서 에너지 넘치게.
+- 괄호 안 지시문은 발음하지 말고 감정으로만 표현할 것.
+
+[발음 규칙]
+- 단어 끝까지 또렷하게. 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 충분히 쉬어 읽을 것.
+
+[${speakerA} — 남성 MALE 전용]
+- 낮고 위트 있는 목소리. 여유롭지만 에너지가 있고 재미있는 사람.
+- ※ 이 화자는 절대 여성 목소리 사용 금지.
+
+[${speakerB} — 여성 FEMALE 전용]
+- 발랄하고 톡톡 튀는 친구. 리액션 크게, 질문은 끝 올려서 호기심 넘치게.
+- ※ 이 화자는 절대 남성 목소리 사용 금지.
+
+[대본]
+`;
+            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+
+            const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000;
+            const expectedSec = fetchTimeout / 1000;
+            let success = false;
+            let attempts = 0;
+            while (!success && attempts < geminiKeys.length) {
+                const key = geminiKeys[(b + attempts) % geminiKeys.length];
+                let timerInterval = null;
+                let timeoutId = null;
+                try {
+                    const controller = new AbortController();
+                    timeoutId = setTimeout(() => controller.abort(), fetchTimeout);
+
+                    let elapsed = 0;
+                    timerInterval = setInterval(() => {
+                        elapsed++;
+                        const pct = Math.min(Math.round((elapsed / expectedSec) * 100), 99);
+                        setTtsLogs(prev => {
+                            const filtered = prev.filter(l => !l.startsWith('🔄'));
+                            return [...filtered, `🔄 배치 ${b + 1} 생성 중... ${elapsed}초 / 예상 ${expectedSec}초 (${pct}%)`];
+                        });
+                    }, 1000);
+
+                    const res = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+                        {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            signal: controller.signal,
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: multiText }] }],
+                                generationConfig: {
+                                    responseModalities: ['audio'],
+                                    speechConfig: {
+                                        multiSpeakerVoiceConfig: {
+                                            speakerVoiceConfigs: [
+                                                { speaker: speakerA, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceA } } },
+                                                { speaker: speakerB, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceB } } },
+                                            ]
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    );
+                    setTtsLogs(prev => {
+                        const filtered = prev.filter(l => !l.startsWith('🔄'));
+                        return [...filtered, `📥 배치 ${b + 1} 응답 수신 중... (오디오 데이터 다운로드)`];
+                    });
+
+                    if (!res.ok) {
+                        const errJson = await res.json().catch(() => null);
+                        clearTimeout(timeoutId);
+                        clearInterval(timerInterval);
+                        setTtsLogs(prev => prev.filter(l => !l.startsWith('📥')));
+                        const msg = errJson?.error?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
+                    }
+                    const data = await res.json();
+                    clearTimeout(timeoutId);
+                    clearInterval(timerInterval);
+                    setTtsLogs(prev => prev.filter(l => !l.startsWith('📥')));
+                    const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    if (!part) throw new Error('응답에 오디오 데이터 없음');
+                    const pcm = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+                    pcmBuffers[b] = pcm;
+                    await saveBatchBuffer(`${scriptForm.bookId}-gemini-${b}`, pcm);
+                    success = true;
+                    setTtsLogs(prev => {
+                        const filtered = prev.filter(l => !l.startsWith('⏳'));
+                        return [...filtered, `✅ 배치 [${b + 1}/${batches.length}] 완료`];
+                    });
+                } catch (e) {
+                    clearInterval(timerInterval);
+                    setTtsLogs(prev => prev.filter(l => !l.startsWith('🔄')));
+                    attempts++;
+                    if (attempts < geminiKeys.length) {
+                        const isAbort = e.name === 'AbortError';
+                        const is429 = e.message.includes('429') || e.message.includes('quota') || e.message.includes('RESOURCE_EXHAUSTED');
+                        const retryMatch = e.message.match(/retry in (\d+(?:\.\d+)?)s/i);
+                        const waitSec = isAbort ? 60 : is429 ? 0 : retryMatch ? Math.ceil(parseFloat(retryMatch[1])) + 2 : 40;
+                        const reason = isAbort ? '타임아웃' : is429 ? '할당량 소진, 다음 키 시도' : 'API 오류';
+                        setTtsLogs(prev => [...prev, `⚠️ 배치 ${b + 1} 재시도 (${attempts}/${geminiKeys.length}) — ${reason}${waitSec > 0 ? `, ${waitSec}초 대기 중...` : ''}`]);
+                        if (waitSec > 0) await new Promise(r => setTimeout(r, waitSec * 1000));
+                    } else {
+                        const failMsg = `❌ 배치 ${b + 1} 실패 — 모든 키 소진\n오류: ${e.message}`;
+                        setTtsLogs(prev => [...prev, failMsg]);
+                        alert(`배치 ${b + 1} 실패!\n\n${e.message}`);
+                        newFailed.push(b + 1);
+                    }
+                }
+            }
+
+            if (b < batches.length - 1) {
+                const batchDelay = ttsModel === 'pro' ? 35000 : 30000;
+                setTtsLogs(prev => [...prev, `⏱ 다음 배치까지 ${batchDelay / 1000}초 대기...`]);
+                await new Promise(r => setTimeout(r, batchDelay));
+            }
+        }
+
+        setSavedPcmBuffers([...pcmBuffers]);
+        setFailedBatches(newFailed);
+
+        const successBuffers = pcmBuffers.filter(Boolean);
+        setTtsLogs(prev => [...prev.filter(l => !l.startsWith('⏳')),
+            newFailed.length > 0
+                ? `⚠️ ${newFailed.length}개 배치 실패. 내일 다시 접속해도 이어받기 가능합니다.`
+                : '🎵 WAV 파일 생성 중...'
+        ]);
+
+        try {
+            if (successBuffers.length > 0) {
+                const wavBuffer = createWavFromPcm(successBuffers);
+                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${scriptForm.bookId || 'audio'}_gemini_tts.wav`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTtsProgress(100);
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const audioBuffer = await audioContext.decodeAudioData(wavBuffer.slice(0));
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.playbackRate.value = 0.98;
+                    source.connect(audioContext.destination);
+                    source.start();
+                } catch (playErr) { console.warn("미리듣기 재생 실패:", playErr); }
+
+                if (newFailed.length === 0) {
+                    await clearBatchBuffers(`${scriptForm.bookId}-gemini`, batches.length);
+                    setTtsLogs(prev => [...prev, `🎉 완료! ${scriptForm.bookId}_gemini_tts.wav 다운로드됨`]);
+                } else {
+                    setTtsLogs(prev => [...prev, `💾 진행 상황 저장됨 — 이어받기 버튼으로 재시도하세요.`]);
+                }
+            } else {
+                setTtsLogs(prev => [...prev, `⚠️ 생성된 오디오가 없습니다.`]);
+            }
+        } catch (err) {
+            setTtsLogs(prev => [...prev, `❌ 파일 생성 중 오류: ${err.message}`]);
+        } finally {
+            setIsTtsRunning(false);
+        }
+    };
+
     // ── 배치 전용 TTS 헬퍼 — 단일 모드 상태 일절 건드리지 않음 ──────
-    const runTtsForBook = async (script, bookId, addBatchLog, skipOptimize = false) => {
+    const runTtsForBook = async (script, bookId, addBatchLog, skipOptimize = false, setBatchLogsFunc = null) => {
+        const _setBatchLogs = setBatchLogsFunc || setBatchLogs;
         const geminiKeys = [
             import.meta.env.VITE_GEMINI_API_KEY,
             import.meta.env.VITE_GEMINI_API_KEY2,
@@ -1398,9 +2088,10 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용.
 
 ⚠️ 속도 & 발음 절대 규칙:
-- 전체 발화 속도를 평소보다 20~25% 느리게 유지할 것. 절대 빠르게 읽지 말 것.
-- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것.
-- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
+- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
+- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
+- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
 - 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
 
 ⚠️ 이것은 낭독이 아닌 연기입니다!
@@ -1441,7 +2132,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     let elapsed = 0;
                     const timerInterval = setInterval(() => {
                         elapsed++;
-                        setBatchLogs(prev => {
+                        _setBatchLogs(prev => {
                             const filtered = prev.filter(l => !l.includes(`⏳ [${bookId}]`));
                             return [...filtered, `[${new Date().toLocaleTimeString()}] ⏳ [${bookId}] 배치 ${b + 1}/${batches.length} 생성 중... ${elapsed}초 경과`];
                         });
@@ -1476,7 +2167,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                     const data = await res.json();
                     const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                     if (!part) throw new Error('오디오 데이터 없음');
-                    pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+                    pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
                     clearInterval(timerInterval);
                     success = true;
                     addBatchLog(`✅ [${bookId}] 배치 ${b + 1}/${batches.length} 완료`);
@@ -1624,7 +2315,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
         const speakerA = (overrides.speakerA || scriptForm.speakerA).trim() || '제임스';
         const speakerB = (overrides.speakerB || scriptForm.speakerB).trim() || '스텔라';
         let apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
-        
+
         if (!apiKey && scriptApiKey) {
             apiKey = scriptApiKey;
         }
@@ -1660,7 +2351,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
             const callClaude = async (systemPrompt, userPrompt, temperature = 0.7) => {
                 const response = await anthropic.messages.create({
                     model: 'claude-sonnet-4-5',
-                    max_tokens: 8192,
+                    max_tokens: 6500,
                     temperature: temperature,
                     system: systemPrompt,
                     messages: [{ role: 'user', content: userPrompt }]
@@ -1715,7 +2406,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
   {"speaker": "${speakerA}", "text": "..."},
   {"speaker": "${speakerB}", "text": "..."}
 ]
-총 턴 수는 정확히 58턴으로 고정 (7분 30초~8분 분량 목표)
+총 턴 수는 50~65턴 내외 (7분~8분 분량 목표). 정해진 토큰 한도 안에서 이야기를 자연스럽게 펼치되, 아래 클로징 구조로 마무리할 것.
 
 [턴 구조 - 반드시 이 흐름으로만 작성]
 턴 1~6 : 주어진 상황 안에서 자연스러운 수다. 책 언급 절대 금지.
@@ -1723,21 +2414,14 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
   - 턴 3~6에서 자연스럽게 직장 고민·스트레스·인간관계 소재를 흘릴 것. 이게 나중에 책 주제로 연결되는 씨앗이 됨.
   - ⚠️ 고민 소재가 억지로 꺼내진 느낌이면 안 됨. 상황 대화를 하다가 자연스럽게 나오는 것처럼.
 
-턴 7~10 : 책으로 넘어가는 전환 — 공식처럼 딱딱하게 하지 말고 대화가 자연스럽게 흘러가듯 할 것.
-  핵심 원칙: 앞에서 나온 고민·소재에서 ${speakerA}의 뇌에 책이 떠오른 것처럼. 책을 꺼내려고 억지로 화제를 꺾는 게 아님.
-
-  좋은 흐름 예시:
-  - 치킨집 상황: "치킨 먹다가 → 야근 얘기 → 팀장 얘기 → '그러고 보니 그거 읽으면서 딱 그 생각 했는데' → '뭐?' → 책 제목"
-  - 등산 상황: "정상 보이는데 → 요즘 지친다는 얘기 → '근데 이상하게 그 얘기 들으니까 생각나는 게 있어' → '뭔데' → 책 제목"
-
-  [7~8턴] ${speakerA}가 앞 대화 흐름을 받아서 자연스럽게 생각이 연결된 것처럼 운을 뗌. 책 제목은 아직 안 나옴.
-    - "그러고 보니 나 요즘 그런 거 많이 생각하다가 뭔가 읽었는데", "아 갑자기 생각났는데 딱 그 얘기더라" 등
-    - 대화 흐름을 끊지 말고 앞 소재에서 자연스럽게 이어질 것
-  [9턴] ${speakerB}가 궁금해하며 물어봄 → ${speakerA}가 책 제목 꺼냄
-  [10턴] ${speakerB}가 처음 듣는 반응 ("그게 뭐야?", "처음 들어보는데") → ${speakerA}가 한 줄 설명
-
-  ⚠️ 절대 금지: "오늘은 이 책 얘기를 해볼게", "이 책이 딱 맞는 것 같아서", "이 책 알아?" 식으로 갑자기 방송 진행자처럼 책을 꺼내는 것.
-  ⚠️ 절대 금지: ${speakerB}가 책을 먼저 꺼내거나 소개하는 것.
+턴 7~8 : 책으로 자연스럽게 전환. 반드시 아래 패턴 중 하나로만 쓸 것.
+  [7턴] ${speakerA} 대사 패턴 (이 중 하나):
+    - "그러게, 요즘 읽는 책이 있는데 딱 그 얘기더라고."
+    - "야 근데 그거 나 요즘 읽는 책이랑 완전 같은 얘기인데."
+    - "아 그러니까 생각났는데, 요즘 읽는 책 있거든. 딱 그 얘기야."
+  → ${speakerB}가 "무슨 책인데?" 또는 "어떤 책?" 반응
+  [8턴] ${speakerA}가 책 제목 말하고 한 줄 소개 → ${speakerB}가 처음 듣는 반응
+  ⚠️ ${speakerB}가 책을 먼저 꺼내거나 소개하는 것 절대 금지.
 
 턴 10~35 : 책 핵심 개념 소개 — ${speakerA}가 책 내용을 설명하되, 매 2~3턴마다 반드시 직장인 현실 사례로 연결할 것.
   ⚠️ 책 내용만 계속 나열하는 것 절대 금지. 개념 1개 설명 → 직장 사례 연결 → ${speakerB} 반박/공감 → 다음 개념 순서로 진행.
@@ -1784,6 +2468,7 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 - 연속 동의·칭찬 금지. 누군가는 반드시 반박.
 - ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 "야 ${speakerB}", "${speakerA}야" 식으로 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지, 이름 없이 자연스럽게 말할 것.
 - ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨. 대체 표현: "정말", "완전", "너무", "대박", "어이없어", "말도 안 돼" 등 다양하게 활용.
+- ⚠️ 직장 용어 정확히 쓸 것: "야근"은 평일 밤에 늦게까지 일하는 것. 주말에 출근하는 건 "주말 근무" 또는 "주말 출근"이라고 해야 함. "주말 야근"이라는 표현 절대 금지.
 - ${speakerA}: 감정 공감 → 건조 개그
 - ${speakerB}: 날카로운 현실 반박 최소 5회 + 결국 본인 자폭 고백
 
@@ -1846,14 +2531,14 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
    - 좋은 끝맺음 예시: "그게 제일 웃기더라. 진짜." / "우리 팀장도 그랬어.. " / "생각만 해도 빡세. 진짜로."
    - 나쁜 끝맺음 피하기: "그럴 거야" "맞아" "그러니까" (단독으로 끝날 때 특히 위험)
 10. 마지막 10자 구간에 쉼표(,)나 마침표(.) 최소 1개 이상 강제 배치
-11. 턴 55~58은 문장 더 짧게 (평균 30~40자 권장)
+11. 마지막 4턴은 문장 더 짧게 (평균 30~40자 권장)
 
 [2단계 클로징 통합]
-58턴까지 작성 후 마지막 6턴은 자연 마무리:
-턴 54~55: 책 얘기 텐션 낮추기 — 갑자기 끊지 말고 "야 우리 얘기가 너무 길어졌다", "정신차려보니 시간이" 같은 브릿지 1~2턴 삽입. 책 → 상황 급전환 금지.
-턴 56: "오늘 얘기 진짜 좋았다" 뉘앙스
-턴 57: 오프닝에서 설정한 장소·상황 속 주변 묘사로 자연 복귀 (오프닝과 동일한 장소·상황이어야 함. 전혀 다른 장소나 상황으로 바뀌는 것 절대 금지)
-턴 58: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것. 임의로 바꾸거나 다른 멘트로 대체 금지.
+책 내용을 충분히 다룬 후 마지막 6턴은 자연 마무리:
+끝에서 6~5번째 턴: 책 얘기 텐션 낮추기 — 갑자기 끊지 말고 "야 우리 얘기가 너무 길어졌다", "정신차려보니 시간이" 같은 브릿지 삽입. 책 → 상황 급전환 금지.
+끝에서 4번째 턴: "오늘 얘기 진짜 좋았다" 뉘앙스
+끝에서 3번째 턴: 오프닝에서 설정한 장소·상황 속 주변 묘사로 자연 복귀 (오프닝과 동일한 장소·상황이어야 함. 전혀 다른 장소나 상황으로 바뀌는 것 절대 금지)
+마지막 턴: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것. 임의로 바꾸거나 다른 멘트로 대체 금지.
 ⚠️ 절대 금지 마무리 표현: "오늘 녹음 여기까지", "편안한 저녁 보내", "다음 시간에 또 만나", "오늘 방송 여기서 마칠게", "청취해주셔서 감사" 등 팟캐스트 방송 아웃로 형식의 표현. 마지막은 반드시 두 사람이 그 상황(장소·활동) 안에 있는 것처럼 자연스럽게 끝나야 함.
 ⚠️ 클로징 시간 점프 절대 금지: 직전 턴에서 어떤 행동이 막 시작됐는데(예: "치킨 왔다", "탑승 시작한다", "출발하자") 바로 다음 턴에서 그 행동이 이미 끝난 것처럼 쓰는 것 금지.
   나쁜 예: 턴 74 "치킨 왔다" → 턴 75 "치킨 다 먹었다"
@@ -1871,7 +2556,7 @@ ${themes}
 상황극: ${situation}`;
 
             const rawScript = await callClaude(systemPrompt1, prompt1, 0.7);
-            
+
             addLog('✅ [2단계] 맞춤법 및 띄어쓰기 교정 요청 중...');
             setScriptProgress(50);
 
@@ -1882,7 +2567,7 @@ ${themes}
 - 단, "니는"→"너는", "니도"→"너도", "니한테"→"너한테"만 명시적으로 바꿀 것.
 - 이외의 말투·구어체·내용은 절대 변경 금지.
 오직 유효한 JSON 배열만 출력하세요.`;
-            
+
             const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
             const callGemini = async (systemPrompt, userContent, temperature = 0.2, thinking = false) => {
                 const res = await fetch(
@@ -1930,7 +2615,7 @@ ${themes}
   위 0-A, 0-B, 0-C, 0-D 항목이 모두 통과되지 않으면 나머지 검토 의미 없음.
 1. 턴 수 정확히 58개인가?
 2. 턴 1~6에서 책 언급이 없는가?
-3. 전환(턴 7~9)이 3단계 브릿지로 자연스럽게 이어지는가? 갑자기 책 제목이 등장하거나 "책 읽는다며?" 식의 뜬금 전환이면 수정. 턴 4~6의 대화 소재와 연결되어야 함.
+3. 전환(턴 7~8)이 자연스러운가? 앞 대화 소재를 받아 ${speakerA}가 심플하게 책을 꺼내야 함. "그러게, 요즘 읽는 책이 있는데 딱 그 얘기더라고" 식. 질질 끌거나 뜬금없이 튀어나오면 수정.
 4. 유머와 리액션이 대화 맥락에서 자연스럽게 나오는가? 뜬금없이 끼워넣은 유머가 있으면 제거 또는 앞 대화와 연결되도록 수정.
 5. ${speakerB}의 현실 반박 5회 이상 + 자폭 고백이 있는가?
 6. 추천 유도 정확히 1회 (턴 48~52 사이)? + 판매성 표현 없음? + 매번 다른 표현?
@@ -1954,7 +2639,7 @@ ${themes}
 21. "진짜" 단어 횟수: 전체 대본에서 "진짜"가 3회 이상 등장하면 3번째부터 "정말", "완전", "너무", "대박" 등으로 교체.
 
 위 항목 중 하나라도 위반이면 가장 최소한의 단어/구두점/끝맺음만 수정하고, 특유의 말투·캐릭터성·내용은 절대 변경하지 마세요.
-모든 검토 완료 후 오직 완성된 58턴 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
+모든 검토 완료 후 오직 완성된 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
 
             let afterPrompt3 = await callGemini(systemPrompt3, rawCorrected, 0.2, true);
 
@@ -2140,33 +2825,62 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
         if (!bookId || !title || !author) return alert('도서를 먼저 선택하세요.');
 
         setIsGeneratingEbook(true);
-        setEbookLogs(['E-book 생성 시작...', '엔진: Gemini 1.5 Flash (Reliable)', '구성: 표지 + 에세이(10p) + 종이']);
+        setEbookLogs(['E-book 생성 시작...', '엔진: Gemini 2.5 Flash Thinking', '구성: ebook.md 가이드 기준 (6페이지 + 지혜의 갈무리)']);
 
+        // ebook.md 가이드 기준 프롬프트
         const prompt = `# Role: 당신은 통찰력 있는 "전문 도서 비평가"이자 "인사이트 에세이스트"입니다.
-# Goal: 도서 "${title}"의 핵심 내용을 바탕으로, "표지 -> 본문 에세이 -> 마무리 페이지"로 연결되는 프리미엄 이북 콘텐츠를 작성합니다.
+# Goal: 도서 "${title}"에 대한 고퀄리티 이북 리뷰를 작성합니다. (4,000자 이상)
+# Guide: ebook.md 가이드 기준
 
-# ⚠️ 최우선 금지 규칙 (절대 준수):
-1. **팟캐스트 형식을 절대 사용하지 마세요.** (대화체, 대본 형식, 캐릭터 이름 금지)
-2. **오직 "순수 에세이" 문체로만 작성하세요.** (~다, ~한다 체 사용)
-3. **등장인물 간의 대화나 방송 진행 멘트는 절대 삼가세요.**
+# ⚠️ 핵심 원칙 (반드시 준수):
+1. **비율**: 도서 내용 요약 30% + 나의 독창적 성찰·해석 70%
+2. **반복 금지**: 모든 문장은 고유한 의미를 가짐. 채우기용 filler 문구 절대 금지
+3. **분량**: 4,000자 이상의 밀도 높은 텍스트 (억지로 채우지 말고 깊이 있게)
+4. **내 생각 중심**: 단순 책 소개가 아닌, 책 내용과 나의 생각이 어떻게 연결되는지를 풀어내기
+5. **구조 설명 노출 금지**: "도서요약 (30%)", "성찰 (70%)" 같은 내부 구조 설명은 본문에 절대 노출 금지
+6. **팟캐스트 형식 금지**: 대화체, 대본 형식, 캐릭터 이름 등 절대 사용 금지
+7. **문체**: ~다, ~한다 체의 문어체. 풍부한 수식어와 연결어(게다가, 요컨대 등) 활용
 
-# 콘텐츠 구성 구조 (필수):
+# ⚠️ 인용구 규칙 (엄수):
+- **최대 3개**: 전체 이북에서 직접 인용구는 3개를 초과할 수 없음
+- **중앙 정렬 표기**: 반드시 아래 형식으로 작성
+  <blockquote class="ebook-quote"><p>"인용 문장"</p><cite>— 저자명, 『책 제목』</cite></blockquote>
+- **출처 필수**: 인용구마다 cite 태그로 저자명·책 제목 표기
 
-### 1. COVER PAGE (표지)
-- <div class="ebook-cover"> 태그로 감싸주세요.
-- 책 제목과 저자명을 포함하십시오.
-- 책을 관통하는 "한 줄의 강렬한 통찰 멘트"를 중심에 배치하세요.
+# 콘텐츠 구성 — 각 PAGE를 반드시 <section class="ebook-page">...</section>으로 감싸기:
 
-### 2. MAIN ESSAY CONTENT (본문)
-- <div class="ebook-main-content"> 태그로 감싸주세요.
-- **도서 내용 소개 (30%)**: 핵심 개념과 저자의 의도.
-- **오리지널 인사이트 및 재해석 (70%)**: 현대 사회와 삶에 연결한 깊이 있는 통찰.
-- **중요**: 내용을 읽기 편하게 여러 개의 <section class="ebook-page"> 태그로 나누어 작성하세요. (각 페이지는 하나의 완결된 주제를 담습니다.)
-- HTML 태그(h1, h2, h3, p, ul, li)를 적절히 사용하세요.
+### PAGE 1 — 오프닝 + 서론 (약 500자)
+- 이 책에서 가장 인상적인 문장을 blockquote 인용구 형식으로 시작 (독자 몰입도 향상)
+- 책을 선택하게 된 동기, 첫인상, 사회적 배경 서술
+- 출처 표기 포함: <p><em>참고 도서: ${title} / 저자: ${author}</em></p>
 
-### 3. END PAGE (마무리)
-- <div class="ebook-end-page"> 태그로 감싸주세요.
-- "감사의 말"과 함께 책 제목, 저자, 그리고 가상의 출판사 명칭 "The Archiview Publishing"을 표기하세요.
+### PAGE 2 — 핵심 갈등과 줄거리 (약 800자)
+- 단순 나열이 아닌 핵심 갈등 위주
+- 중요 사건의 전후 맥락, 긴장감, 심리 변화 서술
+- 인용구 활용 시 공식: [인용문 blockquote] → [의미 해석] → [내 생각] → [현실 세계로의 확장]
+
+### PAGE 3 — 심층 분석 1: 인물·상징 (약 800자)
+- 핵심 인물 분석 및 상징적 의미 해석
+- 비슷한 주제의 영화·뉴스·다른 책과 비교 분석 (선택)
+- "만약 다른 선택을 했다면?" 가정으로 깊이 있는 분석 추가 (선택)
+
+### PAGE 4 — 심층 분석 2: 저자 철학과 사회적 메시지 (약 800자)
+- 저자의 철학 및 사회적 메시지를 현대 맥락으로 연결
+- 소제목(h2) 붙이기, 문답 형식으로 독자에게 질문하고 스스로 답하기
+
+### PAGE 5 — 개인적 성찰 (약 800자)
+- 내 삶과의 연결, 변화된 생각
+- 구체적인 상황·에피소드로 묘사
+- 저작권 방지: 성찰·관점 위주로 작성 (단순 소개 지양)
+
+### PAGE 6 — 결론 + 【지혜의 갈무리】 (약 300자 결론 + 갈무리 필수)
+- 총평과 마무리 문구 (약 300자)
+- 반드시 아래 형식의 【지혜의 갈무리】 포함:
+  <h2>【지혜의 갈무리】</h2>
+  <h3>이 책을 선택한 이유</h3><p>이 책이 현재 사회나 독자에게 왜 필요한지</p>
+  <h3>저자 소개</h3><p>저자의 이력, 집필 배경, 다른 저서와의 연결 고리</p>
+  <h3>추천 대상</h3><p>"이런 고민을 가진 분들이 읽으면 좋습니다" 형태</p>
+  <h3>지혜의 요약</h3><ol><li>핵심 메시지 1</li><li>핵심 메시지 2</li><li>핵심 메시지 3</li></ol>
 
 # Book Information:
 - 제목: ${title}
@@ -2175,18 +2889,20 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
 
 # Output Format:
 - 반드시 순수 HTML 태그만 출력하세요. 마크다운 기호(\`\`\`)는 제외하십시오.
-- 모바일 가독성을 위해 단락 구분을 명확히 하고 <br/>을 활용하세요.`;
+- 각 PAGE는 반드시 <section class="ebook-page">...</section> 태그로 감싸주세요.
+- h2, h3, p, ul, li, ol, blockquote, cite 태그를 적절히 사용하세요.
+- 이북 뷰어(모바일 flipbook)에서 읽힐 것을 고려하여 단락 구분을 깔끔하게 하세요.`;
 
         try {
             // v1beta가 가장 범용적으로 작동하되, 모델명을 명확히 함
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentGeminiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentGeminiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 8192,
+                        maxOutputTokens: 16000,
+                        thinkingConfig: { thinkingBudget: 8192 }
                     }
                 }),
             });
@@ -2243,7 +2959,7 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         setIsLoadingScript(true);
         try {
             await setDoc(doc(db, 'scripts', bookId), {
-                lines: localScript,
+                script: localScript,
                 title: scriptForm.title,
                 author: scriptForm.author,
                 updatedAt: serverTimestamp()
@@ -2283,6 +2999,565 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
             alert('삭제 실패: ' + e.message);
         } finally {
             setIsLoadingScript(false);
+        }
+    };
+
+    // ── Gemini 대본 저장 ─────────────────────────────────────────────────────
+    const handleSaveGeminiScript = async () => {
+        if (!geminiGeneratedScript.length) return;
+        const bookId = scriptForm.bookId;
+        if (!bookId) return alert('Book ID가 없습니다.');
+        setIsLoadingScript(true);
+        try {
+            await setDoc(doc(db, 'scripts', bookId), {
+                lines: geminiGeneratedScript,
+                title: scriptForm.title,
+                author: scriptForm.author,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            setGeminiScriptLogs(prev => [...prev, '✅ Firestore 저장 완료 (기존 대본 덮어쓰기)']);
+            alert('성공적으로 저장되었습니다.');
+        } catch (e) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setIsLoadingScript(false);
+        }
+    };
+
+    // ── Claude 탭 — 기존 대본으로 TTS 일괄 생성 ─────────────────────────────
+    const handleClaudeTtsBatchRun = async () => {
+        if (!claudeTtsBatchBooks.length) return alert('도서를 1개 이상 선택하세요.');
+
+        setIsClaudeTtsBatchRunning(true);
+        setClaudeTtsBatchLogs([]);
+        setClaudeTtsBatchProgress({ current: 0, total: claudeTtsBatchBooks.length });
+        const initialStatuses = {};
+        claudeTtsBatchBooks.forEach(id => { initialStatuses[id] = 'pending'; });
+        setClaudeTtsBatchStatuses(initialStatuses);
+
+        const addLog = (msg) => setClaudeTtsBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+        addLog(`🚀 TTS 일괄 시작 — ${claudeTtsBatchBooks.length}권`);
+
+        for (let i = 0; i < claudeTtsBatchBooks.length; i++) {
+            const bookId = claudeTtsBatchBooks[i];
+            const book = realBooks.find(b => b.id === bookId);
+            if (!book) { addLog(`⚠️ [${bookId}] 도서 정보 없음, 스킵`); continue; }
+
+            setClaudeTtsBatchProgress({ current: i + 1, total: claudeTtsBatchBooks.length });
+            setClaudeTtsBatchStatuses(prev => ({ ...prev, [bookId]: 'loading' }));
+            addLog(`\n📂 [${i + 1}/${claudeTtsBatchBooks.length}] ${book.title} — Firestore 대본 불러오는 중...`);
+
+            try {
+                const snap = await getDoc(doc(db, 'scripts', bookId));
+                if (!snap.exists()) throw new Error('Firestore에 대본 없음');
+                const data = snap.data();
+                const script = data.script || data.lines || data.content || null;
+                if (!script || !script.length) throw new Error('대본 데이터 비어있음');
+
+                addLog(`✅ [${bookId}] 대본 ${script.length}턴 불러옴 → TTS 시작`);
+                setClaudeTtsBatchStatuses(prev => ({ ...prev, [bookId]: 'tts' }));
+                await runTtsForBook(script, bookId, addLog, false, setClaudeTtsBatchLogs);
+
+                setClaudeTtsBatchStatuses(prev => ({ ...prev, [bookId]: 'done' }));
+            } catch (e) {
+                addLog(`❌ [${bookId}] 오류: ${e.message}`);
+                setClaudeTtsBatchStatuses(prev => ({ ...prev, [bookId]: 'error' }));
+            }
+        }
+
+        addLog(`\n🏁 TTS 일괄 완료! ${claudeTtsBatchBooks.length}권 처리됨`);
+        setIsClaudeTtsBatchRunning(false);
+    };
+
+    // ── Gemini 일괄 배치 실행 ────────────────────────────────────────────────
+    // mode: 'full' = 대본 새로 생성 + TTS / 'tts-only' = 기존 대본으로 TTS만
+    const handleGeminiBatchRun = async (mode = 'full') => {
+        if (!geminiSelectedBatchBooks.length) return alert('도서를 1개 이상 선택하세요.');
+        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (mode === 'full' && !geminiKey) return alert('Gemini API 키 (VITE_GEMINI_API_KEY) 가 설정되지 않았습니다.');
+
+        setIsGeminiBatchRunning(true);
+        setGeminiBatchLogs([]);
+        setGeminiBatchProgress({ current: 0, total: geminiSelectedBatchBooks.length });
+        const initialStatuses = {};
+        geminiSelectedBatchBooks.forEach(id => { initialStatuses[id] = 'pending'; });
+        setGeminiBatchStatuses(initialStatuses);
+
+        const addBatchLog = (msg) => setGeminiBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+        const modeLabel = mode === 'full' ? '대본 생성 + TTS' : 'TTS 전용';
+        addBatchLog(`🚀 Gemini 배치 시작 — ${geminiSelectedBatchBooks.length}권 · 모드: ${modeLabel}`);
+
+        for (let i = 0; i < geminiSelectedBatchBooks.length; i++) {
+            const bookId = geminiSelectedBatchBooks[i];
+            const book = realBooks.find(b => b.id === bookId);
+            if (!book) { addBatchLog(`⚠️ [${bookId}] 도서 정보 없음, 스킵`); continue; }
+
+            setGeminiBatchProgress({ current: i + 1, total: geminiSelectedBatchBooks.length });
+
+            try {
+                let script = null;
+
+                if (mode === 'full') {
+                    // 대본 새로 생성 (기존 덮어쓰기)
+                    setGeminiBatchStatuses(prev => ({ ...prev, [bookId]: 'generating' }));
+                    addBatchLog(`\n📚 [${i + 1}/${geminiSelectedBatchBooks.length}] ${book.title} 대본 생성 중...`);
+                    const firestoreDesc = overrides[bookId]?.description || '';
+                    const themes = firestoreDesc || book.description || book.desc || '';
+                    script = await handleGenerateScriptGemini({
+                        bookId, title: book.title, author: book.author, themes,
+                        isBatch: true, addLog: addBatchLog,
+                    });
+                    if (!script) throw new Error('대본 생성 실패');
+                    addBatchLog(`✅ [${bookId}] 대본 완료 (${script.length}턴) → TTS 시작`);
+                } else {
+                    // TTS 전용: Firestore에서 기존 대본 불러오기
+                    addBatchLog(`\n📚 [${i + 1}/${geminiSelectedBatchBooks.length}] ${book.title} 기존 대본 확인 중...`);
+                    const snap = await getDoc(doc(db, 'scripts', bookId));
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const stored = data.script || data.lines || data.content || null;
+                        if (stored && Array.isArray(stored) && stored.length > 0) {
+                            script = stored;
+                            addBatchLog(`📂 [${bookId}] 기존 대본 불러옴 (${script.length}턴) → TTS 시작`);
+                        }
+                    }
+                    if (!script) {
+                        addBatchLog(`⏭️ [${bookId}] 대본 없음 — 스킵`);
+                        setGeminiBatchStatuses(prev => ({ ...prev, [bookId]: 'skipped' }));
+                        continue;
+                    }
+                }
+
+                setGeminiBatchStatuses(prev => ({ ...prev, [bookId]: 'tts' }));
+                await runTtsForBook(script, bookId, addBatchLog, false, setGeminiBatchLogs);
+                setGeminiBatchStatuses(prev => ({ ...prev, [bookId]: 'done' }));
+            } catch (e) {
+                addBatchLog(`❌ [${bookId}] 오류: ${e.message}`);
+                setGeminiBatchStatuses(prev => ({ ...prev, [bookId]: 'error' }));
+            }
+        }
+
+        addBatchLog(`\n🏁 Gemini 배치 완료! ${geminiSelectedBatchBooks.length}권 처리됨`);
+        setIsGeminiBatchRunning(false);
+    };
+
+    // ── Gemini 2.5 Pro Thinking 대본 생성 ───────────────────────────────────
+    const handleGenerateScriptGemini = async (overrides = {}) => {
+        const bookId = overrides.bookId || scriptForm.bookId;
+        const title = overrides.title || scriptForm.title;
+        const author = overrides.author || scriptForm.author;
+        const themes = overrides.themes !== undefined ? overrides.themes : scriptForm.themes;
+        const speakerA = scriptForm.speakerA.trim() || '제임스';
+        const speakerB = scriptForm.speakerB.trim() || '스텔라';
+        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const isBatch = !!overrides.isBatch;
+        const externalLog = overrides.addLog || null;
+
+        if (!geminiKey) { alert('Gemini API 키 (VITE_GEMINI_API_KEY) 가 설정되지 않았습니다.'); return; }
+        if (!bookId || !title || !author) { alert('도서 ID, 제목, 저자는 필수 입력입니다.'); return; }
+
+        const addLog = externalLog || ((msg) => setGeminiScriptLogs(prev => [...prev, '[' + new Date().toLocaleTimeString() + '] ' + msg]));
+        const setProgress = isBatch ? () => {} : setGeminiScriptProgress;
+
+        if (!isBatch) {
+            setIsGeneratingGeminiScript(true);
+            setGeminiScriptProgress(0);
+            setGeminiScriptLogs([]);
+            setGeminiGeneratedScript([]);
+        }
+
+        const callGeminiFlash = async (systemPrompt, userContent, temperature = 0.2, thinking = false) => {
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userContent}` }] }],
+                        generationConfig: {
+                            temperature,
+                            maxOutputTokens: 65536,
+                            ...(thinking ? { thinkingConfig: { thinkingBudget: 8000 } } : { thinkingConfig: { thinkingBudget: 0 } }),
+                        }
+                    })
+                }
+            );
+            if (!res.ok) throw new Error(`Gemini Flash HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.error) throw new Error(`Gemini Flash API 오류: ${data.error.message}`);
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            return parts.filter(p => !p.thought).map(p => p.text || '').join('');
+        };
+
+        const callGeminiPro = async (systemPrompt, userPrompt) => {
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                        generationConfig: {
+                            temperature: 1,
+                            maxOutputTokens: 16000,
+                            thinkingConfig: { thinkingBudget: 8000 },
+                        }
+                    })
+                }
+            );
+            if (!res.ok) throw new Error(`Gemini Pro HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.error) throw new Error(`Gemini Pro API 오류: ${data.error.message}`);
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            return parts.filter(p => !p.thought).map(p => p.text || '').join('');
+        };
+
+        try {
+            const _activeSituation = geminiSelectedSituation || SCRIPT_SITUATIONS[Math.floor(Math.random() * SCRIPT_SITUATIONS.length)];
+            const situation = `선택된 상황: ${_activeSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${_activeSituation.close}"`;
+
+            addLog('✅ [1단계] Gemini 2.5 Pro Thinking 초기 대본 생성 요청 중...');
+            setProgress(20);
+
+            const systemPrompt1 = `[시스템 페르소나 및 핵심 제약사항]
+당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다.
+두 명의 친한 친구(${speakerA}, ${speakerB})가 수다 떨듯이 쓰되, 절대 책 강의처럼 들리지 않게 하세요.
+
+[콘텐츠 비율 — 전체 대본의 절대 기준]
+📌 책 내용 30% : 직장인 인사이트 70%
+
+▶ 책 내용 30% (반드시 아래 규칙 준수)
+- 유저 메시지에 제공된 "책 소개"를 완전히 숙지 후, 그 내용만을 기반으로 작성
+- 책 소개에 명시된 핵심 주제·개념·메시지만 ${speakerA} 대사에 녹여낼 것
+- ⚠️ 책 소개에 없는 내용, 다른 책 개념을 임의로 지어내거나 섞는 것 절대 금지
+- ⚠️ 저작권 보호: 책 내용은 요약·발췌 수준(겉핥기)으로만 언급. 책 전체를 풀어주는 강의 방식 금지
+- ⚠️ 외부 인물 혼동 절대 금지: 이 책을 추천하거나 인용한 유튜버·작가·독자 등 외부 인물을 마치 책 안에 등장하는 것처럼 표현하는 것 절대 금지.
+  나쁜 예: "책에서 OOO이라는 사람 얘기가 나오는데..." → 그 인물이 책 저자·공동저자가 아니면 금지.
+  책 소개에 명시된 인물·사례·실험만 언급 가능. 학습 데이터 기반 추측 사용 금지.
+
+▶ 직장인 인사이트 70% (아래 4가지 요소를 균형 있게 포함)
+① 상황극: 오프닝 장소·상황 안에서 두 사람의 현실감 넘치는 대화
+② 직장생활 사례: 팀장, 동료, 야근, 회의, 보고서, 월급, 회식 등 생생한 직장 현실 소재
+③ 일상생활 공감: 다이어트 실패, 주말 순삭, 월요병, 탕비실 눈치 등 생활 밀착형 유머
+④ 직장 지침 3가지: 내일 당장 출근해서 써볼 수 있는 구체적·실천적 행동 지침 정확히 3개
+
+[실제 사례·수치 사용 규칙 — 저작권·명예훼손 방지 최우선]
+⚠️ 이 규칙을 어기면 저작권 침해·명예훼손 법적 리스크 발생. 반드시 준수.
+
+사례·수치를 쓸 수 있는 경우는 딱 2가지뿐:
+  1️⃣ 책 소개에 명시된 실험·연구·사례 → 그 내용 범위 안에서만 언급
+  2️⃣ "우리 팀장", "우리 회사", "내 동료", "한 직장인" 같은 완전 익명·가상 사례
+
+절대 금지 (위 2가지에 해당하지 않으면 모두 금지):
+- 실제 기업명 사용 (긍정이든 부정이든). 예: "삼성이", "카카오가", "OO기업이" → "한 대기업이", "어떤 IT회사가" 로 교체
+- 구체적 수치·통계 날조. 예: "XX%가 효과 봤대", "OO연구 결과 평균 3배" → 책 소개에 없으면 삭제
+- 실존 인물(CEO, 정치인, 연예인, 유튜버 등) 발언·행동 묘사. → 삭제 또는 익명 처리
+- 책 소개에 없는 연구·실험을 사실처럼 인용 → 삭제
+
+[절대 출력 형식]
+오직 아래 JSON 배열 형태만 최종 출력하세요. 그 외 어떤 글자도 쓰지 마세요.
+[
+  {"speaker": "${speakerA}", "text": "..."},
+  {"speaker": "${speakerB}", "text": "..."}
+]
+총 턴 수는 50~65턴 내외 (7분~8분 분량 목표). 정해진 토큰 한도 안에서 이야기를 자연스럽게 펼치되, 아래 클로징 구조로 마무리할 것.
+
+[턴 구조 - 반드시 이 흐름으로만 작성]
+턴 1~6 : 주어진 상황 안에서 자연스러운 수다. 책 언급 절대 금지.
+  - 두 사람이 지금 있는 장소·상황을 충분히 묘사하며 시작할 것. (예: 등산 중이면 숨차는 묘사, 치킨집이면 메뉴 고르는 장면 등)
+  - 턴 3~6에서 자연스럽게 직장 고민·스트레스·인간관계 소재를 흘릴 것. 이게 나중에 책 주제로 연결되는 씨앗이 됨.
+  - ⚠️ 고민 소재가 억지로 꺼내진 느낌이면 안 됨. 상황 대화를 하다가 자연스럽게 나오는 것처럼.
+
+턴 7~8 : 책으로 자연스럽게 전환. 반드시 아래 패턴 중 하나로만 쓸 것.
+  [7턴] ${speakerA} 대사 패턴 (이 중 하나):
+    - "그러게, 요즘 읽는 책이 있는데 딱 그 얘기더라고."
+    - "야 근데 그거 나 요즘 읽는 책이랑 완전 같은 얘기인데."
+    - "아 그러니까 생각났는데, 요즘 읽는 책 있거든. 딱 그 얘기야."
+  → ${speakerB}가 "무슨 책인데?" 또는 "어떤 책?" 반응
+  [8턴] ${speakerA}가 책 제목 말하고 한 줄 소개 → ${speakerB}가 처음 듣는 반응
+  ⚠️ ${speakerB}가 책을 먼저 꺼내거나 소개하는 것 절대 금지.
+
+턴 10~35 : 책 핵심 개념 소개 — ${speakerA}가 책 내용을 설명하되, 매 2~3턴마다 반드시 직장인 현실 사례로 연결할 것.
+  ⚠️ 책 내용만 계속 나열하는 것 절대 금지. 개념 1개 설명 → 직장 사례 연결 → ${speakerB} 반박/공감 → 다음 개념 순서로 진행.
+  직장 사례 예시: "그게 딱 우리 회사 얘기야. 우리 팀장도...", "OO기업이 그래서 망했잖아", "야근하면서 느끼는 그 공허함이 딱 그거야"
+
+턴 36~45 : 직장인 현실 밀착 구간 — 책 개념을 직장 사례에 완전히 녹여낼 것.
+  ⚠️ 이 구간에서 책 내용 설명보다 직장 사례·현실 얘기가 더 많아야 함. 구체적인 회사 상황, 팀장, 동료, 야근, 월급, 회식 등 생생한 소재 최소 3개 이상.
+  ${speakerB}가 이 구간에서 반드시 본인 직장 경험을 꺼내며 반박 또는 자폭 고백할 것. (예: "근데 솔직히 나는 그게 잘 안 돼. 우리 팀은...")
+
+턴 46~52 : 직장 지침 3가지 구간 — 이 책 소개의 핵심 개념에서만 뽑아낸 고유한 직장인 실천 지침 정확히 3가지.
+
+  ⚠️ 지침 전달 방식 — 가장 중요한 규칙:
+  - ${speakerA}가 "첫째, 둘째, 셋째" 식으로 한꺼번에 나열하는 강연자 모드 절대 금지.
+  - 반드시 ${speakerB}의 고민·반박·질문 흐름에 맞춰 하나씩 툭 던지듯 꺼낼 것.
+  - "~해봐" 처방전 형식 금지. "나는 그때 이렇게 해봤는데 좀 달랐어" 식 경험 공유 형태가 이상적.
+  - "이게 정답이야"가 아니라 "이런 방법도 있더라" 뉘앙스로 — 듣는 사람이 스스로 생각할 여지를 남길 것.
+  - 지침 사이에 반드시 ${speakerB}의 리액션·반박·자기 상황 적용 대사가 끼어들어야 함.
+    (지침1 → ${speakerB} 반응 → 지침2 → ${speakerB} 반응 → 지침3 순서 필수)
+
+  ⚠️ 지침 고유성:
+  - 지침 3가지는 반드시 이 책 소개에 등장하는 개념·주제·사례에서 직접 도출할 것.
+  - 어느 책에나 쓸 수 있는 범용 조언 절대 금지.
+  - ❌ 범용 조언 예시 (절대 금지):
+      "메모하는 습관 들여봐" / "목록 작성해봐" / "감사 일기 써봐" /
+      "아침 루틴 만들어봐" / "명상해봐" / "산책해봐" / "긍정적으로 생각해" / "작게 시작해봐"
+  - ✅ 이 책 고유 지침의 기준: 지침을 들었을 때 "아, 이게 [책 제목]에서 나온 거구나" 하고 바로 연결되어야 함.
+  - 반드시 내일 출근해서 바로 실천 가능한 구체적 행동으로.
+
+  ${speakerB}가 지침 중 최소 1개에 "그건 우리 팀에서 해봤는데 안 됐어" 또는 "그 상황이 딱 나한테 해당되는데" 식으로 현실적 반박 또는 자기 적용을 할 것.
+
+턴 53~끝 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 사봐야겠다" 식으로 읽고 싶다는 의사 표현 (추천 유도 1회).
+
+[화자 정체성 — 위반 시 전체 실패]
+⚠️ ${speakerA}: 책을 읽은 사람. 설명 + 직장 사례 연결하는 역할. 대사 충분히 길게(2~4문장).
+  - "이 책을 듣고 나서", "들어보니까" 등 청취 표현 절대 금지. 반드시 "읽고 나서", "읽어보니까", "책에서 봤는데" 등 독서 표현만 사용.
+  - ⚠️ 입체적 캐릭터 필수: ${speakerA}는 단순한 설명자가 아님. 본인도 확신 없을 때 "솔직히 나도 처음엔 이게 맞나 싶었는데" 식으로 의구심을 드러내고, 본인 직장 실패담·실수 경험도 가끔 꺼낼 것.
+  - 메시지를 직접 전달하기보다 경험을 나누는 방식으로 → 상대방이 스스로 생각할 여지를 남겨둘 것.
+  - ${speakerA}도 매 5~6턴에 한 번씩 본인 고민·약점·실수를 짧게 꺼내 캐릭터 입체감을 살릴 것.
+⚠️ ${speakerB}: 책은 모르지만 본인 직장 경험과 생각은 풍부하게 가진 사람.
+  - 책 내용 설명 절대 금지 (읽은 적 없으니까)
+  - ⚠️ 단순 동의·질문만 하는 것도 금지. ${speakerB}는 매 3~4턴에 한 번씩 반드시 본인 생각·경험·반박을 꺼낼 것.
+  - 마지막 구간에서 "나도 한번 읽어봐야겠다" / "이거 사봐야겠는데" 식으로 마무리.
+
+[말투 철칙 — 위반 시 전체 실패]
+- 전 구간 100% 반말. 단 1턴도 예외 없음.
+- 존댓말 어미 절대 금지: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 → 전부 반말로 교체
+- "네가" → "니가"로만 바꾸고, "너는/너도/너한테"는 그대로 유지
+- 문장 끝은 반드시 완결형 ("~거야.", "~진짜.", "~건데.")
+- 대화 끊기 최소 3회, 스스로 정정 최소 2회, 딴소리 새기 최소 3회
+- 연속 동의·칭찬 금지. 누군가는 반드시 반박.
+- ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지.
+- ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨.
+- ⚠️ 직장 용어 정확히 쓸 것: "야근"은 평일 밤에 늦게까지 일하는 것. 주말에 출근하는 건 "주말 근무" 또는 "주말 출근"이라고 해야 함. "주말 야근"이라는 표현 절대 금지.
+- ${speakerA}: 감정 공감 → 건조 개그. 가끔 본인 약점·실수도 툭 꺼냄.
+- ${speakerB}: 날카로운 현실 반박 최소 5회 + 결국 본인 자폭 고백
+
+[대화 리듬 — 필수]
+- 글자수 기준 (띄어쓰기 포함):
+  · ${speakerA} 설명 대사: 최소 50자 ~ 최대 80자
+  · ${speakerB} 반응 대사: 최소 30자 ~ 최대 60자
+  · 클로징(턴 54~58): 최소 20자 ~ 최대 50자
+  · 한 문장짜리 단답 절대 금지: 20자 미만 대사 금지
+- ⚠️ 추임새 남용 금지: 단순 동의·감탄만으로 이루어진 대사는 전체 대본에서 최대 3회 이하.
+- 긴 대사(설명·인사이트)와 반응 대사(공감·질문)를 번갈아 배치해 리듬 형성.
+
+[유머 규칙]
+- 유머는 반드시 직전 대화 내용에서 자연스럽게 이어져야 함.
+- 억지 비유, 뜬금없는 농담, 대화 흐름을 끊는 개그 절대 금지.
+
+[TTS 최적화 규칙]
+1. 모든 text 글자수 기준 (띄어쓰기 포함): 최소 30자 ~ 최대 80자. 클로징(마지막 4턴)은 최소 20자.
+2. 한 턴에 문장 2개 이상이면 쉼표(,) 또는 마침표(.)로 반드시 구분
+3. 매 턴 text는 반드시 마침표(.) 또는 물음표(?) 또는 느낌표(!)로 끝
+4. 숫자는 무조건 한글로 (1+1 → 원 플러스 원, 20대 → 스무 살 대)
+5. 문장 끝 글자 뭉개짐 방지: 마지막에 반드시 여유 주는 요소 추가.
+
+[2단계 클로징 통합]
+책 내용을 충분히 다룬 후 마지막 6턴은 자연 마무리:
+끝에서 6~5번째 턴: 책 얘기 텐션 낮추기 — 지침 정리가 아니라 대화가 자연스럽게 수그러드는 느낌으로.
+끝에서 4번째 턴: "오늘 얘기 좋았다" 뉘앙스 — 감상 나누기, 억지 마무리 느낌 금지.
+끝에서 3번째 턴: 오프닝에서 설정한 장소·상황 속 주변 묘사로 자연 복귀. (예: 치킨이 식었네, 산 다 올라왔네 등)
+끝에서 2번째 턴: 두 사람이 자연스럽게 다음 행동으로 이어지는 대사. (예: 계산하자, 내려가자 등)
+마지막 턴: 반드시 주어진 [클로징 복귀 멘트]를 그대로 사용할 것.
+⚠️ 절대 금지 마무리 표현: "오늘 녹음 여기까지", "편안한 저녁 보내", "다음 시간에 또 만나" 등 방송 아웃로 형식.
+⚠️ 클로징이 갑작스럽거나 어색하게 끊기면 안 됨. 오프닝 장소·상황과 자연스럽게 연결되어야 함.
+
+[★ 황금 예시 구조 — 이 흐름을 반드시 참고]
+아래는 실제 잘 만들어진 대본의 흐름 패턴. 내용은 새 책에 맞게 새로 만들 것.
+
+▶ 오프닝(1~6턴) 흐름 예시 (삼겹살집):
+[1] 제임스: 야 스텔라, 이 집 삼겹살 진짜 두껍다. 완전 육즙 터질 것 같아.
+[2] 스텔라: 그니까. 불이 너무 센 거 아냐? 겉만 타고 속은 안 익을 것 같아서 걱정되네. 이러다 다 태우겠어.
+[3] 제임스: 아 맞다, 불 좀 줄여야겠다. 야 근데 너 요즘 회사 어때? 표정이 좀 어둡던데.
+[4] 스텔라: 아 그게, 이번에 신입이 들어왔어. 근데 그 친구가 완전 명문대 출신에 스펙도 화려해. 나는 뭐 했나 싶더라.
+[5] 제임스: 어 그런 생각 들 만하네. 근데 그 신입, 회사에서 맡은 일은 잘하고 있어?
+[6] 스텔라: 그게 또 애매해. 똑똑하긴 한데 팀장이랑 말이 안 통한다고 해야 하나. 보고서는 기가 막히게 쓰는데 회의에서 자기 의견을 제대로 못 피력해. 좀 답답해 보이더라.
+
+▶ 책 전환(7~9턴) 예시 — 심플 연결 패턴:
+[7] 제임스: 오, 네 신입 이야기 듣고 나니 그거 완전 흥미롭다. 그러고 보니까 나 요즘 읽은 책 생각나는데, 딱 그 얘기더라.
+[8] 스텔라: 뭔데? 갑자기 책 얘기는 왜 나오는 거야?
+[9] 제임스: 아니 정말 신기한 게, 그 책에서 [책 핵심 주제]를 파헤쳐. 제목이 [책 제목]이다.
+[10] 스텔라: [책 제목]? 처음 읽어보는데. 그 책이 대체 무슨 내용을 다루길래?
+
+▶ 본문 전개 패턴 (반복):
+- 제임스: 개념 설명 (2~3문장, 직장 상황에 빗댐)
+- 스텔라: 의구심/반박 또는 공감 + 본인 직장 경험
+- 제임스: 심화 설명 + 다시 직장 사례
+- 스텔라: "그럼 우리는 어떻게 해야 하는데" 식 현실 적용 질문
+
+▶ 클로징 예시 — 장소 복귀 패턴:
+[N-3] 스텔라: 완전 희망적이네. 야 근데 우리 얘기가 너무 길어졌다. [오프닝 장소 관련 상황 묘사].
+[N-2] 제임스: 아 맞다. [장소 행동 묘사]. 오늘 얘기 정말 좋았어.
+[N-1] 스텔라: 나도. 내일 출근하면 좀 다르게 행동해봐야겠다.
+[N] 제임스: [클로징 복귀 멘트 그대로]`;
+
+            const prompt1 = `도서 정보:
+제목: ${title}
+저자: ${author}
+${themes ? `책 소개 (반드시 숙지 후 대본 작성):\n"""\n${themes}\n"""\n⚠️ 위 책 소개를 반드시 읽고, 실제 책 내용·주제·핵심 메시지를 기반으로 대본을 작성할 것.` : ''}
+상황극: ${situation}`;
+
+            const rawScript = await callGeminiPro(systemPrompt1, prompt1);
+
+            addLog('✅ [2단계] 맞춤법 및 띄어쓰기 교정 요청 중...');
+            setProgress(50);
+
+            const systemPrompt2 = `[3단계 맞춤법 교정]
+당신은 팟캐스트 대본 맞춤법 교정 전문가입니다.
+아래 대본 배열에서 최종 출력 전 반드시 다음 규칙만 적용하여 반환하세요:
+- 오직 맞춤법·띄어쓰기만 수정
+- 단, "니는"→"너는", "니도"→"너도", "니한테"→"너한테"만 명시적으로 바꿀 것.
+- 이외의 말투·구어체·내용은 절대 변경 금지.
+오직 유효한 JSON 배열만 출력하세요.`;
+
+            const rawCorrected = await callGeminiFlash(systemPrompt2, rawScript, 0.2, true);
+
+            addLog('✅ [3단계] 최종 품질 검수 요청 중...');
+            setProgress(80);
+
+            const systemPrompt3 = `[4단계 최종 검토 에이전트 - 발음 & 자연스러움 특화]
+당신은 Perfect TTS Script Review Agent입니다.
+아래 JSON 배열 대본 전체를 재검토합니다.
+검토 항목 (모두 체크 후 미비 시 최소 수정만):
+0-A. ⚠️ 최우선 — 존댓말 어미 완전 제거: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 가 단 1개라도 있으면 즉시 반말로 교체.
+0-B. ⚠️ 최우선 — 이름 호칭: 턴 7 이후에 이름 호칭이 있으면 즉시 제거 (턴 1~6은 허용).
+0-B2. ⚠️ 최우선 — ${speakerA} 화자 역할: 턴 7 이후 책/콘텐츠를 소개하고 설명하는 것은 반드시 ${speakerA}. 만약 ${speakerB}가 책 내용을 먼저 꺼내거나 설명하는 구조라면 speaker를 ${speakerA}↔${speakerB} 전환 교체할 것.
+0-C. ⚠️ 최우선 — 대화 논리 일관성 확인 및 모순 수정.
+0-D. ⚠️ 최우선 — ${speakerB} 화자 정체성: ${speakerB}는 이 책을 읽은 적 없는 사람.
+위 0-A, 0-B, 0-C, 0-D 항목이 모두 통과되지 않으면 나머지 검토 의미 없음.
+1. 턴 1~6에서 책 언급이 없는가?
+2. 전환(턴 7~8)이 자연스러운가? ${speakerA}가 심플하게 책을 꺼내야 함.
+3. ${speakerB}의 현실 반박 5회 이상 + 자폭 고백이 있는가?
+4. 추천 유도 정확히 1회 (턴 48~52 사이)? + 판매성 표현 없음?
+5. 매 턴 text 길이: 30자 이상 80자 이하인가?
+6. 모든 문장 끝에 마침표/물음표/느낌표가 있는가?
+7. 숫자·약어는 한글화되었나?
+8. "듣고 나서", "들어보니까", "들었는데" 등 청취 표현이 있으면 즉시 "읽고 나서", "읽어보니까", "읽었는데"로 교체.
+9. 마지막 4턴이 클로징 복귀 멘트로 자연스럽게 마무리되는가?
+10. "진짜" 단어 횟수: 전체 대본에서 "진짜"가 3회 이상 등장하면 3번째부터 교체.
+모든 검토 완료 후 오직 완성된 JSON 배열만 출력하세요. 설명·코멘트는 절대 붙이지 마세요.`;
+
+            let afterPrompt3 = await callGeminiFlash(systemPrompt3, rawCorrected, 0.2, true);
+
+            addLog('✅ [4단계] 오류 탐지 중 (Gemini Thinking)...');
+            setProgress(85);
+
+            const systemPrompt4 = `[4단계 — 오류 탐지 전용 에이전트]
+당신은 팟캐스트 대본에서 오류를 찾아내는 전문 검수자입니다.
+아래 대본 JSON을 처음부터 끝까지 꼼꼼히 읽고, 발견한 모든 오류를 목록으로 출력하세요.
+⚠️ 이 단계에서는 수정하지 마세요. 오직 오류 목록만 출력합니다.
+
+[탐지 항목]
+A. 시간 점프: 행동이 막 시작됐는데 다음 턴에서 이미 완료된 경우.
+B. 사실 모순: 한 턴 내용이 앞·뒤 턴과 논리적으로 충돌하는 경우.
+C. ${speakerB} 책 지식 오류: ${speakerB}가 이 책을 읽은 것처럼 아는 척하는 대사.
+D. 외부 인물 혼동: 책 저자·공동저자가 아닌 인물이 책 내용에 등장하는 것처럼 쓰인 경우.
+E. 저작권·명예훼손 위험: 실제 기업명 부정적 언급, 수치 날조, 실존 인물 묘사.
+F. 화자 역할 역전: 턴 7 이후 ${speakerB}가 책 내용을 설명하는 구조.
+G. 존댓말 잔존: ~요, ~습니다, ~세요 등이 있는 턴.
+H. 이름 호칭: 턴 7 이후에 이름을 부르는 대사.
+I. "진짜" 단어가 대본 전체에서 3회 이상 등장하는 경우.
+J. 30자 미만 단답 대사 (클로징 마지막 4턴 제외).
+K. 단순 추임새 단독 대사가 4개 이상인 경우.
+L. 청취 표현 오류: "듣고 나서", "들어보니까" 등.
+M. 범용 행동 지침 오류: 지침 구간에서 어느 책에나 쓸 수 있는 범용 조언.
+
+오류가 있으면:
+- [A] 턴 N→N+1: (오류 내용 한 줄 설명)
+오류가 없으면: "오류 없음"
+설명·마크다운·JSON 절대 출력 금지. 오류 목록만 출력.`;
+
+            const errorList = await callGeminiFlash(systemPrompt4, afterPrompt3, 0.1, true);
+            addLog(`🔍 탐지된 오류:\n${errorList}`);
+
+            addLog('✅ [5단계] 오류 수정 중...');
+            setProgress(93);
+
+            const systemPrompt5 = `[5단계 — 오류 수정 전용 에이전트]
+당신은 팟캐스트 대본 수정 전문가입니다.
+아래에 원본 대본 JSON과 검수자가 찾아낸 오류 목록이 주어집니다.
+오류 목록에 있는 항목만 최소한으로 수정하세요. 오류 목록에 없는 부분은 절대 건드리지 마세요.
+
+[수정 기준]
+- [A] 시간 점프: 완료형 직전 턴을 진행 중인 자연스러운 대사로 교체.
+- [B] 사실 모순: 충돌하는 턴 text를 맥락에 맞게 교체.
+- [C] ${speakerB} 책 지식 오류: 처음 듣는 반응으로 교체.
+- [D] 외부 인물 혼동: 해당 대사 삭제 또는 책 소개 기반 사례로 대체.
+- [E] 저작권·명예훼손: 기업명→"한 회사가", 수치→삭제 또는 모호하게, 실존 인물→익명 처리.
+- [F] 화자 역할 역전: speaker 값을 ${speakerA}↔${speakerB} 교체.
+- [G] 존댓말: 반말 어미로 교체.
+- [H] 이름 호칭: 해당 이름 호칭 부분만 삭제.
+- [I] "진짜" 초과: 3번째 이후 등장분을 대체 표현으로 교체.
+- [J] 단답 30자 미만: 내용 보완해 30자 이상으로 늘릴 것.
+- [K] 추임새 단독 대사 초과: 구체적 내용·질문을 이어 붙일 것.
+- [L] 청취 표현: "듣고 나서"→"읽고 나서" 등으로 교체.
+- [M] 범용 행동 지침: 이 책 소개의 핵심 개념과 직접 연결된 구체적 행동으로 교체.
+
+[입력 형식]
+=== 오류 목록 ===
+{오류목록}
+
+=== 원본 대본 JSON ===
+{대본JSON}
+
+[출력]
+수정 완료된 JSON 배열만 출력. 설명·코멘트·마크다운 절대 금지.
+speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
+
+            const fixInput = `=== 오류 목록 ===\n${errorList}\n\n=== 원본 대본 JSON ===\n${afterPrompt3}`;
+            let finalOutputRaw = await callGeminiFlash(systemPrompt5, fixInput, 0.1, true);
+
+            addLog('✅ 대본 파싱 및 검증 완료');
+            setProgress(97);
+
+            let cleanJson = finalOutputRaw.replace(/\`\`\`(json)?/gi, '').trim();
+            const finalScript = tryLooseParseJSON(cleanJson);
+
+            const spkAAliases = [speakerA.toLowerCase(), 'james', '제임스'];
+            const spkBAliases = [speakerB.toLowerCase(), 'stella', '스텔라'];
+            const normSpk = (s) => {
+                const v = String(s || '').trim().toLowerCase();
+                if (spkAAliases.includes(v)) return speakerA;
+                if (spkBAliases.includes(v)) return speakerB;
+                return speakerA;
+            };
+
+            const cleanedScript = finalScript.map((turn, i) => {
+                let actualSpeaker = normSpk(turn.speaker);
+                if (i > 0) {
+                    const prevSpeaker = finalScript[i - 1].speaker;
+                    if (prevSpeaker === actualSpeaker) {
+                        actualSpeaker = actualSpeaker === speakerA ? speakerB : speakerA;
+                    }
+                }
+                return { speaker: actualSpeaker, text: turn.text };
+            });
+
+            if (!isBatch) {
+                setGeminiGeneratedScript(cleanedScript);
+            }
+
+            await setDoc(doc(db, 'scripts', bookId), {
+                bookId, title, author, themes,
+                script: cleanedScript,
+                createdAt: serverTimestamp(),
+            }, { merge: true });
+
+            addLog('✅ Firestore에 대본이 저장되었습니다. (덮어쓰기)');
+
+            if (isBatch) {
+                return cleanedScript;
+            }
+            setProgress(100);
+
+        } catch (error) {
+            console.error(error);
+            addLog('❌ 대본 생성 실패: ' + error.message);
+            if (isBatch) throw error;
+        } finally {
+            if (!isBatch) {
+                setIsGeneratingGeminiScript(false);
+            }
         }
     };
 
@@ -3020,28 +4295,32 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
   {"speaker": "${speakerA}", "text": "..."},
   {"speaker": "${speakerB}", "text": "..."}
 ]
-총 턴 수는 정확히 58턴으로 고정 (7분 30초~8분 분량 목표)
+총 턴 수는 50~65턴 내외 (7분~8분 분량 목표). 정해진 토큰 한도 안에서 이야기를 자연스럽게 펼치되, 아래 클로징 구조로 마무리할 것.
 
 [턴 구조 - 반드시 이 흐름으로만 작성]
 턴 1~6 : 주어진 상황만 수다. 영상/강연/유튜브 언급 절대 금지. 현실적인 직장인 수다만.
           단, 턴 4~6에서 나중에 영상 주제와 연결될 수 있는 소재를 자연스럽게 흘려둘 것.
-턴 7~9 : 영상 전환 브릿지 — ⚠️ 7~9턴 모두 ${speakerA}가 먼저 말을 꺼내고 ${speakerB}가 반응하는 구조.
-          [7턴] ${speakerA}가 앞 대화 고민/공감대 받아서 "그러고 보니…", "근데 그거 관련해서 생각난 게 있는데" 식으로 연결
-          [8턴] ${speakerA}가 직접 언급 없이 "나 요즘 그런 생각 하다가 뭔가 봤는데" 궁금증 유발 → ${speakerB}가 "뭔데?" 반응
-          [9턴] ${speakerA}가 자연스럽게 영상/강연 제목 꺼냄 → ${speakerB}가 처음 듣는 반응
-          (나쁜 예: ${speakerB}가 영상/콘텐츠를 먼저 꺼내는 것 → 절대 금지)
+턴 7~8 : 영상으로 자연스럽게 전환. 앞 대화 소재를 받아서 ${speakerA}가 심플하게 한 번에 꺼낼 것.
+          [7턴] ${speakerA} 대사 패턴 (이 중 하나):
+            - "그러게, 요즘 본 영상이 있는데 딱 그 얘기더라고."
+            - "야 근데 그거 나 최근에 본 강연이랑 완전 같은 얘기인데."
+            - "아 그러니까 생각났는데, 요즘 본 유튜브 있거든. 딱 그 얘기야."
+          → ${speakerB}가 "무슨 영상인데?" 반응
+          [8턴] ${speakerA}가 영상/강연 제목 말하고 한 줄 소개 → ${speakerB}가 처음 듣는 반응
+          ⚠️ ${speakerB}가 영상/콘텐츠를 먼저 꺼내는 것 절대 금지.
 턴 10~52 : ${speakerA}가 영상 내용 설명, ${speakerB}가 듣고 질문·공감·반박하는 구조.
   - ${speakerA}: 영상 내용 설명 + 직장 사례 연결 (대사 충분히 길게, 2~4문장)
   - ${speakerB}: 처음 듣는 사람처럼 반응 (영상 내용 설명 절대 금지)
   - 턴 36~45: 직장 사례 최소 2개
   - 턴 46~52: 행동 인사이트 정확히 2개
-턴 53~58 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 봐야겠다" 식으로 처음으로 보고 싶다는 의사 표현 (추천 유도 1회)
+마지막 6턴 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 봐야겠다" 식으로 처음으로 보고 싶다는 의사 표현 (추천 유도 1회)
 
 [말투 철칙]
 - 전 구간 100% 반말. 단 1턴도 예외 없음.
 - 존댓말 어미 절대 금지: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요 등 전부 반말로
 - ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지.
 - ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨. 대체 표현: "정말", "완전", "너무", "대박", "어이없어", "말도 안 돼" 등 다양하게 활용.
+- ⚠️ 직장 용어 정확히 쓸 것: "야근"은 평일 밤에 늦게까지 일하는 것. 주말에 출근하는 건 "주말 근무" 또는 "주말 출근"이라고 해야 함. "주말 야근"이라는 표현 절대 금지.
 - ⚠️ 대화 논리 일관성: 각 대사는 직전 대사와 반드시 논리적으로 연결되어야 함. 직전에 언급한 소재를 갑자기 모순되게 쓰는 것 절대 금지. 화제 전환 시 자연스러운 브릿지 사용.
 - 모든 대사는 최소 2문장 이상 (한 문장짜리 단답 금지)
 - 매 턴 text 길이 최대 80자 (초과 시 나누기)
@@ -3064,12 +4343,12 @@ ${video.content}
 
 상황극: ${situation}
 
-위 유튜브 영상 내용을 바탕으로 직장인들이 공감할 수 있는 팟캐스트 대본을 58턴으로 작성해주세요.
+위 유튜브 영상 내용을 바탕으로 직장인들이 공감할 수 있는 팟캐스트 대본을 작성해주세요. (50~65턴 내외, 토큰 한도 안에서 자유롭게)
 영상의 핵심 인사이트를 자연스럽게 녹여내되, 마치 두 친구가 이 강연/영상을 보고 나서 수다를 떠는 느낌으로 작성하세요.`;
 
             const res1 = await anthropic.messages.create({
                 model: 'claude-sonnet-4-5',
-                max_tokens: 8192,
+                max_tokens: 6500,
                 temperature: 0.7,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: prompt }]
@@ -3088,7 +4367,7 @@ ${video.content}
             const corrected = res2.content[0].text;
 
             setLogs(prev => [...prev, '[CLAUDE] 3단계: TTS 최적화 검토 중...']);
-            const sys3 = `아래 JSON 배열 대본을 검토하세요. 존댓말 어미 제거, 30자 초과 턴 분리, 턴수 58개 확인, 문장 끝 마침표 확인. 추가로: 스텔라(Stella) 화자의 대사 중 "설명해도 안 와닿아", "이건 말로 표현이 안 돼" 처럼 스텔라 본인이 설명을 포기하는 표현은 "제임스 말 듣고 나니 나도 보고 싶어졌어" 식으로 교체. 단, 제임스(James) 화자의 "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 는 그대로 유지. ⚠️ 대사 중 상대방 이름 직접 호칭 제거: "야 스텔라", "스텔라야", "야 제임스", "제임스야" 등 이름을 부르는 표현이 있으면 이름 없이 자연스럽게 수정. ⚠️ 대화 논리 일관성: 직전 대사와 모순되는 내용(예: 느리다고 불평한 것을 바로 다음 턴에서 "벌써 됐네"라고 하는 것)이 있으면 즉시 수정. 오직 완성된 58턴 JSON 배열만 출력하세요.`;
+            const sys3 = `아래 JSON 배열 대본을 검토하세요. 존댓말 어미 제거, 30자 초과 턴 분리, 문장 끝 마침표 확인. 추가로: 스텔라(Stella) 화자의 대사 중 "설명해도 안 와닿아", "이건 말로 표현이 안 돼" 처럼 스텔라 본인이 설명을 포기하는 표현은 "제임스 말 듣고 나니 나도 보고 싶어졌어" 식으로 교체. 단, 제임스(James) 화자의 "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 는 그대로 유지. ⚠️ 대사 중 상대방 이름 직접 호칭 제거: "야 스텔라", "스텔라야", "야 제임스", "제임스야" 등 이름을 부르는 표현이 있으면 이름 없이 자연스럽게 수정. ⚠️ 대화 논리 일관성: 직전 대사와 모순되는 내용이 있으면 즉시 수정. 오직 완성된 JSON 배열만 출력하세요.`;
             const res3 = await anthropic.messages.create({
                 model: 'claude-sonnet-4-5',
                 max_tokens: 8192,
@@ -3129,11 +4408,13 @@ ${video.content}
         'members': '회원 관리',
         'books': '도서 관리',
         'popular': '인기 아카이뷰',
-        'script': 'AI 대본 생성',
+        'script': 'Claude 대본',
+        'gemini-script': 'Gemini 대본 🔮',
         'automation': '일괄 자동화 ⚡',
         'ebook': 'E-BOOK 제작',
         'podcast': 'YouTube 팟캐스트',
         'voice': 'YouTube 등록',
+        'tts-verify': 'TTS 검증 🎙️',
         'sales': '매출 관리',
         'payment': '결제 설정'
     };
@@ -3327,38 +4608,78 @@ ${video.content}
                             </div>
                             <div className="bg-white/5 rounded-[48px] border border-white/10 overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
                                 <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-px bg-white/10">
-                                    {realUsers.map((user) => (
-                                        <div key={user.id} className="p-10 bg-background-dark flex items-center justify-between hover:bg-white/5 transition-all group">
-                                            <div className="flex items-center gap-8">
-                                                <div className="size-20 rounded-3xl bg-slate-800 border-4 border-white/5 flex items-center justify-center text-slate-300 font-black text-3xl overflow-hidden group-hover:border-gold/50 transition-all shadow-2xl">
-                                                    {user.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : user.displayName?.charAt(0)}
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <p className="text-white text-2xl font-black leading-tight tracking-tight">{user.displayName || 'GUEST USER'}</p>
-                                                    <p className="text-slate-500 text-base font-bold font-mono">{user.email}</p>
-                                                    <div className="flex items-center gap-3 pt-2">
-                                                        <span className="text-[10px] font-black text-slate-600 uppercase bg-white/5 px-2 py-1 rounded">ID: {user.id?.substring(0, 12)}</span>
-                                                        <span className="text-[10px] font-black text-slate-600 uppercase">Login: {user.lastLogin ? new Date(user.lastLogin.seconds * 1000).toLocaleDateString() : 'N/A'}</span>
+                                    {realUsers.map((user) => {
+                                        const membership = getMembershipStatus(user);
+                                        return (
+                                        <div key={user.id} className="p-8 bg-background-dark flex flex-col gap-6 hover:bg-white/5 transition-all group">
+                                            {/* 상단: 프로필 + 상태 */}
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="size-16 rounded-2xl bg-slate-800 border-4 border-white/5 flex items-center justify-center text-slate-300 font-black text-2xl overflow-hidden group-hover:border-gold/50 transition-all">
+                                                        {user.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : user.displayName?.charAt(0)}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-white text-lg font-black leading-tight">{user.displayName || 'GUEST USER'}</p>
+                                                        <p className="text-slate-500 text-xs font-bold font-mono">{user.email}</p>
+                                                        <div className="flex items-center gap-2 pt-1">
+                                                            <span className="text-[9px] font-black text-slate-600 uppercase bg-white/5 px-2 py-0.5 rounded">ID: {user.id?.substring(0, 10)}</span>
+                                                            <span className="text-[9px] font-black text-slate-600 uppercase">Login: {user.lastLogin ? new Date(user.lastLogin.seconds * 1000).toLocaleDateString('ko-KR') : 'N/A'}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-6">
                                                 <select
                                                     value={user.status || '활동중'}
                                                     onChange={(e) => handleUpdateUserStatus(user.id, e.target.value)}
-                                                    className={`bg-black/60 text-xs font-black px-6 py-3 border-2 rounded-2xl outline-none focus:border-gold transition-all cursor-pointer ${user.status === '정지' ? 'text-red-400 border-red-500/30' : 'text-emerald-400 border-emerald-500/30'
-                                                        }`}
+                                                    className={`bg-black/60 text-[10px] font-black px-3 py-2 border-2 rounded-xl outline-none focus:border-gold transition-all cursor-pointer ${user.status === '정지' ? 'text-red-400 border-red-500/30' : 'text-emerald-400 border-emerald-500/30'}`}
                                                 >
                                                     <option value="활동중">ACTIVE</option>
                                                     <option value="정지">SUSPENDED</option>
                                                     <option value="휴면">INACTIVE</option>
                                                 </select>
-                                                <button className="text-slate-700 hover:text-white transition-colors p-2">
-                                                    <span className="material-symbols-outlined text-3xl">open_in_new</span>
+                                            </div>
+
+                                            {/* 멤버십 상태 배지 */}
+                                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${membership.color} bg-white/5`}>
+                                                <span className="material-symbols-outlined text-base">workspace_premium</span>
+                                                <span className="text-xs font-black uppercase tracking-wider">{membership.label}</span>
+                                            </div>
+
+                                            {/* 멤버십 관리 버튼들 */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => handleSetPremium(user.id, 30)}
+                                                    className="px-3 py-2 bg-gold/10 border border-gold/30 rounded-xl text-[10px] font-black text-gold hover:bg-gold/20 transition-all"
+                                                >
+                                                    +30일 연장
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSetPremium(user.id, 90)}
+                                                    className="px-3 py-2 bg-gold/10 border border-gold/30 rounded-xl text-[10px] font-black text-gold hover:bg-gold/20 transition-all"
+                                                >
+                                                    +90일 연장
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSetPremium(user.id, null)}
+                                                    className="px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[10px] font-black text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                                                >
+                                                    영구 프리미엄
+                                                </button>
+                                                <button
+                                                    onClick={() => handleResetTrial(user.id)}
+                                                    className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-xl text-[10px] font-black text-blue-400 hover:bg-blue-500/20 transition-all"
+                                                >
+                                                    체험 재시작
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRevokePremium(user.id)}
+                                                    className="col-span-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-black text-red-400 hover:bg-red-500/20 transition-all"
+                                                >
+                                                    무료회원으로 변경
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -3578,7 +4899,7 @@ ${video.content}
                                                     </div>
                                                     <div className="flex-1 min-w-0 space-y-3">
                                                         <div className="flex justify-between items-start gap-2">
-                                                            <h4 className="text-white text-2xl font-black truncate leading-tight tracking-tight uppercase">{book.title}</h4>
+                                                            <h4 className="text-white text-2xl font-black leading-tight tracking-tight uppercase">{book.title}</h4>
                                                             <div className="flex items-center gap-1 shrink-0">
                                                                 <button
                                                                     onClick={() => handleTogglePublic(bookKey, book.isPublic !== false)}
@@ -4547,6 +5868,532 @@ ${video.content}
                                     )}
                                 </div>
                             </div>
+
+                        {/* ── 기존 대본으로 TTS 일괄 생성 ── */}
+                        <div className="bg-white/3 border border-emerald-500/20 p-8 rounded-[36px] space-y-6">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-emerald-400 text-2xl">record_voice_over</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-black text-2xl italic tracking-tighter">기존 대본으로 TTS 일괄 생성</h3>
+                                    <p className="text-slate-500 text-sm">Firestore에 저장된 대본이 있는 도서를 선택해 TTS를 바로 생성합니다.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                {/* LEFT — 도서 선택 */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">대본 있는 도서 선택</p>
+                                        <span className="text-slate-500 text-xs">{claudeTtsBatchBooks.length}개 선택됨</span>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setClaudeTtsBatchBooks(realBooks.filter(b => batchScriptStatuses[b.id] === true).map(b => b.id))}
+                                            disabled={isClaudeTtsBatchRunning}
+                                            className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                        >전체 선택</button>
+                                        <button
+                                            onClick={() => setClaudeTtsBatchBooks([])}
+                                            disabled={isClaudeTtsBatchRunning}
+                                            className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                        >선택 해제</button>
+                                    </div>
+
+                                    <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
+                                        {realBooks.map(book => {
+                                            const hasScript = batchScriptStatuses[book.id] === true;
+                                            const status = claudeTtsBatchStatuses[book.id];
+                                            const statusColors = { pending: 'text-slate-500', loading: 'text-blue-400 animate-pulse', tts: 'text-yellow-400 animate-pulse', done: 'text-emerald-400', error: 'text-red-400' };
+                                            const statusLabels = { pending: '대기', loading: '불러오는 중...', tts: 'TTS 변환 중...', done: '완료', error: '오류' };
+                                            const isDisabled = isClaudeTtsBatchRunning || !hasScript;
+                                            return (
+                                                <label
+                                                    key={book.id}
+                                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                                                        isDisabled ? 'opacity-40 cursor-not-allowed border-transparent' :
+                                                        claudeTtsBatchBooks.includes(book.id) ? 'bg-emerald-500/10 border-emerald-500/30 cursor-pointer' :
+                                                        'bg-white/3 border-white/5 hover:bg-white/5 cursor-pointer'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 accent-emerald-500 cursor-pointer shrink-0"
+                                                        checked={claudeTtsBatchBooks.includes(book.id)}
+                                                        disabled={isDisabled}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setClaudeTtsBatchBooks(prev => [...prev, book.id]);
+                                                            else setClaudeTtsBatchBooks(prev => prev.filter(id => id !== book.id));
+                                                        }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-white truncate">{book.title}</p>
+                                                        <p className="text-[10px] text-slate-500 font-mono">{book.id}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {hasScript
+                                                            ? <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">📝 대본있음</span>
+                                                            : <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/5 text-slate-600">⬜ 대본없음</span>
+                                                        }
+                                                        {status && (
+                                                            <span className={`text-[10px] font-black ${statusColors[status] || 'text-slate-500'}`}>
+                                                                {statusLabels[status] || status}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        onClick={handleClaudeTtsBatchRun}
+                                        disabled={isClaudeTtsBatchRunning || !claudeTtsBatchBooks.length}
+                                        className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all ${
+                                            isClaudeTtsBatchRunning || !claudeTtsBatchBooks.length
+                                                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                                : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-[1.02] shadow-xl shadow-emerald-500/20'
+                                        }`}
+                                    >
+                                        {isClaudeTtsBatchRunning ? (
+                                            <>
+                                                <span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span>
+                                                TTS 생성 중... ({claudeTtsBatchProgress.current}/{claudeTtsBatchProgress.total})
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-2xl">record_voice_over</span>
+                                                TTS 일괄 생성 ({claudeTtsBatchBooks.length}권)
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* RIGHT — 진행 로그 */}
+                                <div className="space-y-4">
+                                    {(isClaudeTtsBatchRunning || claudeTtsBatchProgress.total > 0) && (
+                                        <div className="space-y-2">
+                                            <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">전체 진행</p>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex-1 bg-white/5 rounded-full h-2">
+                                                    <div
+                                                        className="h-2 bg-emerald-500 rounded-full transition-all duration-500"
+                                                        style={{ width: claudeTtsBatchProgress.total ? `${(claudeTtsBatchProgress.current / claudeTtsBatchProgress.total) * 100}%` : '0%' }}
+                                                    />
+                                                </div>
+                                                <span className="text-white text-sm font-black shrink-0">{claudeTtsBatchProgress.current} / {claudeTtsBatchProgress.total}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {claudeTtsBatchLogs.length > 0 && (
+                                        <div className="bg-black/60 border border-white/8 rounded-[16px] overflow-hidden">
+                                            <div className="px-4 py-2 border-b border-white/10">
+                                                <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">TTS Batch Log</span>
+                                            </div>
+                                            <div className="p-4 font-mono text-[10px] overflow-y-auto space-y-1 max-h-72 bg-[#050505] scrollbar-hide">
+                                                {claudeTtsBatchLogs.map((log, i) => (
+                                                    <div key={i} className={`border-l pl-2 whitespace-pre-wrap ${String(log).includes('❌') ? 'border-red-500/30 text-red-400' : String(log).includes('✅') ? 'border-emerald-500/30 text-emerald-400' : String(log).includes('🏁') ? 'border-emerald-500/30 text-emerald-400' : 'border-white/10 text-slate-500'}`}>{log}</div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!isClaudeTtsBatchRunning && claudeTtsBatchLogs.length === 0 && (
+                                        <div className="h-40 flex items-center justify-center text-slate-600 text-sm border border-dashed border-white/10 rounded-2xl">
+                                            대본 있는 도서를 선택하고 실행하면 로그가 표시됩니다.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    )}
+
+                    {/* ── Gemini 대본 생성 탭 ── */}
+                    {activeTab === 'gemini-script' && (
+                        <div className="space-y-10 animate-fade-in">
+                            {/* 헤더 */}
+                            <div className="bg-gradient-to-r from-violet-950/60 to-purple-950/60 border border-violet-500/20 rounded-[28px] p-10">
+                                <div className="flex items-center gap-5 mb-4">
+                                    <div className="size-14 bg-violet-500/20 border border-violet-500/30 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-violet-400 text-3xl">psychology</span>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-3">
+                                                <h3 className="text-white font-black text-4xl italic tracking-tighter uppercase flex items-center gap-4">
+                                                    Gemini 대본 생성
+                                                    <span className="bg-violet-500 text-white text-[10px] px-3 py-1 rounded-full not-italic animate-pulse">GEMINI 2.5 PRO THINKING</span>
+                                                </h3>
+                                                <p className="text-slate-500 text-xl font-medium italic">Gemini 2.5 Pro Thinking을 이용해 대본을 생성합니다. 책 정보는 Claude 대본 탭과 공유됩니다.</p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button
+                                                    onClick={handleSaveGeminiScript}
+                                                    disabled={!geminiGeneratedScript.length || isLoadingScript}
+                                                    className={`px-10 py-5 rounded-2xl font-black text-sm flex items-center gap-3 transition-all shadow-xl ${geminiGeneratedScript.length ? 'bg-gold text-primary hover:scale-105 active:scale-95 shadow-[0_20px_50px_rgba(212,175,55,0.3)]' : 'bg-white/5 text-slate-500 cursor-not-allowed'}`}
+                                                >
+                                                    <span className="material-symbols-outlined font-black">save</span>
+                                                    Firestore 저장 (덮어쓰기)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {false && <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                                {/* LEFT — 입력 폼 */}
+                                <div className="space-y-6">
+                                    <div className="bg-white/3 border border-white/8 rounded-[24px] p-8 space-y-5">
+                                        <p className="text-violet-400 text-xs font-black uppercase tracking-widest">STEP 1 · 책 정보 선택</p>
+                                        <p className="text-slate-500 text-xs">Claude 대본 탭에서 입력한 책 정보를 공유합니다. 책 선택은 Claude 대본 탭에서 하세요.</p>
+
+                                        {scriptForm.bookId ? (
+                                            <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl px-4 py-3 space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-violet-400 text-sm">check_circle</span>
+                                                    <span className="text-violet-300 text-sm font-black">{scriptForm.title}</span>
+                                                </div>
+                                                <p className="text-slate-500 text-xs font-mono">ID: {scriptForm.bookId} · 저자: {scriptForm.author}</p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+                                                <p className="text-amber-400 text-xs font-bold">⚠️ Claude 대본 탭에서 먼저 책을 선택하세요.</p>
+                                            </div>
+                                        )}
+
+                                        <p className="text-violet-400 text-xs font-black uppercase tracking-widest pt-2">STEP 2 · 상황극 선택 (선택 사항)</p>
+                                        <select
+                                            value={geminiSelectedSituation ? SCRIPT_SITUATIONS.indexOf(geminiSelectedSituation) : ''}
+                                            onChange={e => setGeminiSelectedSituation(e.target.value === '' ? null : SCRIPT_SITUATIONS[parseInt(e.target.value)])}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-violet-500/50"
+                                        >
+                                            <option value="">— 랜덤 선택 (비워두면 자동) —</option>
+                                            {SCRIPT_SITUATIONS.map((s, i) => (<option key={i} value={i}>{s.scene}</option>))}
+                                        </select>
+                                        {geminiSelectedSituation && (
+                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+                                                <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">SCENE SETTING</p>
+                                                <p className="text-amber-200 text-sm font-medium">{geminiSelectedSituation.scene}</p>
+                                                <p className="text-amber-500 text-xs mt-1">CLOSING: "{geminiSelectedSituation.close}"</p>
+                                            </div>
+                                        )}
+
+                                        <button
+                                            onClick={handleGenerateScriptGemini}
+                                            disabled={isGeneratingGeminiScript || !scriptForm.bookId}
+                                            className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all ${isGeneratingGeminiScript || !scriptForm.bookId ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-violet-500 text-white hover:bg-violet-400 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-violet-500/20'}`}
+                                        >
+                                            {isGeneratingGeminiScript ? (
+                                                <>
+                                                    <span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span>
+                                                    {geminiScriptProgress >= 88 ? `SPELL CHECKING... (${geminiScriptProgress}%)` : `GENERATING (${geminiScriptProgress}%)`}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-2xl">psychology</span>
+                                                    GENERATE WITH GEMINI
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* 진행 로그 */}
+                                    {geminiScriptLogs.length > 0 && (
+                                        <div className="bg-black/60 border border-white/8 rounded-[20px] p-6">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest mb-3">GENERATION LOG</p>
+                                            {geminiScriptProgress > 0 && geminiScriptProgress < 100 && (
+                                                <div className="w-full bg-white/5 rounded-full h-1.5 mb-4">
+                                                    <div className="h-1.5 bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${geminiScriptProgress}%` }} />
+                                                </div>
+                                            )}
+                                            <div className="space-y-1 max-h-64 overflow-y-auto">
+                                                {geminiScriptLogs.map((log, i) => (
+                                                    <p key={i} className={`text-xs font-mono whitespace-pre-wrap ${String(log).includes('❌') ? 'text-red-400' : String(log).includes('✅') ? 'text-violet-400' : String(log).includes('🔍') ? 'text-yellow-400' : 'text-slate-400'}`}>{String(log)}</p>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* RIGHT — 대본 미리보기 */}
+                                <div className="space-y-6">
+                                    <div className="bg-white/3 border border-white/8 rounded-[24px] p-8">
+                                        <div className="flex items-center justify-between mb-5">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest">STEP 3 · 대본 미리보기</p>
+                                            {geminiGeneratedScript.length > 0 && (
+                                                <span className="text-slate-500 text-xs">{geminiGeneratedScript.length}턴 · {geminiGeneratedScript.reduce((s, t) => s + (t?.text ? t.text.replace(/[\s\uFEFF\xA0]/g, '').length : 0), 0).toLocaleString()}자</span>
+                                            )}
+                                        </div>
+
+                                        {geminiGeneratedScript.length === 0 ? (
+                                            <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
+                                                대본을 생성하면 여기에 미리보기가 표시됩니다.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 max-h-[750px] overflow-y-auto px-1">
+                                                <div className="sticky top-0 z-10 flex gap-3 justify-end pb-3 bg-slate-950/90 backdrop-blur-sm pt-2 border-b border-violet-500/20 mb-3">
+                                                    <button
+                                                        onClick={handleSaveGeminiScript}
+                                                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-gold to-yellow-500 text-primary text-[11px] font-black rounded-xl shadow-[0_10px_40px_rgba(212,175,55,0.3)] hover:scale-105 active:scale-95 transition-all uppercase"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm font-black">done_all</span>
+                                                        저장 (덮어쓰기)
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    {geminiGeneratedScript.map((line, i) => {
+                                                        if (!line) return null;
+                                                        const isSpeakerA = line.speaker === (scriptForm.speakerA || '제임스');
+                                                        return (
+                                                            <div key={i} className={`flex gap-3 ${isSpeakerA ? '' : 'flex-row-reverse'}`}>
+                                                                <div className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black flex-shrink-0 shadow-lg ${isSpeakerA ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20' : 'bg-pink-600/20 text-pink-400 border border-pink-500/20'}`}>
+                                                                    {line.speaker?.[0] ?? '?'}
+                                                                </div>
+                                                                <div className={`flex-1 overflow-hidden rounded-3xl border border-white/5 hover:border-violet-500/30 transition-all shadow-xl bg-[#1e2228] ${isSpeakerA ? 'rounded-tl-none' : 'rounded-tr-none'}`}>
+                                                                    <div className={`px-4 py-2 flex justify-between items-center border-b border-white/5 ${isSpeakerA ? 'bg-blue-500/5' : 'bg-pink-500/5'}`}>
+                                                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isSpeakerA ? 'text-blue-400' : 'text-pink-400'}`}>{line.speaker}</span>
+                                                                        <span className="text-[9px] text-slate-700 font-mono">TURN {i + 1}</span>
+                                                                    </div>
+                                                                    <textarea
+                                                                        className="w-full bg-transparent text-slate-200 text-sm leading-relaxed outline-none resize-none p-5 transition-all min-h-[5.5em] block focus:bg-white/5"
+                                                                        value={line.text}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value;
+                                                                            setGeminiGeneratedScript(prev => {
+                                                                                const next = [...prev];
+                                                                                next[i] = { ...next[i], text: val };
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        onFocus={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                                                                        onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                                                                        rows={1}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>}
+
+                            {/* Gemini 일괄 배치 패널 */}
+                            <div className="bg-white/3 border border-violet-500/20 p-8 rounded-[36px] space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-12 bg-violet-500/20 border border-violet-500/30 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-violet-400 text-2xl">batch_prediction</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white font-black text-2xl italic tracking-tighter">Gemini 일괄 대본 생성</h3>
+                                        <p className="text-slate-500 text-sm">여러 도서를 선택해 Gemini 2.5 Pro로 순차 생성합니다.</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                    {/* LEFT — 도서 선택 */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-violet-400 text-xs font-black uppercase tracking-widest">도서 선택</p>
+                                            <span className="text-slate-500 text-xs">{geminiSelectedBatchBooks.length}개 선택됨</span>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setGeminiSelectedBatchBooks(realBooks.map(b => b.id))}
+                                                disabled={isGeminiBatchRunning}
+                                                className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                            >전체 선택</button>
+                                            <button
+                                                onClick={() => setGeminiSelectedBatchBooks([])}
+                                                disabled={isGeminiBatchRunning}
+                                                className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-all"
+                                            >선택 해제</button>
+                                        </div>
+
+                                        <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
+                                            {realBooks.map(book => {
+                                                const hasScript = batchScriptStatuses[book.id] === true;
+                                                const status = geminiBatchStatuses[book.id];
+                                                const statusColors = { pending: 'text-slate-500', generating: 'text-yellow-400 animate-pulse', tts: 'text-blue-400 animate-pulse', done: 'text-emerald-400', error: 'text-red-400' };
+                                                const statusLabels = { pending: '대기', generating: '대본 생성 중...', tts: 'TTS 변환 중...', done: '완료', error: '오류' };
+                                                return (
+                                                    <label
+                                                        key={book.id}
+                                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                                                            isGeminiBatchRunning ? 'opacity-60 cursor-not-allowed border-transparent' :
+                                                            geminiSelectedBatchBooks.includes(book.id) ? 'bg-violet-500/10 border-violet-500/30 cursor-pointer' :
+                                                            'bg-white/3 border-white/5 hover:bg-white/5 cursor-pointer'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 accent-violet-500 cursor-pointer shrink-0"
+                                                            checked={geminiSelectedBatchBooks.includes(book.id)}
+                                                            disabled={isGeminiBatchRunning}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setGeminiSelectedBatchBooks(prev => [...prev, book.id]);
+                                                                else setGeminiSelectedBatchBooks(prev => prev.filter(id => id !== book.id));
+                                                            }}
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-bold text-white truncate">{book.title}</p>
+                                                            <p className="text-[10px] text-slate-500 font-mono">{book.id}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {hasScript && !status && (
+                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">📝 대본있음</span>
+                                                            )}
+                                                            {status && (
+                                                                <span className={`text-[10px] font-black ${statusColors[status] || 'text-slate-500'}`}>
+                                                                    {statusLabels[status] || status}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {isGeminiBatchRunning ? (
+                                            <div className="w-full py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-sm flex items-center justify-center gap-3">
+                                                <span className="material-symbols-outlined animate-spin text-2xl">settings_accent</span>
+                                                처리 중... ({geminiBatchProgress.current}/{geminiBatchProgress.total})
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleGeminiBatchRun('full')}
+                                                    disabled={!geminiSelectedBatchBooks.length}
+                                                    className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                                        !geminiSelectedBatchBooks.length ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-violet-500 text-white hover:bg-violet-400 shadow-lg shadow-violet-500/20'
+                                                    }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                                                    대본 생성 + TTS
+                                                </button>
+                                                <button
+                                                    onClick={() => handleGeminiBatchRun('tts-only')}
+                                                    disabled={!geminiSelectedBatchBooks.length}
+                                                    className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                                        !geminiSelectedBatchBooks.length ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-500/20'
+                                                    }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">graphic_eq</span>
+                                                    TTS만 실행
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* RIGHT — 진행 로그 */}
+                                    <div className="space-y-4">
+                                        {(isGeminiBatchRunning || geminiBatchProgress.total > 0) && (
+                                            <div className="space-y-2">
+                                                <p className="text-violet-400 text-xs font-black uppercase tracking-widest">전체 진행</p>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex-1 bg-white/5 rounded-full h-2">
+                                                        <div
+                                                            className="h-2 bg-violet-500 rounded-full transition-all duration-500"
+                                                            style={{ width: geminiBatchProgress.total ? `${(geminiBatchProgress.current / geminiBatchProgress.total) * 100}%` : '0%' }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-white text-sm font-black shrink-0">{geminiBatchProgress.current} / {geminiBatchProgress.total}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {geminiBatchLogs.length > 0 && (
+                                            <div className="bg-black/60 border border-white/8 rounded-[16px] overflow-hidden">
+                                                <div className="px-4 py-2 border-b border-white/10">
+                                                    <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Gemini Batch Log</span>
+                                                </div>
+                                                <div className="p-4 font-mono text-[10px] overflow-y-auto space-y-1 max-h-72 bg-[#050505] scrollbar-hide">
+                                                    {geminiBatchLogs.map((log, i) => (
+                                                        <div key={i} className={`border-l pl-2 whitespace-pre-wrap ${String(log).includes('❌') ? 'border-red-500/30 text-red-400' : String(log).includes('✅') ? 'border-violet-500/30 text-violet-400' : String(log).includes('🏁') ? 'border-emerald-500/30 text-emerald-400' : 'border-white/10 text-slate-500'}`}>{log}</div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {!isGeminiBatchRunning && geminiBatchLogs.length === 0 && (
+                                            <div className="h-40 flex items-center justify-center text-slate-600 text-sm border border-dashed border-white/10 rounded-2xl">
+                                                배치를 실행하면 진행 로그가 여기에 표시됩니다.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TTS 패널 — 사용 안함 (주석처리) */}
+                            {false && <div className="bg-white/5 border border-white/10 p-10 rounded-[48px] space-y-8 shadow-3xl backdrop-blur-3xl">
+                                <div className="flex items-center gap-5">
+                                    <div className="size-14 bg-violet-500/20 border border-violet-500/30 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-violet-400 text-3xl">record_voice_over</span>
+                                    </div>
+                                    <div>
+                                        <div className="inline-block px-4 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[10px] font-black uppercase tracking-widest mb-2">Gemini TTS Engine</div>
+                                        <h3 className="text-white font-black text-3xl italic tracking-tighter">TTS 음성 생성</h3>
+                                        <p className="text-slate-500 text-sm">Gemini 대본으로 팟캐스트 WAV 파일을 생성합니다.</p>
+                                    </div>
+                                </div>
+
+                                {/* TTS 모델 선택 */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">TTS 모델</label>
+                                    <div className="flex bg-black/60 p-2 rounded-2xl gap-2">
+                                        {[['pro', 'Gemini 2.5 Pro'], ['flash', 'Gemini 2.5 Flash']].map(([val, label]) => (
+                                            <button key={val} onClick={() => setTtsModel(val)} className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${ttsModel === val ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}>{label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 진행률 */}
+                                {isTtsRunning && (
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
+                                            <span>TTS 진행률</span><span>{ttsProgress}%</span>
+                                        </div>
+                                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-gradient-to-r from-violet-500 to-purple-400 rounded-full transition-all duration-500" style={{ width: `${ttsProgress}%` }}></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TTS 실행 버튼 */}
+                                <button
+                                    onClick={handleRunGeminiTts}
+                                    disabled={isTtsRunning || geminiGeneratedScript.length === 0}
+                                    className={`w-full py-7 rounded-[28px] font-black text-xl flex items-center justify-center gap-5 transition-all ${isTtsRunning || geminiGeneratedScript.length === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-violet-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(139,92,246,0.3)]'}`}
+                                >
+                                    {isTtsRunning
+                                        ? <><span className="material-symbols-outlined animate-spin text-3xl">settings_accent</span>TTS 생성 중... ({ttsProgress}%)</>
+                                        : <><span className="material-symbols-outlined text-3xl">rocket_launch</span>TTS 음성 생성</>
+                                    }
+                                </button>
+
+                                {/* TTS 로그 */}
+                                {ttsLogs.length > 0 && (
+                                    <div className="bg-black rounded-2xl border border-white/5 overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-white/10">
+                                            <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">TTS Engine Log</span>
+                                        </div>
+                                        <div className="p-4 font-mono text-[10px] text-violet-400 overflow-y-auto space-y-1.5 max-h-52 bg-[#050505] scrollbar-hide">
+                                            {ttsLogs.map((log, i) => <div key={i} className="border-l border-violet-500/20 pl-2">{log}</div>)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!isTtsRunning && geminiGeneratedScript.length > 0 && (
+                                    <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/20 text-center space-y-1">
+                                        <p className="text-violet-400 text-xs font-black">TTS 완료 후 WAV 파일이 자동 다운로드됩니다</p>
+                                        <p className="text-slate-600 text-[10px]">파일명: {scriptForm.bookId || 'audio'}_gemini_tts.wav</p>
+                                    </div>
+                                )}
+                            </div>}
                         </div>
                     )}
 
@@ -5245,6 +7092,620 @@ ${video.content}
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'tts-verify' && (
+                        <div className="space-y-8">
+                            <div>
+                                <h3 className="text-white font-black text-4xl italic tracking-tighter uppercase">TTS 품질 검증</h3>
+                                <p className="text-slate-500 text-sm mt-1">WAV 파일 + Firestore 대본을 Gemini 1.5 Pro로 비교 분석합니다.</p>
+                            </div>
+
+                            {/* 입력 영역 */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">도서 선택</label>
+                                        <select
+                                            value={verifyBookId}
+                                            onChange={e => {
+                                                const id = e.target.value;
+                                                setVerifyBookId(id);
+                                                if (id) setVerifyWavUrl(`/audio/${id}.wav`);
+                                                else setVerifyWavUrl('');
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-violet-400 transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="" style={{background:'#1a1a2e'}}>— 도서를 선택하세요 —</option>
+                                            {realBooks.filter(b => b.id).map(b => (
+                                                <option key={b.id} value={b.id} style={{background:'#1a1a2e'}}>{b.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">WAV 파일 선택</label>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={selectedWavName}
+                                                onChange={e => {
+                                                    const name = e.target.value;
+                                                    setSelectedWavName(name);
+                                                    if (name && localWavFileMap[name]) {
+                                                        const file = localWavFileMap[name];
+                                                        const url = URL.createObjectURL(file);
+                                                        setVerifyWavUrl(url);
+                                                    } else {
+                                                        setVerifyWavUrl('');
+                                                    }
+                                                }}
+                                                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-violet-400 transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option value="" style={{background:'#1a1a2e'}}>
+                                                    {localWavFiles.length === 0 ? '← 폴더 선택 후 파일 목록이 표시됩니다' : '— WAV 파일을 선택하세요 —'}
+                                                </option>
+                                                {localWavFiles.map(name => (
+                                                    <option key={name} value={name} style={{background:'#1a1a2e'}}>{name}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const dir = await window.showDirectoryPicker({ mode: 'read' });
+                                                        const files = [];
+                                                        const fileMap = {};
+                                                        for await (const [name, handle] of dir.entries()) {
+                                                            if (handle.kind === 'file' && name.toLowerCase().endsWith('.wav')) {
+                                                                const file = await handle.getFile();
+                                                                files.push(name);
+                                                                fileMap[name] = file;
+                                                            }
+                                                        }
+                                                        files.sort();
+                                                        setLocalWavFiles(files);
+                                                        setLocalWavFileMap(fileMap);
+                                                        setSelectedWavName('');
+                                                        setVerifyWavUrl('');
+                                                    } catch (err) {
+                                                        if (err.name !== 'AbortError') alert('폴더 접근 실패: ' + err.message);
+                                                    }
+                                                }}
+                                                className="px-4 py-3 bg-violet-600/30 border border-violet-500/40 rounded-xl text-violet-300 text-xs font-black hover:bg-violet-600/50 transition-all whitespace-nowrap"
+                                            >
+                                                폴더 선택
+                                            </button>
+                                        </div>
+                                        {selectedWavName && (
+                                            <p className="text-[10px] text-slate-500 truncate">{selectedWavName}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleTtsVerify}
+                                    disabled={verifyLoading}
+                                    className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${
+                                        verifyLoading ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/20'
+                                    }`}
+                                >
+                                    {verifyLoading ? (
+                                        <><span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>분석 중...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-xl">hearing</span>WAV + 대본 비교 분석</>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* 진행 로그 */}
+                            {verifyLogs.length > 0 && (
+                                <div className="bg-black/60 border border-white/8 rounded-2xl p-4 space-y-1 font-mono text-xs max-h-48 overflow-y-auto">
+                                    {verifyLogs.map((log, i) => (
+                                        <div key={i} className={`${log.includes('❌') ? 'text-red-400' : log.includes('✅') ? 'text-emerald-400' : 'text-slate-400'}`}>{log}</div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 분석 결과 — 점수 카드 */}
+                            {verifyResult && (() => {
+                                let parsed = null;
+                                try { parsed = JSON.parse(verifyResult); } catch {}
+                                if (!parsed || typeof parsed.총점 === 'undefined') {
+                                    return (
+                                        <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                                            <p className="text-slate-300 text-sm whitespace-pre-wrap font-mono">{verifyResult}</p>
+                                        </div>
+                                    );
+                                }
+                                const score = parsed.총점;
+                                const uploadOk = score >= 85;
+                                const scoreColor = score >= 85 ? 'text-emerald-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400';
+                                const ringColor = score >= 85 ? 'border-emerald-500' : score >= 70 ? 'border-yellow-500' : 'border-red-500';
+                                const bgColor = score >= 85 ? 'bg-emerald-500/10' : score >= 70 ? 'bg-yellow-500/10' : 'bg-red-500/10';
+                                const subItems = [
+                                    { label: '발음 신뢰도', score: parsed.발음신뢰도, max: 30 },
+                                    { label: '대본 일치율', score: parsed.대본일치율, max: 40 },
+                                    { label: '누락 오류',   score: parsed.누락오류,   max: 20 },
+                                    { label: '추가 오류',   score: parsed.추가오류,   max: 10 },
+                                ];
+                                return (
+                                    <div className="space-y-5">
+                                        {/* 총점 + 업로드 판정 */}
+                                        <div className={`${bgColor} border ${ringColor.replace('border-','border-').replace('500','500/40')} rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8`}>
+                                            <div className={`w-36 h-36 rounded-full border-4 ${ringColor} flex flex-col items-center justify-center flex-shrink-0`}>
+                                                <span className={`font-black text-5xl ${scoreColor}`}>{score}</span>
+                                                <span className="text-slate-400 text-xs font-black">/ 100</span>
+                                            </div>
+                                            <div className="flex-1 space-y-3 text-center md:text-left">
+                                                <div className={`text-2xl font-black ${uploadOk ? 'text-emerald-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                    {uploadOk ? '✅ 업로드 권장 (85점 이상)' : score >= 70 ? '⚠️ 검토 후 판단 필요 (70~84점)' : '❌ 재생성 권장 (70점 미만)'}
+                                                </div>
+                                                <p className="text-slate-300 text-sm">{parsed.총평}</p>
+                                            </div>
+                                        </div>
+                                        {/* 세부 점수 */}
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                            <h4 className="text-slate-400 text-xs font-black uppercase tracking-widest">세부 점수</h4>
+                                            {subItems.map(item => {
+                                                const pct = Math.round((item.score / item.max) * 100);
+                                                const barColor = pct >= 85 ? 'bg-emerald-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-red-500';
+                                                return (
+                                                    <div key={item.label} className="space-y-1">
+                                                        <div className="flex justify-between text-xs font-black">
+                                                            <span className="text-slate-300">{item.label}</span>
+                                                            <span className="text-white">{item.score} / {item.max}</span>
+                                                        </div>
+                                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${barColor} rounded-full transition-all`} style={{width:`${pct}%`}} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {/* 오류 목록 */}
+                                        {parsed.오류목록?.length > 0 && (
+                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
+                                                <h4 className="text-slate-400 text-xs font-black uppercase tracking-widest">발견된 오류 ({parsed.오류목록.length}건)</h4>
+                                                <div className="space-y-2 max-h-60 overflow-y-auto">
+                                                    {parsed.오류목록.map((err, i) => (
+                                                        <div key={i} className="flex gap-3 text-sm">
+                                                            <span className="text-red-400 font-black flex-shrink-0">#{i+1}</span>
+                                                            <span className="text-slate-300">{err}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {parsed.오류목록?.length === 0 && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-center text-emerald-400 font-black text-sm">
+                                                ✅ 오류 없음 — 대본과 100% 일치
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                            {/* ── 일괄 검증 ── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-5">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-white font-black text-lg">일괄 검증</h4>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const dir = await window.showDirectoryPicker({ mode: 'read' });
+                                                        const files = [];
+                                                        const fileMap = {};
+                                                        const readDir = async (d, prefix = '') => {
+                                                            for await (const [name, handle] of d.entries()) {
+                                                                if (handle.kind === 'file' && name.toLowerCase().endsWith('.wav')) {
+                                                                    const file = await handle.getFile();
+                                                                    files.push(prefix + name);
+                                                                    fileMap[prefix + name] = file;
+                                                                } else if (handle.kind === 'directory') {
+                                                                    await readDir(handle, prefix + name + '/');
+                                                                }
+                                                            }
+                                                        };
+                                                        await readDir(dir);
+                                                        files.sort();
+                                                        setLocalWavFiles(files);
+                                                        setLocalWavFileMap(fileMap);
+                                                        setSelectedWavName('');
+                                                        setVerifyWavUrl('');
+                                                    } catch (err) {
+                                                        if (err.name !== 'AbortError') alert('폴더 접근 실패: ' + err.message);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-violet-600/30 border border-violet-500/40 rounded-xl text-violet-300 text-xs font-black hover:bg-violet-600/50 transition-all flex items-center gap-1.5"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">folder_open</span>
+                                                WAV 폴더 선택
+                                            </button>
+                                            <button
+                                                onClick={() => setBatchVerifyIds(realBooks.filter(b => b.id).map(b => b.id))}
+                                                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all"
+                                            >도서 전체선택</button>
+                                            <button
+                                                onClick={() => setBatchVerifyIds([])}
+                                                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all"
+                                            >전체 해제</button>
+                                        </div>
+                                    </div>
+                                    {/* 감지된 WAV 파일 목록 */}
+                                    {localWavFiles.length > 0 ? (
+                                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 space-y-2">
+                                            <p className="text-emerald-400 text-xs font-black">✅ WAV {localWavFiles.length}개 감지됨 — 파일명(확장자 제외)이 도서 ID와 일치하면 자동 매칭</p>
+                                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                                                {localWavFiles.map(f => {
+                                                    const nameNoExt = f.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                                                    const matched = realBooks.some(b => b.id && (b.id.toLowerCase() === nameNoExt || nameNoExt.includes(b.id.toLowerCase()) || b.id.toLowerCase().includes(nameNoExt)));
+                                                    return (
+                                                        <span key={f} className={`text-[10px] font-black px-2 py-0.5 rounded-md ${matched ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-slate-500'}`}>
+                                                            {f.split('/').pop()} {matched ? '✓' : ''}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                            ⚠️ WAV 폴더를 먼저 선택하세요 — TTS 파일이 있는 폴더를 선택하면 자동 매칭됩니다
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 도서 체크리스트 */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
+                                    {realBooks.filter(b => b.id).map(b => {
+                                        const hasWav = Object.keys(localWavFileMap).some(n => n.toLowerCase() === `${b.id}.wav`);
+                                        const checked = batchVerifyIds.includes(b.id);
+                                        return (
+                                            <label key={b.id}
+                                                className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all text-xs font-black
+                                                    ${checked ? 'bg-violet-500/20 border-violet-400/50 text-violet-300' : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'}`}
+                                            >
+                                                <input type="checkbox" className="hidden"
+                                                    checked={checked}
+                                                    onChange={() => setBatchVerifyIds(prev => prev.includes(b.id) ? prev.filter(x => x !== b.id) : [...prev, b.id])}
+                                                />
+                                                <span className={`w-3 h-3 rounded-sm flex-shrink-0 border ${checked ? 'bg-violet-500 border-violet-400' : 'border-slate-600'}`} />
+                                                <span className="truncate">{b.title}</span>
+                                                {hasWav && <span className="text-emerald-400 flex-shrink-0">🎵</span>}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    onClick={handleBatchVerify}
+                                    disabled={batchVerifyRunning || batchVerifyIds.length === 0}
+                                    className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${
+                                        batchVerifyRunning || batchVerifyIds.length === 0
+                                            ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
+                                    }`}
+                                >
+                                    {batchVerifyRunning
+                                        ? <><span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>분석 중: {batchVerifyCurrent}...</>
+                                        : <><span className="material-symbols-outlined text-xl">playlist_add_check</span>{batchVerifyIds.length}권 일괄 검증 시작</>
+                                    }
+                                </button>
+
+                                {/* 일괄 결과 */}
+                                {Object.keys(batchVerifyResults).length > 0 && (() => {
+                                    const entries = Object.entries(batchVerifyResults);
+                                    const scored = entries.filter(([,r]) => r.총점 != null);
+                                    const passCount = scored.filter(([,r]) => r.총점 >= 85).length;
+                                    const failCount = scored.filter(([,r]) => r.총점 < 85).length;
+                                    const skipCount = entries.filter(([,r]) => r.총점 == null).length;
+                                    const avgScore = scored.length ? Math.round(scored.reduce((a,[,r]) => a + r.총점, 0) / scored.length) : null;
+                                    return (
+                                        <div className="space-y-4">
+                                            {/* 요약 헤더 */}
+                                            <div className="bg-black/40 border border-white/10 rounded-2xl p-5 flex flex-wrap gap-4 items-center justify-between">
+                                                <div className="flex flex-wrap gap-5 text-sm">
+                                                    <span className="text-slate-400">총 <b className="text-white">{entries.length}권</b> 검증</span>
+                                                    <span className="text-emerald-400 font-black">✅ {passCount}권 업로드 가능</span>
+                                                    <span className="text-red-400 font-black">❌ {failCount}권 재생성 필요</span>
+                                                    {skipCount > 0 && <span className="text-slate-500">— {skipCount}권 스킵</span>}
+                                                    {avgScore != null && <span className="text-slate-300">평균 <b className={avgScore >= 85 ? 'text-emerald-400' : avgScore >= 70 ? 'text-yellow-400' : 'text-red-400'}>{avgScore}점</b></span>}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const rows = ['도서','총점','발음신뢰도(30)','대본일치율(40)','누락오류(20)','추가오류(10)','업로드','총평','주요오류'].join('\t');
+                                                        const data = entries.map(([id, r]) => {
+                                                            const book = realBooks.find(b => b.id === id);
+                                                            return [book?.title||id, r.총점??'skip', r.발음신뢰도??'', r.대본일치율??'', r.누락오류??'', r.추가오류??'', r.업로드권장?'가능':r.총점!=null?'재생성':'스킵', r.총평??r.오류??'', (r.오류목록||[]).join(' / ')].join('\t');
+                                                        });
+                                                        navigator.clipboard.writeText([rows,...data].join('\n'));
+                                                        alert('클립보드에 복사됨 (엑셀에 붙여넣기 가능)');
+                                                    }}
+                                                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all flex items-center gap-1.5"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">content_copy</span>엑셀 복사
+                                                </button>
+                                            </div>
+
+                                            {/* 도서별 카드 */}
+                                            <div className="space-y-2">
+                                                {entries.map(([id, r]) => {
+                                                    const book = realBooks.find(b => b.id === id);
+                                                    const isRunning = batchVerifyRunning && batchVerifyCurrent === id;
+                                                    const isSkip = r.총점 == null;
+                                                    const isPass = r.총점 >= 85;
+                                                    const scoreColor = isSkip ? 'text-slate-500' : isPass ? 'text-emerald-400' : r.총점 >= 70 ? 'text-yellow-400' : 'text-red-400';
+                                                    const borderColor = isSkip ? 'border-white/10' : isPass ? 'border-emerald-500/30' : r.총점 >= 70 ? 'border-yellow-500/30' : 'border-red-500/30';
+                                                    const ringColor = isPass ? 'border-emerald-500' : r.총점 >= 70 ? 'border-yellow-500' : 'border-red-500';
+                                                    const expanded = batchExpandedId === id;
+                                                    const subItems = [
+                                                        { label: '발음 신뢰도', val: r.발음신뢰도, max: 30 },
+                                                        { label: '대본 일치율', val: r.대본일치율, max: 40 },
+                                                        { label: '누락 오류',   val: r.누락오류,   max: 20 },
+                                                        { label: '추가 오류',   val: r.추가오류,   max: 10 },
+                                                    ];
+                                                    return (
+                                                        <div key={id} className={`bg-white/5 border ${borderColor} rounded-2xl overflow-hidden`}>
+                                                            {/* 카드 헤더 */}
+                                                            <button
+                                                                onClick={() => !isSkip && !isRunning && setBatchExpandedId(expanded ? null : id)}
+                                                                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 transition-all text-left"
+                                                            >
+                                                                {/* 점수 원 */}
+                                                                <div className={`w-12 h-12 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSkip ? 'border-slate-700' : ringColor}`}>
+                                                                    {isRunning
+                                                                        ? <span className="material-symbols-outlined animate-spin text-sm text-slate-400">progress_activity</span>
+                                                                        : isSkip
+                                                                            ? <span className="text-slate-600 text-[9px] font-black">SKIP</span>
+                                                                            : <span className={`font-black text-sm ${scoreColor}`}>{r.총점}</span>
+                                                                    }
+                                                                </div>
+                                                                {/* 제목 + 총평 */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-white font-black text-sm truncate">{book?.title || id}</p>
+                                                                    <p className="text-slate-500 text-xs truncate mt-0.5">
+                                                                        {isRunning ? '분석 중...' : isSkip ? (r.오류||'WAV 없음') : r.총평}
+                                                                    </p>
+                                                                </div>
+                                                                {/* 세부 점수 미니 (헤더) */}
+                                                                {!isSkip && !isRunning && (
+                                                                    <div className="hidden md:flex items-center gap-4 flex-shrink-0">
+                                                                        {subItems.map(s => {
+                                                                            const pct = s.val != null ? (s.val/s.max) : 0;
+                                                                            const c = pct >= 0.85 ? 'text-emerald-400' : pct >= 0.7 ? 'text-yellow-400' : 'text-red-400';
+                                                                            return (
+                                                                                <div key={s.label} className="text-center">
+                                                                                    <p className="text-[9px] text-slate-500 font-black mb-0.5">{s.label.replace(' ','')}</p>
+                                                                                    <p className={`text-xs font-black ${c}`}>{s.val??'—'}<span className="text-slate-600 text-[9px]">/{s.max}</span></p>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                                {/* 업로드 배지 */}
+                                                                {!isSkip && !isRunning && (
+                                                                    <span className={`flex-shrink-0 text-xs font-black px-3 py-1 rounded-full ${isPass ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                                        {isPass ? '✅ 업로드' : '❌ 재생성'}
+                                                                    </span>
+                                                                )}
+                                                                {!isSkip && !isRunning && (
+                                                                    <span className={`material-symbols-outlined text-slate-500 flex-shrink-0 transition-transform text-base ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
+                                                                )}
+                                                            </button>
+
+                                                            {/* 펼침 상세 */}
+                                                            {expanded && !isSkip && (
+                                                                <div className="border-t border-white/10 px-5 py-5 space-y-5 bg-black/20">
+                                                                    {/* 세부 점수 바 */}
+                                                                    <div className="space-y-3">
+                                                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">세부 점수</p>
+                                                                        {subItems.map(s => {
+                                                                            const pct = s.val != null ? Math.round((s.val/s.max)*100) : 0;
+                                                                            const barColor = pct >= 85 ? 'bg-emerald-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-red-500';
+                                                                            const txtColor = pct >= 85 ? 'text-emerald-400' : pct >= 70 ? 'text-yellow-400' : 'text-red-400';
+                                                                            return (
+                                                                                <div key={s.label}>
+                                                                                    <div className="flex justify-between text-xs font-black mb-1">
+                                                                                        <span className="text-slate-300">{s.label}</span>
+                                                                                        <span className={txtColor}>{s.val??'—'}<span className="text-slate-600"> / {s.max}</span></span>
+                                                                                    </div>
+                                                                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                                        <div className={`h-full ${barColor} rounded-full`} style={{width:`${pct}%`}} />
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    {/* 수정 필요 항목 */}
+                                                                    {r.오류목록?.length > 0 ? (
+                                                                        <div className="space-y-2">
+                                                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">수정 필요 항목 ({r.오류목록.length}건)</p>
+                                                                            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                                                                                {r.오류목록.map((err, i) => (
+                                                                                    <div key={i} className="flex gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                                                                        <span className="text-red-400 font-black text-xs flex-shrink-0">#{i+1}</span>
+                                                                                        <span className="text-slate-300 text-xs leading-relaxed">{err}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 text-emerald-400 text-xs font-black">
+                                                                            ✅ 발견된 오류 없음 — 대본과 완전 일치
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* ── 수동 타임스탬프 편집 ── */}
+                            {(() => {
+                                // tsScript: Firestore scripts/{id} 에서 로드된 대본 (state)
+                                const toSec = (str) => {
+                                    if (str === '' || str === undefined || str === null) return 0;
+                                    const s = String(str);
+                                    const parts = s.split(':');
+                                    if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0);
+                                    return parseFloat(s) || 0;
+                                };
+                                const toMMSS = (sec) => {
+                                    if (!sec && sec !== 0) return '';
+                                    const m = Math.floor(sec / 60);
+                                    const s = (sec % 60).toFixed(1);
+                                    return `${m}:${parseFloat(s) < 10 ? '0' : ''}${s}`;
+                                };
+                                const handleSaveTs = async (mode) => {
+                                    if (!verifyBookId || tsScript.length === 0) return;
+                                    setTsSaving(true);
+                                    const segments = tsTimestamps.map((val, i) => {
+                                        const start = toSec(val);
+                                        const end = i < tsTimestamps.length - 1
+                                            ? toSec(tsTimestamps[i + 1])
+                                            : start + 15;
+                                        return { start, end };
+                                    });
+                                    await setDoc(doc(db, 'timestamps', verifyBookId), {
+                                        segments,
+                                        mode,
+                                        generatedAt: new Date().toISOString(),
+                                        source: 'manual'
+                                    });
+                                    setTsSaving(false);
+                                    alert(`✅ ${mode === 'sync' ? '싱크' : '스크롤'} 저장 완료 (${segments.length}턴)`);
+                                };
+                                const handleAutoTimestamps = async () => {
+                                    const aaiKey = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
+                                    if (!aaiKey) return alert('VITE_ASSEMBLYAI_API_KEY가 없습니다.');
+                                    if (!verifyBookId || tsScript.length === 0) return alert('도서와 Firestore 대본을 먼저 확인하세요.');
+                                    setTsSaving(true);
+                                    try {
+                                        // 1. 오디오 소스 결정: WAV 폴더 선택 파일 우선, 없으면 MP3 fetch
+                                        let audioBuffer;
+                                        const matchedWav = Object.entries(localWavFileMap).find(([name]) => {
+                                            const base = name.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                                            return base === verifyBookId.toLowerCase() || verifyBookId.toLowerCase().includes(base) || base.includes(verifyBookId.toLowerCase());
+                                        });
+                                        if (matchedWav) {
+                                            audioBuffer = await matchedWav[1].arrayBuffer();
+                                        } else {
+                                            const res = await fetch(`/audio/${verifyBookId}.mp3`);
+                                            if (!res.ok) throw new Error(`오디오 없음: /audio/${verifyBookId}.mp3 (WAV 폴더를 선택하거나 MP3가 배포되어야 합니다)`);
+                                            audioBuffer = await res.arrayBuffer();
+                                        }
+                                        // 2. AssemblyAI 전사
+                                        const transcribed = await transcribeWithAssemblyAI(audioBuffer, aaiKey, () => {});
+                                        if (!transcribed.words?.length) throw new Error('단어 타임스탬프를 받지 못했습니다.');
+                                        // 3. 턴별 타임스탬프 계산
+                                        const segments = generateTurnSegments(tsScript, transcribed.words);
+                                        if (!segments || segments.length !== tsScript.length) throw new Error('턴 매칭 실패');
+                                        setTsTimestamps(segments.map(s => s.start));
+                                        alert(`🤖 1차 자동계산 완료 (${segments.length}턴)\n오류 부분을 수동으로 수정 후 저장하세요.`);
+                                    } catch (e) {
+                                        alert('오류: ' + e.message);
+                                    } finally {
+                                        setTsSaving(false);
+                                    }
+                                };
+                                return (
+                                    <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-5">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-white font-black text-lg">📝 수동 타임스탬프 편집</h4>
+                                                <p className="text-slate-500 text-xs mt-0.5">각 턴의 시작 시간을 입력하면 말풍선 싱크가 활성화됩니다. 형식: M:SS 또는 초단위</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleAutoTimestamps}
+                                                    disabled={tsSaving || !verifyBookId || tsScript.length === 0}
+                                                    className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-all flex items-center gap-2"
+                                                >
+                                                    {tsSaving ? '⏳ 계산 중...' : '🤖 AssemblyAI 1차 자동계산'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSaveTs('scroll')}
+                                                    disabled={tsSaving || !verifyBookId || tsScript.length === 0}
+                                                    className="px-5 py-2.5 bg-slate-600 hover:bg-slate-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-all flex items-center gap-2"
+                                                >
+                                                    {tsSaving ? '저장 중...' : '📜 스크롤 저장'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSaveTs('sync')}
+                                                    disabled={tsSaving || !verifyBookId || tsScript.length === 0}
+                                                    className="px-5 py-2.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-all flex items-center gap-2"
+                                                >
+                                                    {tsSaving ? '저장 중...' : '🎵 싱크 저장'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {!verifyBookId && (
+                                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                                ⬆️ 위에서 도서를 먼저 선택하세요
+                                            </div>
+                                        )}
+
+                                        {verifyBookId && tsScript.length === 0 && (
+                                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                                ⚠️ 이 도서의 대본이 없습니다 (bookScripts 미등록)
+                                            </div>
+                                        )}
+
+                                        {verifyBookId && tsScript.length > 0 && (
+                                            <>
+                                                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-2.5 text-orange-300 text-xs font-black flex items-center gap-2">
+                                                    <span>🎙️</span>
+                                                    <span>인트로 5초 자동 반영 — 첫 턴 기본값 0:05.0 | 총 {tsScript.length}턴</span>
+                                                </div>
+
+                                                {/* 헤더 */}
+                                                <div className="grid gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest px-1" style={{gridTemplateColumns:'2.5rem 2.5rem 1fr 7rem'}}>
+                                                    <span>#</span><span>화자</span><span>대사</span><span>시작 시간</span>
+                                                </div>
+
+                                                {/* 턴 목록 — 스크롤 */}
+                                                <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+                                                    {tsScript.map((turn, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="grid gap-2 items-center bg-black/30 rounded-xl px-3 py-2 hover:bg-white/5 transition-all"
+                                                            style={{gridTemplateColumns:'2.5rem 2.5rem 1fr 7rem'}}
+                                                        >
+                                                            <span className="text-slate-600 text-xs font-black tabular-nums">{i + 1}</span>
+                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md text-center ${turn.role === 'A' ? 'bg-blue-500/20 text-blue-300' : 'bg-yellow-500/20 text-yellow-300'}`}>
+                                                                {turn.role === 'A' ? 'J' : 'S'}
+                                                            </span>
+                                                            <span className="text-slate-300 text-xs truncate">{turn.text?.slice(0, 40)}</span>
+                                                            <input
+                                                                type="text"
+                                                                value={toMMSS(tsTimestamps[i] ?? 0)}
+                                                                onChange={e => {
+                                                                    const newTs = [...tsTimestamps];
+                                                                    newTs[i] = toSec(e.target.value);
+                                                                    setTsTimestamps(newTs);
+                                                                }}
+                                                                onBlur={e => {
+                                                                    // 값 정규화
+                                                                    const newTs = [...tsTimestamps];
+                                                                    newTs[i] = toSec(e.target.value);
+                                                                    setTsTimestamps(newTs);
+                                                                }}
+                                                                placeholder="0:00.0"
+                                                                className="bg-black/60 border border-white/10 focus:border-orange-500/60 rounded-lg px-2 py-1.5 text-xs text-white outline-none text-center font-mono tabular-nums transition-colors"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 

@@ -5,7 +5,7 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: "book-site-123.web.app",
+    authDomain: "archiview.store",
     projectId: "book-site-123",
     storageBucket: "book-site-123.firebasestorage.app",
     messagingSenderId: "176157090689",

@@ -117,16 +117,9 @@ export default function Home() {
         '심리': 'PSYCHOLOGY'
     };
 
-    // Weekly FocusBooks - Sort by updatedAt desc (from Firestore)
-    const weeklyFocusBooks = allBooks
-        .filter(b => b.section === 'WEEKLY_FOCUS')
-        .sort((a, b) => {
-            const timeA = a.updatedAt?.seconds || 0;
-            const timeB = b.updatedAt?.seconds || 0;
-            return timeB - timeA;
-        })
-        .slice(0, 2);
-
+    // ── Firestore 섹션 데이터 ──────────────────────────────────────────
+    const [weeklyFocusRaw, setWeeklyFocusRaw] = useState([]);
+    const [weeklyMostViewedRaw, setWeeklyMostViewedRaw] = useState([]);
     const [popularArchives, setPopularArchives] = useState([
         { id: "wealth-way", title: "부자들이 돈을 보는 방식", listens: "12.4k" },
         { id: "decision-making", title: "억만장자의 의사결정", listens: "10.1k" },
@@ -136,26 +129,36 @@ export default function Home() {
     ]);
 
     useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) {
-                setPopularArchives(snap.data().books);
-            }
+        const unsub1 = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
+            if (snap.exists() && snap.data().books?.length) setPopularArchives(snap.data().books);
         });
-        return () => unsub();
+        const unsub2 = onSnapshot(doc(db, 'site_config', 'weekly_focus'), (snap) => {
+            if (snap.exists() && snap.data().books?.length) setWeeklyFocusRaw(snap.data().books);
+        });
+        const unsub3 = onSnapshot(doc(db, 'site_config', 'weekly_most_viewed'), (snap) => {
+            if (snap.exists() && snap.data().books?.length) setWeeklyMostViewedRaw(snap.data().books);
+        });
+        return () => { unsub1(); unsub2(); unsub3(); };
     }, []);
 
-    const enrichedPopularArchives = useMemo(() => {
-        return popularArchives.map(item => {
-            const bookData = allBooks.find(b => b.id === item.id) || {};
-            return {
-                ...bookData,
-                ...item,
-                cover: item.cover || bookData.cover || '',
-                purchaseLink: item.purchaseLink || bookData.purchaseLink || '',
-                author: item.author || bookData.author || '',
-            };
-        });
-    }, [popularArchives, allBooks]);
+    const enrich = (list) => list.map(item => {
+        const bookData = allBooks.find(b => b.id === item.id) || {};
+        return { ...bookData, ...item, cover: item.cover || bookData.cover || '', purchaseLink: item.purchaseLink || bookData.purchaseLink || '', author: item.author || bookData.author || '' };
+    });
+
+    const enrichedPopularArchives = useMemo(() => enrich(popularArchives), [popularArchives, allBooks]);
+
+    // Weekly Focus: Firestore 데이터 우선, 없으면 section 필드로 fallback
+    const weeklyFocusBooks = useMemo(() => {
+        if (weeklyFocusRaw.length > 0) return enrich(weeklyFocusRaw);
+        return allBooks.filter(b => b.section === 'WEEKLY_FOCUS').sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).slice(0, 5);
+    }, [weeklyFocusRaw, allBooks]);
+
+    // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
+    const enrichedWeeklyMostViewed = useMemo(() => {
+        if (weeklyMostViewedRaw.length > 0) return enrich(weeklyMostViewedRaw);
+        return enrichedPopularArchives;
+    }, [weeklyMostViewedRaw, enrichedPopularArchives, allBooks]);
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -322,6 +325,95 @@ export default function Home() {
                         </div>
 
  
+                         {/* 📍 [애드센스 심사용 리뷰 라이브러리 시작] 📍 
+                             (나중에 승인 이후 이 부분을 주석 처리하시면 다른 페이지 영향 없이 홈에서 사라집니다) */}
+                         <div className="relative z-[20] px-6 mb-7">
+                             <div className="flex items-center justify-between mb-4">
+                                 <h2 className="text-[18px] font-black text-white tracking-tight flex items-center gap-2">
+                                     <span className="material-symbols-outlined text-indigo-400">menu_book</span> 리뷰 라이브러리
+                                 </h2>
+                                 <Link to="/review-board" className="text-[11px] font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-0.5">
+                                     <span>전체보기</span>
+                                     <span className="material-symbols-outlined text-[13px]">chevron_right</span>
+                                 </Link>
+                             </div>
+                             
+                             <div className="grid grid-cols-2 gap-3">
+                                 {allBooks.slice(0, 20).map((book, i) => {
+                                     const uniqueThumbnails = [
+                                         '/images/ai_thumb_1_1774242408559.png',
+                                         '/images/ai_thumb_2_1774242423284.png',
+                                         '/images/ai_thumb_3_1774242438198.png',
+                                         '/images/ai_thumb_4_1774242450662.png',
+                                         '/images/ai_thumb_5_1774242465139.png',
+                                         '/images/ai_thumb_6_1774242481405.png',
+                                         '/images/ai_thumb_7_1774244247197.png',
+                                         '/images/ai_thumb_8_1774244261615.png',
+                                         '/images/ai_thumb_9_1774244276802.png',
+                                         '/images/ai_thumb_10_1774244292962.png',
+                                         '/images/ai_thumb_11_1774244309549.png',
+                                         '/images/ai_thumb_12_1774244327138.png',
+                                         '/images/ai_thumb_13_1774244342082.png',
+                                         '/images/ai_thumb_14_1774244354910.png',
+                                         '/images/ai_thumb_15_1774244370317.png',
+                                         '/images/media__1774241836813.png',
+                                         '/images/media__1774242276171.png',
+                                         '/images/media__1774242843095.png',
+                                         '/images/media__1774243372385.png',
+                                         '/images/media__1774244650167.png',
+                                     ]
+                                     const thumbSrc = uniqueThumbnails[i % 20];
+
+                                     // 텍스트 추출 헬퍼 (이북 내용 최소 3줄 노출)
+                                     let rawText = "";
+                                     const tmp = document.createElement("DIV");
+                                     if (book.review) {
+                                         try {
+                                             tmp.innerHTML = book.review;
+                                             let text = tmp.textContent || tmp.innerText || "";
+                                             text = text.replace(/\[.*?\]/g, '').replace(/\n+/g, ' ').trim();
+                                             if (text) rawText += text + " ";
+                                         } catch (e) {
+                                             console.error(e);
+                                         }
+                                     }
+                                     if (book.ebookText) {
+                                         try {
+                                             tmp.innerHTML = book.ebookText;
+                                             let eText = tmp.textContent || tmp.innerText || "";
+                                             eText = eText.replace(/\[.*?\]/g, '').replace(/\n+/g, ' ').trim();
+                                             if (eText) rawText += eText + " ";
+                                         } catch (e) {
+                                             console.error(e);
+                                         }
+                                     }
+                                     
+                                     let textPreview = rawText ? rawText.substring(0, 150) + "..." : (book.desc || "도서 리뷰 및 인사이트가 준비되어 있습니다.");
+
+                                     return (
+                                         <Link key={i} to={`/review-board#book-${book.id}`} className="block bg-zinc-900/60 border border-white/5 shadow-lg relative group transition-all hover:border-indigo-500/40 rounded-none overflow-hidden">
+                                             {/* 상단 썸네일 (책 표지 대신 AI 추상 이미지 반복 사용) */}
+                                             <div className="w-full aspect-[16/10] overflow-hidden relative border-b border-white/5">
+                                                 <img src={thumbSrc} alt={`${book.title} 추상 이미지`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = '/images/hero_expert_v5.png'; }} />
+                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                                                 <div className="absolute bottom-2 left-2 right-2 flex flex-col justify-end h-full">
+                                                     <h3 className="text-[12px] font-black text-white leading-tight drop-shadow-md line-clamp-2">{book.title}</h3>
+                                                     {book.author && <p className="text-[9px] text-gray-300 opacity-80 mt-0.5 truncate">{book.author}</p>}
+                                                 </div>
+                                             </div>
+                                             {/* 하단 텍스트 리뷰 (3줄) */}
+                                             <div className="p-2.5">
+                                                 <p className="text-[10px] text-gray-400 leading-[1.6] font-medium line-clamp-3 break-keep">
+                                                     {textPreview}
+                                                 </p>
+                                             </div>
+                                         </Link>
+                                     );
+                                 })}
+                             </div>
+                         </div>
+                         {/* 📍 [애드센스 심사용 리뷰 라이브러리 끝] 📍 */}
+
                          {/* 2️⃣ Weekly Focus */}
                         <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
@@ -449,7 +541,7 @@ export default function Home() {
                     <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
-                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">주간 최다 조회 아카이뷰</h2>
+                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 아카이뷰</h2>
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번주 가장 많이 들은 아카이뷰</p>
@@ -460,7 +552,7 @@ export default function Home() {
                             </Link>
                         </div>
                         <div className="space-y-5">
-                            {enrichedPopularArchives.map((item, i) => (
+                            {enrichedWeeklyMostViewed.map((item, i) => (
                                 <div key={i} className={`flex items-start gap-3 pb-5 ${i !== enrichedPopularArchives.length - 1 ? 'border-b border-white/5' : ''}`}>
                                     <span className="text-3xl font-black text-white/50 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
                                     <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`} className="flex-shrink-0">

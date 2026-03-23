@@ -84,6 +84,9 @@ export default function BottomNavigation() {
 
     const navItems = [
         { path: '/', label: '홈', icon: 'home' },
+        /* 📍 [애드센스 심사용 추가: 메인 노출을 위해 순서 변경됨] 📍 */
+        { path: '/review-board', label: '라이브러리', icon: 'library_books' },
+        /* ========================================================= */
         { path: '/editorial', label: '에디토리얼', icon: 'auto_awesome' },
         { path: '/library', label: '서재', icon: 'auto_stories' },
         { path: '/reading-notes', label: '기록노트', icon: 'edit_note' },
@@ -117,7 +120,7 @@ export default function BottomNavigation() {
                                     </span>
                                 </div>
                             </div>
-                            <p className={`text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-500 -translate-y-0.5 ${isActive ? 'opacity-100 scale-105' : 'opacity-60 group-hover/nav:opacity-100'}`}>
+                            <p className={`text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 -translate-y-0.5 ${isActive ? 'opacity-100 scale-105' : 'opacity-60 group-hover/nav:opacity-100'}`}>
                                 {item.label}
                             </p>
                         </Link>

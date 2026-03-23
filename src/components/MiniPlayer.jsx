@@ -27,8 +27,6 @@ export default function MiniPlayer() {
         }
     };
 
-    // 바텀 네비 높이(약 56px) + safe area 위에 표시
-    // 리뷰(상세) 페이지에서는 바텀 네비가 없으므로 0으로 설정
     const isReviewMode = location.pathname.startsWith('/review');
     const bottomNavH = isReviewMode ? 0 : 56;
 
@@ -40,18 +38,21 @@ export default function MiniPlayer() {
             transform: 'translate3d(-50%, 0, 0)',
             width: '100%',
             maxWidth: 430,
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            padding: '8px 12px 10px',
+            background: 'rgba(10, 10, 20, 0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            padding: '0 16px 10px',
+            paddingTop: 6,
             zIndex: 60,
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
             willChange: 'transform',
         }}>
-            {/* Progress bar */}
+            {/* Progress bar — clickable */}
             <div
                 style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                    background: 'rgba(255,255,255,0.1)', cursor: 'pointer'
+                    background: 'rgba(255,255,255,0.07)', cursor: 'pointer'
                 }}
                 onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -61,68 +62,109 @@ export default function MiniPlayer() {
             >
                 <div style={{
                     width: `${progress}%`, height: '100%',
-                    background: 'linear-gradient(90deg, #e94560, #ff6b6b)',
-                    transition: 'width 0.3s ease'
+                    background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                    transition: 'width 0.3s linear',
+                    borderRadius: '0 2px 2px 0'
                 }} />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Cover - Click to go back */}
-                <div onClick={goToPodcast} style={{ cursor: 'pointer', position: 'relative' }}>
-                    {podcastInfo.cover && (
-                        <img src={podcastInfo.cover} alt="" style={{
-                            width: 40, height: 40, borderRadius: 6, objectFit: 'cover',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Cover */}
+                <div
+                    onClick={goToPodcast}
+                    style={{ cursor: 'pointer', flexShrink: 0, position: 'relative' }}
+                >
+                    <img
+                        src={podcastInfo.cover || '/images/covers/default_custom.jpg'}
+                        alt=""
+                        style={{
+                            width: 44, height: 44,
+                            borderRadius: 8,
+                            objectFit: 'cover',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                        }}
+                    />
+                    {podcastPlaying && (
+                        <div style={{
+                            position: 'absolute', bottom: 2, right: 2,
+                            width: 8, height: 8, borderRadius: '50%',
+                            background: '#f97316',
+                            boxShadow: '0 0 6px #f97316',
+                            animation: 'pulse 1.5s ease-in-out infinite'
                         }} />
                     )}
-                    <div style={{
-                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)',
-                        borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        opacity: 0, transition: 'opacity 0.2s'
-                    }} className="hover-show">
-                        <span className="material-symbols-outlined" style={{ color: '#fff', fontSize: 18 }}>menu_book</span>
-                    </div>
                 </div>
 
                 {/* Info */}
-                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={goToPodcast}>
+                <div
+                    style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                    onClick={goToPodcast}
+                >
                     <div style={{
-                        color: '#fff', fontSize: 13, fontWeight: 600,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                        color: '#f1f5f9',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '-0.01em'
                     }}>
-                        🎙️ {podcastInfo.title || 'Podcast'}
+                        {podcastInfo.title || 'Podcast'}
                     </div>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                    <div style={{
+                        color: 'rgba(255,255,255,0.35)',
+                        fontSize: 11,
+                        marginTop: 2,
+                        fontVariantNumeric: 'tabular-nums'
+                    }}>
                         {fmt(currentTime)} / {fmt(duration)}
                     </div>
                 </div>
 
-                {/* Controls */}
-                {/* Go back button (Text version) */}
+                {/* 책 대화보기 */}
                 <button
                     onClick={goToPodcast}
                     style={{
-                        background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', 
-                        borderRadius: '8px', padding: '6px 10px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', color: '#fff', fontSize: '10px', fontWeight: '700',
-                        whiteSpace: 'nowrap', transition: 'all 0.2s'
+                        flexShrink: 0,
+                        background: 'rgba(249,115,22,0.12)',
+                        border: '1px solid rgba(249,115,22,0.35)',
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        cursor: 'pointer',
+                        color: 'rgba(251,146,60,0.95)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
                     }}
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14, marginRight: 4 }}>menu_book</span>
-                    <span>책 대화보기</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>menu_book</span>
+                    <span>대화보기</span>
                 </button>
 
+                {/* Play / Pause — perfectly round */}
                 <button
                     onClick={() => podcastPlaying
                         ? pausePodcastMP3()
                         : playPodcastMP3(podcastInfo.src, podcastInfo.title, podcastInfo.cover, podcastInfo.id)
                     }
                     style={{
-                        background: 'linear-gradient(135deg, #e94560, #ff6b6b)',
-                        border: 'none', borderRadius: '50%', width: 36, height: 36,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', color: '#fff', boxShadow: '0 2px 10px rgba(233,69,96,0.4)'
+                        flexShrink: 0,
+                        width: 38,
+                        height: 38,
+                        minWidth: 38,
+                        minHeight: 38,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #f97316, #fb923c)',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#fff',
+                        boxShadow: '0 4px 16px rgba(249,115,22,0.45)',
+                        padding: 0,
                     }}
                 >
                     <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
@@ -130,16 +172,30 @@ export default function MiniPlayer() {
                     </span>
                 </button>
 
+                {/* Close */}
                 <button
                     onClick={closePodcastMP3}
                     style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'rgba(255,255,255,0.4)', padding: 4
+                        flexShrink: 0,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.3)',
+                        padding: 2,
+                        display: 'flex',
+                        alignItems: 'center',
                     }}
                 >
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
                 </button>
             </div>
+
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(0.7); }
+                }
+            `}</style>
         </div>
     );
 }

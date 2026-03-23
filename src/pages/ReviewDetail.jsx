@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import HTMLFlipBook from 'react-pageflip';
@@ -9,7 +10,9 @@ import { availableAudio } from '../data/availableAudio';
 import { db } from '../firebase';
 import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import SubscriptionModal from '../components/SubscriptionModal';
 import { chatWithGemini } from '../services/gemini';
+import { shareCard } from '../utils/shareCard';
 import './ReviewDetail.css';
 
 const CHARS_PER_PAGE = 400;
@@ -29,29 +32,47 @@ function normalizeBrTags(html) {
     return html.replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '</p><p>');
 }
 
+// 문단(p, div, section, h1-6 등)의 시작이나 br, 줄바꿈 직후에 나타나는 불필요한 첫 줄 공백(스페이스) 제거
+function removeLeadingSpaces(html) {
+    if (!html) return html;
+    // <p>, <div>, <section>, <h1>-<h6>, <blockquote> 블록 태그 직후의 모든 공백 문자(&nbsp; 포함) 제거
+    let res = html.replace(/(<(p|div|section|h[1-6]|blockquote)[^>]*>)(?:\s|&nbsp;)+/gi, '$1');
+    // <br> 태그 직후의 공백 문자 제거
+    res = res.replace(/(<br\s*\/?>)(?:\s|&nbsp;)+/gi, '$1');
+    // HTML 내부의 단순 줄바꿈(\n) 직후에 나오는 대량의 공백 제거
+    res = res.replace(/\n(?:\s|&nbsp;)+/g, '\n');
+    return res;
+}
+
 // 모바일 가독성을 위해 긴 문단을 3문장 단위로 강제 분할
 function optimizeParagraphs(html) {
     if (!html || window.innerWidth > 600) return html;
+
     
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const ps = Array.from(doc.querySelectorAll('p'));
     
     ps.forEach(p => {
-        const inner = p.innerHTML;
+        let inner = p.innerHTML;
+        // 직접적인 nbsp 제거 및 첫 공백 제거
+        inner = inner.replace(/^(?:\s|&nbsp;)+/, '');
+        
         // 마침표, 물음표, 느낌표 뒤에 공백이 있는 경우를 문장의 끝으로 간주
         const parts = inner.replace(/([.?!。？！])\s+/g, '$1\x00').split('\x00').filter(s => s.trim());
         
         if (parts.length > 3) {
             let newHtml = '';
             for (let i = 0; i < parts.length; i++) {
-                newHtml += parts[i] + ' ';
+                newHtml += parts[i].trim() + ' ';
                 // 3문장마다 새로운 문단으로 나눔
                 if ((i + 1) % 3 === 0 && i !== parts.length - 1) {
                     newHtml += '</p><p>';
                 }
             }
             p.outerHTML = `<p>${newHtml.trim()}</p>`;
+        } else {
+            p.innerHTML = inner.trim();
         }
     });
     return doc.body.innerHTML;
@@ -144,7 +165,7 @@ async function measureAndResplitPages(rawPages) {
     try { await document.fonts.ready; } catch (_) {}
 
     const isPC = window.innerWidth > 600;
-    
+
     // 모바일은 전체화면 기준, PC는 HTMLFlipBook 사이즈(400x600) 기준
     const bodyH = isPC ? 600 - 170 : window.innerHeight - 170;
     const bodyW = isPC ? 400 - 40  : window.innerWidth - 40;
@@ -155,7 +176,7 @@ async function measureAndResplitPages(rawPages) {
 
     const sty = document.createElement('style');
     sty.id = '__ebk_s__';
-    sty.textContent = `#__ebk_m__ p{margin-bottom:1.35em;margin-top:0;text-indent:0.4em;} #__ebk_m__ h1{font-size:1em;padding:1.2em 0.5em;margin:0 0 1.5em;font-weight:800;} #__ebk_m__ h2{font-size:1.15em;margin:1.5em 0 0.8em;font-weight:600;} #__ebk_m__ h3{font-size:1.1em;margin:1.2em 0 0.4em;} #__ebk_m__ blockquote{margin:1.5em 0;padding:1.2em 1.2em 1.2em 1.8em;} #__ebk_m__ blockquote p{font-size:0.95em;margin-bottom:0;text-indent:0;}`;
+    sty.textContent = `#__ebk_m__ p{margin-bottom:1.35em;margin-top:0;text-indent:0.4em;} #__ebk_m__ h1{font-size:1em;padding:1.2em 0.5em;margin:0 0 1.5em;font-weight:800;} #__ebk_m__ h2{font-size:1.15em;margin:1.5em 0 0.8em;font-weight:600;} #__ebk_m__ h3{font-size:1.1em;margin:1.2em 0 0.4em;} #__ebk_m__ blockquote{margin:1.5em 0;padding:1.2em 1.2em 1.2em 1.8em;} #__ebk_m__ blockquote p{font-size:0.95em;margin-bottom:0;text-indent:0;} #__ebk_m__ .ebook-quote{text-align:center;padding:1.4em 1em;margin:1.5em 0;border-left:none;border-top:1px solid rgba(255,255,255,0.15);border-bottom:1px solid rgba(255,255,255,0.15);} #__ebk_m__ .ebook-quote p{font-size:1em;font-style:italic;text-indent:0;margin-bottom:0.5em;} #__ebk_m__ .ebook-quote cite{display:block;font-size:0.8em;opacity:0.6;font-style:normal;}`;
 
     document.head.appendChild(sty);
     document.body.appendChild(div);
@@ -366,17 +387,118 @@ const Avatar = ({ role }) => {
     );
 };
 
+const BookCoverImage = ({ book, className, alt, isBackground = false, children, style = {} }) => {
+    // 1순위: 커버 링크 (외부 링크 리스트), 2순위: 로컬 링크
+    const [currentIdx, setCurrentIdx] = useState(0);
+
+    const sources = useMemo(() => {
+        if (!book) return [];
+        const srcs = [];
+        
+        // 1. 커버 링크 명시적 프로퍼티 확인
+        if (book.coverUrl && String(book.coverUrl).startsWith('http')) srcs.push(book.coverUrl);
+        if (book.coverLink && String(book.coverLink).startsWith('http')) srcs.push(book.coverLink);
+        // 2. 현재 cover 프로퍼티가 http로 시작하는 경우 (외부 링크)
+        if (book.cover && String(book.cover).startsWith('http')) srcs.push(book.cover);
+        
+        // 3. 로컬 경로 형태인 경우
+        if (book.cover && !String(book.cover).startsWith('http')) srcs.push(book.cover);
+        
+        // 4. 마지막 폴백 로컬 링크 (id 기반)
+        if (book.id) srcs.push(`/images/covers/${book.id}.jpg`);
+        if (book.id) srcs.push(`/images/covers/${book.id}.png`);
+        
+        // 중복 제거
+        return [...new Set(srcs)];
+    }, [book]);
+
+    const handleError = () => {
+        if (currentIdx < sources.length - 1) {
+            setCurrentIdx(currentIdx + 1);
+        }
+    };
+
+    if (!sources.length || currentIdx >= sources.length) {
+        if (isBackground) {
+            return <div className={className} style={{ ...style, backgroundColor: '#333' }}>{children}</div>;
+        }
+        return (
+            <div className={`flex items-center justify-center bg-slate-800 ${className || ''}`} style={style}>
+                <span className="material-symbols-outlined text-4xl text-white/20">menu_book</span>
+            </div>
+        );
+    }
+
+    if (isBackground) {
+        return (
+            <>
+                <img 
+                    src={sources[currentIdx]} 
+                    onError={handleError} 
+                    style={{ display: 'none' }} 
+                    alt="hidden-preload" 
+                />
+                <div 
+                    className={className} 
+                    style={{ 
+                        ...style,
+                        backgroundImage: `url(${sources[currentIdx]})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                >
+                    {children}
+                </div>
+            </>
+        );
+    }
+
+    return (
+        <img
+            src={sources[currentIdx]}
+            alt={alt || book?.title}
+            className={className}
+            onError={handleError}
+            loading="lazy"
+            style={style}
+        />
+    );
+};
+
+// 모바일 플립북 가용 높이 계산 (탭바 + 탑바 + safe-area 제외)
+function getMobileFlipbookHeight() {
+    if (window.innerWidth > 600) return 740;
+    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top')) || 0;
+    const safeBot = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom')) || 0;
+    return Math.max(400, window.innerHeight - 96 - safeTop - safeBot);
+}
+
 export default function ReviewDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const reviewFlipBook = useRef(null);
     const ebookFlipBook = useRef(null);
+    const [flipbookH] = useState(() => getMobileFlipbookHeight());
 
     const [pageIdx, setPageIdx] = useState(0);
     const [showUI, setShowUI] = useState(true);
-    const { user } = useAuth();
-    const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3 } = useAudio();
+    const { user, hasAccess, trialDaysLeft } = useAuth();
+    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [cardLoading, setCardLoading] = useState(false);
+    const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3, updatePodcastCover } = useAudio();
+    // currentTime, duration: 싱크 제거됐으나 seekPodcastMP3/진행바에서 사용
+
+    const [firestoreCoverUrl, setFirestoreCoverUrl] = useState(null);
+
+    // 파이어스토어 표지가 로드되면 미니플레이어 커버 즉시 업데이트
+    useEffect(() => {
+        if (firestoreCoverUrl && id) {
+            updatePodcastCover(id, firestoreCoverUrl);
+        }
+    }, [firestoreCoverUrl, id, updatePodcastCover]);
 
     const book = useMemo(() => {
         if (!celebrities) return null;
@@ -392,12 +514,13 @@ export default function ReviewDetail() {
                     ...b,
                     id: validId,
                     isPodcast: b.isPodcast || hasAudioFile,
-                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null)
+                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null),
+                    coverUrl: firestoreCoverUrl || b.coverUrl
                 };
             }
         }
         return null;
-    }, [id]);
+    }, [id, firestoreCoverUrl]);
 
     const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
     const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
@@ -432,7 +555,7 @@ export default function ReviewDetail() {
                 window.scrollTo(0, 1);
             }, 100);
         };
-        
+
         if (document.readyState === 'complete') {
             hideAddressBar();
         } else {
@@ -507,7 +630,7 @@ export default function ReviewDetail() {
             // podcast 탭으로 URL 진입 시 자동 재생
             if (tab === 'podcast' && book && podcastSrc) {
                 if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                    playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+                    playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
                 }
             }
         } else if (book && !hasReview) {
@@ -527,18 +650,21 @@ export default function ReviewDetail() {
         // Firestore 대본 항상 조회 (로컬보다 우선)
         getDoc(doc(db, 'scripts', id)).then(snap => {
             if (snap.exists()) {
-                setFirestoreScript((snap.data().lines || []).map(l => ({
-                    role: l.speaker === '스텔라' ? 'B' : 'A',
+                const d = snap.data();
+                const lines = d.script || [];
+                setFirestoreScript(lines.map(l => ({
+                    role: (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
                     text: l.text
                 })));
             }
         }).catch(() => { });
-        // 성우 MP3 / 오디오 URL / isPodcast Firestore 오버라이드 조회
+        // 성우 MP3 / 오디오 URL / isPodcast / Cover URL Firestore 오버라이드 조회
         getDoc(doc(db, 'book_overrides', id)).then(snap => {
             if (snap.exists()) {
                 const d = snap.data();
                 setFirestoreAudioUrl(d.voiceAudioUrl || d.audioUrl || null);
                 if (d.isPodcast) setFirestoreIsPodcast(true);
+                if (d.cover) setFirestoreCoverUrl(d.cover);
             }
         }).catch(() => { });
 
@@ -572,72 +698,43 @@ export default function ReviewDetail() {
         }).catch(() => { }).finally(() => setEbookLoading(false));
     }, [id]);
 
-    // 오디오 싱크: Firestore timestamps → public/timestamps/{id}.json 순서
     const bubbleRefs = useRef([]);
-    const [timestampData, setTimestampData] = useState(null);
 
+    // 수동 타임스탬프 (Firestore timestamps/{id}) 로드 + mode
+    const [timestampSegments, setTimestampSegments] = useState(null);
+    const [syncMode, setSyncMode] = useState(false);
     useEffect(() => {
         if (!id) return;
-        // 1순위: Firestore timestamps 컬렉션
-        getDoc(doc(db, 'timestamps', id))
-            .then(snap => {
-                if (snap.exists() && snap.data().segments?.length > 0) {
-                    setTimestampData(snap.data());
-                } else {
-                    // 2순위: 로컬 JSON 파일
-                    return fetch(`/timestamps/${id}.json`)
-                        .then(r => r.ok ? r.json() : null)
-                        .then(data => setTimestampData(data));
-                }
-            })
-            .catch(() =>
-                fetch(`/timestamps/${id}.json`)
-                    .then(r => r.ok ? r.json() : null)
-                    .then(data => setTimestampData(data))
-                    .catch(() => setTimestampData(null))
-            );
+        getDoc(doc(db, 'timestamps', id)).then(snap => {
+            if (snap.exists() && snap.data().segments?.length) {
+                setTimestampSegments(snap.data().segments);
+                setSyncMode(snap.data().mode === 'sync');
+            } else {
+                setTimestampSegments(null);
+                setSyncMode(false);
+            }
+        }).catch(() => { setTimestampSegments(null); setSyncMode(false); });
     }, [id]);
 
-    // 각 턴의 시작 시간 계산 (timestamps JSON → 글자 수 비율 추정 순서로 fallback)
-    const turnStartTimes = useMemo(() => {
-        if (script.length === 0) return [];
-        // 1순위: public/timestamps/{id}.json — 턴수가 일치할 때만 사용
-        if (timestampData?.segments?.length === script.length) {
-            return timestampData.segments.map(s => s.start ?? 0);
-        }
-        // 2순위: script turn에 time 필드
-        if (script[0]?.time !== undefined) {
-            return script.map(turn => turn.time);
-        }
-        // 3순위: 글자 수 비율 추정 (현재 로드된 script 기준)
-        if (!duration) return [];
-        const totalChars = script.reduce((sum, t) => sum + t.text.length, 0);
-        let acc = 0;
-        return script.map(turn => {
-            const start = (acc / totalChars) * duration;
-            acc += turn.text.length;
-            return start;
-        });
-    }, [script, duration, timestampData]);
+    const hasSyncData = !!(timestampSegments && script.length && timestampSegments.length === script.length);
 
+    // currentTime 기반 activeTurnIndex — 싱크 모드 + 타임스탬프 있을 때만 활성
     const activeTurnIndex = useMemo(() => {
-        if (!duration || !isThisPodcastActive || turnStartTimes.length === 0) return -1;
-        let idx = 0;
-        for (let i = 0; i < turnStartTimes.length; i++) {
-            if (currentTime >= turnStartTimes[i]) idx = i;
+        if (!syncMode || !hasSyncData) return -1;
+        let idx = -1;
+        for (let i = 0; i < timestampSegments.length; i++) {
+            if (currentTime >= timestampSegments[i].start) idx = i;
             else break;
         }
         return idx;
-    }, [currentTime, duration, turnStartTimes, isThisPodcastActive]);
+    }, [syncMode, hasSyncData, timestampSegments, currentTime]);
 
+    // 활성 말풍선 자동 스크롤 (싱크 모드일 때만)
     useEffect(() => {
-        if (activeTurnIndex >= 0 && bubbleRefs.current[activeTurnIndex]) {
-            bubbleRefs.current[activeTurnIndex].scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-            });
-        }
-    }, [activeTurnIndex]);
+        if (!syncMode || activeTurnIndex < 0) return;
+        const el = bubbleRefs.current[activeTurnIndex];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [syncMode, activeTurnIndex]);
 
     // 타이머 비활성화 (버튼 고정 요청)
     const resetHideTimer = useCallback(() => {
@@ -677,7 +774,7 @@ export default function ReviewDetail() {
     }
 
     const handlePodcastClick = () => {
-        playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+        playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
     };
 
     const formatTime = (sec) => {
@@ -690,29 +787,67 @@ export default function ReviewDetail() {
     const handleKakaoShare = useCallback(() => {
         if (!window.Kakao) return;
         if (!window.Kakao.isInitialized()) {
-            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
-        window.Kakao.Link.sendDefault({
+        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        const shareImage = book.cover?.startsWith('http')
+            ? book.cover
+            : `https://archiview.store${book.cover}`;
+        window.Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
                 title: `[아카이뷰] ${book.title}`,
                 description: book.desc || '아카이뷰의 정밀 도서 리뷰',
-                imageUrl: `https://the-archive.web.app${book.cover}`,
+                imageUrl: shareImage,
                 link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
+                    mobileWebUrl: shareUrl,
+                    webUrl: shareUrl,
                 },
             },
             buttons: [
                 {
                     title: '리뷰 보기',
                     link: {
-                        mobileWebUrl: window.location.href,
-                        webUrl: window.location.href,
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
                     },
                 },
             ],
         });
+        setShowShareMenu(false);
+    }, [book]);
+
+    const handleInstagramShare = useCallback(() => {
+        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        if (navigator.share) {
+            navigator.share({
+                title: `[아카이뷰] ${book.title}`,
+                text: `『${book.title}』 - 아카이뷰에서 읽어보세요!`,
+                url: shareUrl,
+            }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(shareUrl).then(() => alert('링크 복사됨! 인스타그램에 붙여넣기 하세요.'));
+        }
+        setShowShareMenu(false);
+    }, [book]);
+
+    const handleCopyLink = useCallback(() => {
+        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        navigator.clipboard.writeText(shareUrl).then(() => alert('링크 복사됨!'));
+        setShowShareMenu(false);
+    }, [book]);
+
+    const handleCardShare = useCallback(async () => {
+        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        setShowShareMenu(false);
+        setCardLoading(true);
+        try {
+            await shareCard(book, shareUrl);
+        } catch {
+            alert('카드 생성 실패. 다시 시도해주세요.');
+        } finally {
+            setCardLoading(false);
+        }
     }, [book]);
 
     // ── Insight Chat 핸들러 ─────────────────────────────────
@@ -770,7 +905,20 @@ ${scriptContext}
         }
     }, [chatMessages]);
 
+    const ogImage = book.cover?.startsWith('http') ? book.cover : `https://archiview.store${book.cover}`;
+
     return (
+        <>
+        <Helmet>
+            <title>{book.title} - ARCHIVIEW</title>
+            <meta property="og:title" content={`[아카이뷰] ${book.title}`} />
+            <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
+            <meta property="og:image" content={ogImage} />
+            <meta property="og:url" content={`https://archiview.store/review/${encodeURIComponent(book.id)}`} />
+            <meta property="og:type" content="article" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:image" content={ogImage} />
+        </Helmet>
         <div
             className={`rv-root ${activeTab === 'podcast' ? 'podcast-view' : ''}`}
             style={{ background: '#0d0b08' }}
@@ -778,17 +926,81 @@ ${scriptContext}
         >
             {/* ── Top Bar ── */}
             <div className={`rv-topbar ${showUI ? 'visible' : 'hidden'}`}>
-                <button className="rv-close-btn" onClick={() => navigate(-1)}>
+                <button className="rv-close-btn" onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}>
                     <span className="material-symbols-outlined">close</span>
                 </button>
                 <div className="rv-topbar-title-wrap">
                     <span className="rv-topbar-title">{book.title}</span>
                     <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
                 </div>
-                <button className="rv-close-btn" onClick={() => navigate('/')}>
-                    <span className="material-symbols-outlined">home</span>
-                </button>
+                <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
+                    <button className="rv-close-btn" onClick={() => setShowShareMenu(v => !v)} title="공유">
+                        <span className="material-symbols-outlined">ios_share</span>
+                    </button>
+                    <button className="rv-close-btn" onClick={() => navigate('/')}>
+                        <span className="material-symbols-outlined">home</span>
+                    </button>
+                </div>
             </div>
+
+            {/* ── Share Menu ── */}
+            {showShareMenu && (
+                <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 997 }}
+                    onClick={() => setShowShareMenu(false)}
+                >
+                    <div
+                        style={{
+                            position: 'absolute', top: '52px', right: '44px',
+                            background: '#1c1f2e', border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '16px', padding: '6px', minWidth: '170px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                            display: 'flex', flexDirection: 'column', gap: '2px',
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={handleCardShare}
+                            disabled={cardLoading}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: cardLoading ? 'rgba(212,175,55,0.08)' : 'none', border: 'none', color: '#d4af37', cursor: cardLoading ? 'not-allowed' : 'pointer', borderRadius: '10px', fontSize: '14px', textAlign: 'left', fontWeight: 'bold' }}
+                            onMouseOver={e => { if (!cardLoading) e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; }}
+                            onMouseOut={e => { if (!cardLoading) e.currentTarget.style.background = 'none'; }}
+                        >
+                            <span className={`material-symbols-outlined ${cardLoading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}>
+                                {cardLoading ? 'progress_activity' : 'photo_camera'}
+                            </span>
+                            {cardLoading ? '카드 생성 중...' : '이미지 카드 공유'}
+                        </button>
+                        <button
+                            onClick={handleKakaoShare}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '10px', fontSize: '14px', textAlign: 'left' }}
+                            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                            <span style={{ fontSize: '18px' }}>💬</span>
+                            카카오톡 공유
+                        </button>
+                        <button
+                            onClick={handleInstagramShare}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '10px', fontSize: '14px', textAlign: 'left' }}
+                            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                            <span style={{ fontSize: '18px' }}>📸</span>
+                            공유하기
+                        </button>
+                        <button
+                            onClick={handleCopyLink}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '10px', fontSize: '14px', textAlign: 'left' }}
+                            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
+                            링크 복사
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ── Tab Bar ── */}
             <div className={`rv-tab-bar ${showUI ? 'visible' : 'hidden'}`}>
@@ -799,13 +1011,13 @@ ${scriptContext}
                     이북보기
                 </button>
 
-                {hasScript && isPodcast && (
+                {isPodcast && (
                     <button
                         className={`rv-tab ${activeTab === 'podcast' ? 'active' : ''}`}
                         onClick={() => {
                             setActiveTab('podcast');
                             if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                                playPodcastMP3(podcastSrc, book.title, book.cover, book.id);
+                                playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
                             }
                         }}
                     >
@@ -813,12 +1025,14 @@ ${scriptContext}
                     </button>
                 )}
 
+                {/* 인사이트 챗 탭 비활성화
                 <button
                     className={`rv-tab ${activeTab === 'chat' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chat')}
                 >
                     인사이트 챗
                 </button>
+                */}
             </div>
 
             {/* ── Stage (FlipBook Container) ── */}
@@ -834,12 +1048,12 @@ ${scriptContext}
                             key={`flipbook-${hasEbook ? 'ebook' : 'review'}`}
                             ref={hasEbook ? ebookFlipBook : reviewFlipBook}
                             width={window.innerWidth > 600 ? 520 : window.innerWidth}
-                            height={window.innerWidth > 600 ? 740 : window.innerHeight}
+                            height={flipbookH}
                             size="fixed"
                             minWidth={280}
                             maxWidth={window.innerWidth > 600 ? 520 : window.innerWidth}
                             minHeight={400}
-                            maxHeight={window.innerWidth > 600 ? 740 : window.innerHeight}
+                            maxHeight={flipbookH}
                             maxShadowOpacity={0.4}
                             showCover={!hasEbook}
                             usePortrait={true}
@@ -857,9 +1071,9 @@ ${scriptContext}
                                     <EbookPage key="ebook-cover" className="rv-ebook-cover-page">
                                         <div className="rv-ebook-cover-inner">
                                             <div className="rv-ebook-glow"></div>
-                                            <div className="rv-ebook-cover-frame" style={{ backgroundImage: `url(${book.cover})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+                                            <BookCoverImage book={book} className="rv-ebook-cover-frame" isBackground={true}>
                                                 <div className="rv-ebook-cover-shadow"></div>
-                                            </div>
+                                            </BookCoverImage>
                                             <h1 className="rv-ebook-title">{book.title}</h1>
                                             <div className="rv-ebook-author-box">
                                                 <p className="rv-ebook-author">{book.author}</p>
@@ -871,23 +1085,19 @@ ${scriptContext}
                                     </EbookPage>,
                                     ...ebookPages.map((pageHtml, i) => (
                                         <EbookPage key={`ebook-p-${i}`} className="rv-ebook-content-page">
-                                            <div className="rv-ebook-page-header">
-                                                <span className="rv-ebook-chapter-label">INSIGHT ESSAY</span>
-                                                <span className="rv-ebook-brand">ARCHIVIEW</span>
-                                            </div>
+
                                             <div className="rv-ebook-body-container">
-                                                {i === 0 && book.cover && (
+                                                {i === 0 && (
                                                     <div className="rv-ebook-page-cover-thumb">
-                                                        <img src={book.cover} alt={book.title} />
+                                                        <BookCoverImage book={book} alt={book.title} />
                                                     </div>
                                                 )}
                                                 <div
                                                     className="rv-ebook-body-html"
-                                                    dangerouslySetInnerHTML={{ __html: pageHtml }}
+                                                    dangerouslySetInnerHTML={{ 
+                                                        __html: pageHtml.replace(/(<blockquote>.*?<p>)\s*["“”](.*?)\s*["“”](\s*<\/p>)/gs, '$1$2$3') 
+                                                    }}
                                                 />
-                                            </div>
-                                            <div className="rv-ebook-page-footer">
-                                                <span className="rv-ebook-page-number">— {i + 1} —</span>
                                             </div>
                                         </EbookPage>
                                     )),
@@ -934,7 +1144,7 @@ ${scriptContext}
                                             <div className="rv-frame-outer">
                                                 <div className="rv-frame-inner">
                                                     <div className="rv-cover-img">
-                                                        <img src={book.cover} alt={book.title} loading="lazy" />
+                                                        <BookCoverImage book={book} alt={book.title} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -977,7 +1187,7 @@ ${scriptContext}
                                                     <div className="rv-biblio-body">
                                                         <div className="rv-biblio-card">
                                                             <div className="rv-biblio-cover">
-                                                                <img src={book.cover} alt={p.body.title} />
+                                                                <BookCoverImage book={book} alt={p.body.title} />
                                                             </div>
                                                             <div className="rv-biblio-info">
                                                                 <h3>{p.body.title}</h3>
@@ -996,9 +1206,6 @@ ${scriptContext}
                                                         ))}
                                                     </div>
                                                 )}
-                                                <div className="rv-page-footer">
-                                                    — {i + 1} —
-                                                </div>
                                             </div>
                                         </Page>
                                     )),
@@ -1042,7 +1249,31 @@ ${scriptContext}
             ) : activeTab === 'podcast' ? (
                 <div className="rv-podcast-stage">
                     {/* ── Chat View ── */}
-                    <div className="rv-chat-container">
+                    <div className={`rv-chat-container${(syncMode && hasSyncData) ? ' sync-active' : ''}`}>
+                        {script.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(212,175,55,0.7)' }}>
+                                <div style={{ fontSize: 40, marginBottom: 12 }}>🎙️</div>
+                                <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.5)' }}>
+                                    대본을 불러오는 중이에요.<br />잠시 후 다시 시도해주세요.
+                                </p>
+                                {isPodcast && (
+                                    <button
+                                        onClick={() => {
+                                            if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
+                                                playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
+                                            }
+                                        }}
+                                        style={{
+                                            marginTop: 20, padding: '10px 24px',
+                                            background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.4)',
+                                            borderRadius: 24, color: '#d4af37', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                                        }}
+                                    >
+                                        🎧 오디오만 재생하기
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         {script.map((turn, i) => (
                             <div
                                 key={i}
@@ -1165,7 +1396,15 @@ ${scriptContext}
                     </div>
                 </div>
             )}
+
+            {showSubscriptionModal && (
+                <SubscriptionModal
+                    onClose={() => setShowSubscriptionModal(false)}
+                    trialDaysLeft={trialDaysLeft}
+                />
+            )}
         </div>
+        </>
     );
 }
 // ── Ebook Page Component ──

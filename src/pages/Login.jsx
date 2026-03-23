@@ -50,14 +50,22 @@ export default function Login() {
                 // Save/Update user profile in Firestore
                 try {
                     const { db } = await import('../firebase');
-                    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-                    await setDoc(doc(db, "users", user.uid), {
+                    const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+                    const userRef = doc(db, "users", user.uid);
+                    const snap = await getDoc(userRef);
+                    const updates = {
                         displayName: user.displayName,
                         email: user.email,
                         photoURL: user.photoURL,
                         lastLogin: serverTimestamp(),
-                        status: '활동중' // Default status
-                    }, { merge: true });
+                        status: '활동중',
+                    };
+                    // 첫 로그인인 경우에만 trialStartDate 설정
+                    if (!snap.exists() || !snap.data().trialStartDate) {
+                        updates.trialStartDate = serverTimestamp();
+                        updates.isPremium = false;
+                    }
+                    await setDoc(userRef, updates, { merge: true });
                 } catch (error) {
                     console.error("Error updating user profile:", error);
                 }
@@ -79,13 +87,20 @@ export default function Login() {
 
             // Sync with Firestore
             const { db } = await import('../firebase');
-            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-            await setDoc(doc(db, "users", user.uid), {
+            const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+            const updates = {
                 displayName: user.displayName,
                 email: user.email,
                 photoURL: user.photoURL,
                 lastLogin: serverTimestamp(),
-            }, { merge: true });
+            };
+            if (!snap.exists() || !snap.data().trialStartDate) {
+                updates.trialStartDate = serverTimestamp();
+                updates.isPremium = false;
+            }
+            await setDoc(userRef, updates, { merge: true });
 
             navigate('/profile', { replace: true });
         } catch (error) {
@@ -107,7 +122,7 @@ export default function Login() {
     const handleKakaoLogin = () => {
         if (!window.Kakao) return;
         if (!window.Kakao.isInitialized()) {
-            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
         window.Kakao.Auth.login({
             success: function(authObj) {
@@ -145,15 +160,6 @@ export default function Login() {
                         
                         {/* PC: Show Google Button, Hide Mobile Button */}
                         <div ref={googleBtnRef} className="hidden md:flex w-full justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
-
-                        {/* Kakao Login Button */}
-                        <button
-                            onClick={handleKakaoLogin}
-                            className="w-full py-3.5 px-6 bg-[#FEE500] text-[#3c1e1e] font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3"
-                        >
-                            <span className="material-symbols-outlined">chat_bubble</span>
-                            카카오톡으로 로그인
-                        </button>
 
                         {/* Mobile Google Button */}
                         <button

@@ -83,17 +83,20 @@
 
 
 .rv-topbar-title-wrap {
-    flex: 1;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 0 10px;
+    max-width: calc(100% - 160px);
+    pointer-events: none;
 }
 
 .rv-topbar-title {
-    font-size: 15px;
+    font-size: 12px;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
     overflow: hidden;
@@ -104,7 +107,7 @@
 }
 
 .rv-topbar-count {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     color: rgba(200, 168, 112, 0.7);
     letter-spacing: 0.5px;
@@ -136,7 +139,7 @@
 }
 
 .rv-podcast-label {
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: -0.2px;
 }
@@ -229,7 +232,7 @@
     }
 
     .rv-book-container {
-        width: 100vw;
+        width: 100%;
         max-width: none;
         height: 100dvh;
         max-height: none;
@@ -1312,26 +1315,19 @@
     transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
 }
 
-/* 현재 재생 중인 말풍선 하이라이트 */
-.rv-chat-bubble.james.active {
-    background: #5a5aff;
-    box-shadow: 0 0 0 2px rgba(90, 90, 255, 0.4), 0 4px 16px rgba(90, 90, 255, 0.3);
-    transform: scale(1.02);
+/* 수동 타임스탬프 싱크 — timestamps 있을 때만 적용 */
+.sync-active .rv-chat-row {
+    opacity: 0.5;
+    transition: opacity 0.35s ease;
 }
-
-.rv-chat-bubble.stella.active {
-    background: #ffe500;
-    box-shadow: 0 0 0 2px rgba(255, 229, 0, 0.5), 0 4px 16px rgba(255, 180, 0, 0.35);
-    transform: scale(1.02);
-}
-
-/* 비활성 말풍선은 살짝 흐리게 */
-.rv-chat-row:not(.active) .rv-chat-bubble {
-    opacity: 0.55;
-}
-
-.rv-chat-row.active .rv-chat-bubble {
+.sync-active .rv-chat-row.active {
     opacity: 1;
+}
+.sync-active .rv-chat-bubble.james.active {
+    box-shadow: -3px 0 0 #f97316;
+}
+.sync-active .rv-chat-bubble.stella.active {
+    box-shadow: 3px 0 0 #f97316;
 }
 
 /* ── Mobile Chat Adjustments ── */
@@ -2154,15 +2150,27 @@
 }
 
 .rv-ebook-body-html h2 {
+    position: relative;
     font-size: 1.25em;
     font-weight: 600;
     color: #e0d8cc;
     margin: 1.5em 0 0.8em;
     line-height: 1.5;
     font-family: 'Noto Serif KR', serif;
-    padding-left: 0.8em;
-    border-left: 2.5px solid #c8a870;
+    padding-left: 0.8rem;
     letter-spacing: 0.2px;
+}
+
+.rv-ebook-body-html h2::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: calc(100% - 0.4em);
+    width: 3.5px;
+    background-color: #c8a870;
+    border-radius: 2px;
 }
 
 .rv-ebook-body-html h3 {
@@ -2176,10 +2184,10 @@
 
 .rv-ebook-body-html p {
     margin-bottom: 1.35em;
-    text-align: justify;
+    text-align: left;
     word-break: keep-all;
     color: #e6e1d6;
-    text-indent: 0.4em;
+    text-indent: 0;
 }
 
 .rv-ebook-body-html b, .rv-ebook-body-html strong {
@@ -2223,26 +2231,34 @@
 /* Blockquote (인용구) */
 .rv-ebook-body-html blockquote {
     position: relative;
-    text-align: left;
+    text-align: center;
     margin: 1.8rem 0;
-    padding: 1.4rem 1.4rem 1.4rem 2rem;
+    padding: 1.4rem 1.4rem 1.4rem 1.4rem;
     background: rgba(20, 18, 15, 0.4);
-    border-left: 3px solid #c8a870;
-    border-radius: 0 6px 6px 0;
+    border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.rv-ebook-body-html blockquote::before {
+.rv-ebook-body-html blockquote p::before {
     content: '\201C';
     font-family: 'Playfair Display', 'Georgia', serif;
-    font-size: 4.5rem;
+    font-size: 2.5rem;
     color: #c8a870;
-    opacity: 0.22;
-    position: absolute;
-    top: -1rem;
-    left: 0.6rem;
-    line-height: 1;
-    pointer-events: none;
+    opacity: 0.5;
+    line-height: 0;
+    vertical-align: -0.2em;
+    margin-right: 0.2rem;
+}
+
+.rv-ebook-body-html blockquote p::after {
+    content: '\201D';
+    font-family: 'Playfair Display', 'Georgia', serif;
+    font-size: 2.5rem;
+    color: #c8a870;
+    opacity: 0.5;
+    line-height: 0;
+    vertical-align: -0.2em;
+    margin-left: 0.1rem;
 }
 
 .rv-ebook-body-html blockquote p {
@@ -2272,6 +2288,10 @@
 
 .rv-ebook-body-html blockquote cite::before {
     content: '— ';
+}
+
+.rv-ebook-body-html blockquote cite::after {
+    content: ' —';
 }
 
 .rv-ebook-page-footer {
@@ -2861,7 +2881,7 @@
     }
 
     .rv-topbar-title {
-        font-size: 14px !important;
+        font-size: 11px !important;
     }
 
     .rv-close-btn {
@@ -2887,8 +2907,9 @@
     }
 
     /* ── 이북 스테이지: 탭바 아래부터 화면 끝까지 꽉 채움 ── */
+    /* 탭바 bottom = 52px + safe-area-top + 44px(높이) = 96px + safe-area-top */
     .rv-stage {
-        padding: 96px 0 env(safe-area-inset-bottom, 0px) !important;
+        padding: calc(96px + env(safe-area-inset-top, 0px)) 0 env(safe-area-inset-bottom, 0px) !important;
         background: #0d0b08 !important;
         align-items: stretch !important;
         justify-content: center !important;
@@ -2909,12 +2930,7 @@
 
     /* ── 오버레이 화살표 모바일 위치 ── */
     .rv-overlay-btn {
-        top: 96px !important;
-        bottom: env(safe-area-inset-bottom, 0px) !important;
-        width: 44px !important;
-    }
-    .rv-overlay-btn .material-symbols-outlined {
-        font-size: 30px !important;
+        display: none !important;
     }
 
     /* ── 이북 페이지 내부 ── */
@@ -2924,51 +2940,79 @@
 
     .rv-ebook-body-html {
         font-size: 20px !important;
-        line-height: 1.75 !important;
+        line-height: 1.8 !important;
         padding-bottom: 0 !important;
-        letter-spacing: -0.2px !important;
+        letter-spacing: -0.3px !important;
     }
 
     .rv-ebook-body-html p {
         text-align: left !important;
-        margin-bottom: 1.35em !important;
-        word-break: break-word !important;
-        overflow-wrap: anywhere !important;
-        text-indent: 0.4em !important;
+        margin-bottom: 1.5em !important;
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+        text-indent: 0 !important;
     }
 
     .rv-ebook-body-html h1 {
-        font-size: 1em !important;
-        margin: 0 0 1.5em !important;
-        padding: 1.2em 0.5em !important;
+        font-size: 1.15em !important;
+        margin: 0 0 1.6em !important;
+        padding: 1.4em 0.5em !important;
         font-weight: 800 !important;
-        background: rgba(200, 168, 112, 0.03) !important;
-        border-top: 1px solid rgba(200,168,112,0.25) !important;
-        border-bottom: 1px solid rgba(200,168,112,0.25) !important;
+        background: rgba(200, 168, 112, 0.04) !important;
+        border-top: 1px solid rgba(200,168,112,0.3) !important;
+        border-bottom: 1px solid rgba(200,168,112,0.3) !important;
     }
 
     .rv-ebook-body-html h2 {
-        font-size: 1.15em !important;
-        margin: 1.5em 0 0.8em !important;
+        font-size: 1.25em !important;
+        margin: 2.2em 0 1em !important;
+        padding-left: 0.8em !important;
+        line-height: 1.4 !important;
+    }
+    
+    .rv-ebook-body-html h2::before {
+        width: 4px !important;
     }
 
     .rv-ebook-body-html blockquote {
-        margin: 1.5em 0 !important;
-        padding: 1.2em 1.2em 1.2em 1.8em !important;
-        background: rgba(20, 18, 15, 0.4) !important;
-        border-left: 3px solid #c8a870 !important;
-        border-top: none !important;
-        border-bottom: none !important;
+        margin: 2.2em 0 !important;
+        padding: 1.6em 1.2em !important;
+        background: rgba(30, 28, 26, 0.4) !important;
+        border: 1px solid rgba(200, 168, 112, 0.15) !important;
+        border-radius: 12px !important;
     }
 
     .rv-ebook-body-html blockquote p {
         font-size: 0.95em !important;
         text-indent: 0 !important;
+        text-align: center !important;
+        margin-bottom: 0 !important;
+        line-height: 1.7 !important;
+    }
+
+    .rv-ebook-body-html blockquote p::before,
+    .rv-ebook-body-html blockquote p::after {
+        font-size: 1.8rem !important;
+        opacity: 0.4 !important;
+        display: inline-block !important;
+        vertical-align: -0.2em !important;
+        line-height: 0 !important;
+        color: #c8a870 !important;
+    }
+
+    .rv-ebook-body-html blockquote p::before {
+        content: '\201C' !important;
+        margin-right: 0.35rem !important;
+    }
+    
+    .rv-ebook-body-html blockquote p::after {
+        content: '\201D' !important;
+        margin-left: 0.35rem !important;
     }
 
     .rv-ebook-page-header {
-        margin-bottom: 14px !important;
-        padding-bottom: 6px !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 8px !important;
     }
 
     .rv-ebook-chapter-label,

@@ -58,6 +58,7 @@ const ReviewDetail  = lazyWithRetry(() => import('./pages/ReviewDetail'));
 const ReadingNotes  = lazyWithRetry(() => import('./pages/ReadingNotes'));
 const Membership    = lazyWithRetry(() => import('./pages/Membership'));
 const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
+const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
 
 // 페이지 로딩 스피너
 const PageLoader = () => (
@@ -70,7 +71,7 @@ const PageLoader = () => (
 );
 
 const MobileLayout = ({ children }) => (
-  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative overflow-x-hidden flex flex-col">
+  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative flex flex-col">
     {children}
   </div>
 );
@@ -107,6 +108,7 @@ export default function App() {
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
                   <Route path="/review/:id" element={<MobileLayout><ReviewDetail /></MobileLayout>} />
+                  <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
                   <Route path="/reading-notes" element={<ProtectedRoute><MobileLayout><ReadingNotes /></MobileLayout></ProtectedRoute>} />
                 </Routes>
               </Suspense>
