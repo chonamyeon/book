@@ -11,6 +11,14 @@ export default function Membership() {
         alert('출퇴근길 자기계발 프로젝트, 아카이뷰 프리미엄이 곧 시작됩니다!');
     };
 
+    const handleKakaoChannel = () => {
+        if (!window.Kakao) return;
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
+        }
+        window.Kakao.Channel.followChannel({ channelPublicId: '_HssEX' });
+    };
+
     return (
         <div className="bg-[#0a0c10] min-h-screen pb-24 font-display text-slate-200 selection:bg-gold/30">
             <TopNavigation type="sub" title="Premium Pass" />
@@ -116,6 +124,13 @@ export default function Membership() {
                                 className="w-full py-5 bg-gold text-primary font-black rounded-none shadow-xl hover:brightness-110 active:scale-[0.98] transition-all text-sm"
                             >
                                 지금 바로 시작하기
+                            </button>
+                            <button
+                                onClick={handleKakaoChannel}
+                                className="w-full py-4 bg-[#FEE500] text-[#191919] font-black rounded-none flex items-center justify-center gap-3 hover:brightness-95 active:scale-[0.98] transition-all text-sm"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.477 2 2 5.805 2 10.5c0 3.027 1.86 5.687 4.686 7.25L5.5 22l4.688-2.6A11.6 11.6 0 0012 19c5.523 0 10-3.806 10-8.5S17.523 2 12 2z" fill="#191919"/></svg>
+                                카카오 채널 친구추가
                             </button>
                             <p className="text-center text-[9px] text-slate-600 uppercase tracking-widest font-bold">커피 한 잔 값으로 당신의 인생을 투자하세요</p>
                         </div>

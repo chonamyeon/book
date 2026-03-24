@@ -55,7 +55,10 @@ export default function Celebrity() {
         allCelebBooks.map(book => ({
             ...book,
             _cleanDesc: cleanText(book.desc),
-            _cleanReview: cleanText(book.review) || cleanText(book.desc),
+            // review > description(Firestore) > desc 순서로 가장 긴 내용 사용
+            _cleanReview: [book.review, book.description, book.desc]
+                .map(t => cleanText(t))
+                .sort((a, b) => b.length - a.length)[0] || '',
         })),
     [allCelebBooks, cleanText]);
 
@@ -67,7 +70,7 @@ export default function Celebrity() {
     return (
         <div className="bg-white text-slate-900 dark:text-slate-100 antialiased font-display min-h-screen pb-24 flex justify-center">
             {/* Main Layout Container: Everything constrained to max-w-lg */}
-            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
+            <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-x-hidden border-t border-white/5" style={{ touchAction: 'pan-y' }}>
                 <TopNavigation title="에디토리얼 시리즈" type="sub" />
 
                 <main className="pb-24">
@@ -204,14 +207,16 @@ export default function Celebrity() {
                                                         <span className="material-symbols-outlined text-sm">edit_note</span>
                                                         Insight & Review
                                                     </h6>
-                                                    <button
-                                                        onClick={() => toggleReview(index)}
-                                                        className="px-4 py-2 rounded-none bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
-                                                    >
-                                                        {expandedReviews[index] ? '접기' : '전체보기'}
-                                                    </button>
+                                                    {book._cleanReview.length > 150 && (
+                                                        <button
+                                                            onClick={() => toggleReview(index)}
+                                                            className="px-4 py-2 rounded-none bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
+                                                        >
+                                                            {expandedReviews[index] ? '접기' : '열기'}
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-6'}`}>
+                                                <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-3'}`}>
                                                     {book._cleanReview}
                                                 </p>
                                             </div>

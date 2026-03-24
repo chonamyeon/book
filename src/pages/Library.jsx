@@ -64,7 +64,7 @@ export default function Library() {
     return (
         <div className="bg-[#101218] text-white font-sans antialiased min-h-screen flex justify-center selection:bg-orange-500/30">
             {/* Main Layout Container */}
-            <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-hidden">
+            <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
                 <TopNavigation type="sub" />
 
                 <main className="px-6 pt-6 pb-24 space-y-2 animate-fade-in flex-grow">

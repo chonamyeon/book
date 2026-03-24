@@ -1,13 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || "").trim();
+const apiKey = (import.meta.env.VITE_AISTUDIO_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || "").trim();
 if (!apiKey) {
-    console.warn("VITE_GEMINI_API_KEY is missing. AI features will not work.");
+    console.warn("VITE_AISTUDIO_API_KEY or VITE_GEMINI_API_KEY is missing. AI features will not work.");
 }
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-pro",
+    model: "gemini-1.5-pro",
     generationConfig: {
         maxOutputTokens: 2000,
         temperature: 0.7,

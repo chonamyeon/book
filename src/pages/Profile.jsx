@@ -26,6 +26,14 @@ export default function Profile() {
         }
     }, [user, loading, navigate]);
 
+    const handleKakaoChannel = () => {
+        if (!window.Kakao) return;
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
+        }
+        window.Kakao.Channel.followChannel({ channelPublicId: '_HssEX' });
+    };
+
     const handleLogout = async () => {
         if (window.confirm("로그아웃 하시겠습니까?")) {
             try {
@@ -199,6 +207,13 @@ export default function Profile() {
                                     <span className="material-symbols-outlined text-slate-400">settings</span>
                                     <span className="text-sm text-slate-200 font-medium">설정</span>
                                 </div>
+                            </button>
+                            <button onClick={handleKakaoChannel} className="w-full flex items-center justify-between p-4 hover:bg-[#FEE500]/10 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.477 2 2 5.805 2 10.5c0 3.027 1.86 5.687 4.686 7.25L5.5 22l4.688-2.6A11.6 11.6 0 0012 19c5.523 0 10-3.806 10-8.5S17.523 2 12 2z" fill="#FEE500"/></svg>
+                                    <span className="text-sm text-slate-200 font-medium">카카오 채널 친구추가</span>
+                                </div>
+                                <span className="text-[10px] text-[#FEE500] font-bold">알림 받기</span>
                             </button>
                             <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 hover:bg-red-500/10 transition-colors group text-red-400">
                                 <div className="flex items-center gap-4">

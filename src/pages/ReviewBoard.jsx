@@ -112,21 +112,19 @@ export default function ReviewBoard() {
                 style={{ scrollMarginTop: '80px' }}
             >
                 <Link to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`} className="block">
-                    <div className="flex gap-4 p-5 pb-3">
-                        <div className="w-[85px] h-[120px] shrink-0 border border-white/10 bg-black overflow-hidden relative">
-                            <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
-                             {/* Category badge */}
-                             {book.category && (
-                                <div className="absolute bottom-0 left-0 w-full bg-black/80 backdrop-blur-md text-[9px] font-black text-white text-center py-0.5">
-                                    {book.category}
+                    <div className="p-5 pb-3">
+                        <div className="flex flex-col pt-1">
+                            {book.category && (
+                                <div className="mb-2">
+                                    <span className="bg-white/10 text-[9px] font-black text-white px-2 py-0.5 rounded-sm">
+                                        {book.category}
+                                    </span>
                                 </div>
-                             )}
-                        </div>
-                        <div className="flex-1 flex flex-col justify-between pt-1">
+                            )}
                             <div>
-                                <h3 className="text-[17px] font-black text-white leading-snug mb-1 group-hover:text-indigo-400 transition-colors tracking-tight line-clamp-2">{book.title}</h3>
+                                <h3 className="text-[17px] font-black text-white leading-snug mb-1 group-hover:text-indigo-400 transition-colors tracking-tight">{book.title}</h3>
                                 <p className="text-[11px] text-gray-400 font-bold mb-2 truncate">{book.author}</p>
-                                <p className="text-[11px] text-gray-500 line-clamp-2 font-medium break-keep leading-tight">{book.desc}</p>
+                                <p className="text-[11px] text-gray-500 font-medium break-keep leading-tight">{book.desc}</p>
                             </div>
                         </div>
                     </div>

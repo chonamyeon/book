@@ -1212,6 +1212,8 @@
     scroll-behavior: smooth;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
 }
 
 .rv-chat-container::-webkit-scrollbar {
@@ -1293,10 +1295,12 @@
 .rv-chat-bubble {
     padding: 10px 14px;
     border-radius: 14px;
-    font-size: 15px;
+    font-size: 17px;
     line-height: 1.6;
     word-break: keep-all;
     position: relative;
+    transform: translateZ(0);
+    contain: layout style;
 }
 
 .rv-chat-bubble.james {
@@ -1317,17 +1321,34 @@
 
 /* 수동 타임스탬프 싱크 — timestamps 있을 때만 적용 */
 .sync-active .rv-chat-row {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+/* 이전 대사: 살짝 흐리게 */
+.sync-active .rv-chat-row:not(.active) {
     opacity: 0.5;
-    transition: opacity 0.35s ease;
+}
+/* 활성 말풍선: 제임스 */
+.sync-active .rv-chat-bubble.james.active {
+    background: #454545;
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: -4px 0 0 #f97316, 0 6px 24px rgba(249,115,22,0.28);
+}
+/* 활성 말풍선: 스텔라 */
+.sync-active .rv-chat-bubble.stella.active {
+    background: #ffe000;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 4px 0 0 #f97316, 0 6px 24px rgba(249,115,22,0.32);
+}
+/* 새 말풍선 등장 애니메이션 */
+@keyframes syncBubbleIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 .sync-active .rv-chat-row.active {
-    opacity: 1;
-}
-.sync-active .rv-chat-bubble.james.active {
-    box-shadow: -3px 0 0 #f97316;
-}
-.sync-active .rv-chat-bubble.stella.active {
-    box-shadow: 3px 0 0 #f97316;
+    animation: syncBubbleIn 0.38s cubic-bezier(0.34, 1.5, 0.64, 1) both;
 }
 
 /* ── Mobile Chat Adjustments ── */
@@ -1371,7 +1392,7 @@
     }
 
     .rv-chat-bubble {
-        font-size: 13.5px;
+        font-size: 16.5px;
         padding: 10px 13px;
     }
 
@@ -3074,7 +3095,7 @@
     }
 
     .rv-chat-bubble {
-        font-size: 13px !important;
+        font-size: 16px !important;
         line-height: 1.65 !important;
         padding: 10px 13px !important;
     }

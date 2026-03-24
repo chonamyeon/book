@@ -876,7 +876,7 @@ export default function ReadingNotes() {
                                 <div className="size-10" />
                             </div>
 
-                            <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12 pb-32">
+                            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7 pb-6">
                                 {/* Category Selection */}
                                 <div className="space-y-4">
                                     <h4 className="text-[14px] font-bold text-orange-500">카테고리 선택</h4>
@@ -1043,12 +1043,12 @@ export default function ReadingNotes() {
                                                  </motion.span>
                                             )}
                                         </h4>
-                                        <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] rounded-none p-5">
+                                        <div className="space-y-2 bg-white/[0.02] border border-white/[0.05] rounded-none p-3">
                                             {activeActionGuide.map((item, idx) => (
                                                 <div
                                                     key={idx}
                                                     onClick={() => setCheckedActions(prev => ({ ...prev, [idx]: !prev[idx] }))}
-                                                    className={`flex items-start gap-3 p-3 rounded-none cursor-pointer transition-all border
+                                                    className={`flex items-start gap-3 p-2.5 rounded-none cursor-pointer transition-all border
                                                         ${checkedActions[idx]
                                                             ? 'bg-orange-500/10 border-orange-500/30'
                                                             : 'bg-white/5 border-transparent hover:border-white/10'}`}
@@ -1061,10 +1061,10 @@ export default function ReadingNotes() {
                                                         <span className="material-symbols-outlined text-sm font-black">check</span>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-orange-500' : 'text-white/80'}`}>
+                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-orange-500' : 'text-white'}`}>
                                                             {idx + 1}. {item.title}
                                                         </p>
-                                                        <p className="text-[11px] text-white/40 leading-relaxed">
+                                                        <p className="text-[12px] text-white leading-relaxed">
                                                             {item.description}
                                                         </p>
                                                     </div>
@@ -1135,7 +1135,7 @@ export default function ReadingNotes() {
                                             value={body}
                                             onChange={e => setBody(e.target.value)}
                                             placeholder="책을 읽으며 떠오른 생각이나 간직하고 싶은 문장을 자유롭게 기록해보세요..."
-                                            className="w-full bg-transparent border-none text-[16px] text-white/80 placeholder-white/20 min-h-[300px] outline-none resize-none leading-relaxed"
+                                            className="w-full bg-transparent border-none text-[16px] text-white placeholder-white/50 min-h-[300px] outline-none resize-none leading-relaxed"
                                         />
                                         <div className="flex justify-end pt-4">
                                             <span className="flex items-center gap-2 text-[11px] text-white/30 font-medium">
@@ -1152,7 +1152,7 @@ export default function ReadingNotes() {
                                 <button
                                     onClick={handleSave}
                                     disabled={saving || !body.trim() || (noteType === '#메모' && !selectedMood) || ((noteType === '#서평' || noteType === '#액션') && !bookTitle.trim())}
-                                    className="w-full h-16 rounded-none bg-orange-600 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-orange-600/20"
+                                    className="w-full h-12 rounded-none bg-orange-600 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-orange-600/20"
                                 >
                                     {saving ? (
                                         <div className="size-5 border-2 border-primary/20 border-t-primary rounded-none animate-spin" />

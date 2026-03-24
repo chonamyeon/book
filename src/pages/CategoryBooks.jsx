@@ -14,12 +14,12 @@ const categoriesInfo = [
     { label: "비즈니스의 본질과 성과를 내고 싶을 때", subLabel: "경영 & 리더십", id: 'MANAGEMENT', img: '/images/cat_career.png', seq: "03", accent: "#60a5fa", search: "경영" },
     { label: "삶의 지혜와 통찰이 필요할 때", subLabel: "인문 & 역사 & 철학", id: 'HUMANITIES', img: '/images/cat_philosophy_mod.png', seq: "04", accent: "#f87171", search: "인문" },
     { label: "나의 마음을 돌보고 싶을 때", subLabel: "심리학 & 치유", id: 'PSYCHOLOGY', img: '/images/cat_healing_mod.png', seq: "05", accent: "#818cf8", search: "심리" },
-    { label: "일이 손에 안 잡히고 지칠 때", subLabel: "번아웃 & 커리어", id: 'BURNOUT', img: '/images/cat_burnout_mod.png', seq: "06", accent: "#34d399", search: "커리어" },
+    { label: "일이 손에 안 잡히고 지칠 때", subLabel: "번아웃 & 커리어", id: 'BURNOUT', img: '/images/cat_burnout_v10.png', seq: "06", accent: "#34d399", search: "커리어" },
 
     // Legacy support for existing IDs if needed
-    { label: "내 가치를 증명하고 부를 쌓고 싶을 때", subLabel: "연봉협상 & 경제적 자유", id: 'WEALTH', img: '/images/cat_money.png', seq: "07", accent: "orange-500", search: "WEALTH" },
-    { label: "마음이 답답하고 위로가 필요할 때", subLabel: "우울 & 고독 & 치유", id: 'HEALING', img: '/images/cat_healing.png', seq: "08", accent: "#60a5fa", search: "HEALING" },
-    { label: "어떻게 살아야 할지 막막할 때", subLabel: "자아성찰 & 인생철학", id: 'PHILOSOPHY', img: '/images/cat_philosophy.png', seq: "09", accent: "#f87171", search: "PHILOSOPHY" }
+    { label: "내 가치를 증명하고 부를 쌓고 싶을 때", subLabel: "연봉협상 & 경제적 자유", id: 'WEALTH', img: '/images/cat_wealth_v11.png', seq: "07", accent: "orange-500", search: "WEALTH" },
+    { label: "마음이 답답하고 위로가 필요할 때", subLabel: "우울 & 고독 & 치유", id: 'HEALING', img: '/images/cat_healing_v8.png', seq: "08", accent: "#60a5fa", search: "HEALING" },
+    { label: "어떻게 살아야 할지 막막할 때", subLabel: "자아성찰 & 인생철학", id: 'PHILOSOPHY', img: '/images/cat_philosophy_v8.png', seq: "09", accent: "#f87171", search: "PHILOSOPHY" }
 ];
 
 export default function CategoryBooks() {
@@ -78,7 +78,7 @@ export default function CategoryBooks() {
     };
 
     return (
-        <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative overflow-x-hidden selection:bg-orange-500/30 pb-32">
+        <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative selection:bg-orange-500/30 pb-32">
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
                 .cursive-font { font-family: 'Alex Brush', cursive; }
@@ -91,7 +91,7 @@ export default function CategoryBooks() {
 
             <main className="flex-grow">
                 {/* 🌟 Dynamic Hero Section */}
-                <section className="relative h-[65vh] w-full flex flex-col justify-end overflow-hidden mb-12">
+                <section className="relative h-[65vh] w-full flex flex-col justify-end overflow-hidden mb-12" style={{ touchAction: 'pan-y' }}>
                     <motion.div initial={{ scale: 1.1, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.5 }} className="absolute inset-0">
                         <img src={categoryInfo.img} alt={categoryInfo.label} className="w-full h-full object-cover grayscale-[30%]" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>

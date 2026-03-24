@@ -116,9 +116,18 @@ function detectBoundaries(mp3Path, numSegments, script) {
     const totalChars = chars.reduce((a, b) => a + b, 0);
     let cumulative = 0;
     const expectedBoundaries = [];
+
+    // 징글 고려
+    let voiceStart = 0;
+    let voiceDuration = totalDuration;
+    if (totalDuration > 30) {
+        voiceStart = 6.0;
+        voiceDuration = totalDuration - 12.0;
+    }
+
     for (let i = 0; i < numSegments - 1; i++) {
         cumulative += chars[i];
-        expectedBoundaries.push((cumulative / totalChars) * totalDuration);
+        expectedBoundaries.push(voiceStart + (cumulative / totalChars) * voiceDuration);
     }
 
     // 각 예상 경계에서 ±35% 반경 내 가장 가까운 무음을 선택 (greedy)
@@ -156,18 +165,19 @@ function detectBoundaries(mp3Path, numSegments, script) {
     }
 
     const timings = [];
-    let prev = 0;
+    let prev = voiceStart; // 시작점을 voiceStart로 변경 (기본 0, 징글있으면 6.0)
     for (const b of boundaries) {
         timings.push({ start: parseFloat(prev.toFixed(3)), end: b });
         prev = b;
     }
-    timings.push({ start: parseFloat(prev.toFixed(3)), end: parseFloat(totalDuration.toFixed(3)) });
+    // 끝점도 음성 끝나는 시점으로 (voiceStart + voiceDuration)
+    timings.push({ start: parseFloat(prev.toFixed(3)), end: parseFloat((voiceStart + voiceDuration).toFixed(3)) });
 
     return timings;
 }
 
 // 개별 WAV 누적 타임스탬프
-function generateFromWavs(normalizedDir) {
+function generateFromWavs(normalizedDir, mp3Path) {
     const wavFiles = fs.readdirSync(normalizedDir)
         .filter(f => f.match(/^norm_\d+\.wav$|^norm_chunk_\d+\.wav$/))
         .sort((a, b) => {
@@ -175,14 +185,28 @@ function generateFromWavs(normalizedDir) {
             return n(a) - n(b);
         });
 
-    let cursor = 0;
-    return wavFiles.map(wav => {
+    let sumWavDur = 0;
+    const durs = wavFiles.map(wav => {
         const dur = getAudioDuration(path.join(normalizedDir, wav));
+        if (dur) sumWavDur += dur;
+        return dur;
+    });
+
+    const totalDuration = getAudioDuration(mp3Path) || sumWavDur;
+
+    // 징글 오프셋 계산.
+    // 전체 MP3가 WAV 총합보다 10초 이상 길다면 (징글+무음 12초가 붙은 것)
+    let cursor = 0;
+    if (totalDuration > sumWavDur + 10) {
+        cursor = (totalDuration - sumWavDur) / 2; // 대칭이므로 양측 동일 오프셋 (통상 6.0초)
+    }
+
+    return durs.map(dur => {
         if (!dur) return null;
         const timing = { start: parseFloat(cursor.toFixed(3)), end: parseFloat((cursor + dur).toFixed(3)) };
         cursor += dur;
         return timing;
-    }).filter(Boolean);
+    });
 }
 
 async function processBook(bookId, script) {
@@ -204,10 +228,10 @@ async function processBook(bookId, script) {
     const hasWavs = (d) => fs.existsSync(d) && fs.readdirSync(d).some(f => f.endsWith('.wav'));
 
     if (hasWavs(normalizedDir)) {
-        timings = generateFromWavs(normalizedDir);
+        timings = generateFromWavs(normalizedDir, mp3Path);
         method = 'wav-durations';
     } else if (hasWavs(multispeakerDir)) {
-        timings = generateFromWavs(multispeakerDir);
+        timings = generateFromWavs(multispeakerDir, mp3Path);
         method = 'wav-durations(multispeaker)';
     } else {
         console.log(`  → silencedetect (${numSegments}턴 기준)`);

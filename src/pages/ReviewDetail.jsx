@@ -10,6 +10,7 @@ import { availableAudio } from '../data/availableAudio';
 import { db } from '../firebase';
 import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { useBookData } from '../hooks/useBookData';
 import SubscriptionModal from '../components/SubscriptionModal';
 import { chatWithGemini } from '../services/gemini';
 import { shareCard } from '../utils/shareCard';
@@ -482,6 +483,7 @@ export default function ReviewDetail() {
     const ebookFlipBook = useRef(null);
     const [flipbookH] = useState(() => getMobileFlipbookHeight());
 
+    const { getBook, loading: bookLoading } = useBookData();
     const [pageIdx, setPageIdx] = useState(0);
     const [showUI, setShowUI] = useState(true);
     const { user, hasAccess, trialDaysLeft } = useAuth();
@@ -501,26 +503,30 @@ export default function ReviewDetail() {
     }, [firestoreCoverUrl, id, updatePodcastCover]);
 
     const book = useMemo(() => {
-        if (!celebrities) return null;
-        for (const c of celebrities) {
-            const b = c.books?.find((b) => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === id);
-            if (b) {
-                const validId = b.id || b.title.toLowerCase().replace(/\s+/g, '-');
-                // Auto-detect isPodcast and podcastFile based on availableAudio
-                const fileName = `${validId}.mp3`;
-                const hasAudioFile = !!availableAudio[fileName];
-
-                return {
-                    ...b,
-                    id: validId,
-                    isPodcast: b.isPodcast || hasAudioFile,
-                    podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null),
-                    coverUrl: firestoreCoverUrl || b.coverUrl
-                };
+        if (!id) return null;
+        let b = getBook(id);
+        if (!b) {
+            // Find in celebrities manually as fallback just in case
+            for (const c of celebrities || []) {
+                const cb = c.books?.find((bk) => (bk?.id || bk?.title?.toLowerCase()?.replace(/\s+/g, '-')) === id);
+                if (cb) { b = cb; break; }
             }
         }
+        if (b) {
+            const validId = b.id || b.title?.toLowerCase()?.replace(/\s+/g, '-');
+            const fileName = `${validId}.mp3`;
+            const hasAudioFile = !!availableAudio[fileName];
+            
+            return {
+                ...b,
+                id: validId,
+                isPodcast: b.isPodcast || hasAudioFile,
+                podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null),
+                coverUrl: firestoreCoverUrl || b.cover || b.coverUrl
+            };
+        }
         return null;
-    }, [id, firestoreCoverUrl]);
+    }, [id, firestoreCoverUrl, getBook]);
 
     const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
     const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
@@ -533,7 +539,7 @@ export default function ReviewDetail() {
 
         const q = query(
             collection(db, 'users', user.uid, 'readingNotes'),
-            where('bookTitle', '==', book.title),
+            where('bookTitle', '==', book?.title || ''),
             where('type', 'in', ['action', '#액션'])
         );
 
@@ -596,12 +602,15 @@ export default function ReviewDetail() {
     const [ebookLoading, setEbookLoading] = useState(true);
 
     const script = useMemo(() => {
-        const raw = firestoreScript || bookScripts[id] || [];
+        let raw = firestoreScript && firestoreScript.length > 0 ? firestoreScript : (bookScripts[id] || []);
+        if (raw.length === 0 && book?.podcastScript) {
+            try { raw = typeof book.podcastScript === 'string' ? JSON.parse(book.podcastScript) : book.podcastScript; } catch {}
+        }
         return raw.map(turn => ({
             ...turn,
             role: turn.role || (turn.speaker === 'B' || turn.speaker === '스텔라' ? 'B' : 'A'),
         }));
-    }, [id, firestoreScript]);
+    }, [id, firestoreScript, book]);
     const hasScript = script.length > 0;
     const isPodcast = book?.isPodcast || firestoreIsPodcast;
 
@@ -627,10 +636,10 @@ export default function ReviewDetail() {
         const tab = searchParams.get('tab');
         if (tab && ['review', 'podcast', 'ebook'].includes(tab)) {
             setActiveTab(tab);
-            // podcast 탭으로 URL 진입 시 자동 재생
-            if (tab === 'podcast' && book && podcastSrc) {
+            // podcast 탭으로 URL 진입 시 자동 재생 (사용자 제스처 유효성 위해 지연 최소화)
+            if (tab === 'podcast' && book && podcastSrc && isPodcast) {
                 if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                    playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
+                    try { playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id); } catch (e) {}
                 }
             }
         } else if (book && !hasReview) {
@@ -649,13 +658,16 @@ export default function ReviewDetail() {
         if (!id) return;
         // Firestore 대본 항상 조회 (로컬보다 우선)
         getDoc(doc(db, 'scripts', id)).then(snap => {
-            if (snap.exists()) {
+            if (snap.exists() && snap.data().script) {
                 const d = snap.data();
-                const lines = d.script || [];
-                setFirestoreScript(lines.map(l => ({
-                    role: (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
-                    text: l.text
-                })));
+                if (Array.isArray(d.script) && d.script.length > 0) {
+                    setFirestoreScript(d.script.map(l => ({
+                        role: l.role || (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
+                        text: l.text || l.message || ''
+                    })));
+                } else if (d.script.length === 0) {
+                    setFirestoreScript([]);
+                }
             }
         }).catch(() => { });
         // 성우 MP3 / 오디오 URL / isPodcast / Cover URL Firestore 오버라이드 조회
@@ -668,47 +680,71 @@ export default function ReviewDetail() {
             }
         }).catch(() => { });
 
-        // 이북 데이터 조회
-        getDoc(doc(db, 'ebooks', id)).then(async snap => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const mc = getMobileMaxChars();
-                let rawPages = null;
-                if (data.pages && Array.isArray(data.pages)) {
-                    rawPages = data.pages.flatMap(p => splitEbookSection(optimizeParagraphs(normalizeBrTags(p)), mc));
-                } else if (data.content) {
-                    // Split content by <section class="ebook-page">
-                    const content = data.content;
-                    const sections = content.split(/<section[^>]*class=["']ebook-page["'][^>]*>/i);
-                    const validSections = sections
-                        .map(s => s.split(/<\/section>/i)[0])
-                        .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
-
-                    if (validSections.length > 0) {
-                        rawPages = validSections.flatMap(s => splitEbookSection(optimizeParagraphs(normalizeBrTags(s || '')), mc));
-                    } else {
-                        rawPages = splitEbookSection(optimizeParagraphs(normalizeBrTags(content || '')), mc);
+        // 이북 데이터 조회 — 파싱은 idle time에 실행해 초기 렌더링 블로킹 방지
+        getDoc(doc(db, 'ebooks', id)).then(snap => {
+            const parseEbook = async () => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const mc = getMobileMaxChars();
+                    let rawPages = null;
+                    if (data.pages && Array.isArray(data.pages)) {
+                        rawPages = data.pages.flatMap(p => splitEbookSection(optimizeParagraphs(normalizeBrTags(p)), mc));
+                    } else if (data.content) {
+                        const content = data.content;
+                        const sections = content.split(/<section[^>]*class=["']ebook-page["'][^>]*>/i);
+                        const validSections = sections
+                            .map(s => s.split(/<\/section>/i)[0])
+                            .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
+                        if (validSections.length > 0) {
+                            rawPages = validSections.flatMap(s => splitEbookSection(optimizeParagraphs(normalizeBrTags(s || '')), mc));
+                        } else {
+                            rawPages = splitEbookSection(optimizeParagraphs(normalizeBrTags(content || '')), mc);
+                        }
+                    }
+                    if (rawPages) {
+                        const finalPages = await measureAndResplitPages(rawPages);
+                        setFirestoreEbook(finalPages);
                     }
                 }
-                if (rawPages) {
-                    const finalPages = await measureAndResplitPages(rawPages);
-                    setFirestoreEbook(finalPages);
-                }
+                setEbookLoading(false);
+            };
+            // requestIdleCallback 지원 브라우저는 idle time에 파싱, 미지원 시 setTimeout
+            if (typeof requestIdleCallback !== 'undefined') {
+                requestIdleCallback(() => parseEbook(), { timeout: 3000 });
+            } else {
+                setTimeout(parseEbook, 200);
             }
-        }).catch(() => { }).finally(() => setEbookLoading(false));
+        }).catch(() => setEbookLoading(false));
     }, [id]);
 
     const bubbleRefs = useRef([]);
 
     // 수동 타임스탬프 (Firestore timestamps/{id}) 로드 + mode
+    // localStorage 캐시로 매번 Firestore 호출 방지 (24시간 유효)
     const [timestampSegments, setTimestampSegments] = useState(null);
     const [syncMode, setSyncMode] = useState(false);
     useEffect(() => {
         if (!id) return;
+        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
+        const cacheKey = `rv_ts_${id}`;
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const { segments, mode, cachedAt } = JSON.parse(cached);
+                if (segments?.length && Date.now() - cachedAt < CACHE_TTL) {
+                    setTimestampSegments(segments);
+                    setSyncMode(mode === 'sync');
+                    return; // Firestore 호출 없이 캐시 사용
+                }
+            }
+        } catch (e) {}
+        // 캐시 없거나 만료 → Firestore 호출
         getDoc(doc(db, 'timestamps', id)).then(snap => {
             if (snap.exists() && snap.data().segments?.length) {
-                setTimestampSegments(snap.data().segments);
-                setSyncMode(snap.data().mode === 'sync');
+                const { segments, mode } = snap.data();
+                setTimestampSegments(segments);
+                setSyncMode(mode === 'sync');
+                localStorage.setItem(cacheKey, JSON.stringify({ segments, mode, cachedAt: Date.now() }));
             } else {
                 setTimestampSegments(null);
                 setSyncMode(false);
@@ -733,7 +769,7 @@ export default function ReviewDetail() {
     useEffect(() => {
         if (!syncMode || activeTurnIndex < 0) return;
         const el = bubbleRefs.current[activeTurnIndex];
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [syncMode, activeTurnIndex]);
 
     // 타이머 비활성화 (버튼 고정 요청)
@@ -766,9 +802,18 @@ export default function ReviewDetail() {
     }, [navigate]);
 
     if (!book) {
+        if (bookLoading) {
+            return (
+                <div style={{ minHeight: '100vh', background: '#101218', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="w-[50px] h-[50px] border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                </div>
+            );
+        }
         return (
-            <div style={{ minHeight: '100vh', background: '#f0ebe0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ minHeight: '100vh', background: '#101218', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="material-symbols-outlined text-[60px] text-white/10 mb-4">menu_book</span>
                 <p style={{ color: '#888', fontSize: 16 }}>도서를 찾을 수 없습니다.</p>
+                <button onClick={() => navigate('/')} className="mt-6 px-6 py-2 bg-orange-500/20 text-orange-500 rounded-full text-[12px] font-bold">홈으로 돌아가기</button>
             </div>
         );
     }
@@ -856,8 +901,7 @@ export default function ReviewDetail() {
         if (!msg || chatLoading) return;
         setChatInput('');
 
-        // 최초 메시지면 시스템 컨텍스트 구성
-        const isFirstMessage = chatMessages.length === 0;
+        // 시스템 컨텍스트 구성
         const scriptContext = script.slice(0, 30).map(t => t.text).join(' ');
         const systemPrompt = `당신은 '${book?.title}' (저자: ${book?.author}) 책 전문 독서 도우미입니다.
 아래는 이 책을 주제로 한 팟캐스트 대본 일부입니다:
@@ -871,13 +915,19 @@ ${scriptContext}
         setChatLoading(true);
 
         try {
-            // chatWithGemini expects history as [{role, parts:[{text}]}]
-            const geminiHistory = isFirstMessage
-                ? [{ role: 'user', parts: [{ text: systemPrompt }] }, { role: 'model', parts: [{ text: '네, 이 책에 대해 무엇이든 물어보세요!' }] }]
-                : chatMessages.map(m => ({
+            // chatWithGemini expects history as [{role, parts:[{text}]}] and must start with user
+            let geminiHistory = [
+                { role: 'user', parts: [{ text: systemPrompt }] },
+                { role: 'model', parts: [{ text: `안녕하세요! 저는 『${book?.title}』 인사이트 도우미입니다 📖\n이 책에서 가장 인상 깊었던 부분이나 궁금한 점을 자유롭게 물어보세요.` }] }
+            ];
+
+            chatMessages.forEach((m, idx) => {
+                if (idx === 0 && m.role === 'model') return; // 첫 환영 메시지 스킵
+                geminiHistory.push({
                     role: m.role === 'user' ? 'user' : 'model',
                     parts: [{ text: m.content }]
-                }));
+                });
+            });
 
             const reply = await chatWithGemini(msg, geminiHistory);
             setChatMessages(prev => [...prev, { role: 'model', content: reply }]);
@@ -910,8 +960,8 @@ ${scriptContext}
     return (
         <>
         <Helmet>
-            <title>{book.title} - ARCHIVIEW</title>
-            <meta property="og:title" content={`[아카이뷰] ${book.title}`} />
+            <title>{book.title || '아카이뷰 도서'} - ARCHIVIEW</title>
+            <meta property="og:title" content={`[아카이뷰] ${book.title || '도서'}`} />
             <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
             <meta property="og:image" content={ogImage} />
             <meta property="og:url" content={`https://archiview.store/review/${encodeURIComponent(book.id)}`} />
@@ -1025,14 +1075,12 @@ ${scriptContext}
                     </button>
                 )}
 
-                {/* 인사이트 챗 탭 비활성화
                 <button
                     className={`rv-tab ${activeTab === 'chat' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chat')}
                 >
                     인사이트 챗
                 </button>
-                */}
             </div>
 
             {/* ── Stage (FlipBook Container) ── */}
@@ -1274,23 +1322,31 @@ ${scriptContext}
                                 )}
                             </div>
                         )}
-                        {script.map((turn, i) => (
-                            <div
-                                key={i}
-                                ref={el => bubbleRefs.current[i] = el}
-                                className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}
-                            >
-                                <div className={`rv-chat-avatar ${turn.role === 'A' ? 'james' : 'stella'}`}>
-                                    <Avatar role={turn.role} />
-                                </div>
-                                <div className="rv-chat-bubble-wrap">
-                                    <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
-                                    <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}>
-                                        {turn.text}
+                        {script.map((turn, i) => {
+                            // 싱크 모드: 최근 3개 메시지만 표시 (현재 + 이전 2개), -1일 경우 0번 보여줌
+                            if (syncMode && hasSyncData) {
+                                const renderIdx = activeTurnIndex < 0 ? 0 : activeTurnIndex;
+                                if (i > renderIdx) return null;
+                                if (i < renderIdx - 2) return null;
+                            }
+                            return (
+                                <div
+                                    key={i}
+                                    ref={el => bubbleRefs.current[i] = el}
+                                    className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}
+                                >
+                                    <div className={`rv-chat-avatar ${turn.role === 'A' ? 'james' : 'stella'}`}>
+                                        <Avatar role={turn.role} />
+                                    </div>
+                                    <div className="rv-chat-bubble-wrap">
+                                        <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
+                                        <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}>
+                                            {turn.text}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         <div ref={chatEndRef} />
                     </div>
                 </div>

@@ -79,7 +79,7 @@ export default function Result() {
     const handleKakaoShare = () => {
         if (!window.Kakao) return;
         if (!window.Kakao.isInitialized()) {
-            window.Kakao.init('91e847c5035f8d9758712395669f6927');
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
         window.Kakao.Link.sendDefault({
             objectType: 'feed',

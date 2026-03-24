@@ -1,4 +1,24 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import TopNavigation from '../components/TopNavigation';
+import BottomNavigation from '../components/BottomNavigation';
+import { loadTossPayments } from '@tosspayments/payment-sdk';
+import { db, storage } from '../firebase';
+import {
+    collection,
+    onSnapshot,
+    query,
+    orderBy,
+    doc,
+    getDoc,
+    setDoc,
+    deleteDoc,
+    updateDoc,
+    serverTimestamp,
+    addDoc,
+    Timestamp
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useBookData } from '../hooks/useBookData';
 
 // IndexedDB 헬퍼 — TTS 배치 버퍼 영구 저장
 const TTS_DB = 'tts-cache';
@@ -103,26 +123,6 @@ function createWavFromPcm(pcmBuffers, sampleRate = 24000, channels = 1, bitDepth
     for (const buf of pcmBuffers) { new Uint8Array(buffer).set(new Uint8Array(buf), offset); offset += buf.byteLength; }
     return buffer;
 }
-import TopNavigation from '../components/TopNavigation';
-import BottomNavigation from '../components/BottomNavigation';
-import { loadTossPayments } from '@tosspayments/payment-sdk';
-import { db, storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import {
-    collection,
-    onSnapshot,
-    query,
-    orderBy,
-    doc,
-    getDoc,
-    setDoc,
-    deleteDoc,
-    updateDoc,
-    serverTimestamp,
-    addDoc,
-    Timestamp
-} from 'firebase/firestore';
-import { useBookData } from '../hooks/useBookData';
 
 // 컴포넌트 외부 상수 — 매 렌더마다 재생성 방지
 const CELEB_LIST = [
@@ -359,6 +359,7 @@ export default function AdminDashboard() {
         return () => unsub();
     }, []);
 
+
     // Toss Payments Init
     const handlePayment = async () => {
         try {
@@ -466,6 +467,7 @@ export default function AdminDashboard() {
         if (!aaiWords?.length || !scriptLines?.length) return null;
         const norm = (t) => t.replace(/[^\uAC00-\uD7A3a-zA-Z0-9]/g, '').toLowerCase();
         const normAai = aaiWords.map(w => norm(w.text));
+        const audioDuration = aaiWords[aaiWords.length - 1].end / 1000; // ms → s
 
         const segments = [];
         let searchStart = 0;
@@ -475,34 +477,39 @@ export default function AdminDashboard() {
             const matchLen = Math.min(3, turnWords.length);
             let bestIdx = -1;
 
-            // 앞 3단어 시퀀스 매칭으로 턴 시작 위치 탐색
-            for (let j = searchStart; j < normAai.length - matchLen + 1; j++) {
-                let hits = 0;
-                for (let k = 0; k < matchLen; k++) {
-                    if (normAai[j + k] === turnWords[k]) hits++;
+            // 앞 3단어 시퀀스 매칭으로 턴 시작 위치 탐색 (단어 남아 있을 때만)
+            if (searchStart < normAai.length - matchLen + 1) {
+                for (let j = searchStart; j < normAai.length - matchLen + 1; j++) {
+                    let hits = 0;
+                    for (let k = 0; k < matchLen; k++) {
+                        if (normAai[j + k] === turnWords[k]) hits++;
+                    }
+                    if (hits >= Math.ceil(matchLen * 0.6)) { bestIdx = j; break; }
                 }
-                if (hits >= Math.ceil(matchLen * 0.6)) { bestIdx = j; break; }
             }
 
-            // 매칭 실패 시 비례 추정으로 폴백
-            if (bestIdx === -1) {
-                const frac = i / scriptLines.length;
-                bestIdx = Math.max(searchStart, Math.min(Math.round(frac * (normAai.length - 1)), normAai.length - 1));
-            }
-
-            // 턴 종료: 예상 단어 수만큼 전진
-            const endIdx = Math.min(bestIdx + turnWords.length, normAai.length - 1);
-
-            // 안전 guards — 인덱스 범위 벗어날 경우 이전 세그먼트 기반 추정
-            const wordStart = aaiWords[bestIdx];
-            const wordEnd = aaiWords[endIdx];
             const prevEnd = segments.length > 0 ? segments[segments.length - 1].end : 0;
-            segments.push({
-                start: wordStart ? parseFloat((wordStart.start / 1000).toFixed(3)) : prevEnd,
-                end: wordEnd ? parseFloat((wordEnd.end / 1000).toFixed(3)) : prevEnd + 5
-            });
 
-            searchStart = Math.max(bestIdx + 1, endIdx - 2);
+            if (bestIdx !== -1) {
+                // 매칭 성공: 실제 단어 타임스탬프 사용
+                const endIdx = Math.min(bestIdx + turnWords.length, normAai.length - 1);
+                const wordStart = aaiWords[bestIdx];
+                const wordEnd = aaiWords[endIdx];
+                segments.push({
+                    start: parseFloat((wordStart.start / 1000).toFixed(3)),
+                    end: parseFloat((wordEnd.end / 1000).toFixed(3))
+                });
+                searchStart = Math.max(bestIdx + 1, endIdx - 2);
+            } else {
+                // 매칭 실패(전사 소진 포함): 남은 턴 수로 나눠 균등 분배
+                const turnsRemaining = scriptLines.length - i;
+                const timeRemaining = audioDuration - prevEnd;
+                const stepDuration = Math.max(timeRemaining / turnsRemaining, 0.5);
+                segments.push({
+                    start: parseFloat(prevEnd.toFixed(3)),
+                    end: parseFloat((prevEnd + stepDuration).toFixed(3))
+                });
+            }
         }
 
         return segments;
@@ -674,6 +681,14 @@ export default function AdminDashboard() {
                 // 턴별 타임스탬프 → Firestore 저장
                 const segments = generateTurnSegments(lines, transcribed.words);
                 if (segments && segments.length === lines.length) {
+                    // 5초 인트로 보정
+                    if (segments[0].start < 5) {
+                        const offset = parseFloat((5 - segments[0].start).toFixed(3));
+                        for (const seg of segments) {
+                            seg.start = parseFloat((seg.start + offset).toFixed(3));
+                            seg.end = parseFloat((seg.end + offset).toFixed(3));
+                        }
+                    }
                     await setDoc(doc(db, 'timestamps', bookId), {
                         segments,
                         generatedAt: new Date().toISOString(),
@@ -694,6 +709,98 @@ export default function AdminDashboard() {
         }
         setBatchVerifyRunning(false);
         setBatchVerifyCurrent('');
+    };
+
+    // ── 일괄 AssemblyAI 타임스탬프 자동계산 ──────────────────────────────────
+    const handleBatchTimestamps = async () => {
+        if (batchTsIds.length === 0) return alert('도서를 선택하세요.');
+        const aaiKey = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
+        if (!aaiKey) return alert('VITE_ASSEMBLYAI_API_KEY가 없습니다.');
+        setBatchTsRunning(true);
+        setBatchTsResults({});
+
+        for (const bookId of batchTsIds) {
+            setBatchTsCurrent(bookId);
+            try {
+                // 1. Firestore 대본 로드
+                const snap = await getDoc(doc(db, 'scripts', bookId));
+                if (!snap.exists()) {
+                    setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'error', message: '대본 없음 (scripts/' + bookId + ')' } }));
+                    continue;
+                }
+                const data = snap.data();
+                const lines = data.script || data.lines || [];
+                if (!lines.length) {
+                    setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'error', message: '대본 비어있음' } }));
+                    continue;
+                }
+
+                // 2. 오디오 소스 결정: WAV 폴더 우선, 없으면 MP3 fetch
+                const idLower = bookId.toLowerCase();
+                const wavName = Object.keys(localWavFileMap).find(n => {
+                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                    return base === idLower || base.includes(idLower) || idLower.includes(base);
+                });
+
+                let audioBuffer;
+                if (wavName) {
+                    audioBuffer = await localWavFileMap[wavName].arrayBuffer();
+                } else {
+                    const res = await fetch(`/audio/${bookId}.mp3`);
+                    if (!res.ok) {
+                        setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'noWav', message: 'WAV/MP3 없음 (스킵)' } }));
+                        continue;
+                    }
+                    const ct = res.headers.get('content-type') || '';
+                    if (ct.includes('text/html')) {
+                        setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'noWav', message: 'MP3 서버에 없음 (스킵)' } }));
+                        continue;
+                    }
+                    audioBuffer = await res.arrayBuffer();
+                }
+
+                // 3. AssemblyAI 전사
+                const transcribed = await transcribeWithAssemblyAI(audioBuffer, aaiKey, () => {});
+                if (!transcribed.words?.length) {
+                    setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'error', message: '전사 실패 (단어 없음)' } }));
+                    continue;
+                }
+
+                // 4. 턴별 타임스탬프 계산
+                const segments = generateTurnSegments(lines, transcribed.words);
+                if (!segments || segments.length !== lines.length) {
+                    setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'error', message: '턴 매칭 실패' } }));
+                    continue;
+                }
+
+                // 5초 인트로 보정: 첫 턴이 5초 미만이면 전체를 5초 기준으로 시프트
+                if (segments[0].start < 5) {
+                    const offset = parseFloat((5 - segments[0].start).toFixed(3));
+                    for (const seg of segments) {
+                        seg.start = parseFloat((seg.start + offset).toFixed(3));
+                        seg.end = parseFloat((seg.end + offset).toFixed(3));
+                    }
+                }
+
+                // 5. Firestore + localStorage 저장
+                await setDoc(doc(db, 'timestamps', bookId), {
+                    segments,
+                    mode: 'sync',
+                    generatedAt: new Date().toISOString(),
+                    source: 'assemblyai'
+                });
+                try {
+                    localStorage.setItem(`rv_ts_${bookId}`, JSON.stringify({ segments, mode: 'sync', cachedAt: Date.now() }));
+                } catch(e) {}
+
+                setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'done', turns: segments.length } }));
+            } catch(e) {
+                setBatchTsResults(prev => ({ ...prev, [bookId]: { status: 'error', message: e.message } }));
+            }
+        }
+
+        setBatchTsRunning(false);
+        setBatchTsCurrent('');
     };
 
     const handleUpdateUserStatus = async (userId, status) => {
@@ -937,6 +1044,12 @@ export default function AdminDashboard() {
     const [tsScript, setTsScript] = useState([]); // Firestore scripts/{id} 대본
     const [tsTimestamps, setTsTimestamps] = useState([]); // [seconds, ...]
     const [tsSaving, setTsSaving] = useState(false);
+    const [tsDataSource, setTsDataSource] = useState('none'); // 'none' | 'firestore' | 'assemblyai'
+    // 일괄 AssemblyAI 타임스탬프 자동계산
+    const [batchTsIds, setBatchTsIds] = useState([]);
+    const [batchTsRunning, setBatchTsRunning] = useState(false);
+    const [batchTsCurrent, setBatchTsCurrent] = useState('');
+    const [batchTsResults, setBatchTsResults] = useState({});
 
     // ── E-book 생성 탭 상태 ─────────────────────────────────
     const [isGeneratingEbook, setIsGeneratingEbook] = useState(false);
@@ -1193,24 +1306,44 @@ export default function AdminDashboard() {
 
     // verifyBookId 바뀌면 Firestore scripts/{id}에서 대본 불러오고 타임스탬프 초기화
     useEffect(() => {
-        if (!verifyBookId) { setTsScript([]); setTsTimestamps([]); return; }
+        if (!verifyBookId) { setTsScript([]); setTsTimestamps([]); setTsDataSource('none'); return; }
         // 1. Firestore 대본 로드
         getDoc(doc(db, 'scripts', verifyBookId)).then(async snap => {
             const script = (snap.exists() ? snap.data().script : null) || [];
             setTsScript(script);
-            if (script.length === 0) { setTsTimestamps([]); return; }
-            // 2. 기존 타임스탬프 로드
+            if (script.length === 0) { setTsTimestamps([]); setTsDataSource('none'); return; }
+            // 2. localStorage 캐시 우선 확인
+            const cacheKey = `rv_ts_${verifyBookId}`;
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const { segments, cachedAt } = JSON.parse(cached);
+                    const CACHE_TTL = 24 * 60 * 60 * 1000;
+                    if (segments?.length === script.length && Date.now() - cachedAt < CACHE_TTL) {
+                        setTsTimestamps(segments.map(s => s.start));
+                        setTsDataSource('firestore');
+                        return;
+                    }
+                }
+            } catch (e) {}
+            // 3. Firestore 타임스탬프 로드
             try {
                 const tsSnap = await getDoc(doc(db, 'timestamps', verifyBookId));
                 if (tsSnap.exists() && tsSnap.data().segments?.length === script.length) {
-                    setTsTimestamps(tsSnap.data().segments.map(s => s.start));
+                    const { segments, mode } = tsSnap.data();
+                    setTsTimestamps(segments.map(s => s.start));
+                    setTsDataSource('firestore');
+                    // 캐시에 저장
+                    try { localStorage.setItem(cacheKey, JSON.stringify({ segments, mode, cachedAt: Date.now() })); } catch(e) {}
                 } else {
                     setTsTimestamps(script.map((_, i) => i === 0 ? 5 : 0));
+                    setTsDataSource('none');
                 }
             } catch {
                 setTsTimestamps(script.map((_, i) => i === 0 ? 5 : 0));
+                setTsDataSource('none');
             }
-        }).catch(() => { setTsScript([]); setTsTimestamps([]); });
+        }).catch(() => { setTsScript([]); setTsTimestamps([]); setTsDataSource('none'); });
     }, [verifyBookId]);
 
     // 대본 생성 중 브라우저 새로고침/탭 닫기 방지
@@ -4874,7 +5007,13 @@ ${video.content}
                                         const matchCeleb = filterCeleb === '' || (book.celebName === filterCeleb || book.celebrity === filterCeleb);
                                         return matchSearch && matchCategory && matchSection && matchCeleb;
                                     })
-                                    .reverse();
+                                    .reverse()
+                                    .sort((a, b) => {
+                                        const timeA = a.createdAt?.toMillis?.() || a.createdAt || a.updatedAt?.toMillis?.() || a.updatedAt || 0;
+                                        const timeB = b.createdAt?.toMillis?.() || b.createdAt || b.updatedAt?.toMillis?.() || b.updatedAt || 0;
+                                        if (timeA !== timeB) return timeB - timeA;
+                                        return 0;
+                                    });
                                 const totalPages = Math.ceil(filteredBooks.length / BOOKS_PER_PAGE);
                                 const pagedBooks = filteredBooks.slice(booksPage * BOOKS_PER_PAGE, (booksPage + 1) * BOOKS_PER_PAGE);
                                 return (<>
@@ -7544,6 +7683,128 @@ ${video.content}
                                 })()}
                             </div>
 
+                            {/* ── 일괄 AssemblyAI 타임스탬프 자동계산 ── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-5">
+                                <div className="flex items-center justify-between flex-wrap gap-3">
+                                    <div>
+                                        <h4 className="text-white font-black text-lg">🤖 일괄 AssemblyAI 1차 자동계산</h4>
+                                        <p className="text-slate-500 text-xs mt-0.5">여러 도서의 타임스탬프를 한 번에 생성합니다. WAV 폴더 선택 후 사용하세요.</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const booksWithWav = realBooks.filter(b => b.id && Object.keys(localWavFileMap).some(n => {
+                                                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                                                    const id = b.id.toLowerCase();
+                                                    return base === id || base.includes(id) || id.includes(base);
+                                                }));
+                                                setBatchTsIds(booksWithWav.map(b => b.id));
+                                            }}
+                                            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-black text-slate-400 hover:text-white transition-all"
+                                        >WAV 있는 도서 전체 선택</button>
+                                        <button
+                                            onClick={() => setBatchTsIds([])}
+                                            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-black text-slate-400 hover:text-white transition-all"
+                                        >전체 해제</button>
+                                    </div>
+                                </div>
+
+                                {localWavFiles.length === 0 ? (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                        ⚠️ WAV 폴더를 먼저 선택하세요 — 위 입력 영역의 [폴더 선택] 버튼을 사용하세요
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                                        {realBooks.filter(b => b.id).map(b => {
+                                            const hasWav = Object.keys(localWavFileMap).some(n => {
+                                                const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
+                                                const id = b.id.toLowerCase();
+                                                return base === id || base.includes(id) || id.includes(base);
+                                            });
+                                            const checked = batchTsIds.includes(b.id);
+                                            const result = batchTsResults[b.id];
+                                            return (
+                                                <label key={b.id}
+                                                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all text-xs font-black
+                                                        ${checked ? 'bg-violet-500/20 border-violet-400/50 text-violet-300' : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'}`}
+                                                >
+                                                    <input type="checkbox" className="hidden"
+                                                        checked={checked}
+                                                        onChange={() => setBatchTsIds(prev => prev.includes(b.id) ? prev.filter(x => x !== b.id) : [...prev, b.id])}
+                                                    />
+                                                    <span className={`w-3 h-3 rounded-sm flex-shrink-0 border ${checked ? 'bg-violet-500 border-violet-400' : 'border-slate-600'}`} />
+                                                    <span className="truncate flex-1">{b.title}</span>
+                                                    {result ? (
+                                                        result.status === 'done'
+                                                            ? <span className="text-emerald-400 flex-shrink-0">✅</span>
+                                                            : result.status === 'noWav'
+                                                                ? <span className="text-slate-500 flex-shrink-0">—</span>
+                                                                : <span className="text-red-400 flex-shrink-0">❌</span>
+                                                    ) : hasWav ? (
+                                                        <span className="text-emerald-400 flex-shrink-0">🎵</span>
+                                                    ) : null}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={handleBatchTimestamps}
+                                    disabled={batchTsRunning || batchTsIds.length === 0}
+                                    className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${
+                                        batchTsRunning || batchTsIds.length === 0
+                                            ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                            : 'bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/20'
+                                    }`}
+                                >
+                                    {batchTsRunning ? (
+                                        <><span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                                        계산 중: {(() => { const b = realBooks.find(x => x.id === batchTsCurrent); return b?.title || batchTsCurrent; })()}...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-xl">schedule</span>
+                                        {batchTsIds.length}권 일괄 AssemblyAI 자동계산 시작</>
+                                    )}
+                                </button>
+
+                                {/* 결과 목록 */}
+                                {Object.keys(batchTsResults).length > 0 && (() => {
+                                    const entries = Object.entries(batchTsResults);
+                                    const doneCount = entries.filter(([,r]) => r.status === 'done').length;
+                                    const errCount = entries.filter(([,r]) => r.status === 'error').length;
+                                    const skipCount = entries.filter(([,r]) => r.status === 'noWav').length;
+                                    return (
+                                        <div className="space-y-3">
+                                            <div className="flex flex-wrap gap-4 text-sm px-1">
+                                                <span className="text-emerald-400 font-black">✅ {doneCount}권 완료</span>
+                                                {errCount > 0 && <span className="text-red-400 font-black">❌ {errCount}권 오류</span>}
+                                                {skipCount > 0 && <span className="text-slate-500">— {skipCount}권 스킵 (오디오 없음)</span>}
+                                            </div>
+                                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                                {entries.map(([id, r]) => {
+                                                    const book = realBooks.find(b => b.id === id);
+                                                    return (
+                                                        <div key={id} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs font-black ${
+                                                            r.status === 'done' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' :
+                                                            r.status === 'noWav' ? 'bg-white/5 border-white/10 text-slate-500' :
+                                                            'bg-red-500/10 border-red-500/30 text-red-300'
+                                                        }`}>
+                                                            <span className="flex-shrink-0">
+                                                                {r.status === 'done' ? '✅' : r.status === 'noWav' ? '—' : '❌'}
+                                                            </span>
+                                                            <span className="flex-1 truncate">{book?.title || id}</span>
+                                                            <span className="flex-shrink-0 text-[10px] opacity-70">
+                                                                {r.status === 'done' ? `${r.turns}턴 저장` : r.message}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
                             {/* ── 수동 타임스탬프 편집 ── */}
                             {(() => {
                                 // tsScript: Firestore scripts/{id} 에서 로드된 대본 (state)
@@ -7576,6 +7837,10 @@ ${video.content}
                                         generatedAt: new Date().toISOString(),
                                         source: 'manual'
                                     });
+                                    // localStorage 캐시도 즉시 갱신 (사용자 페이지 Firestore 호출 방지)
+                                    try {
+                                        localStorage.setItem(`rv_ts_${verifyBookId}`, JSON.stringify({ segments, mode, cachedAt: Date.now() }));
+                                    } catch(e) {}
                                     setTsSaving(false);
                                     alert(`✅ ${mode === 'sync' ? '싱크' : '스크롤'} 저장 완료 (${segments.length}턴)`);
                                 };
@@ -7596,7 +7861,21 @@ ${video.content}
                                         } else {
                                             const res = await fetch(`/audio/${verifyBookId}.mp3`);
                                             if (!res.ok) throw new Error(`오디오 없음: /audio/${verifyBookId}.mp3 (WAV 폴더를 선택하거나 MP3가 배포되어야 합니다)`);
+                                            const contentType = res.headers.get('content-type') || '';
+                                            if (contentType.includes('text/html')) {
+                                                throw new Error(`오디오 파일 없음: "${verifyBookId}.mp3"가 서버에 없습니다.\nMP3를 Firebase에 배포하거나, WAV 폴더를 선택하세요.`);
+                                            }
                                             audioBuffer = await res.arrayBuffer();
+                                        }
+                                        // 오디오 파일 유효성 검사 (magic bytes)
+                                        {
+                                            const header = new Uint8Array(audioBuffer.slice(0, 4));
+                                            const isID3  = header[0] === 0x49 && header[1] === 0x44 && header[2] === 0x33; // ID3
+                                            const isMPEG = header[0] === 0xFF && (header[1] & 0xE0) === 0xE0;              // MPEG sync
+                                            const isRIFF = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46; // WAV
+                                            if (!isID3 && !isMPEG && !isRIFF) {
+                                                throw new Error(`오디오 파일 형식 오류: 유효한 MP3/WAV가 아닙니다.\n(파일이 HTML이거나 손상되었을 수 있습니다)\n→ MP3를 Firebase에 배포 후 다시 시도하거나, WAV 폴더를 선택하세요.`);
+                                            }
                                         }
                                         // 2. AssemblyAI 전사
                                         const transcribed = await transcribeWithAssemblyAI(audioBuffer, aaiKey, () => {});
@@ -7604,8 +7883,28 @@ ${video.content}
                                         // 3. 턴별 타임스탬프 계산
                                         const segments = generateTurnSegments(tsScript, transcribed.words);
                                         if (!segments || segments.length !== tsScript.length) throw new Error('턴 매칭 실패');
+                                        // 5초 인트로 보정: 첫 턴이 5초 미만이면 전체를 5초 기준으로 시프트
+                                        if (segments[0].start < 5) {
+                                            const offset = parseFloat((5 - segments[0].start).toFixed(3));
+                                            for (const seg of segments) {
+                                                seg.start = parseFloat((seg.start + offset).toFixed(3));
+                                                seg.end = parseFloat((seg.end + offset).toFixed(3));
+                                            }
+                                        }
                                         setTsTimestamps(segments.map(s => s.start));
-                                        alert(`🤖 1차 자동계산 완료 (${segments.length}턴)\n오류 부분을 수동으로 수정 후 저장하세요.`);
+                                        setTsDataSource('assemblyai');
+                                        // 4. 자동으로 Firestore + localStorage 저장 (다음에 AssemblyAI 재호출 방지)
+                                        // AssemblyAI 타임스탬프는 정확하므로 mode: 'sync'로 직접 저장
+                                        await setDoc(doc(db, 'timestamps', verifyBookId), {
+                                            segments,
+                                            mode: 'sync',
+                                            generatedAt: new Date().toISOString(),
+                                            source: 'assemblyai'
+                                        });
+                                        try {
+                                            localStorage.setItem(`rv_ts_${verifyBookId}`, JSON.stringify({ segments, mode: 'sync', cachedAt: Date.now() }));
+                                        } catch(e) {}
+                                        alert(`🤖 1차 자동계산 완료 (${segments.length}턴)\nFirestore에 자동 저장됨 — 오류 부분 수동 수정 후 싱크 저장 하세요.`);
                                     } catch (e) {
                                         alert('오류: ' + e.message);
                                     } finally {
@@ -7618,6 +7917,12 @@ ${video.content}
                                             <div>
                                                 <h4 className="text-white font-black text-lg">📝 수동 타임스탬프 편집</h4>
                                                 <p className="text-slate-500 text-xs mt-0.5">각 턴의 시작 시간을 입력하면 말풍선 싱크가 활성화됩니다. 형식: M:SS 또는 초단위</p>
+                                                {tsDataSource === 'firestore' && (
+                                                    <p className="text-emerald-400 text-xs mt-1 font-bold">✅ Firestore 저장 데이터 로드됨 — AssemblyAI 재호출 불필요</p>
+                                                )}
+                                                {tsDataSource === 'assemblyai' && (
+                                                    <p className="text-amber-400 text-xs mt-1 font-bold">🤖 AssemblyAI 자동계산 완료 — Firestore 자동 저장됨</p>
+                                                )}
                                             </div>
                                             <div className="flex gap-2">
                                                 <button
