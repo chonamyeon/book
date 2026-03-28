@@ -7,9 +7,11 @@ import { resultData } from '../data/resultData';
 import { recommendations } from '../data/recommendations';
 import { useAuth } from '../hooks/useAuth';
 import BookCardActions from '../components/BookCardActions';
+import { useBookData } from '../hooks/useBookData';
 
 export default function Library() {
     const { user } = useAuth();
+    const { getAllBooks } = useBookData();
     const [unlocked, setUnlocked] = useState(false);
     const [myResultType, setMyResultType] = useState(null);
     const [quizResult, setQuizResult] = useState(null);
@@ -56,6 +58,13 @@ export default function Library() {
             window.removeEventListener('savedBooksUpdated', handleStorage);
         };
     }, []);
+
+    // getAllBooks()로 Firestore override 병합된 완전한 book 객체를 제목으로 찾아 반환
+    const allBooks = getAllBooks();
+    const enrichBook = (book) => {
+        const found = allBooks.find(b => b.title === book.title);
+        return found ? { ...book, ...found } : book;
+    };
 
     const result = myResultType ? resultData[myResultType] : null;
     const myRecs = myResultType ? recommendations[myResultType]?.books.filter(b => !hiddenRecs.includes(b.title)) : [];
@@ -159,7 +168,7 @@ export default function Library() {
                                             <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                             <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
                                             <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc || '당신을 위해 특별히 찾아낸 도서입니다.'}"</p>
-                                            <BookCardActions book={book} className="mt-auto" />
+                                            <BookCardActions book={enrichBook(book)} className="mt-auto" />
                                         </div>
                                     </div>
                                 ))}
@@ -179,7 +188,7 @@ export default function Library() {
                                             <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                             <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
                                             <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc}"</p>
-                                            <BookCardActions book={book} className="mt-auto" />
+                                            <BookCardActions book={enrichBook(book)} className="mt-auto" />
                                         </div>
                                     </div>
                                 ))}
@@ -219,7 +228,7 @@ export default function Library() {
                                         <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
                                             <h4 className="text-white text-[15px] font-black truncate pr-6 mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                             <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
-                                            <BookCardActions book={book} className="mt-auto" />
+                                            <BookCardActions book={enrichBook(book)} className="mt-auto" />
                                         </div>
                                     </div>
                                 ))}

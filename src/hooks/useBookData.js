@@ -75,12 +75,19 @@ export const useBookData = () => {
 
     const getBook = useCallback((bookId) => {
         const localBook = celebrities.flatMap(c => c.books || []).find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bookId);
-        const override = overrides[bookId];
+        const normStr = s => s.normalize('NFC');
+        const override = overrides[bookId] ||
+            Object.entries(overrides).find(([k]) => {
+                const nk = normStr(k);
+                const ni = normStr(bookId);
+                return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
+            })?.[1];
 
         if (!localBook && !override) return null;
 
         const fileName = `${bookId}.mp3`;
-        const hasAudioFile = !!availableAudio[fileName];
+        const koreanFileName = `${(localBook?.title || '').replace(/\s+/g, '-')}.mp3`;
+        const hasAudioFile = !!(availableAudio[fileName] || availableAudio[koreanFileName]);
 
         const ebook = ebooks[bookId];
 
@@ -103,15 +110,27 @@ export const useBookData = () => {
             }))
         );
 
+        // override 키가 "top70-X" 형태일 때 "X"로도 찾을 수 있도록 (NFC 정규화 포함)
+        const normStr = s => s.normalize('NFC');
+        const findOverride = (id) =>
+            overrides[id] ||
+            Object.entries(overrides).find(([k]) => {
+                const nk = normStr(k);
+                const ni = normStr(id);
+                return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
+            })?.[1];
+
         const bookMap = new Map();
         allLocalBooks.forEach(book => {
             const id = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
-            const override = overrides[id];
+            const override = findOverride(id);
 
             if (override?.isDeleted) return;
+            if (!adminMode && override?.isPublic === false) return;
 
             const fileName = `${id}.mp3`;
-            const hasAudioFile = !!availableAudio[fileName];
+            const koreanFileName = `${(book.title || '').replace(/\s+/g, '-')}.mp3`;
+            const hasAudioFile = !!(availableAudio[fileName] || availableAudio[koreanFileName]);
 
             const ebook = ebooks[id];
 
@@ -122,6 +141,8 @@ export const useBookData = () => {
                 isPodcast: override?.isPodcast || book.isPodcast || hasAudioFile,
                 cover: override?.cover || book.cover,
                 purchaseLink: override?.purchaseLink || book.purchaseLink || '',
+                coupangLink: override?.coupangLink || book.coupangLink || '',
+                amazonLink: override?.amazonLink || book.amazonLink || '',
                 isPublic: override?.isPublic !== undefined ? override.isPublic : true,
                 ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
             });

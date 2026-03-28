@@ -21,7 +21,7 @@ const getCachedAccess = () => {
 };
 
 function computeAccess(firestoreData) {
-    if (!firestoreData) return { hasAccess: false, trialDaysLeft: 0, isPremium: false };
+    if (!firestoreData) return { hasAccess: true, trialDaysLeft: 0, isPremium: false };
 
     const { isPremium, trialStartDate, premiumEndDate } = firestoreData;
 
@@ -29,7 +29,7 @@ function computeAccess(firestoreData) {
         // premiumEndDate 체크 (없으면 영구)
         if (premiumEndDate) {
             const end = premiumEndDate.toDate ? premiumEndDate.toDate() : new Date(premiumEndDate);
-            if (new Date() > end) return { hasAccess: false, trialDaysLeft: 0, isPremium: false };
+            if (new Date() > end) return { hasAccess: true, trialDaysLeft: 0, isPremium: false };
         }
         return { hasAccess: true, trialDaysLeft: 0, isPremium: true };
     }
@@ -46,7 +46,7 @@ function computeAccess(firestoreData) {
         }
     }
 
-    return { hasAccess: false, trialDaysLeft: 0, isPremium: false };
+    return { hasAccess: true, trialDaysLeft: 0, isPremium: false };
 }
 
 export function useAuth() {
@@ -55,7 +55,7 @@ export function useAuth() {
 
     const [user, setUser] = useState(cachedUser);
     const [loading, setLoading] = useState(!cachedUser);
-    const [hasAccess, setHasAccess] = useState(cachedAccess?.hasAccess ?? false);
+    const [hasAccess, setHasAccess] = useState(cachedAccess?.hasAccess ?? true);
     const [trialDaysLeft, setTrialDaysLeft] = useState(cachedAccess?.trialDaysLeft ?? 0);
     const [isPremium, setIsPremium] = useState(cachedAccess?.isPremium ?? false);
 
@@ -98,7 +98,7 @@ export function useAuth() {
                 localStorage.removeItem('auth_user_cache');
                 localStorage.removeItem('auth_access_cache');
                 if (firestoreUnsub) firestoreUnsub();
-                setHasAccess(false);
+                setHasAccess(true);
                 setTrialDaysLeft(0);
                 setIsPremium(false);
             }

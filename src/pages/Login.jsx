@@ -61,11 +61,16 @@ export default function Login() {
                         status: '활동중',
                     };
                     // 첫 로그인인 경우에만 trialStartDate 설정
-                    if (!snap.exists() || !snap.data().trialStartDate) {
+                    const isNewUser = !snap.exists() || !snap.data().trialStartDate;
+                    if (isNewUser) {
                         updates.trialStartDate = serverTimestamp();
                         updates.isPremium = false;
                     }
                     await setDoc(userRef, updates, { merge: true });
+                    // Meta Pixel: 신규 회원가입 이벤트
+                    if (isNewUser && window.fbq) {
+                        window.fbq('track', 'CompleteRegistration', { method: 'Google' });
+                    }
                 } catch (error) {
                     console.error("Error updating user profile:", error);
                 }
@@ -96,11 +101,16 @@ export default function Login() {
                 photoURL: user.photoURL,
                 lastLogin: serverTimestamp(),
             };
-            if (!snap.exists() || !snap.data().trialStartDate) {
+            const isNewUser = !snap.exists() || !snap.data().trialStartDate;
+            if (isNewUser) {
                 updates.trialStartDate = serverTimestamp();
                 updates.isPremium = false;
             }
             await setDoc(userRef, updates, { merge: true });
+            // Meta Pixel: 신규 회원가입 이벤트
+            if (isNewUser && window.fbq) {
+                window.fbq('track', 'CompleteRegistration', { method: 'Google' });
+            }
 
             navigate('/profile', { replace: true });
         } catch (error) {

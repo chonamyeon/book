@@ -43,6 +43,8 @@ const lazyWithRetry = (factory) =>
 
 // 코드 스플리팅
 const Home          = lazyWithRetry(() => import('./pages/Home'));
+const Test4         = lazyWithRetry(() => import('./pages/Test4'));
+const Test5         = lazyWithRetry(() => import('./pages/Test5'));
 const Editorial     = lazyWithRetry(() => import('./pages/Editorial'));
 const Result        = lazyWithRetry(() => import('./pages/Result'));
 const Celebrity     = lazyWithRetry(() => import('./pages/Celebrity'));
@@ -59,6 +61,7 @@ const ReadingNotes  = lazyWithRetry(() => import('./pages/ReadingNotes'));
 const Membership    = lazyWithRetry(() => import('./pages/Membership'));
 const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
 const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
+const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
 
 // 페이지 로딩 스피너
 const PageLoader = () => (
@@ -93,6 +96,8 @@ export default function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<MobileLayout><Home /></MobileLayout>} />
+                  <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
+                  <Route path="/test5" element={<MobileLayout><Test5 /></MobileLayout>} />
                   <Route path="/editorial" element={<MobileLayout><Editorial /></MobileLayout>} />
                   <Route path="/result" element={<ProtectedRoute><MobileLayout><Result /></MobileLayout></ProtectedRoute>} />
                   <Route path="/celebrity/:id" element={<MobileLayout><Celebrity /></MobileLayout>} />
@@ -109,6 +114,7 @@ export default function App() {
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
                   <Route path="/review/:id" element={<MobileLayout><ReviewDetail /></MobileLayout>} />
                   <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
+                  <Route path="/review-board/:id" element={<MobileLayout><ReviewBoardDetail /></MobileLayout>} />
                   <Route path="/reading-notes" element={<ProtectedRoute><MobileLayout><ReadingNotes /></MobileLayout></ProtectedRoute>} />
                 </Routes>
               </Suspense>

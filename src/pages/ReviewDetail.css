@@ -855,13 +855,13 @@
     z-index: 500;
     display: flex;
     gap: 2px;
-    background: rgba(14, 11, 7, 0.82);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(14, 11, 7, 0.45); /* 투명도 낮추어 글래스모피즘 강화 */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     padding: 4px;
     border-radius: 40px;
-    border: 1px solid rgba(200, 168, 112, 0.22);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(200, 168, 112, 0.18);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 1px rgba(255, 255, 255, 0.05) inset;
     white-space: nowrap;
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
@@ -899,9 +899,10 @@
 }
 
 .rv-tab.active {
-    background: rgba(200, 168, 112, 0.15);
-    color: #c8a870;
-    box-shadow: inset 0 0 0 1px rgba(200, 168, 112, 0.2);
+    background: #d4af37;
+    color: #1a1208;
+    box-shadow: 0 2px 12px rgba(212, 175, 55, 0.3);
+    font-weight: 800;
 }
 
 .rv-tab:not(.active):hover {
@@ -1646,11 +1647,13 @@
     width: 100%;
     max-width: 500px;
     height: 100%;
-    background: #000;
+    background: #0d0d0d;
     position: relative;
     border-radius: 40px;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.8),
+        0 10px 20px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -2090,10 +2093,25 @@
     letter-spacing: 0.5px;
 }
 
-/* Content Page */
+/* Content Page Style Revision for "Wider" look */
 .rv-ebook-content-page .rv-sheet {
     padding: 36px 40px 44px;
-    background: #111111 !important;
+    background: #0d0b08 !important; /* Unified with stage background */
+    position: relative;
+    box-shadow: none !important; /* Remove boundaries for expansive feel */
+    border: none !important;
+}
+
+.rv-ebook-content-page .rv-sheet::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.2) 0%, transparent 5%, transparent 95%, rgba(0,0,0,0.2) 100%);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .rv-ebook-page-header {
@@ -2156,18 +2174,19 @@
 }
 
 .rv-ebook-body-html h1 {
-    font-size: 1em;
-    font-weight: 800;
+    font-size: 1.1em;
+    font-weight: 900;
     color: #f2ebd9;
-    margin: 0 0 1.5em;
-    line-height: 1.5;
-    letter-spacing: -0.5px;
+    margin: 0.5em 0 1.8em;
+    line-height: 1.4;
+    letter-spacing: -0.8px;
     font-family: 'Noto Serif KR', 'Playfair Display', serif;
     text-align: center;
-    padding: 1.2em 0.5em;
-    border-top: 1px solid rgba(200,168,112,0.25);
-    border-bottom: 1px solid rgba(200,168,112,0.25);
-    background: rgba(200, 168, 112, 0.03);
+    padding: 1.5em 0.8em;
+    border-top: 1px solid rgba(200,168,112,0.3);
+    border-bottom: 1px solid rgba(200,168,112,0.3);
+    background: rgba(200, 168, 112, 0.05);
+    border-radius: 4px;
 }
 
 .rv-ebook-body-html h2 {
@@ -2717,18 +2736,24 @@
 
 @media (max-width: 600px) {
     .rv-ebook-content-page .rv-sheet {
-        padding: 26px 20px 18px;
+        padding: 24px 22px 20px !important;
     }
     .rv-ebook-body-html {
-        font-size: 13.5px;
-        line-height: 1.9;
+        font-size: 14px; /* 기본 요약 레이아웃과의 조화 */
+        line-height: 2.0;
+        letter-spacing: -0.2px;
+    }
+    .rv-ebook-body-html p {
+        margin-bottom: 1.6em !important;
+        text-align: justify !important;
     }
     .rv-ebook-body-html blockquote {
-        margin: 1.2rem 0;
-        padding: 1.2rem 0.8rem 1rem;
+        margin: 1.8rem 0 !important;
+        padding: 1.5rem 1.2rem 1.2rem !important;
+        background: rgba(25, 23, 20, 0.6) !important;
     }
     .rv-ebook-body-html blockquote p {
-        font-size: 0.9rem;
+        font-size: 1rem !important;
     }
 }
 
@@ -2931,9 +2956,10 @@
     /* 탭바 bottom = 52px + safe-area-top + 44px(높이) = 96px + safe-area-top */
     .rv-stage {
         padding: calc(96px + env(safe-area-inset-top, 0px)) 0 env(safe-area-inset-bottom, 0px) !important;
-        background: #0d0b08 !important;
+        background: #0d0b08 !important; /* Root background consistent */
         align-items: stretch !important;
         justify-content: center !important;
+        box-shadow: none !important;
     }
 
     /* ── 이북 컨테이너: 남은 공간 전체 사용 ── */
@@ -2960,15 +2986,16 @@
     }
 
     .rv-ebook-body-html {
-        font-size: 20px !important;
-        line-height: 1.8 !important;
-        padding-bottom: 0 !important;
-        letter-spacing: -0.3px !important;
+        font-size: 15.5px !important; /* 가독성과 밀도의 균형 포인트 */
+        line-height: 1.85 !important;
+        padding-bottom: 4px !important;
+        letter-spacing: -0.4px !important;
+        color: #e6e1d6 !important;
     }
 
     .rv-ebook-body-html p {
-        text-align: left !important;
-        margin-bottom: 1.5em !important;
+        text-align: justify !important;
+        margin-bottom: 1.45em !important;
         word-break: keep-all !important;
         overflow-wrap: break-word !important;
         text-indent: 0 !important;
@@ -2996,11 +3023,12 @@
     }
 
     .rv-ebook-body-html blockquote {
-        margin: 2.2em 0 !important;
-        padding: 1.6em 1.2em !important;
-        background: rgba(30, 28, 26, 0.4) !important;
-        border: 1px solid rgba(200, 168, 112, 0.15) !important;
+        margin: 2em 0 !important;
+        padding: 1.8em 1.4em !important;
+        background: rgba(26, 24, 22, 0.5) !important;
+        border: 1px solid rgba(200, 168, 112, 0.22) !important;
         border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
     }
 
     .rv-ebook-body-html blockquote p {

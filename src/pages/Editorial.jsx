@@ -254,13 +254,13 @@ export default function Editorial() {
                     <div className="px-6 my-[28px]">
                         <div className="h-[1px] bg-white/5 w-full"></div>
                     </div>
-                    <section className="px-6 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
-                        <div className="flex overflow-x-auto no-scrollbar gap-3">
+                    <section className="px-4 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
+                        <div className="flex gap-1.5 w-full">
                             {categoriesInfo.map((cat) => (
                                 <button
                                     key={`tab-${cat.id}`}
                                     onClick={() => setSelectedCategoryId(cat.id)}
-                                    className={`px-5 py-2.5 rounded-none border flex-none text-[13px] font-black tracking-tight whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-orange-600/50'}`}
+                                    className={`flex-1 min-w-0 py-2.5 rounded-none border text-[12px] font-black tracking-tight transition-all ${selectedCategoryId === cat.id ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-orange-600/50'}`}
                                 >
                                     {cat.label}
                                 </button>

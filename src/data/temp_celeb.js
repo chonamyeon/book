@@ -1,4 +1,4 @@
-export const celebrities = [
+module.exports = [
     {
         "id": "bill-gates",
         "name": "Bill Gates",
@@ -34,8 +34,7 @@ export const celebrities = [
                         "title": "감정을 동료에게 솔직하게 표현해보기",
                         "description": "오늘 힘들었던 일을 믿을 수 있는 동료에게 짧게 털어놓아 보세요. 속으로 쌓아두기보다 표현하는 것이 관계를 깊게 하고 스트레스를 줄여줍니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0375704027?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "leverage",
@@ -63,8 +62,7 @@ export const celebrities = [
                         "title": "아침 30분 '이메일 금지 집중 루틴' 시작하기",
                         "description": "내일 출근 직후 30분을 이메일·메신저 없이 가장 중요한 업무 하나에만 집중하는 루틴을 시작해보세요. 하루 중 가장 생산적인 시간대를 레버리지로 활용하는 가장 쉬운 방법입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1473640285?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "sapiens",
@@ -92,8 +90,7 @@ export const celebrities = [
                         "title": "모르는 것을 솔직하게 인정하고 질문하기",
                         "description": "오늘 회의나 업무에서 잘 모르는 것이 있었다면, 아는 척하지 말고 담당자나 동료에게 직접 물어보세요. '모름'을 인정하는 것이 더 나은 협업의 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0062316117?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "factfulness",
@@ -119,8 +116,7 @@ export const celebrities = [
                         "title": "비즈니스 판단 전 '이분법 사고' 점검하기",
                         "description": "중요한 결정을 내리기 전, 내가 이것을 '성공 아니면 실패', '우리 편 아니면 적'처럼 이분법으로 보고 있지는 않은지 5초간 점검해보세요. 연속 스펙트럼으로 보면 더 좋은 해결책이 보입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1250107814?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "homo-deus",
@@ -146,8 +142,7 @@ export const celebrities = [
                         "title": "알고리즘 추천 끄고 나만의 선택 해보기",
                         "description": "점심 메뉴나 오늘 읽을 기사를 알고리즘 추천 없이 직접 선택해보세요. 내 취향이 알고리즘 취향인지, 진짜 내 선택인지를 확인하는 가장 쉬운 훈련입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0062464310?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "21-lessons",
@@ -173,8 +168,7 @@ export const celebrities = [
                         "title": "퇴근 전 5분 '알고리즘 없이 내 의사결정' 돌아보기",
                         "description": "오늘 업무 중 내가 진짜 주체적으로 판단한 것과 관행이나 압력에 따라 한 것을 구분해보세요. 내 판단 근거를 한 줄씩 적는 것이 자기 주도적 커리어의 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0525512179?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "built-to-last",
@@ -200,8 +194,7 @@ export const celebrities = [
                         "title": "3년 후 커리어 목표 한 문장으로 명확하게 쓰기",
                         "description": "지금은 불가능해 보여도 가슴 뛰는 3년 후 목표를 딱 한 문장으로 써보세요. 그리고 오늘 그 목표를 향한 가장 작은 행동 하나를 실천해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/Built-Last-Successful-Visionary-Companies/dp/0060516402?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "gentleman-in-moscow",
@@ -227,8 +220,7 @@ export const celebrities = [
                         "title": "매일 같은 시간에 시작하는 루틴 하나 정하기",
                         "description": "업무 효율을 높이는 가장 간단한 방법은 매일 같은 시간에 같은 방식으로 하루를 시작하는 것입니다. 내일부터 지킬 아침 루틴 하나(예: 9시 TO-DO 정리)를 정해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0143110438?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "why-we-sleep",
@@ -254,8 +246,7 @@ export const celebrities = [
                         "title": "오후 2시 이후 카페인 끊고 수면 질 실험하기",
                         "description": "이번 주 오후 2시 이후 커피를 끊고 일주일간 수면 질 변화를 체크해보세요. 야근용 커피가 오히려 다음 날 집중력을 더 떨어뜨리는 악순환을 직접 확인해볼 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1501144316?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "klara-and-the-sun",
@@ -281,8 +272,7 @@ export const celebrities = [
                         "title": "업무 프로세스에서 '사람 중심 요소' 강화하기",
                         "description": "내 업무에서 자동화할 수 있는 부분과 반드시 사람이 해야 하는 부분을 나눠보세요. 사람이 해야 할 부분을 더 잘하는 것이 AI 시대 커리어 전략입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/059331817X?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "project-hail-mary",
@@ -308,8 +298,7 @@ export const celebrities = [
                         "title": "틀렸을 때 빠르게 수정하는 습관 만들기",
                         "description": "오늘 업무에서 예상과 다른 결과가 나왔다면, 방어하지 말고 즉시 원인 하나를 분석해 수정 방향을 팀에 공유해보세요. 빠른 수정이 완벽한 첫 시도보다 훨씬 더 가치 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0593135202?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "one-thing",
@@ -336,8 +325,7 @@ export const celebrities = [
                         "title": "오늘 TO-DO 리스트에서 중요도 낮은 것 2개 지우기",
                         "description": "지금 오늘 할 일 목록을 보고 안 해도 되는 것, 위임할 수 있는 것 2개를 과감하게 삭제하거나 나중으로 미뤄보세요. 덜 하는 것이 더 잘하는 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1885167776?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -372,8 +360,7 @@ export const celebrities = [
                         "title": "오늘 내린 중요한 결정을 데이터로 한 번 더 검증하기",
                         "description": "오늘 직감이나 관성으로 내린 결정 하나를 골라, 실제 숫자나 사례 데이터로 그 결정이 옳은지 5분만 검증해보세요. 느낌이 아닌 증거로 판단하는 습관이 장기적으로 차이를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0553293354?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "슈퍼인텔리전스",
@@ -397,8 +384,7 @@ export const celebrities = [
                         "title": "이번 주 AI 관련 뉴스 하나 읽고 팀원과 공유하기",
                         "description": "내 업계에서 AI가 어떻게 활용되고 있는지 기사 하나를 읽고 팀 채널에 짧게 요약해 공유해보세요. 변화를 먼저 파악하고 공유하는 사람이 조직에서 인정받습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0199678111?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "은하수를 여행하는 히치하이커를 위한 안내서",
@@ -421,8 +407,7 @@ export const celebrities = [
                         "title": "매주 엉뚱한 아이디어 하나씩 팀에 제안해보기",
                         "description": "다음 팀 회의에서 '이건 좀 황당할 수 있는데...'로 시작하는 아이디어 하나를 꺼내보세요. 엉뚱해 보이는 발상이 가장 혁신적인 해결책이 되는 경우가 많습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0345391802?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "제로 투 원",
@@ -446,8 +431,7 @@ export const celebrities = [
                         "title": "'모두가 당연하게 생각하지만 나는 의문인 것' 한 가지 찾기",
                         "description": "우리 팀이나 업계에서 '당연히 이렇게 하는 것'이지만 실은 비효율적이라고 느끼는 것 하나를 찾아 메모해두세요. 이 질문이 혁신의 시작점입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0804139296?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "벤자민 프랭클린 인생의 발견",
@@ -470,8 +454,7 @@ export const celebrities = [
                         "title": "이번 주 고치고 싶은 작은 업무 습관 하나 실행하기",
                         "description": "회의 때 핸드폰 보기, 보고서 마감 직전에 시작하기 등 고치고 싶은 업무 습관 하나를 골라 이번 주만 집중적으로 바꿔보세요. 작은 습관 하나가 평판을 바꿉니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0743223226?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "우리 본성의 선한 천사",
@@ -494,8 +477,7 @@ export const celebrities = [
                         "title": "직장 내 갈등을 데이터와 사실로 해결하기",
                         "description": "팀 내 의견 불일치가 있을 때 감정이 아닌 실제 데이터나 사실을 기반으로 대화를 이끌어보세요. 공통의 사실에서 출발하면 서로 다른 의견도 합의점을 찾기 쉬워집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0143122010?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -534,8 +516,7 @@ export const celebrities = [
                         "title": "다음 커리어 결정을 남이 아닌 나를 위해 내리기",
                         "description": "이직, 업무 변경, 교육 신청 등 최근 고민 중인 결정이 있다면, 타인의 기대가 아닌 내가 진짜 원하는 방향인지 한 번만 더 확인해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0486414132?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "almond",
@@ -561,8 +542,7 @@ export const celebrities = [
                         "title": "나와 일하는 방식이 다른 동료 판단하지 않기",
                         "description": "내 방식과 다르게 일하는 동료를 '틀렸다'가 아닌 '다르다'고 바라보는 연습을 해보세요. 다름을 인정하는 팀이 더 창의적이고 강합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0062941372?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "lightness-of-being",
@@ -588,8 +568,7 @@ export const celebrities = [
                         "title": "중요한 결정은 빠르게, 사소한 것은 더 빠르게",
                         "description": "오늘 점심 메뉴, 보고서 폰트 같은 사소한 결정은 30초 안에 내리고, 그 에너지를 정말 중요한 결정에 쓰도록 연습해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0061731013?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "vegetarian",
@@ -617,8 +596,7 @@ export const celebrities = [
                         "title": "회사 관행 중 '왜'를 물어본 적 없는 것 찾아보기",
                         "description": "우리 팀이 당연하게 지키는 관행 중 한 번도 의문을 갖지 않은 것을 하나 찾아보세요. '왜 이렇게 해야 하지?'라는 질문이 더 나은 업무 방식을 만드는 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1101906111?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "human-acts",
@@ -644,8 +622,7 @@ export const celebrities = [
                         "title": "불합리한 상황에서 한 마디라도 소신 발언해보기",
                         "description": "회의에서 잘못된 방향이 감지됐는데도 분위기상 말을 못 했다면, 회의 후 슬랙이나 1:1로라도 의견을 전달해보세요. 작은 용기 있는 발언이 더 좋은 의사결정을 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1101906100?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "the-stranger",
@@ -671,8 +648,7 @@ export const celebrities = [
                         "title": "업무에서 '왜 이렇게 하는가'를 스스로 질문하기",
                         "description": "오늘 관성적으로 처리한 업무 하나에 '이 방식이 정말 최선인가?'라고 질문해보세요. 비판적 사고를 잃지 않는 것이 직장에서 자신을 지키는 방법입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0679720200?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "1984",
@@ -698,8 +674,7 @@ export const celebrities = [
                         "title": "보고서나 메일에 내 생각을 구체적으로 담기",
                         "description": "다음에 쓸 보고서나 이메일에 복사-붙여넣기 대신 내 생각과 판단을 직접 한 문단이라도 써보세요. 자신의 언어로 표현하는 연습이 직장 내 존재감을 높여줍니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0451524934?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "catcher-in-the-rye",
@@ -725,8 +700,7 @@ export const celebrities = [
                         "title": "내가 직장에서 절대 타협 않을 가치 한 문장으로 쓰기",
                         "description": "어떤 압력이 있어도 지키고 싶은 직업적 원칙을 한 문장으로 명확하게 써보세요. 그것이 흔들릴 때 다시 꺼내 읽는 나만의 나침반이 됩니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0316769487?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -763,8 +737,7 @@ export const celebrities = [
                         "title": "완벽하지 않아도 오늘 한 가지 의미 있는 일 찾기",
                         "description": "오늘 업무 중 아무리 작아도 의미 있었던 것 하나를 퇴근 전 메모해두세요. 사라지는 것들 속에서 남는 것을 기록하는 습관이 직장 생활의 지속 가능성을 높여줍니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0525520279?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "we-do-not-part",
@@ -790,8 +763,7 @@ export const celebrities = [
                         "title": "나를 힘들게 했던 일에서 배운 것 한 가지 찾기",
                         "description": "최근 실수하거나 좌절한 일을 떠올려 '이 경험에서 내가 배운 것은 무엇인가?'라고 스스로 물어보세요. 고통스러운 경험도 의미를 부여하면 성장의 자원이 됩니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "greek-lessons",
@@ -817,8 +789,7 @@ export const celebrities = [
                         "title": "어려운 동료 상황을 다른 시각으로 설명해보기",
                         "description": "지금 해결하기 어려운 팀 갈등이나 업무 문제를 완전히 다른 관점(예: 고객 입장, 경쟁사 입장)으로 설명해보세요. 새로운 언어로 바라보면 새로운 해결책이 보입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -853,8 +824,7 @@ export const celebrities = [
                         "title": "직관적으로 느껴지는 고객 불편 지점 메모해두기",
                         "description": "데이터보다 앞서 '이건 분명 사용자가 불편할 것 같다'고 느끼는 서비스나 프로세스의 문제점을 오늘 메모해두세요. 직관적 판단이 혁신의 씨앗이 됩니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "혁신 기업의 딜레마",
@@ -878,8 +848,7 @@ export const celebrities = [
                         "title": "주류가 무시하는 것 하나 관심 갖기",
                         "description": "팀이나 업계에서 '별로 중요하지 않다'고 무시하는 트렌드나 고객층을 하나 찾아보세요. 기존 강자들이 간과한 틈새가 다음 기회가 될 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/Innovators-Dilemma-Revolutionary-Change-Business/dp/0062060244?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "모비 딕",
@@ -903,8 +872,7 @@ export const celebrities = [
                         "title": "번아웃 신호 오기 전 팀에 도움 요청하기",
                         "description": "혼자 다 하려다 에이해브처럼 파국으로 가지 않으려면, 지금 과부하 상태인 업무를 동료에게 솔직하게 알리고 도움을 요청해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0142437247?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "리어 왕",
@@ -927,8 +895,7 @@ export const celebrities = [
                         "title": "팀원에게 솔직한 비판적 피드백 요청해보기",
                         "description": "가까운 동료에게 '내가 개선해야 할 점 한 가지만 솔직하게 말해줄 수 있어?'라고 물어보세요. 불편한 피드백을 요청하는 용기가 성장을 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/074347712X?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -963,8 +930,7 @@ export const celebrities = [
                         "title": "단기 성과 대신 팀 성장을 위한 투자 하나 제안하기",
                         "description": "이번 달 팀이 단기 성과에만 매달리고 있다면, 장기적으로 팀 역량을 키울 수 있는 교육이나 개선 활동을 하나 제안해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307719227?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -999,8 +965,7 @@ export const celebrities = [
                         "title": "어려운 업무 결정 앞에서 두려움을 글로 써보기",
                         "description": "중요한 결정이나 도전적인 업무 앞에서 느끼는 두려움을 구체적으로 적어보세요. 불안을 막연하게 느끼는 것보다 글로 쓰면 훨씬 덜 무서워집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1524763160?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "삼체",
@@ -1024,8 +989,7 @@ export const celebrities = [
                         "title": "경쟁자보다 협력자 먼저 생각하는 전략 세워보기",
                         "description": "비슷한 업무를 하는 동료나 타부서를 경쟁자가 아닌 협력자로 바라보고, 함께하면 더 좋아질 프로젝트 하나를 제안해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0765377063?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "가라, 파수꾼이여",
@@ -1048,8 +1012,7 @@ export const celebrities = [
                         "title": "업무에서 '잘못했다'가 아닌 '복잡하다'는 시각 가져보기",
                         "description": "동료의 실수나 판단에 즉각적으로 비판하기 전에 '어떤 맥락과 이유가 있었을까?'를 먼저 생각해보세요. 선악의 이분법 대신 복잡성을 이해하는 것이 더 현명한 리더십입니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1084,8 +1047,7 @@ export const celebrities = [
                         "title": "내 팀에서 더 힘든 여건에서 일하는 사람 한 번 챙기기",
                         "description": "내게는 당연한 환경(좋은 장비, 정보 접근성 등)이 누군가에게는 장벽일 수 있습니다. 팀에서 더 불리한 여건의 동료가 있다면 오늘 한 번 더 도움을 건네보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1524763136?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "언더그라운드 레일로드",
@@ -1108,8 +1070,7 @@ export const celebrities = [
                         "title": "지금 내가 당연하게 누리는 직장 환경에 감사하기",
                         "description": "오늘 내가 당연하게 누리고 있는 것(안정적인 월급, 협업하는 동료, 쾌적한 사무실 등) 중 하나를 의식적으로 감사하는 시간을 가져보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0345804325?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "내가 확실히 아는 것들",
@@ -1132,8 +1093,7 @@ export const celebrities = [
                         "title": "점심시간 10분, 판단 없이 지금 이 순간에만 집중하기",
                         "description": "오늘 점심시간에 스마트폰을 내려놓고 음식 맛, 주변 소리, 햇살 같은 지금 이 순간만 느껴보세요. 과거 실수나 오후 회의 걱정 없이 딱 10분만 현재에 머무는 연습을 해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1250054056?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "와일드",
@@ -1156,8 +1116,7 @@ export const celebrities = [
                         "title": "힘들었던 직장 경험에서 내가 얻은 것 한 가지 찾기",
                         "description": "지금껏 가장 힘들었던 직장 경험을 떠올리고, 그 고통이 나에게 가르쳐준 것 한 가지를 솔직하게 써보세요. 고통을 피하지 않고 통과한 경험이 지금의 나를 더 단단하게 만들었습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "앵무새 죽이기",
@@ -1180,8 +1139,7 @@ export const celebrities = [
                         "title": "부당하다고 느끼는 상황에서 조용히 한마디 하기",
                         "description": "회의에서 잘못된 방향이 정해지거나 특정 동료가 부당하게 배제될 때, 침묵하는 대신 사실 기반으로 조심스럽게 한마디를 꺼내보세요. 옳은 일을 위해 목소리를 낸 경험이 쌓일수록 직장에서의 자존감도 높아집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1219,8 +1177,7 @@ export const celebrities = [
                         "title": "유행 스킬 대신 10년 후에도 값어치 있는 '내재가치 역량' 찾기",
                         "description": "지금 핫한 트렌드 스킬이 아닌, 10년 뒤에도 나의 가치를 높여줄 역량 하나를 정해 이번 달 학습 계획에 넣어보세요. 버핏이 복리 투자를 고집했듯, 진짜 역량은 시간이 지날수록 가치가 커집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0060555661?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "security-analysis",
@@ -1247,8 +1204,7 @@ export const celebrities = [
                         "title": "보여주기식 업무 하나를 본질적 성과 업무로 교체하기",
                         "description": "지금 하는 업무 중 진짜 성과보다 바빠 보이는 것에 가까운 작업 하나를 찾아보세요. 그 시간을 실제로 팀과 회사에 임팩트를 주는 일에 쓰도록 오늘 스케줄을 조정해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0071592539?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1283,8 +1239,7 @@ export const celebrities = [
                         "title": "생각만 하다 미뤄온 일 하나, 오늘 딱 5분만 시작하기",
                         "description": "완벽한 준비가 될 때까지 기다리는 동안 기회는 지나갑니다. 나이키의 슬로건처럼 오늘 '그냥 해보기'로 결심한 한 가지를 5분만 시작해보세요. 시작하는 것 자체가 이미 절반입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1501135910?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1318,8 +1273,7 @@ export const celebrities = [
                         "title": "감정이 격해진 회의에서 사실 기반 발언 한 가지 준비하기",
                         "description": "다음 번 갈등이 생긴 회의에서 감정이 아닌 사실과 논리로 말하는 랠프 역할을 해보세요. '제가 이해한 바로는…'으로 시작하는 침착한 한마디가 분위기를 바꿀 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0399501487?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1355,8 +1309,7 @@ export const celebrities = [
                         "title": "'그때 그 시절'에 에너지 쓰는 것 멈추고 오늘 한 가지 행동하기",
                         "description": "과거의 성공, 아쉬운 선택, 지나간 기회에 에너지를 쓰는 대신 오늘 내가 바꿀 수 있는 것 한 가지에 집중해보세요. 개츠비는 과거에 집착하다 현재를 잃었습니다. 당신의 초록 불빛은 지금 여기에 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0743273562?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1394,8 +1347,7 @@ export const celebrities = [
                         "title": "힘든 이번 주를 버티게 해줄 '기다려지는 것' 하나 써두기",
                         "description": "이번 주 가장 기다려지는 것 하나를 오늘 적어보세요. 맛있는 주말 식사, 친구와의 약속, 관심 있는 책 한 권이어도 됩니다. 사소해도 기다리는 것이 있는 사람은 더 잘 버팁니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/080701429X?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "연금술사",
@@ -1419,8 +1371,7 @@ export const celebrities = [
                         "title": "실패가 두려워 미뤄온 한 가지, 오늘 딱 첫 걸음만 내딛기",
                         "description": "모든 두려움은 시작 전이 가장 큽니다. 오랫동안 준비만 하고 시작 못 한 것 하나를 골라, 결과에 상관없이 딱 첫 번째 행동 하나만 오늘 해보세요. 연금술사가 말하듯, 원하면 온 우주가 도와줍니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0062315005?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1454,8 +1405,7 @@ export const celebrities = [
                         "title": "지금 힘들어 보이는 동료의 이야기를 오늘 5분 들어주기",
                         "description": "요즘 표정이 어두운 동료나 후배 한 명에게 오늘 조용히 '요즘 어때요?'라고 물어보세요. 조언하려 하지 말고 그냥 들어주기만 해도, 그 5분이 누군가에게 큰 힘이 됩니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0452260116?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "파이 이야기",
@@ -1478,8 +1428,7 @@ export const celebrities = [
                         "title": "가장 힘들었던 직장 경험을 '성장 스토리'로 다시 써보기",
                         "description": "최근 겪은 힘든 업무 경험을 '나는 이 고난을 통해 ___를 배웠다'라는 형식으로 다시 써보세요. 같은 사건도 어떻게 해석하느냐에 따라 트라우마가 되기도 하고 성장의 증거가 되기도 합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0156027321?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1514,9 +1463,7 @@ export const celebrities = [
                         "title": "오늘 나 자신에게 따뜻한 위로 한 문장 써주기",
                         "description": "자책하고 스스로를 부족하다고 느끼는 날, 친한 친구에게 해주듯 나 자신에게도 따뜻한 말 한 마디를 써주세요. '그래도 넌 오늘 최선을 다했어'처럼 짧아도 됩니다. 자기 자신에게 공감하는 것이 회복의 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0811204812?tag=archiview2026-20",
-                "id": "no-longer-human"
+                ]
             },
             {
                 "title": "카라마조프 가의 형제들",
@@ -1539,8 +1486,7 @@ export const celebrities = [
                         "title": "부조리한 직장 상황에서도 내가 통제할 수 있는 것 하나 찾기",
                         "description": "불합리한 지시, 이해 안 되는 회사 정책에 분노하고 싶을 때, 내가 어쩔 수 없는 것은 내려놓고 오늘 내가 바꿀 수 있는 것 하나를 찾아 행동해보세요. 주체성을 회복하는 것이 번아웃 예방의 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0374528373?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "brahms",
@@ -1568,8 +1514,7 @@ export const celebrities = [
                         "title": "무미건조한 오늘 하루에 작은 새로움 하나 끼워 넣기",
                         "description": "매일 똑같은 루틴에 아주 작은 변화 하나를 오늘 시도해보세요. 다른 길로 출퇴근하거나, 평소 안 가던 탕비실 간식을 먹어보거나, 다른 팀 동료에게 먼저 말을 걸어보세요. 작은 파문이 권태를 깨웁니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "title": "최선의 삶",
@@ -1593,8 +1538,7 @@ export const celebrities = [
                         "title": "도망치고 싶은 순간, 물리적 도피 대신 10분 산책하기",
                         "description": "모든 걸 때려치우고 싶은 날, 실제로 도망치기 전에 오늘 점심 혼자 10분 산책을 해보세요. 그 짧은 이탈이 머리를 식혀주고, 돌아와서 더 차분하게 상황을 볼 수 있게 해줍니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "title": "바깥은 여름",
@@ -1618,8 +1562,7 @@ export const celebrities = [
                         "title": "완전히 극복 못 한 과거 경험, 그냥 마음 한구석에 놓아두기",
                         "description": "모든 상처가 완전히 치유될 필요는 없습니다. 아직 가슴에 걸리는 직장 경험이 있다면 '극복해야 한다'는 압박 없이 그냥 있는 그대로 인정해보세요. 그것도 나의 일부라는 것을 받아들이는 것이 더 건강합니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1654,8 +1597,7 @@ export const celebrities = [
                         "title": "소소한 갈등에 에너지 낭비하지 말고 10년 목표 한 줄 써두기",
                         "description": "탕비실 자리 갈등, 사소한 업무 충돌에 에너지를 다 쓰기 전에 잠깐 멈춰 10년 후 내가 되고 싶은 모습을 한 문장으로 써보세요. 큰 그림이 보이면 작은 갈등은 그냥 흘려보낼 수 있습니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "title": "손정의 제곱법칙",
@@ -1679,8 +1621,7 @@ export const celebrities = [
                         "title": "내 커리어 목표를 '비전'과 '전략' 두 가지로 나눠 써보기",
                         "description": "목적지(비전)와 가는 방법(전략)을 구분하지 않으면 열심히 해도 엉뚱한 곳에 도달합니다. 오늘 노트에 '내가 5년 후 되고 싶은 모습'과 '그것을 위해 지금 해야 할 구체적 행동'을 각각 써보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1714,8 +1655,7 @@ export const celebrities = [
                         "title": "10년 후 돌아봤을 때 후회하지 않을 오늘의 선택 하나 하기",
                         "description": "베조스의 '후회 최소화 프레임'처럼, 지금 망설이는 결정을 10년 후 시점에서 바라보세요. 10년 후의 내가 '그때 했어야 했는데'라고 후회할 것 같은 일을 오늘 용기 내어 해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1750,8 +1690,7 @@ export const celebrities = [
                         "title": "연봉과 직급 외에 직장 생활에서 진짜 중요한 것 세 가지 적기",
                         "description": "어른들은 집의 가격, 연봉 숫자, 직급 타이틀로만 중요도를 매깁니다. 오늘 '숫자로 표현할 수 없지만 나에게 진짜 소중한 직장 경험 3가지'를 적어보세요. 그것이 번아웃에서 나를 지켜주는 진짜 이유입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0156012197?tag=archiview2026-20"
+                ]
             },
             {
                 "title": "천 개의 찬란한 태양",
@@ -1775,8 +1714,7 @@ export const celebrities = [
                         "title": "내가 최근 누군가를 위해 한 희생을 스스로 인정해주기",
                         "description": "자신보다 팀을 위해 일하고, 인정은 못 받은 채 지나간 순간이 있다면 오늘 그 헌신을 스스로 인정해주세요. 당신의 선택은 기록되지 않아도 당신의 성품에 새겨집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/159448385X?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -1814,8 +1752,7 @@ export const celebrities = [
                         "title": "오늘 실수한 것을 '운명애'로 받아들이고 배운 점 한 가지 쓰기",
                         "description": "니체의 아모르 파티(운명을 사랑하라)처럼 오늘 일어난 실수나 불편한 사건을 '내 삶의 일부'로 받아들여보세요. 그리고 그 경험에서 배운 것 한 가지를 써보세요. 저항하지 않을 때 고통이 더 빨리 지나갑니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1852,8 +1789,7 @@ export const celebrities = [
                         "title": "지금 편안하지만 성장을 막는 습관 하나를 오늘 바꾸기로 결심하기",
                         "description": "月급루팡처럼 조용히 무난하게 지내는 것이 단기적으론 편하지만 장기적으론 나를 소진시킵니다. 오늘 '이건 바꿔야 하는데'라고 생각해온 습관 하나를 정하고, 이번 주부터 실천할 구체적 행동을 써보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "psychology",
@@ -1881,8 +1817,7 @@ export const celebrities = [
                         "title": "이번 달 지출에서 '진짜 자유'를 위한 것과 '보여주기'를 위한 것 구분하기",
                         "description": "하우절이 말하는 부의 목적은 자유입니다. 이번 달 지출 내역을 한 번 훑어보고, 나의 자유와 성장을 위한 지출과 타인의 시선을 위한 지출을 솔직하게 분류해보세요. 그 구분이 재정 습관의 출발점이 됩니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -1919,8 +1854,7 @@ export const celebrities = [
                         "title": "퇴근 후 10분, 스마트폰 없이 그냥 하늘 보기",
                         "description": "바쁜 하루를 잠깐 멈추고 퇴근길에 잠시 하늘을 올려다보세요. 아무 생각도 하지 않아도 됩니다. 그 10분이 쌓인 피로를 리셋하고, 오늘 내가 놓친 것들을 자연스럽게 정리해줍니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "property-money",
@@ -1946,8 +1880,7 @@ export const celebrities = [
                         "title": "정기적인 수익 구조 고민하기",
                         "description": "단발성 수익이 아닌, 작더라도 매달 꾸준히 들어올 수 있는 나만의 시스템에 대해 15분간 구상해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "stoner",
@@ -1973,8 +1906,7 @@ export const celebrities = [
                         "title": "내면의 서재 방문하기",
                         "description": "시끄러운 소음 없는 조용한 장소에서 15분간 책을 읽거나 명상을 하며 나만의 내면 세계를 단단하게 다지는 시간을 가지세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1590171993?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "small-things",
@@ -2000,8 +1932,7 @@ export const celebrities = [
                         "title": "양심의 목소리에 귀 기울이기",
                         "description": "이익과 손해를 따지기 전, 내 마음속 깊은 곳에서 '옳다'고 하는 일을 아주 사소한 것이라도 하나 실행해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0571368174?tag=archiview2026-20"
+                ]
             }
         ]
     },
@@ -2041,8 +1972,7 @@ export const celebrities = [
                         "title": "데이터 공유하기",
                         "description": "내가 겪은 시행착오 하나를 동료나 친구에게 가볍게 공유하며 자산화해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -2074,8 +2004,7 @@ export const celebrities = [
                         "description": "물건을 살 때 내 안의 어떤 지배 동기가 작동했는지 5초간 생각하기"
                     }
                 ],
-                "createdAt": 1774259648467,
-                "amazonLink": ""
+                        "createdAt": 1774259648467
             },
             {
                 "id": "think-again",
@@ -2096,11 +2025,10 @@ export const celebrities = [
                         "description": "내가 철석같이 믿는 사실 하나를 골라, 반대되는 증거 찾아보기"
                     }
                 ],
-                "createdAt": 1774259647467,
-                "amazonLink": "https://www.amazon.com/dp/0593395780?tag=archiview2026-20"
+                        "createdAt": 1774259647467
             },
             {
-                "id": "thinking-fast-slow",
+                "id": "thinking-fast-and-slow",
                 "section": "MINDSET",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -2118,8 +2046,7 @@ export const celebrities = [
                         "description": "중요한 결정을 내리기 전 숫자로 계산해보거나 하룻밤 묵혀두기"
                     }
                 ],
-                "createdAt": 1774259646467,
-                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
+                        "createdAt": 1774259646467
             },
             {
                 "id": "optimize-brain",
@@ -2140,9 +2067,9 @@ export const celebrities = [
                         "description": "작은 목표를 달성할 때마다 스스로에게 기분 좋은 보상 주기"
                     }
                 ],
-                "createdAt": 1774259645467,
-                "amazonLink": ""
+                        "createdAt": 1774259645467
             },
+
             {
                 "id": "billionaire-framework",
                 "section": "WEALTH",
@@ -2169,8 +2096,7 @@ export const celebrities = [
                         "title": "장기 프로젝트 시작하기",
                         "description": "당장의 성과는 없더라도 10년 뒤의 나를 위해 매일 10분씩 투자할 나만의 성장 프로젝트를 정해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -2207,8 +2133,7 @@ export const celebrities = [
                         "title": "자청의 자기계발 루틴 하나 따라하기",
                         "description": "독서 1권 → 블로그 1포스팅 → 결과물 공유의 사이클 중 내가 할 수 있는 첫 단계를 이번 주 안에 실행해보세요. 역행자는 소비자가 아닌 생산자로 전환하는 순간 시작됩니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "atomic-habits",
@@ -2234,8 +2159,7 @@ export const celebrities = [
                         "title": "환경 설계로 나쁜 습관 마찰 높이기",
                         "description": "끊고 싶은 습관에 물리적 장벽을 만들어보세요. 핸드폰을 다른 방에, 과자를 눈에 안 보이는 곳에. 의지력보다 환경 변화가 습관을 더 확실히 바꿉니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1524763403?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "tools-of-titans",
@@ -2261,8 +2185,7 @@ export const celebrities = [
                         "title": "배우고 싶은 사람에게 10분 인터뷰 요청하기",
                         "description": "내 분야에서 존경하는 사람 1명에게 10분만 대화를 요청해보세요. 타이탄들은 모두 적극적으로 연결을 만든 사람들입니다. 거절당해도 잃을 것이 없습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1328683788?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "rich-dad-poor-dad",
@@ -2288,8 +2211,7 @@ export const celebrities = [
                         "title": "나만의 돈 공부 루틴 만들기",
                         "description": "매주 30분, 재무제표 보는 법, ETF 종류, 부동산 수익률 계산 중 하나를 공부하세요. 부자 아빠는 돈에 대해 계속 배웠고, 가난한 아빠는 배우기를 멈췄습니다. 그 차이가 10년 뒤를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1612680194?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "guns-germs-and-steel",
@@ -2315,8 +2237,7 @@ export const celebrities = [
                         "title": "팀 내 불평등한 자원 배분 해소 방법 제안하기",
                         "description": "우리 팀에서 특정 사람이나 부서에만 쏠리는 정보, 기회, 예산이 있다면 더 공정하게 배분하는 방법을 한 장 제안서로 써보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "how-to-win-friends",
@@ -2342,8 +2263,7 @@ export const celebrities = [
                         "title": "상대방 관점에서 진심으로 관심 보이기",
                         "description": "오늘 동료 한 명의 근황이나 고민을 먼저 물어보세요. 카네기는 상대방이 관심 있는 것에 관심을 가지는 것이 인간관계의 핵심이라고 했습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0671027034?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "grit",
@@ -2369,8 +2289,7 @@ export const celebrities = [
                         "title": "실패 후 복귀 시간 줄이기 연습",
                         "description": "다음 번 프로젝트가 뜻대로 안 될 때, 낙담하는 시간을 일주일에서 하루로 줄여보세요. 빠른 회복력 자체가 경쟁력입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1501111108?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "miracle-morning",
@@ -2396,8 +2315,7 @@ export const celebrities = [
                         "title": "취침 전 내일 아침 루틴 준비해두기",
                         "description": "오늘 밤 운동복, 물 한 잔, 책 한 권을 눈에 띄는 곳에 두세요. 아침 결정을 줄이면 루틴을 실행할 확률이 훨씬 높아집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0979019710?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "mindset",
@@ -2423,8 +2341,7 @@ export const celebrities = [
                         "title": "결과보다 노력과 과정 칭찬하는 피드백 주기",
                         "description": "팀원이나 후배의 성과를 칭찬할 때 '잘했어'보다 '그 방식이 정말 좋았어', '끝까지 포기 안 한 것이 대단해'로 바꿔보세요. 과정 칭찬이 성장 마인드셋을 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0345472322?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "think-and-grow-rich",
@@ -2450,8 +2367,7 @@ export const celebrities = [
                         "title": "나보다 앞서간 멘토 1명 정하고 연결하기",
                         "description": "내가 되고 싶은 모습의 사람 1명을 정하고 그 사람의 책, 인터뷰, 강의를 이번 달 집중적으로 흡수해보세요. 나폴레온 힐은 성공한 사람들의 사고방식을 복제하는 것이 핵심이라고 했습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1788441029?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "outliers",
@@ -2477,8 +2393,7 @@ export const celebrities = [
                         "title": "팀에서 기회가 적은 동료를 위한 제안 하나 내기",
                         "description": "같은 실력이라도 기회 차이가 결과를 만든다는 것을 알았다면, 우리 팀에서 덜 주목받는 동료에게 기회를 만들어주는 제안을 해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0316017930?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "7-habits",
@@ -2504,8 +2419,7 @@ export const celebrities = [
                         "title": "나만의 사명 선언문 한 문장으로 쓰기",
                         "description": "내가 살면서 진정으로 이루고 싶은 것, 어떤 사람이 되고 싶은 것을 한 문장으로 써보세요. 사명이 명확한 사람은 매일 작은 결정을 더 빠르고 일관되게 합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1451639619?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "essentialism",
@@ -2531,8 +2445,7 @@ export const celebrities = [
                         "title": "내가 진짜 원하는 것 vs 타인이 원하길 바라는 것 구분하기",
                         "description": "지금 내 업무 목표 중 진심으로 원하는 것과 주변 기대에 맞추는 것을 분리해 써보세요. 자신의 우선순위를 지키는 사람이 에센셜리스트입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0804137382?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "give-and-take",
@@ -2558,8 +2471,7 @@ export const celebrities = [
                         "title": "팀에서 지식 공유 문화 하나 만들기",
                         "description": "매주 팀 슬랙이나 메일에 유용한 정보를 하나 공유하는 것을 시작해보세요. 작은 기여가 쌓이면 팀 전체의 생산성이 오르고, 당신의 영향력도 커집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0143124986?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "the-secret",
@@ -2585,8 +2497,7 @@ export const celebrities = [
                         "title": "원하는 미래를 현재형으로 쓴 확언 만들기",
                         "description": "'나는 건강하고 풍요로운 삶을 살고 있다'처럼 이미 이뤄진 것처럼 현재형으로 확언을 써보세요. 매일 소리 내어 읽으면 잠재의식이 그 방향으로 이끌려 갑니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1582701709?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "4-hour-workweek",
@@ -2612,11 +2523,10 @@ export const celebrities = [
                         "title": "자동화하거나 위임할 수 있는 업무 하나 찾기",
                         "description": "지금 내가 직접 하는 반복 업무 중 템플릿화, 자동화, 또는 위임 가능한 것 하나를 찾아 이번 달 안에 그 업무에서 손을 떼보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307465357?tag=archiview2026-20"
+                ]
             },
             {
-                "id": "millionaire-fastlane",
+                "id": "fastlane",
                 "section": "WEALTH",
                 "title": "부의 추월차선",
                 "author": "엠제이 드마코",
@@ -2639,8 +2549,7 @@ export const celebrities = [
                         "title": "현재 직장 외 수입원 하나 만들기 시작하기",
                         "description": "블로그, 유튜브, 온라인 강의, 전자책 등 지금 당장 시작할 수 있는 부수입 실험 하나를 이번 달 안에 시작해보세요. 완성도보다 시작이 먼저입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0984358145?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "money-vessel",
@@ -2666,8 +2575,7 @@ export const celebrities = [
                         "title": "금전적 성공에 대한 내 믿음 체계 점검하기",
                         "description": "'돈은 더럽다', '부자는 나쁜 사람이다' 같은 잠재의식 속 돈에 대한 부정적 믿음이 있는지 써보세요. 그릇을 키우려면 먼저 그 믿음을 인식해야 합니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "richest-man-in-babylon",
@@ -2693,8 +2601,7 @@ export const celebrities = [
                         "title": "복리의 힘을 이해하고 장기 투자 계획 세우기",
                         "description": "월 10만 원을 연 6% 수익률로 30년 투자하면 얼마가 되는지 계산해보세요. 숫자를 직접 보면 지금 당장 시작하고 싶어집니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0451205362?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "millionaire-next-door",
@@ -2720,8 +2627,7 @@ export const celebrities = [
                         "title": "순자산 기준으로 내 재무 건강 진단하기",
                         "description": "자산(예금, 투자, 부동산)에서 부채(대출, 카드빚)를 뺀 순자산을 계산해보세요. 이웃집 백만장자는 수입이 아닌 순자산으로 부를 측정합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1589795474?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "secret-of-thought",
@@ -2747,11 +2653,10 @@ export const celebrities = [
                         "title": "성공을 상상하는 시각화 루틴 만들기",
                         "description": "매일 아침 5분, 이루고 싶은 목표를 달성한 순간을 최대한 생생하게 상상해보세요. 뇌는 생생한 상상과 현실을 구분하지 못하며, 그 방향으로 행동을 이끕니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
-                "id": "secrets-millionaire-mind",
+                "id": "millionaire-mind",
                 "section": "MINDSET",
                 "title": "백만장자 시크릿",
                 "author": "하브 에커",
@@ -2774,8 +2679,7 @@ export const celebrities = [
                         "title": "재정적 성공을 당연하게 받아들이는 마음 훈련하기",
                         "description": "1억, 10억이 내 통장에 있는 상상을 불편하지 않게 할 수 있는지 체크해보세요. 불편하다면 그게 현재 그릇의 한계입니다. 매일 상상하며 익숙해지는 연습을 해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "fire-era",
@@ -2801,8 +2705,7 @@ export const celebrities = [
                         "title": "수동적 수입원 하나 만들기 시작하기",
                         "description": "배당주, ETF, 임대 소득, 디지털 콘텐츠 중 하나에 대해 이번 달 구체적으로 조사하고 소액으로 시작해보세요. FIRE의 핵심은 자산이 나를 위해 일하게 만드는 것입니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "latte-factor",
@@ -2828,8 +2731,7 @@ export const celebrities = [
                         "title": "노후 자금 목표 금액과 월 저축액 계산하기",
                         "description": "65세에 필요한 노후 자금을 역산하고, 지금부터 매달 얼마를 저축해야 하는지 계산해보세요. 숫자가 구체적일수록 행동이 명확해집니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "capitalism-ebs",
@@ -2855,8 +2757,7 @@ export const celebrities = [
                         "title": "자본 소득 vs 노동 소득 비율 점검하기",
                         "description": "현재 내 총소득에서 자본(투자, 이자, 배당)에서 오는 비율이 얼마나 되는지 계산하세요. 자본주의를 이해한 사람은 이 비율을 꾸준히 높여 나갑니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "economy-3years",
@@ -2882,8 +2783,7 @@ export const celebrities = [
                         "title": "내 커리어에서 경제 변화 헤지 전략 짜기",
                         "description": "내 현재 직무가 경기 침체나 산업 변화에 취약한지 점검하고, 대비할 수 있는 스킬이나 업을 하나 준비해보세요. 다양성이 리스크를 줄입니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "history-of-money",
@@ -2909,8 +2809,7 @@ export const celebrities = [
                         "title": "역사적 자산 보존 수단을 현재에 적용하기",
                         "description": "금, 토지, 주식은 수백 년 동안 화폐 가치 하락을 이긴 자산입니다. 내 포트폴리오에 이런 실물 자산의 비중이 얼마나 되는지 확인하고 조정 계획을 세워보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "undercover-economist",
@@ -2936,8 +2835,7 @@ export const celebrities = [
                         "title": "경제학적 사고로 내 시간 배분 최적화하기",
                         "description": "오늘 내가 쓴 시간을 기회비용 관점에서 돌아보세요. 그 시간에 가장 가치 있는 것을 했는지, 더 나은 선택이 있었는지 분석해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "wealth-humanities",
@@ -2963,8 +2861,7 @@ export const celebrities = [
                         "title": "고전에서 현대 직장생활 교훈 하나 추출하기",
                         "description": "손자병법, 군주론, 명상록 등 고전 한 권에서 지금 내 직장생활에 직접 적용할 수 있는 원칙을 하나 찾아 실천해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "nudge",
@@ -2990,8 +2887,7 @@ export const celebrities = [
                         "title": "나쁜 습관의 기본값 바꾸는 환경 설계하기",
                         "description": "줄이고 싶은 행동(야식, 핸드폰)을 하기 위해 추가 단계가 필요하도록 환경을 설계해보세요. 사탕을 불투명 그릇에, 앱을 폴더 안으로. 마찰이 행동을 줄입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0143137523?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "wealth-of-nations",
@@ -3017,8 +2913,7 @@ export const celebrities = [
                         "title": "자유로운 교환이 가치를 만드는 협업 제안하기",
                         "description": "팀이나 부서 간 자원(정보, 스킬, 인맥)을 교환하면 서로 윈윈이 되는 협업 아이디어를 하나 제안해보세요. 교환이 가치를 창출한다는 스미스의 통찰을 적용하는 것입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0553585975?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "financial-scenario",
@@ -3044,10 +2939,10 @@ export const celebrities = [
                         "title": "경기 침체 대비 방어적 자산 하나 추가하기",
                         "description": "금, 채권, 현금, 배당주 등 경기 침체기에 상대적으로 안전한 자산 하나에 대해 조사하고 소액으로라도 포트폴리오에 추가하는 계획을 세워보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
+                "id": "behavioral-econ",
                 "section": "ECONOMY",
                 "title": "행동경제학",
                 "author": "리처드 탈러",
@@ -3070,8 +2965,7 @@ export const celebrities = [
                         "title": "앵커링 효과를 협상에 의도적으로 활용하기",
                         "description": "다음 연봉 협상이나 거래에서 내가 원하는 숫자보다 더 높은 첫 제안을 해보세요. 첫 숫자가 협상의 기준점이 됩니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0061353248?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "lean-startup",
@@ -3097,8 +2991,7 @@ export const celebrities = [
                         "title": "고객/사용자에게 직접 피드백 받는 루틴 만들기",
                         "description": "내 업무 결과물(보고서, 제품, 서비스)을 실제 사용자 1명에게 보여주고 솔직한 반응을 받아보세요. 가정이 아닌 데이터로 개선하는 것이 린 방식입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307887898?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "principles",
@@ -3124,8 +3017,7 @@ export const celebrities = [
                         "title": "실패에서 배운 교훈을 원칙으로 정리하기",
                         "description": "최근 실패한 경험 하나를 떠올려 '왜 실패했는가', '다음엔 어떻게 할 것인가'를 원칙 형식으로 써보세요. 고통 + 성찰 = 진보입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1501124021?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "drucker-manager",
@@ -3151,8 +3043,7 @@ export const celebrities = [
                         "title": "지식 노동자로서 나의 생산성 측정 방법 찾기",
                         "description": "내가 오늘 하루 가장 중요한 성과를 냈는지 퇴근 전에 점검해보세요. 바쁘게 보낸 것이 아니라 결과를 낸 것이 지식 노동자의 생산성 기준입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0062574582?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "steve-jobs",
@@ -3178,8 +3069,7 @@ export const celebrities = [
                         "title": "1%의 완성도 차이를 만드는 개선 하나 찾기",
                         "description": "현재 내 업무 결과물에서 남들이 넘기는 작은 디테일 하나를 끝까지 완성해보세요. 탁월함은 큰 도약이 아니라 작은 완성도의 집착에서 나옵니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1451648537?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "blue-ocean",
@@ -3205,8 +3095,7 @@ export const celebrities = [
                         "title": "업계 당연시되는 관행 중 제거 가능한 것 하나 찾기",
                         "description": "우리 업계에서 다들 하지만 고객/사용자에게 실제 가치를 주지 못하는 관행을 하나 찾아보세요. 그것을 제거하거나 바꾸는 것이 블루오션의 시작입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1591396190?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "amoeba-mgmt",
@@ -3232,8 +3121,7 @@ export const celebrities = [
                         "title": "현장 직원의 의사결정권을 높이는 제안하기",
                         "description": "지금 윗선의 승인이 필요한 업무 중 현장에서 바로 결정해도 되는 것을 하나 찾아 권한을 넓히는 제안을 해보세요. 아메바 경영의 핵심은 현장 자율성입니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "flywheel",
@@ -3259,8 +3147,7 @@ export const celebrities = [
                         "title": "단기 성과 대신 장기 복리를 만드는 습관 심기",
                         "description": "단기 실적을 위해 포기하고 있는 장기 투자가 무엇인지 돌아보세요. 플라이휠은 처음엔 느리지만, 돌리기 시작하면 멈추지 않는 힘이 생깁니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1400231582?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "jidawel",
@@ -3286,8 +3173,7 @@ export const celebrities = [
                         "title": "역사, 경제, 철학과 현재 업무를 연결하는 글 쓰기",
                         "description": "최근 읽은 인문학 내용 하나와 내 업무를 연결하는 짧은 글(5문장)을 써보세요. 연결하는 연습이 통찰력을 키웁니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "cosmos",
@@ -3313,8 +3199,7 @@ export const celebrities = [
                         "title": "당연히 여기던 것에 다시 궁금증 갖기",
                         "description": "오늘 하루 중 '이건 왜 이렇게 됐지?'라고 궁금증을 가질 수 있는 것 하나를 찾아보세요. 호기심을 유지하는 것이 코스모스가 가르쳐주는 가장 중요한 태도입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0345539435?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "justice",
@@ -3340,8 +3225,7 @@ export const celebrities = [
                         "title": "당연하게 여기는 가치 하나에 의문 던져보기",
                         "description": "성과급, 연공서열, 능력주의 중 당연하다고 생각한 것 하나에 '이게 진짜 공정한가?'를 물어보세요. 불편한 질문이 더 나은 제도를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0374532508?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "selfish-gene",
@@ -3367,8 +3251,7 @@ export const celebrities = [
                         "title": "내 본능적 행동 하나를 유전자 관점으로 분석하기",
                         "description": "내가 자주 하는 비합리적 행동(회피, 과시, 경쟁심)이 진화적으로 왜 생겼는지 생각해보세요. 본능을 이해하면 더 의식적으로 행동할 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0198788606?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "zarathustra",
@@ -3394,8 +3277,7 @@ export const celebrities = [
                         "title": "자기 극복을 위해 오늘 불편함을 선택하기",
                         "description": "편안한 선택 대신 성장에 도움이 되지만 불편한 것 하나를 오늘 선택해보세요. 니체의 핵심은 저항과 극복을 통해 더 강해진다는 것입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0140441189?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "what-is-history",
@@ -3421,8 +3303,7 @@ export const celebrities = [
                         "title": "10년 후 지금을 돌아봤을 때 어떻게 기억될지 써보기",
                         "description": "지금 내가 하는 일과 결정이 10년 뒤 어떻게 기록될지 써보세요. 미래의 관점이 현재의 선택을 더 신중하게 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0394703073?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "prince-machiavelli",
@@ -3448,8 +3329,7 @@ export const celebrities = [
                         "title": "두려움과 존경 중 어떤 리더십을 추구할지 고민하기",
                         "description": "마키아벨리는 두려움을 주는 것이 존경받는 것보다 안전하다고 했지만, 현대에선 다릅니다. 내가 팀에서 어떤 방식으로 신뢰를 쌓고 싶은지 써보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0486272745?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "on-liberty",
@@ -3475,8 +3355,7 @@ export const celebrities = [
                         "title": "소수 의견에 귀 기울이는 습관 만들기",
                         "description": "다음 팀 회의에서 가장 조용한 사람의 의견을 먼저 물어보세요. 다수결이 항상 옳지 않으며, 소수 의견 안에 더 나은 해답이 있을 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0140432078?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "eichmann-jerusalem",
@@ -3502,8 +3381,7 @@ export const celebrities = [
                         "title": "윤리적으로 불편한 결정 마주쳤을 때 대응 방식 정해두기",
                         "description": "미리 '이런 상황이라면 나는 이렇게 할 것이다'를 정해두세요. 위기의 순간에 사전에 정한 원칙이 용기를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0143039881?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "courage-to-disliked",
@@ -3529,8 +3407,7 @@ export const celebrities = [
                         "title": "지금 이 순간에 집중하는 연습하기",
                         "description": "과거의 실패나 미래의 걱정 대신, 지금 이 순간 할 수 있는 것에 집중하는 연습을 해보세요. 아들러는 지금 여기(here and now)에서만 변화가 시작된다고 했습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1501197274?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "frame-psychology",
@@ -3556,8 +3433,7 @@ export const celebrities = [
                         "title": "내가 자주 쓰는 언어가 사고를 어떻게 제한하는지 파악하기",
                         "description": "평소 자주 쓰는 말(어차피, 당연히, 불가능해) 중 내 가능성을 좁히는 단어를 찾아보세요. 언어가 프레임을 만들고 프레임이 현실을 만듭니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "influence",
@@ -3583,8 +3459,7 @@ export const celebrities = [
                         "title": "호감 원칙으로 관계 먼저 쌓기",
                         "description": "다음 협업이나 협상 전에 상대방과 공통점을 찾고 진심 어린 칭찬을 먼저 해보세요. 사람은 자신을 좋아하는 사람의 말에 더 귀를 기울입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/006124189X?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "thinking-fast-slow",
@@ -3610,8 +3485,7 @@ export const celebrities = [
                         "title": "손실 회피 편향이 내 투자/협상에 미치는 영향 분석하기",
                         "description": "이득을 얻는 기쁨보다 손실의 고통이 2배 크다는 것을 알고, 내가 손실이 두려워 포기한 기회가 있는지 돌아보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "resilience",
@@ -3637,8 +3511,7 @@ export const celebrities = [
                         "title": "일상에서 작은 회복 루틴 하나 만들기",
                         "description": "산책, 명상, 일기, 친구와의 통화 등 스트레스를 해소하는 나만의 루틴을 하나 정하고 이번 주 3번 실천해보세요. 회복탄력성은 근육처럼 훈련됩니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "you-are-right",
@@ -3664,8 +3537,7 @@ export const celebrities = [
                         "title": "힘든 동료에게 어떤 마음인지 먼저 물어보기",
                         "description": "오늘 힘들어 보이는 동료에게 '괜찮아요?'가 아닌 '요즘 어떤 마음이에요?'로 먼저 물어보세요. 정혜신이 말하는 공감은 평가 없이 있는 그대로 함께 있어주는 것입니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "laws-of-nature",
@@ -3691,8 +3563,7 @@ export const celebrities = [
                         "title": "감정에 반응하지 않고 한 발 물러서 관찰하기",
                         "description": "화나거나 짜증나는 상황에서 즉각 반응하지 말고 '나는 지금 왜 이 감정을 느끼는가?'를 3초 동안 물어보세요. 감정을 관찰하는 순간 그것에 지배당하지 않게 됩니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1101984310?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "inner-comms",
@@ -3718,8 +3589,7 @@ export const celebrities = [
                         "title": "스트레스 상황에서 내면의 대화 패턴 인식하기",
                         "description": "업무 스트레스를 받을 때 내 머릿속에서 어떤 말이 오가는지 적어보세요. 자동으로 돌아가는 부정적 내면의 소리를 인식해야 바꿀 수 있습니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "kluge",
@@ -3745,8 +3615,7 @@ export const celebrities = [
                         "title": "기억보다 기록을 신뢰하는 습관 들이기",
                         "description": "중요한 대화, 결정, 아이디어를 즉시 메모하는 습관을 만들어보세요. 우리 뇌는 기억을 왜곡하고 재구성합니다. 기록만이 정확합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0547304153?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "live-again",
@@ -3772,8 +3641,7 @@ export const celebrities = [
                         "title": "지금 가장 중요한 것에 더 많은 시간 쏟기",
                         "description": "만일 6개월 밖에 남지 않았다면 지금 하는 일 중 무엇을 계속하겠냐고 자문해보세요. 그 답이 지금 진짜 우선순위입니다. 오늘 시간 배분을 다시 조정해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     },
@@ -3787,7 +3655,7 @@ export const celebrities = [
         "quote": "좋은 책을 읽는다는 것은 과거의 가장 훌륭한 사람들과 대화하는 것이다.",
         "books": [
             {
-                "id": "guns-germs-steel",
+                "id": "top70-총-균-쇠",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -3812,8 +3680,7 @@ export const celebrities = [
                         "title": "팀 내 불평등한 자원 배분 찾아 제안서 쓰기",
                         "description": "우리 팀에서 특정 사람이나 부서에만 집중되는 자원(정보, 기회, 예산)이 있다면 더 공정하게 배분할 방법을 한 장 제안서로 써보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-아웨이크",
@@ -3841,8 +3708,7 @@ export const celebrities = [
                         "title": "다음 주 목표를 감각적으로 상상해보기",
                         "description": "다음 주에 이루고 싶은 목표를 달성했을 때의 느낌, 소리, 표정까지 생생하게 상상해 적어보세요. 뇌는 생생한 이미지를 현실과 구분하지 못합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0671791540?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-습관의-디테일",
@@ -3870,8 +3736,7 @@ export const celebrities = [
                         "title": "나쁜 습관의 마찰 높이기",
                         "description": "줄이고 싶은 습관(핸드폰 과다사용, 야식)에 물리적 불편함을 하나 추가해보세요. 핸드폰을 서랍 안에, 과자를 안 보이는 곳에. 마찰만 높여도 절반은 성공입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0544633792?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-퓨처-셀프",
@@ -3899,8 +3764,7 @@ export const celebrities = [
                         "title": "오늘 결정을 5년 후 나의 기준으로 판단하기",
                         "description": "오늘 중요한 결정 앞에서 지금의 나가 아닌 5년 후 내가 원하는 나라면 어떤 선택을 할지 자문해보세요. 미래 자아의 관점이 현재를 바꿉니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1401967574?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-몰입",
@@ -3928,8 +3792,7 @@ export const celebrities = [
                         "title": "몰입 방해 요인 3가지 목록 만들어 제거하기",
                         "description": "집중이 깨지는 순간 무엇이 방해했나를 기록해보세요. 슬랙 알림, 동료의 말걸기, 배고픔 등 방해 요인을 알아야 막을 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0061339202?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-당신은-왜-그-일을-하는가-",
@@ -3957,8 +3820,7 @@ export const celebrities = [
                         "title": "회사의 WHY와 내 WHY 겹치는 부분 찾기",
                         "description": "우리 회사가 존재하는 이유와 내가 일하는 이유를 각각 적고, 겹치는 부분이 얼마나 되는지 확인해보세요. 그 교집합이 클수록 번아웃 없이 오래 일할 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1591846447?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-초격차",
@@ -3986,8 +3848,7 @@ export const celebrities = [
                         "title": "팀에서 기준을 높이는 제안 하나 내기",
                         "description": "우리 팀의 현재 기준이 무난한 수준에 머물러 있는 영역을 하나 찾아 더 높은 기준을 제안해보세요. 초격차는 팀 전체의 기준 상향에서 시작됩니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-하버드-상위-1-의-비밀",
@@ -4015,8 +3876,7 @@ export const celebrities = [
                         "title": "멘토 또는 스터디 파트너 1명 구하기",
                         "description": "내 분야에서 나보다 3~5년 앞서 있는 사람 1명을 찾아 커피챗을 요청해보세요. 하버드 상위권은 혼자 공부하지 않습니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-부자들의-습관",
@@ -4044,8 +3904,7 @@ export const celebrities = [
                         "title": "이번 달 수입의 10% 저축 or 투자하기",
                         "description": "부자들의 가장 기본 습관은 먼저 저축하고 나머지로 생활하는 것입니다. 급여가 들어오는 날, 자동이체로 10%를 빼두는 시스템을 만들어보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1934938939?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-파이어족이-온다",
@@ -4073,8 +3932,7 @@ export const celebrities = [
                         "title": "사이드 인컴 아이디어 3가지 브레인스토밍",
                         "description": "지금 내 스킬과 시간으로 만들 수 있는 부수입 아이디어를 제약 없이 3가지 적어보세요. 소액이라도 첫 걸음이 FIRE 여정을 실감하게 합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0865718989?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-한국의-젊은-부자들",
@@ -4102,8 +3960,7 @@ export const celebrities = [
                         "title": "부자 멘토 1명 정하고 행동 따라하기",
                         "description": "책에 나온 인물 중 나와 비슷한 출발점에서 시작한 사람을 1명 골라, 그 사람이 20~30대에 한 행동 한 가지를 올해 안에 직접 실천해보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-언스크립티드",
@@ -4131,8 +3988,7 @@ export const celebrities = [
                         "title": "시간을 파는 구조 vs 결과를 파는 구조 비교하기",
                         "description": "지금 내 수입이 내 시간을 파는 것인지, 결과나 시스템을 파는 것인지 구분해보세요. 스케일 가능한 수입 구조로 전환하는 첫 아이디어를 써보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0984358188?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-경제기사-궁금증-300문-300답",
@@ -4160,8 +4016,7 @@ export const celebrities = [
                         "title": "경제 이슈를 내 업무에 연결해보기",
                         "description": "오늘 읽은 경제 뉴스가 내 회사, 내 업계, 내 직무에 어떤 영향을 줄 수 있는지 한 문단으로 써보세요. 거시경제를 자기 언어로 번역하는 사람이 비즈니스 판단이 빠릅니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-거시경제학-개론",
@@ -4189,8 +4044,7 @@ export const celebrities = [
                         "title": "인플레이션이 내 연봉에 미치는 실질 영향 계산하기",
                         "description": "올해 물가상승률과 내 연봉인상률을 비교해 실질 임금이 오른 건지 내린 건지 계산해보세요. 숫자로 보면 협상 근거가 생깁니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1319098754?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-이코노믹-씽킹",
@@ -4218,8 +4072,7 @@ export const celebrities = [
                         "title": "한계 편익 사고로 오늘 업무 우선순위 정하기",
                         "description": "지금 해야 할 업무 목록에서 추가 1시간 투자 대비 성과가 가장 큰 일이 무엇인지 골라 그것부터 시작하세요. 한계 편익 사고가 생산성을 높입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0465060710?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-장하준의-경제학-강의",
@@ -4247,8 +4100,7 @@ export const celebrities = [
                         "title": "선진국 경제 정책 사례 하나 스터디하기",
                         "description": "핀란드 교육, 독일 제조업, 싱가포르 금융 등 특정 국가의 성공 정책 하나를 깊이 파고 우리나라나 우리 회사에 적용 가능한 점을 찾아보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1620400314?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-환율의-미래",
@@ -4276,8 +4128,7 @@ export const celebrities = [
                         "title": "해외 자산 일부 분산 투자 계획 세우기",
                         "description": "지금 내 투자 포트폴리오가 전부 원화 자산이라면, 달러 ETF나 해외 펀드에 10% 분산하는 계획을 구체적으로 세워보세요."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-화폐전쟁",
@@ -4305,8 +4156,7 @@ export const celebrities = [
                         "title": "내 자산이 화폐 발행량 증가에 얼마나 취약한지 점검",
                         "description": "현금 예금이 자산의 몇 %인지 확인하고, 인플레이션이 지속될 때 현금 자산의 실질 가치가 어떻게 줄어드는지 계산해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1591845564?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-좋은-기업을-넘어-위대한-기업으로",
@@ -4334,8 +4184,7 @@ export const celebrities = [
                         "title": "단기 성과보다 플라이휠 하나 돌리기",
                         "description": "꾸준히 돌리면 결국 가속이 붙는 플라이휠(반복 가능한 작은 성공 루프)을 내 업무에서 찾아보세요. 오늘의 작은 반복이 내년의 큰 성과를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/Good-Great-Some-Companies-Others/dp/0066620996?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-구글의-아침은-자유가-시작된다",
@@ -4363,8 +4212,7 @@ export const celebrities = [
                         "title": "내 팀의 심리적 안정감 수준 체크하기",
                         "description": "구글이 밝힌 최고 팀의 조건 1위는 심리적 안정감입니다. 우리 팀에서 솔직한 의견을 말할 수 있는 분위기인지, 내가 만들 수 있는 변화가 무엇인지 생각해보세요."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1455554790?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-규칙-없음",
@@ -4392,11 +4240,10 @@ export const celebrities = [
                         "title": "결과 중심으로 평가받기 위한 지표 합의하기",
                         "description": "출퇴근 시간이나 자리 지킴이 아닌 성과로 평가받기 위해 내 업무의 명확한 결과 지표를 상사와 합의해보세요. 측정 가능한 목표가 자유를 만듭니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1984877860?tag=archiview2026-20"
+                ]
             },
             {
-                "id": "deep-work",
+                "id": "top70-딥-워크",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4421,8 +4268,7 @@ export const celebrities = [
                         "title": "퇴근 전 내일 딥 워크 과제 한 가지 정하기",
                         "description": "오늘 퇴근 전 5분, 내일 가장 집중해서 할 한 가지를 메모해두세요. 아침에 무엇을 할지 고민하는 시간을 없애면 딥 워크로 바로 진입할 수 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1455586692?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-그로스-해킹",
@@ -4450,8 +4296,7 @@ export const celebrities = [
                         "title": "제품과 서비스의 아하 모멘트 찾기",
                         "description": "우리 팀이 만드는 제품이나 서비스에서 고객이 이거다를 느끼는 순간이 언제인지 동료들과 토론해보세요. 그 순간까지 빠르게 도달시키는 것이 그로스의 핵심입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1591847389?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-도덕경",
@@ -4479,11 +4324,10 @@ export const celebrities = [
                         "title": "지나친 통제 대신 맡기기 연습하기",
                         "description": "팀원이나 동료에게 일을 맡겼을 때 중간에 끼어들고 싶은 충동을 한 번 참아보세요. 통제를 줄이면 신뢰가 생기고 팀이 성장합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0140441387?tag=archiview2026-20"
+                ]
             },
             {
-                "id": "meditations",
+                "id": "top70-명상록",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4508,8 +4352,7 @@ export const celebrities = [
                         "title": "비판 받을 때 방어 대신 감사 연습하기",
                         "description": "다음 번 피드백이나 비판을 받을 때 방어 반응 대신 무엇을 배울 수 있나를 먼저 물어보세요. 스토아 철학에서 역경은 성장의 재료입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0812968255?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-공정하다는-착각",
@@ -4537,11 +4380,10 @@ export const celebrities = [
                         "title": "능력주의의 한계를 인식하며 평가하기",
                         "description": "다음 번 동료 평가나 성과 검토 때, 결과만이 아닌 그 사람이 처한 환경과 조건을 함께 고려해보세요. 공정한 판단은 맥락을 보는 것에서 시작합니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0374289982?tag=archiview2026-20"
+                ]
             },
             {
-                "id": "sparks-of-genius",
+                "id": "top70-생각의-탄생",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4566,8 +4408,7 @@ export const celebrities = [
                         "title": "오늘 관찰 하나를 글로 기록하기",
                         "description": "출퇴근길이나 업무 중 눈에 띄는 것 하나를 자세히 관찰하고 기록해보세요. 세밀한 관찰 습관이 창의적 문제 해결의 기초입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0618620311?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-당신의-뇌는-최적화를-원한다",
@@ -4595,8 +4436,7 @@ export const celebrities = [
                         "title": "잠자기 90분 전 스마트폰 끄기",
                         "description": "뇌가 최적화되는 수면을 위해 잠들기 90분 전부터 스마트폰 블루라이트를 차단해보세요. 수면의 질이 다음날 뇌 성능을 결정합니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             },
             {
                 "id": "top70-우울할-땐-뇌과학",
@@ -4624,8 +4464,7 @@ export const celebrities = [
                         "title": "주변 사람과 진짜 대화 한 번 시도하기",
                         "description": "오늘 동료와 업무 외의 이야기(주말, 가족, 고민)를 5분이라도 나눠보세요. 사회적 연결감이 뇌의 스트레스 반응을 줄이는 가장 효과적인 방법입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1626251207?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-감정의-발견",
@@ -4653,8 +4492,7 @@ export const celebrities = [
                         "title": "팀원의 감정 상태 확인하는 습관 만들기",
                         "description": "다음 팀 미팅 전에 오늘 어때요? 진짜로요 라고 한 번 물어보세요. 감정 인식 능력이 높은 리더의 팀이 성과도 높다는 연구 결과가 있습니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/1250212847?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-조용한-성격의-힘",
@@ -4682,8 +4520,7 @@ export const celebrities = [
                         "title": "내향인의 강점을 직무에 연결하기",
                         "description": "내향인이 잘하는 것(깊은 분석, 경청, 글쓰기, 1:1 관계)이 지금 내 직무에서 어떻게 강점이 될 수 있는지 써보세요. 강점을 살리는 것이 더 효과적입니다."
                     }
-                ],
-                "amazonLink": "https://www.amazon.com/dp/0307352153?tag=archiview2026-20"
+                ]
             },
             {
                 "id": "top70-자존감-수업",
@@ -4711,8 +4548,7 @@ export const celebrities = [
                         "title": "거절을 연습하는 작은 아니요 한 번 말하기",
                         "description": "자존감 낮은 사람은 거절을 두려워합니다. 오늘 부담스럽지만 하기 싫은 부탁을 하나 정중하게 거절해보세요. 경계를 설정하는 연습이 자존감을 만듭니다."
                     }
-                ],
-                "amazonLink": ""
+                ]
             }
         ]
     }

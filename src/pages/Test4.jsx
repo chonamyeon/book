@@ -13,43 +13,7 @@ import { db } from '../firebase';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 
-// abstract/ 폴더 AI 이미지 32개 — 책 카드에 순서대로 1:1 배정 (중복 없음)
-const ABSTRACT_IMGS = [
-    '/images/abstract/abstract_growth_1774340473886.png',
-    '/images/abstract/abstract_time_1774340492359.png',
-    '/images/abstract/abstract_focus_1774340509108.png',
-    '/images/abstract/abstract_leadership_1774340524825.png',
-    '/images/abstract/abstract_wealth_1774340543117.png',
-    '/images/abstract/abstract_innovation_1774340633247.png',
-    '/images/abstract/abstract_mind_1774340653121.png',
-    '/images/abstract/abstract_success_1774340670143.png',
-    '/images/abstract/abstract_balance_1774340684379.png',
-    '/images/abstract/abstract_resilience_1774340701546.png',
-    '/images/abstract/media__1774334607773.png',
-    '/images/abstract/media__1774335323428.png',
-    '/images/abstract/media__1774336178459.png',
-    '/images/abstract/media__1774336238691.png',
-    '/images/abstract/media__1774336338995.png',
-    '/images/abstract/media__1774336549186.png',
-    '/images/abstract/media__1774336558066.png',
-    '/images/abstract/media__1774336587688.png',
-    '/images/abstract/media__1774337182114.png',
-    '/images/abstract/media__1774337290527.png',
-    '/images/abstract/media__1774337721563.png',
-    '/images/abstract/media__1774338027907.png',
-    '/images/abstract/media__1774338075960.png',
-    '/images/abstract/media__1774338109653.png',
-    '/images/abstract/media__1774338171858.png',
-    '/images/abstract/media__1774338275595.png',
-    '/images/abstract/media__1774339536472.png',
-    '/images/abstract/media__1774339732271.png',
-    '/images/abstract/media__1774339904643.png',
-    '/images/abstract/media__1774339907931.png',
-    '/images/abstract/media__1774340668703.png',
-    '/images/abstract/media__1774340993253.png',
-];
-
-export default function Home() {
+export default function Test4() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { getAllBooks, loading: booksLoading } = useBookData();
@@ -57,7 +21,6 @@ export default function Home() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [showAllCelebs, setShowAllCelebs] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
-    const [searchTerm, setSearchTerm] = useState("");
 
     const getAudioDurationMin = (podcastFile) => {
         if (!podcastFile) return 15;
@@ -142,7 +105,7 @@ export default function Home() {
     }, [getAllBooks]);
 
     const originalContents = useMemo(() => {
-        return allBooks.filter(b => (b.id?.includes('framework') || b.id?.includes('original')));
+        return allBooks.filter(b => b.section === 'ARCHIVIEW_ORIGINAL').slice(0, 3);
     }, [allBooks]);
 
     // Mapping for Category Chips to Category Page IDs
@@ -167,7 +130,7 @@ export default function Home() {
         { id: "story-power", title: "스토리의 힘", listens: "6.8k" },
     ]);
 
-    // 위클리포커스 스케줄 자동 적용
+    // 위클리포커스 스케줄 자동 적용 — 월요일 6시 이후 Firestore 업데이트
     useEffect(() => {
         const applySchedule = async () => {
             try {
@@ -218,12 +181,10 @@ export default function Home() {
     const weeklyFocusBooks = useMemo(() => {
         if (weeklyFocusRaw.length > 0) {
             const enriched = enrich(weeklyFocusRaw);
-            // allBooks가 로드된 경우에만 enriched 캐시 갱신
             if (allBooks.length > 0) {
                 try { localStorage.setItem('wf_enriched_cache', JSON.stringify(enriched)); } catch {}
                 return enriched;
             }
-            // allBooks 아직 로딩 중 → enriched 캐시 사용
             try {
                 const cached = JSON.parse(localStorage.getItem('wf_enriched_cache') || '[]');
                 if (cached.length > 0) return cached;
@@ -283,7 +244,7 @@ export default function Home() {
                 <main className="flex-grow pb-32">
                     {/* Independent Header Area - Positioned above the image */}
                     <div className="bg-[#101218] px-3 pb-3" style={{ paddingTop: 'calc(5px + env(safe-area-inset-top, 0px))' }}>
-                        <header className="flex items-center justify-between mb-4 mt-2">
+                        <header className="flex items-center justify-between mt-2">
                             <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-start">
                                 <div className="flex items-center gap-[7px]">
                                     {/* 🔊 Gray Waveform Graphic Logo */}
@@ -297,73 +258,12 @@ export default function Home() {
                                     <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                                 </div>
                             </Link>
-                            <div className="flex items-center gap-[15px]">
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        placeholder="도서 검색" 
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="bg-white/5 border border-white/20 text-white rounded-full px-4 py-1.5 text-[13px] w-[140px] focus:w-[180px] hover:bg-white/10 transition-all outline-none"
-                                    />
-                                    <span className="material-symbols-outlined absolute right-2.5 top-[6px] text-[16px] text-white/50 pointer-events-none">search</span>
-                                </div>
+                            <div className="flex items-center gap-[25px]">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"></path></svg>
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"></path></svg>
                             </div>
                         </header>
-                        {/* 🏷️ Top Menu Category Chips */}
-                        <div className="flex gap-1.5 w-full px-1">
-                            {Object.keys(chipToIdMap).map((chip) => (
-                                <button
-                                    key={chip}
-                                    onClick={() => {
-                                        const el = document.getElementById(`category-${chipToIdMap[chip]}`);
-                                        if (el) {
-                                            const y = el.getBoundingClientRect().top + window.scrollY - 60;
-                                            window.scrollTo({ top: y, behavior: 'smooth' });
-                                        } else {
-                                            navigate(`/category/${chipToIdMap[chip]}`);
-                                        }
-                                    }}
-                                    className="flex-1 min-w-0 py-1.5 flex items-center justify-center rounded-none border bg-[#1a1d24] border-white/10 text-gray-300 font-bold transition-all active:scale-95 shadow-lg hover:bg-orange-500/20 hover:border-orange-500/50 hover:text-orange-400"
-                                >
-                                    <span className="text-[9px] opacity-70 mr-[1px]">#</span>
-                                    <span className="text-[11px] tracking-tight truncate">{chip}</span>
-                                </button>
-                            ))}
-                        </div>
                     </div>
-
-                    {/* 🔎 Search Results Overlay */}
-                    {searchTerm.trim().length > 0 && (
-                        <div className="absolute top-[108px] left-0 right-0 z-[100] px-3">
-                            <div className="bg-[#1a1d24] border border-white/10 shadow-2xl w-full max-h-[400px] overflow-y-auto overflow-x-hidden p-3 relative" style={{ borderRadius: '0', backdropFilter: 'blur(20px)' }}>
-                                <h3 className="text-[12px] font-bold text-orange-400 mb-3 ml-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">search</span> 검색 결과
-                                </h3>
-                                {allBooks.filter(b => b.title?.includes(searchTerm) || b.author?.includes(searchTerm) || b.category?.includes(searchTerm)).length > 0 ? (
-                                    <div className="flex flex-col gap-2 relative z-[101]">
-                                        {allBooks.filter(b => b.title?.includes(searchTerm) || b.author?.includes(searchTerm) || b.category?.includes(searchTerm)).slice(0, 10).map((book, idx) => (
-                                            <div 
-                                                key={idx} 
-                                                onClick={() => navigate(`/review-board/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}
-                                                className="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-white/5"
-                                            >
-                                                <div className="w-10 h-14 bg-zinc-800 shrink-0 overflow-hidden shadow-inner">
-                                                    <img src={book.cover} alt={book.title} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src='/images/hero_expert_v5.png'}} />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <h4 className="text-[13px] font-black text-white truncate leading-tight">{book.title}</h4>
-                                                    <p className="text-[10px] text-gray-400 truncate mt-0.5 font-medium">{book.author}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-6 text-[12px] text-gray-500 font-bold relative z-[101]">검색 결과가 없습니다.</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
                     <section className="relative pt-0 pb-0 overflow-hidden" style={{ minHeight: '376px' }}>
                         {/* Full background image - face focused */}
                         <div className="absolute inset-0 z-0 overflow-hidden">
@@ -404,7 +304,7 @@ export default function Home() {
                                     <span className="text-[23px]">
                                         성공한 사람들의<br />
                                         <span className="flex items-center gap-[6px]">
-                                            생각을 듣다
+                                            인사이트를 듣다
                                             <span className="inline-flex items-center gap-[2px] opacity-90 h-[24px]">
                                                 <motion.div animate={{ height: [8, 14, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-white rounded-sm" />
                                                 <motion.div animate={{ height: [14, 20, 14] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-white rounded-sm" />
@@ -414,13 +314,30 @@ export default function Home() {
                                         </span>
                                     </span>
                                 </h1>
-                                <p className="text-gray-300 text-[11px] font-medium leading-relaxed">
+                                <p className="text-gray-300 text-[11px] font-medium leading-relaxed mb-6">
                                     책 한 권 읽을 시간 없는 직장인을 위한<br />오디오 인사이트 플랫폼
                                 </p>
                             </motion.div>
-                        </div>
 
-                        {/* Category Chips moved to top Header */}
+                            {/* 🏷️ Category Chips placed here (full width) */}
+                            <motion.div
+                                initial="hidden"
+                                animate="visible"
+                                variants={sectionVariants}
+                                className="flex gap-1.5 w-full mb-4"
+                            >
+                                {Object.keys(chipToIdMap).map((chip) => (
+                                    <button
+                                        key={chip}
+                                        onClick={() => navigate(`/category/${chipToIdMap[chip]}`)}
+                                        className="flex-1 min-w-0 py-1.5 flex items-center justify-center rounded-none border bg-black/40 backdrop-blur-md border-white/10 text-gray-300 font-bold transition-all active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:bg-orange-500/20 hover:border-orange-500/50 hover:text-orange-400"
+                                    >
+                                        <span className="text-[9px] opacity-70 mr-[1px]">#</span>
+                                        <span className="text-[11px] tracking-tight truncate">{chip}</span>
+                                    </button>
+                                ))}
+                            </motion.div>
+                        </div>
 
                         {/* ⭐ Social Proof Section */}
                         <div className="relative z-10 px-6 pb-6 pt-0">
@@ -450,154 +367,9 @@ export default function Home() {
                             </div>
                         </div>
 
- 
-                         {/* 회사 소개 삭제됨 */}
 
-                         {/* 📍 [애드센스 심사용 리뷰 라이브러리 시작] 📍 
-                             (나중에 승인 이후 이 부분을 주석 처리하시면 다른 페이지 영향 없이 홈에서 사라집니다) */}
-                         <div className="relative z-[20] px-6 mb-7">
-                             <div className="flex items-center justify-between mb-4">
-                                 <h2 className="text-[18px] font-black text-white tracking-tight flex items-center gap-2">
-                                     <span className="material-symbols-outlined text-indigo-400">menu_book</span> 리뷰 라이브러리
-                                 </h2>
-                                 <Link to="/review-board" className="text-[11px] font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-0.5">
-                                     <span>전체보기</span>
-                                     <span className="material-symbols-outlined text-[13px]">chevron_right</span>
-                                 </Link>
-                             </div>
-                             
-                             {Object.keys(chipToIdMap).map((categoryName, cIdx) => {
-                                 const catBooks = allBooks.filter(b => {
-                                     const cat = (b.category || '').toLowerCase();
-                                     const sec = (b.section || '').toUpperCase();
-                                     const targetId = chipToIdMap[categoryName];
-                                     if (targetId === 'SELF_DEV') return cat.includes('자기계발');
-                                     if (targetId === 'ECONOMY') return cat.includes('경제') || cat.includes('재테크');
-                                     if (targetId === 'MANAGEMENT') return cat.includes('경영') || cat.includes('비즈니스');
-                                     if (targetId === 'HUMANITIES') return cat.includes('인문') || cat.includes('철학');
-                                     if (targetId === 'PSYCHOLOGY') return cat.includes('심리');
-                                     return false;
-                                 }).slice(0, 8);
-
-                                 if(catBooks.length === 0) return null;
-
-                                 return (
-                                     <div key={categoryName} id={`category-${chipToIdMap[categoryName]}`} className="mb-10 last:mb-0">
-                                         <div className="flex items-center gap-2 mb-4 px-1">
-                                             <div className="w-1.5 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
-                                             <h3 className="text-[15px] font-black tracking-widest text-white/90 uppercase">{categoryName}</h3>
-                                         </div>
-                                         <div className="grid grid-cols-2 gap-3">
-                                             {catBooks.map((book, i) => {
-                                                 // 카테고리마다 8개씩(slice 0,8) → cIdx*8+i 로 전체 고유 인덱스
-                                                 // ABSTRACT_IMGS 32개 순환 — 같은 카테고리 내 절대 중복 없음
-                                                 const thumbSrc = ABSTRACT_IMGS[(cIdx * 8 + i) % ABSTRACT_IMGS.length];
-
-                                                 let rawText = "";
-                                                 if (typeof document !== 'undefined') {
-                                                     const tmp = document.createElement("DIV");
-                                                     if (book.review) {
-                                                         try {
-                                                             tmp.innerHTML = book.review;
-                                                             let text = tmp.textContent || tmp.innerText || "";
-                                                             text = text.replace(/\[.*?\]/g, '').replace(/\n+/g, ' ').trim();
-                                                             if (text) rawText += text + " ";
-                                                         } catch (e) {
-                                                             console.error(e);
-                                                         }
-                                                     }
-                                                     if (book.ebookText) {
-                                                         try {
-                                                             tmp.innerHTML = book.ebookText;
-                                                             let eText = tmp.textContent || tmp.innerText || "";
-                                                             eText = eText.replace(/\[.*?\]/g, '').replace(/\n+/g, ' ').trim();
-                                                             if (eText) rawText += eText + " ";
-                                                         } catch (e) {
-                                                             console.error(e);
-                                                         }
-                                                     }
-                                                 }
-
-                                                 let textPreview = rawText ? rawText.substring(0, 150) + "..." : (book.desc || "도서 리뷰 및 인사이트가 준비되어 있습니다.");
-                                                 const encodedId = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
-
-                                                 return (
-                                                     <Link key={i} to={`/review-board/${encodedId}`} className="block bg-zinc-900/60 border border-white/5 shadow-lg relative group transition-all hover:border-indigo-500/40 rounded-none overflow-hidden hover:bg-zinc-800/80">
-                                                         <div className="w-full aspect-[16/10] overflow-hidden relative border-b border-white/5">
-                                                             <img src={thumbSrc} alt={`${book.title} 추상 이미지`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = '/images/hero_expert_v5.png'; }} />
-                                                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
-                                                             <div className="absolute bottom-2 left-2 right-2 flex flex-col justify-end h-full w-[calc(100%-16px)]">
-                                                                 <h3 className="text-[12px] font-black text-white leading-tight drop-shadow-md line-clamp-2 break-keep">{book.title}</h3>
-                                                                 {book.author && <p className="text-[9px] text-gray-300 opacity-80 mt-1 truncate">{book.author}</p>}
-                                                             </div>
-                                                         </div>
-                                                         <div className="p-3">
-                                                             <p className="text-[10px] text-gray-400 leading-[1.6] font-medium line-clamp-3 break-keep">
-                                                                 {textPreview}
-                                                             </p>
-                                                         </div>
-                                                     </Link>
-                                                 );
-                                             })}
-                                         </div>
-                                     </div>
-                                 );
-                             })}
-                             </div>
-                         {/* 📍 [애드센스 심사용 리뷰 라이브러리 끝] 📍 */}
-
-                         {/* 📍 [애드센스 추가 심사용 5개 카테고리 도서 시작] 📍 
-                             (나중에 승인 이후 주석 처리 가능) */}
-                         {false && (
-                         <div className="relative z-[20] px-5 mb-8">
-                             <div className="flex gap-2 w-full overflow-x-auto scrollbar-hide snap-x pb-2">
-                                 {Object.keys(chipToIdMap).map((chip, idx) => {
-                                     // Find the first book that matches this category
-                                     const matchedBook = allBooks.find(b => {
-                                         const cat = (b.category || '').toLowerCase();
-                                         const sec = (b.section || '').toUpperCase();
-                                         const targetId = chipToIdMap[chip];
-                                         
-                                         if (targetId === 'SELF_DEV') return cat.includes('자기계발');
-                                         if (targetId === 'ECONOMY') return cat.includes('경제');
-                                         if (targetId === 'MANAGEMENT') return cat.includes('경영');
-                                         if (targetId === 'HUMANITIES') return cat.includes('인문');
-                                         if (targetId === 'PSYCHOLOGY') return cat.includes('심리');
-                                         return false;
-                                     });
-                                     
-                                     if (!matchedBook) return null;
-                                     const encodedId = matchedBook.id || matchedBook.title.toLowerCase().replace(/\s+/g, '-');
-
-                                     return (
-                                         <Link
-                                             key={chip}
-                                             to={`/review-board/${encodedId}`}
-                                             className="flex-shrink-0 w-32 relative group snap-start"
-                                         >
-                                             <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/30 transition-all h-full">
-                                                 <span className="text-[12px] font-black tracking-tight text-orange-400">#{chip}</span>
-                                                 <div className="w-full aspect-[3/4] rounded shadow-lg overflow-hidden border border-white/5 bg-zinc-800">
-                                                     <img 
-                                                         src={`/assets/cover_bg_${(idx % 5) + 1}.jpg`}
-                                                         alt={matchedBook.title}
-                                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                                     />
-                                                 </div>
-                                                 <h4 className="text-[10px] font-bold text-white leading-tight break-keep text-center line-clamp-2 w-full">
-                                                     {matchedBook.title}
-                                                 </h4>
-                                             </div>
-                                         </Link>
-                                     );
-                                 })}
-                             </div>
-                         </div>
-                         )}
-                         {/* 📍 [애드센스 추가 심사용 5개 카테고리 도서 끝] 📍 */}
 
                          {/* 2️⃣ Weekly Focus */}
-                         {false && (
                         <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
@@ -640,20 +412,18 @@ export default function Home() {
 
 
 
-                                                {/* <BookCardActions book={book} /> */}
+                                                <BookCardActions book={book} />
                                             </div>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
-                        )}
                     </section>
 
 
                     {/* 3️⃣ 직장인이 많이 듣는 컨텐츠 */}
-                    {false && (
-                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
+                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-0">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5">직장인이 가장 많이 듣는 인사이트</h2>
@@ -662,9 +432,6 @@ export default function Home() {
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">지금 직장인의 고민으로 가장 많이 듣는 인사이트</p>
                                 </div>
                             </div>
-                            <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
-                                <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
-                            </Link>
                         </div>
 
                         <div className="space-y-5">
@@ -719,14 +486,23 @@ export default function Home() {
                             })}
                         </div>
                     </motion.section>
-                    )}
 
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+                    {/* 쿠팡 파트너스 배너 */}
+                    <div style={{ width: '100%', overflow: 'hidden', padding: '0 24px 6px' }}>
+                        <iframe
+                            src="https://ads-partners.coupang.com/widgets.html?id=976186&template=banner&trackingCode=AF5571749&subId=&width=320&height=90"
+                            width="100%"
+                            height="90"
+                            frameBorder="0"
+                            scrolling="no"
+                            referrerPolicy="unsafe-url"
+                            style={{ border: 'none', display: 'block' }}
+                        />
+                        <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', margin: '2px 0 0', lineHeight: 1.2 }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+                    </div>
 
-                    {false && (
-<>
-{/* 4️⃣ 인기 아카이뷰 */}
-                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
+                    {/* 4️⃣ 인기 아카이뷰 */}
+                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-5 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 아카이뷰</h2>
@@ -735,9 +511,6 @@ export default function Home() {
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번주 가장 많이 들은 아카이뷰</p>
                                 </div>
                             </div>
-                            <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
-                                <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
-                            </Link>
                         </div>
                         <div className="space-y-5">
                             {enrichedWeeklyMostViewed.map((item, i) => (
@@ -755,22 +528,20 @@ export default function Home() {
                                         <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                                             <h4 className="text-white font-black text-[14px] tracking-tight truncate">{item.title}</h4>
                                         </Link>
-                                        {item.author && <p className="text-gray-500 text-[10px] font-medium mt-0.5 truncate">{item.author}</p>}
-                                        {item.listens && <p className="text-gray-600 text-[9px] font-black mt-0.5 uppercase tracking-[0.1em]">{item.listens} LISTENS</p>}
+                                        {item.author && <p className="text-gray-500 text-[12px] font-medium mt-0.5 truncate">{item.author}</p>}
+                                        {item.listens && <p className="text-gray-600 text-[11px] font-black mt-0.5 uppercase tracking-[0.1em]">{item.listens} LISTENS</p>}
 
-                                        {/* <BookCardActions book={item} /> */}
+                                        <BookCardActions book={item} />
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </motion.section>
-</>
-)}
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
                     {/* 🎬 2.5 아카이뷰 Originals Section */}
-                    {false && originalContents.length > 0 && (
+                    {originalContents.length > 0 && (
                         <motion.section
                             initial="hidden"
                             whileInView="visible"
@@ -786,9 +557,6 @@ export default function Home() {
                                         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">아카이뷰 만에 특별한 오리지널 컨텐츠</p>
                                     </div>
                                 </div>
-                                <Link to="/archive" className="size-10 rounded-none border border-white/10 flex items-center justify-center bg-white/[0.03] active:scale-95 transition-transform">
-                                    <span className="material-symbols-outlined text-white/30 text-[20px]">chevron_right</span>
-                                </Link>
                             </div>
 
                             <div className="space-y-4">
@@ -818,7 +586,7 @@ export default function Home() {
 
                                             </div>
 
-                                            {/* <BookCardActions book={content} /> */}
+                                            <BookCardActions book={content} />
                                         </div>
                                     </div>
                                 ))}
@@ -828,9 +596,7 @@ export default function Home() {
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
-                    {false && (
-<>
-{/* ✨ 2.8 Celeb Picks Section */}
+                    {/* ✨ 2.8 Celeb Picks Section */}
                     <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
@@ -849,7 +615,7 @@ export default function Home() {
                                         <img src={celeb.image} alt={celeb.name} loading="lazy" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
                                     </div>
                                     <h4 className="text-[14px] font-black tracking-tight text-white mb-1 truncate w-full text-center drop-shadow-md">{celeb.name === '김남준 (RM)' ? 'RM (BTS)' : celeb.name}</h4>
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter truncate w-full text-center">{celeb.role}</p>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-tighter truncate w-full text-center">{celeb.role}</p>
                                 </Link>
                             ))}
                         </div>
@@ -860,14 +626,87 @@ export default function Home() {
                             {showAllCelebs ? '접기 (SHOW LESS)' : '더보기 (SEE MORE)'}
                         </button>
                     </motion.section>
-</>
-)}
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
-                    {false && (
-<>
-{/* 5️⃣ 멤버십 안내 */}
+                    {/* 6️⃣ 추천 역량 강화 (CPA Promotion - Video Production) */}
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-6 pt-7 pb-7"
+                    >
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-[20px] font-black tracking-tight leading-none mb-1.5 text-white">성장을 위한 다음 단계</h2>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-[2px] bg-purple-500 rounded-none"></div>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Creator Insights</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group overflow-hidden glass-card bg-[#13151a] border border-white/5 rounded-none p-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                            {/* Decorative background glow */}
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 blur-[60px] rounded-full pointer-events-none group-hover:bg-purple-600/20 transition-all duration-700"></div>
+                            
+                            <div className="relative z-10">
+                                <div className="flex gap-4 items-start mb-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-tighter shadow-lg">New Creator Course</span>
+                                            <span className="text-zinc-500 text-[11px] font-medium tracking-tight italic">아카이뷰 추천</span>
+                                        </div>
+                                        <h3 className="text-white text-[18px] font-black leading-tight break-keep">"듣기만 하던 인사이트를 영상으로" 1인 미디어 제작 실무 프로젝트</h3>
+                                    </div>
+                                    {/* 📸 Mockup Image Section */}
+                                    <div className="w-[85px] h-[110px] shrink-0 rounded-none overflow-hidden border border-white/10 shadow-2xl rotate-2 group-hover:rotate-0 transition-transform duration-500">
+                                        <img 
+                                            src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=300&auto=format&fit=crop" 
+                                            alt="Video Production" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <p className="text-zinc-400 text-[12px] font-medium leading-relaxed mb-6 break-keep">
+                                    성공한 사람들의 지식을 귀로 듣는 것에서 멈추지 마세요. 내 것으로 만든 인사이트를 유튜브와 고퀄리티 영상 콘텐츠로 세상에 알리고 싶은 분들을 위해 방송정보국제교육원의 전문 과정을 제안합니다. 누구나 국비 지원으로 시작 가능합니다.
+                                </p>
+                                
+                                <div className="space-y-2.5 mb-7 bg-white/[0.02] p-4 border-l border-white/10">
+                                    {[
+                                        "기초 기획부터 시네마틱 영상 편집 마스터",
+                                        "유튜브 채널 성장 및 콘텐츠 브랜딩 전략",
+                                        "실무 프로젝트를 통한 즉각적인 포트폴리오 완성"
+                                    ].map((item, idx) => (
+                                        <div key={idx} className="flex items-start gap-3">
+                                            <span className="material-symbols-outlined text-purple-500 text-[16px] mt-0.5">check_circle</span>
+                                            <span className="text-zinc-300 text-[12px] font-bold leading-tight">{item}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <a 
+                                    href="http://dbdbdeep.com/ma/link.php?lncd=S00281009EC05972375E" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-full h-14 bg-white text-black font-black text-[15px] flex items-center justify-center gap-2 hover:bg-purple-600 hover:text-white transition-all active:scale-95 shadow-[0_15px_35px_rgba(147,51,234,0.2)]"
+                                >
+                                    교육 과정 및 장학 혜택 알아보기
+                                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                                </a>
+                                
+                                <p className="mt-5 text-[9px] text-zinc-600 font-medium text-center opacity-80">
+                                    * 위 링크를 통해 신청 시 아카이뷰는 제휴 마케팅 활동의 일환으로 일정액의 수수료를 제공받을 수 있습니다.
+                                </p>
+                            </div>
+                        </div>
+                    </motion.section>
+
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+
+                    {/* 5️⃣ 멤버십 안내 */}
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -902,11 +741,11 @@ export default function Home() {
                                 ].map((item, idx) => (
                                     <div key={idx} className="flex items-start gap-2">
                                         <span className="text-orange-500/50 text-[11px] mt-0.5">●</span>
-                                        <span className="text-[11px] font-bold text-gray-300 leading-relaxed break-keep">{item}</span>
+                                        <span className="text-[12px] font-bold text-gray-300 leading-relaxed break-keep">{item}</span>
                                     </div>
                                 ))}
                             </div>
-                            <p className="mt-4 text-[10.5px] font-medium text-gray-500 bg-white/5 p-2 border-l-2 border-orange-500/30">
+                            <p className="mt-4 text-[12px] font-medium text-gray-500 bg-white/5 p-2 border-l-2 border-orange-500/30">
                                 아카이뷰를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
                             </p>
                         </div>
@@ -968,7 +807,7 @@ export default function Home() {
                                             <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>
                                             <div className="flex-1 mt-0.5">
                                                 <span className="text-[11px] font-black text-orange-400 block mb-0.5 tracking-tight">기록노트 연동 성취 트래커</span>
-                                                <span className="text-[9px] font-bold text-white/60 leading-tight block break-keep">제공된 가이드를 실천하고, 기록노트에서 달성률을 체크하며 성장하세요.</span>
+                                                <span className="text-[11px] font-bold text-white/60 leading-tight block break-keep">제공된 가이드를 실천하고, 기록노트에서 달성률을 체크하며 성장하세요.</span>
                                             </div>
                                         </li>
                                     </ul>
@@ -976,13 +815,10 @@ export default function Home() {
                             </div>
                         </div>
                     </motion.section>
-</>
-)}
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
-                    {/* ✨ 새로 추가된 3단계 온보딩 (How it Works) */}
-                    {false && (
+                    {/* 7️⃣ 어떻게 이용하나요? (How it Works) */}
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -1006,7 +842,7 @@ export default function Home() {
                                 </div>
                                 <div className="pt-2">
                                     <h3 className="text-[14px] font-black text-white mb-1 tracking-tight">상황에 맞는 책 선택</h3>
-                                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">번아웃, 연봉협상 등 지금 내게 필요한<br />카테고리에서 책을 고릅니다.</p>
+                                    <p className="text-[12px] text-zinc-500 font-medium leading-relaxed">번아웃, 연봉협상 등 지금 내게 필요한<br />카테고리에서 책을 고릅니다.</p>
                                 </div>
                             </div>
 
@@ -1017,7 +853,7 @@ export default function Home() {
                                 </div>
                                 <div className="pt-2">
                                     <h3 className="text-[14px] font-black text-orange-500 mb-1 tracking-tight">출퇴근 15분 오디오</h3>
-                                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">성공한 사람들의 생각과 핵심 레슨을<br />이동하며 스마트하게 듣습니다.</p>
+                                    <p className="text-[12px] text-zinc-500 font-medium leading-relaxed">성공한 사람들의 생각과 핵심 레슨을<br />이동하며 스마트하게 듣습니다.</p>
                                 </div>
                             </div>
 
@@ -1028,17 +864,15 @@ export default function Home() {
                                 </div>
                                 <div className="pt-2">
                                     <h3 className="text-[14px] font-black text-white mb-1 tracking-tight">핵심 요약본으로 복습</h3>
-                                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">스크립트와 인사이트 요약본을 통해<br />내 삶에 즉각적으로 적용합니다.</p>
+                                    <p className="text-[12px] text-zinc-500 font-medium leading-relaxed">스크립트와 인사이트 요약본을 통해<br />내 삶에 즉각적으로 적용합니다.</p>
                                 </div>
                             </div>
                         </div>
                     </motion.section>
-                    )}
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
-                    {/* 7️⃣ CTA */}
-                    {false && (
+                    {/* 8️⃣ CTA */}
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -1069,7 +903,6 @@ export default function Home() {
                             </div>
                         </div>
                     </motion.section>
-                    )}
                     {/* 8️⃣ Footer */}
                     <Footer />
                 </main >

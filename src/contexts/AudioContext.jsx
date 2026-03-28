@@ -104,6 +104,12 @@ export const AudioProvider = ({ children }) => {
             [speechAudio.current, musicAudio.current].forEach(a => {
                 if (a) { a.play().catch(() => { }); a.pause(); }
             });
+            // podcast 오디오도 unlock (재생 중이 아닐 때만)
+            const pa = podcastAudioRef.current;
+            if (pa && !pa.src) {
+                pa.play().catch(() => { });
+                pa.pause();
+            }
             document.removeEventListener('click', unlock);
             document.removeEventListener('touchstart', unlock);
         };
@@ -176,6 +182,11 @@ export const AudioProvider = ({ children }) => {
         const pa = podcastAudioRef.current;
         if (!pa) return;
 
+        // src가 절대 경로로 변환되었을 수 있으므로 normalize
+        const getAbsUrl = (s) => (s && !s.startsWith('http')) ? window.location.origin + s : s;
+        const targetSrc = getAbsUrl(src);
+        const currentPaSrc = getAbsUrl(pa.src);
+
         if (podcastInfo?.src === src) {
             // 커버가 새로 로드됐으면 업데이트
             if (cover && cover !== podcastInfo?.cover) {
@@ -185,21 +196,35 @@ export const AudioProvider = ({ children }) => {
                 pa.pause();
                 setPodcastPlaying(false);
             } else {
-                pa.play().catch(() => { });
+                // 일시정지 후 재개: src 재설정하면 처음부터 재생되므로 그냥 play()만 호출
+                pa.play().catch((err) => {
+                    console.error("Podcast play failed:", err);
+                    setPodcastPlaying(false);
+                });
                 setPodcastPlaying(true);
             }
             return;
         }
 
         if (src) {
-            stopAll();
+            // stopAll로 speech/music만 정지, podcast는 직접 처리
+            stopSignal.current = true;
+            if (speechAudio.current) { speechAudio.current.pause(); speechAudio.current.src = ''; }
+            if (musicAudio.current) { musicAudio.current.pause(); musicAudio.current.src = ''; }
+            setIsSpeaking(false);
+            setActiveAudioId(null);
+            setTimeout(() => { stopSignal.current = false; }, 200);
+
+            pa.pause();
             pa.src = src;
-            pa.load();
             setPodcastPlaying(true);
             setPodcastInfo({ src, title, cover, id });
-            pa.play().catch(() => { setPodcastPlaying(false); });
+            pa.play().catch((err) => { 
+                console.error("New podcast play failed:", err);
+                setPodcastPlaying(false); 
+            });
         }
-    }, [podcastInfo, podcastPlaying, stopAll]);
+    }, [podcastInfo, podcastPlaying]);
 
     const pausePodcastMP3 = useCallback(() => {
         podcastAudioRef.current?.pause();

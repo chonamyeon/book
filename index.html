@@ -72,12 +72,33 @@
     gtag('config', 'G-1WBL218LEF');
   </script>
 
+
+  <!-- Meta Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '34999557622968690');
+    fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+
 </head>
 
 <body class="text-slate-100 antialiased overflow-x-hidden" style="background:#090b10;margin:0;padding:0;">
+  <!-- Meta Pixel noscript fallback -->
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=34999557622968690&ev=PageView&noscript=1"
+  /></noscript>
   <div id="root"></div>
   <!-- Google Sign-In SDK - defer로 렌더링 블로킹 방지 -->
   <script src="https://accounts.google.com/gsi/client" defer></script>
+  <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
   <!-- Kakao SDK (공유 기능) -->
   <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous" defer></script>
   <script type="module" src="/src/main.jsx?v=4"></script>

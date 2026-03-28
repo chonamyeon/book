@@ -1,61 +1,96 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { availableAudio } from '../data/availableAudio';
-import { shareCard } from '../utils/shareCard';
 import { useAuth } from '../hooks/useAuth';
+import { useAudio } from '../contexts/AudioContext';
+import { shareCard } from '../utils/shareCard';
+import { useBookData } from '../hooks/useBookData';
 
-const KAKAO_KEY = '9cbdeec02a8ce33b5deb576a0e63c380';
 const SITE_ORIGIN = 'https://archiview.store';
-
-// Instagram SVG icon
-const InstagramIcon = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-        <circle cx="12" cy="12" r="4" />
-        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-    </svg>
-);
-
-// KakaoTalk SVG icon (speech bubble)
-const KakaoIcon = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.698 1.524 5.08 3.84 6.56l-.96 3.52 4.16-2.24c.95.22 1.93.36 2.96.36 5.523 0 10-3.477 10-7.8S17.523 3 12 3z" />
-    </svg>
-);
 
 /**
  * 공유 북카드 액션 버튼 컴포넌트
- * 4개 버튼: 리뷰 디테일 | ▶ 재생 | 서재 추가 | 도서 구매
- * + 공유 버튼: 인스타그램 | 카카오톡 | 링크 복사
- * 이 컴포넌트를 수정하면 모든 페이지에 동시 적용됩니다.
+ * 1층: 리뷰 디테일 | 서재추가 (50:50)
+ * 2층: 팟캐스트 (50% 사이즈)
+ * 3층: 쿠팡 | 아마존 (50:50)
  */
 export default function BookCardActions({ book, className = '' }) {
     const [toast, setToast] = useState('');
-    const [cardLoading, setCardLoading] = useState(false);
     const navigate = useNavigate();
-    const { hasAccess } = useAuth();
+    const { playPodcastMP3 } = useAudio();
+    const { overrides } = useBookData();
 
-    const handlePremiumNav = (e, path) => {
+    const handlePremiumNav = (e, path, isPodcastAction = false) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!hasAccess) {
-            alert('7일 무료 이용기간이 지났습니다.');
-            navigate('/membership');
-            return;
+        
+        if (isPodcastAction) {
+            const validId = book.id || book.title?.toLowerCase()?.replace(/\s+/g, '-');
+            const fileName = `${validId}.mp3`;
+            const hasAudioFile = !!(availableAudio[fileName] || availableAudio[validId]);
+            const src = book.voiceAudioUrl || book.audioUrl || book.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null);
+            
+            if (src) {
+                try {
+                    playPodcastMP3(src, book.title, book.coverUrl || book.cover, validId);
+                } catch (err) {}
+            }
         }
+        
         navigate(path);
     };
 
-    const purchaseUrl = book.purchaseLink ||
-        `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=All&SearchWord=${encodeURIComponent(book.title)}`;
+    // 구매 링크 로직 — book에 없으면 Firestore override에서 직접 조회
+    const titleId = book.title?.toLowerCase().replace(/\s+/g, '-') || '';
+    const bookKey = book.id || titleId;
+    const normStr = s => s.normalize('NFC');
+    const findInOverrides = (field) => {
+        if (overrides?.[bookKey]?.[field]) return overrides[bookKey][field];
+        const found = Object.entries(overrides || {}).find(([k]) => {
+            const nk = normStr(k); const ni = normStr(titleId);
+            return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
+        });
+        return found?.[1]?.[field] || '';
+    };
+    const coupangUrl = useMemo(() => {
+        if (!book) return '';
+        // 1. Firestore 오버라이드 확인
+        const overrideLink = findInOverrides('coupangLink') || findInOverrides('purchaseLink');
+        if (overrideLink && (overrideLink.includes('coupang.com') || overrideLink.includes('link.coupang.com'))) {
+            return overrideLink;
+        }
+
+        // 2. 도서 데이터 내 쿠팡 링크
+        if (book.coupangLink) return book.coupangLink;
+        
+        // 3. 기존 purchaseLink 폴백
+        if (book.purchaseLink && (book.purchaseLink.includes('coupang.com') || book.purchaseLink.includes('link.coupang.com'))) {
+            return book.purchaseLink;
+        }
+        
+        // 4. 자동 검색 링크
+        return `https://www.coupang.com/np/search?q=${encodeURIComponent(book.title || '')}&channel=relate`;
+    }, [book, overrides, findInOverrides]);
+    
+    const amazonUrl = useMemo(() => {
+        if (!book) return '';
+        // 1. Firestore 오버라이드 확인
+        const overrideLink = findInOverrides('amazonLink');
+        
+        // 2. 도서 데이터 내 아마존 링크 또는 오버라이드 링크 처리
+        const rawAmazon = overrideLink || book.amazonLink || '';
+        if (rawAmazon) {
+            if (rawAmazon.includes('amazon.com') && !rawAmazon.includes('tag=')) {
+                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=archiview2026-20';
+            }
+            return rawAmazon;
+        }
+        
+        // 3. 자동 검색 링크
+        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=archiview2026-20`;
+    }, [book, overrides, findInOverrides]);
 
     const safeId = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
-    const shareUrl = `${SITE_ORIGIN}/review/${encodeURIComponent(safeId)}`;
-
-    const showToast = (msg) => {
-        setToast(msg);
-        setTimeout(() => setToast(''), 2000);
-    };
 
     const addToLibrary = (e) => {
         e.stopPropagation();
@@ -70,111 +105,89 @@ export default function BookCardActions({ book, className = '' }) {
         alert('서재에 보관되었습니다. ✅');
     };
 
-    const handleLinkCopy = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            showToast('링크 복사됨! 📋');
-        }).catch(() => {
-            showToast('복사 실패');
-        });
+    const formatTime = (sec) => {
+        if (!sec || isNaN(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const podcastDuration = useMemo(() => {
+        if (!book) return 0;
+        const validId = book.id || book.title?.toLowerCase()?.replace(/\s+/g, '-');
+        const fileName = `${validId}.mp3`;
+        if (availableAudio[fileName]) return availableAudio[fileName];
+        const koreanSlug = (book.title || '').replace(/\s+/g, '-');
+        if (availableAudio[`${koreanSlug}.mp3`]) return availableAudio[`${koreanSlug}.mp3`];
+        return 0;
+    }, [book]);
+
+    const getAudioDuration = () => {
+        if (book.audioDuration) return book.audioDuration;
+        if (podcastDuration > 0) return formatTime(podcastDuration);
+        return '15:00';
     };
 
     const handleKakaoShare = (e) => {
         e.stopPropagation();
-        try {
-            if (!window.Kakao) throw new Error('no sdk');
-            if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY);
-            window.Kakao.Share.sendDefault({
-                objectType: 'feed',
-                content: {
-                    title: book.title,
-                    description: book.desc || book.description || 'The Archiview에서 확인하세요.',
-                    imageUrl: book.cover
-                        ? (book.cover.startsWith('http') ? book.cover : `${SITE_ORIGIN}${book.cover}`)
-                        : `${SITE_ORIGIN}/images/hero_expert_v5.png`,
-                    link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
-                },
-                buttons: [
-                    { title: '리뷰 보기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
-                ],
-            });
-        } catch {
-            // SDK 도메인 미등록 등 오류 시 → 카카오 공유 URL로 직접 이동
-            const kakaoShareUrl = `https://sharer.kakao.com/talk/friends/picker/easylink?app_key=${KAKAO_KEY}&link_ver=4.0&template_id=&url=${encodeURIComponent(shareUrl)}`;
-            if (navigator.share) {
-                navigator.share({
-                    title: book.title,
-                    text: `📚 『${book.title}』 - The Archiview에서 확인하세요!`,
-                    url: shareUrl,
-                }).catch(() => {
-                    navigator.clipboard.writeText(shareUrl).then(() => showToast('링크 복사됨! 카카오톡에 붙여넣기 하세요'));
-                });
-            } else {
-                navigator.clipboard.writeText(shareUrl).then(() => showToast('링크 복사됨! 카카오톡에 붙여넣기 하세요'));
-            }
+        if (!window.Kakao) { alert('카카오 SDK가 로드되지 않았습니다. 잠시 후 다시 시도해주세요.'); return; }
+        if (!window.Kakao.isInitialized()) {
+            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
+        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+        const shareImage = book.cover?.startsWith('http')
+            ? book.cover
+            : `${SITE_ORIGIN}${book.cover}`;
+        window.Kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+                title: `[아카이뷰] ${book.title}`,
+                description: book.desc || '아카이뷰의 정밀 도서 리뷰',
+                imageUrl: shareImage,
+                link: {
+                    mobileWebUrl: shareUrl,
+                    webUrl: shareUrl,
+                },
+            },
+            buttons: [
+                {
+                    title: '리뷰 보기',
+                    link: {
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
+                    },
+                },
+            ],
+        });
     };
 
-    const handleInstagramShare = (e) => {
+    const handleCopyLink = (e) => {
         e.stopPropagation();
-        // 모바일: 네이티브 공유 시트 (인스타그램 DM 등 선택 가능)
-        if (navigator.share) {
-            navigator.share({
-                title: `[아카이뷰] ${book.title}`,
-                text: `📚 『${book.title}』\n아카이뷰에서 읽어보세요!`,
-                url: shareUrl,
-            }).catch(() => { });
-        } else {
-            // PC: 링크 복사 (인스타그램은 웹 공유 API 미지원)
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                showToast('링크 복사됨! 인스타그램에 붙여넣기 하세요 📸');
-            }).catch(() => showToast('복사 실패'));
-        }
+        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => alert('링크 복사됨! ✅'))
+            .catch(() => {
+                // clipboard API 실패 시 fallback
+                const el = document.createElement('textarea');
+                el.value = shareUrl;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert('링크 복사됨! ✅');
+            });
     };
 
     const handleCardShare = async (e) => {
         e.stopPropagation();
-        if (cardLoading) return;
-        setCardLoading(true);
-        showToast('카드 생성 중... ✨');
+        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
         try {
             await shareCard(book, shareUrl);
         } catch {
-            showToast('공유 실패. 다시 시도해주세요.');
-        } finally {
-            setCardLoading(false);
+            alert('카드 생성 실패. 다시 시도해주세요.');
         }
     };
-
-    const getAudioDurationMin = (podcastFile) => {
-        if (!podcastFile) return 15;
-        const fileName = podcastFile.split('/').pop();
-        const duration = availableAudio[fileName];
-        return Math.ceil((duration || 900) / 60);
-    };
-
-    const getAudioDurationFormatted = (bookData) => {
-        if (!bookData) return "15:00";
-        let duration = null;
-
-        const findDuration = (filename) => {
-            if (!filename) return null;
-            const key = String(filename).toLowerCase();
-            return availableAudio[key] || availableAudio[`${key}.mp3`];
-        };
-
-        if (bookData.podcastFile) duration = findDuration(bookData.podcastFile.split('/').pop());
-        if (!duration && bookData.audioPath) duration = findDuration(bookData.audioPath.split('/').pop());
-        if (!duration && bookData.voiceAudioUrl) duration = findDuration(bookData.voiceAudioUrl.split('/').pop());
-        if (!duration && bookData.audioUrl) duration = findDuration(bookData.audioUrl.split('/').pop());
-        if (!duration && bookData.id) duration = findDuration(bookData.id);
-
-        if (!duration) return "15:00";
-
-        const m = Math.floor(duration / 60);
-        const s = Math.floor(duration % 60);
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
+    const hasAmazon = !!(findInOverrides('amazonLink') || book.amazonLink);
 
     return (
         <div className={`w-full relative ${className}`}>
@@ -187,91 +200,117 @@ export default function BookCardActions({ book, className = '' }) {
                 </div>
             )}
 
-            {/* 시간/페이지 뱃지 + 공유 아이콘 (한 줄) */}
-            <div className="flex gap-2 items-center mb-3">
-                <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">
-                    <span>🎧</span>
-                    <span>{book.isPodcast ? getAudioDurationFormatted(book) : '15:00'}</span>
-                </div>
-                {(book.youtubeUrl || book.videoUrl || book.videoId || book.videoLength || book.videoTime || book.isYoutube) && (
-                    <div className="flex items-center gap-1 text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
-                        <span>▶️</span>
-                        <span>{book.videoLength || book.videoTime || book.youtubeDuration || 5}분</span>
+            {/* 시간/페이지 뱃지 & 공유 버튼 */}
+            <div className="flex items-center gap-2 mb-3">
+                <div className="flex gap-2 items-center flex-1">
+                    <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-xs">
+                        <span>🎧</span>
+                        <span>{getAudioDuration()}</span>
                     </div>
-                )}
+                    {(book.youtubeUrl || book.videoUrl || book.videoId || book.isYoutube) && (
+                        <div className="flex items-center gap-1 text-[9px] font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-xs">
+                            <span>▶️</span>
+                            <span>{book.videoLength || '5분'}</span>
+                        </div>
+                    )}
+                </div>
 
-                {/* 공유 아이콘 (오른쪽 정렬) */}
-                <div className="ml-auto flex items-center gap-1" style={{ flexShrink: 0 }}>
-                    <span className="text-[10px] font-black text-white/90 tracking-wider whitespace-nowrap">공유</span>
-                    <button onClick={handleCardShare} title="이미지 카드 공유" disabled={cardLoading}
-                        style={{ width: 26, height: 26, minWidth: 26, minHeight: 26, borderRadius: '50%', flexShrink: 0, background: cardLoading ? 'rgba(212,175,55,0.2)' : 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.35)', opacity: cardLoading ? 0.7 : 1 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d4af37' }} className={`material-symbols-outlined text-[13px] ${cardLoading ? 'animate-spin' : ''}`}>
-                            {cardLoading ? 'progress_activity' : 'qr_code'}
-                        </span>
-                    </button>
-                    {/* ios_share 버튼 — 카드/링크와 중복으로 비활성화
-                    <button onClick={handleInstagramShare} title="공유"
-                        style={{width:26,height:26,minWidth:26,minHeight:26,borderRadius:'50%',flexShrink:0,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)'}}>
-                        <span style={{display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.8)'}} className="material-symbols-outlined text-[13px]">ios_share</span>
-                    </button>
-                    */}
-                    <button onClick={handleKakaoShare} title="카카오톡 공유"
-                        style={{ width: 26, height: 26, minWidth: 26, minHeight: 26, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFE400' }}><KakaoIcon /></span>
-                    </button>
-                    <button onClick={handleLinkCopy} title="링크 복사"
-                        style={{ width: 26, height: 26, minWidth: 26, minHeight: 26, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,1)' }} className="material-symbols-outlined text-[12px]">link</span>
-                    </button>
+                <div className="flex gap-2" style={{ alignItems: 'center' }}>
+                    {/* 원형 아이콘: 32×32 고정 */}
+                    {[
+                        { onClick: handleCardShare, bg: 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400', icon: 'qr_code_2', isIcon: true },
+                        { onClick: handleKakaoShare, bg: 'bg-[#FAE100]', icon: null, isIcon: false },
+                        { onClick: handleCopyLink, bg: 'bg-blue-500/10 border border-blue-500/30 text-blue-400', icon: 'link', isIcon: true },
+                    ].map((btn, i) => (
+                        <button
+                            key={i}
+                            onClick={btn.onClick}
+                            className={`rounded-full transition-all shadow-sm ${btn.bg}`}
+                            style={{ width: 32, height: 32, minWidth: 32, minHeight: 32, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                        >
+                            {btn.isIcon
+                                ? <span className="material-symbols-outlined" style={{ fontSize: 17, lineHeight: 1 }}>{btn.icon}</span>
+                                : <svg width="16" height="16" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3c-4.97 0-9 3.185-9 7.115 0 2.557 1.707 4.8 4.33 6.091l-.828 3.066c-.052.193.174.351.327.245l3.607-2.399c.504.07 1.028.112 1.564.112 4.97 0 9-3.185 9-7.115S16.97 3 12 3z"/></svg>
+                            }
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-                {/* 1. 리뷰 디테일 */}
-                <button
-                    onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=ebook`)}
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
-                >
-                    <span className="material-symbols-outlined text-[14px]">menu_book</span>
-                    리뷰 디테일
-                </button>
+            <div className="flex flex-col gap-2">
+                {/* 1층: 리뷰 디테일 & 팟캐스트 */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=ebook`)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                    >
+                        <span className="material-symbols-outlined text-[14px]">menu_book</span>
+                        리뷰 디테일
+                    </button>
 
-                {/* 2. 팟캐스트 탭으로 이동 */}
-                <button
-                    onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=podcast`)}
-                    className="group flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
-                >
-                    <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>
-                    <div className="hidden group-hover:flex group-active:flex items-center justify-center gap-[1.5px] h-[14px] w-[14px]">
-                        <div className="w-[1.5px] bg-current rounded-sm h-[6px] animate-wave-bar wave-delay-1" />
-                        <div className="w-[1.5px] bg-current rounded-sm h-[10px] animate-wave-bar wave-delay-2" />
-                        <div className="w-[1.5px] bg-current rounded-sm h-[14px] animate-wave-bar wave-delay-3" />
-                        <div className="w-[1.5px] bg-current rounded-sm h-[8px] animate-wave-bar wave-delay-4" />
-                        <div className="w-[1.5px] bg-current rounded-sm h-[4px] animate-wave-bar wave-delay-5" />
-                    </div>
-                    <span>팟캐스트</span>
-                </button>
+                    <button
+                        onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=podcast`, true)}
+                        className="group flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                    >
+                        <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>
+                        <div className="hidden group-hover:flex group-active:flex items-center justify-center gap-[1.5px] h-[14px] w-[14px]">
+                            <div className="w-[1.5px] bg-current rounded-sm h-[6px] animate-wave-bar wave-delay-1" />
+                            <div className="w-[1.5px] bg-current rounded-sm h-[10px] animate-wave-bar wave-delay-2" />
+                            <div className="w-[1.5px] bg-current rounded-sm h-[14px] animate-wave-bar wave-delay-3" />
+                            <div className="w-[1.5px] bg-current rounded-sm h-[8px] animate-wave-bar wave-delay-4" />
+                            <div className="w-[1.5px] bg-current rounded-sm h-[4px] animate-wave-bar wave-delay-5" />
+                        </div>
+                        <span>팟캐스트</span>
+                    </button>
+                </div>
 
-                {/* 3. 서재 추가 */}
-                <button
-                    onClick={addToLibrary}
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
-                >
-                    <span className="material-symbols-outlined text-[14px]">bookmark_add</span>
-                    서재 추가
-                </button>
+                {/* 2층: 서재추가 & 구매링크 (쿠팡/아마존) */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={addToLibrary}
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                    >
+                        <span className="material-symbols-outlined text-[14px]">bookmark</span>
+                        서재추가
+                    </button>
 
-                {/* 4. 도서 구매 */}
-                <a
-                    href={purchaseUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white hover:from-white/20 hover:to-white/5 transition-all whitespace-nowrap"
-                >
-                    <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
-                    도서 구매
-                </a>
+                    {hasAmazon ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            <a
+                                href={coupangUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
+                                쿠팡
+                            </a>
+
+                            <a
+                                href={amazonUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">public</span>
+                                아마존
+                            </a>
+                        </div>
+                    ) : (
+                        <a
+                            href={coupangUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">shopping_cart</span>
+                            쿠팡
+                        </a>
+                    )}
+                </div>
             </div>
         </div>
     );

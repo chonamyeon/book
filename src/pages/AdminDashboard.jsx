@@ -10,6 +10,7 @@ import {
     orderBy,
     doc,
     getDoc,
+    getDocs,
     setDoc,
     deleteDoc,
     updateDoc,
@@ -19,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useBookData } from '../hooks/useBookData';
+import { availableAudio } from '../data/availableAudio';
 
 // IndexedDB 헬퍼 — TTS 배치 버퍼 영구 저장
 const TTS_DB = 'tts-cache';
@@ -219,6 +221,18 @@ const SCRIPT_SITUATIONS = [
     { scene: '프로야구 경기 7회 스트레칭 타임에 자리에서', close: '다시 경기 시작한다, 앉자' },
 ];
 
+const getNext4Mondays = () => {
+    const today = new Date();
+    const dow = today.getDay(); // 0=Sun,1=Mon...
+    const daysUntil = dow === 0 ? 1 : dow === 1 ? 7 : 8 - dow;
+    return Array.from({ length: 4 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() + daysUntil + i * 7);
+        d.setHours(6, 0, 0, 0);
+        return d;
+    });
+};
+
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
         const storedAuth = localStorage.getItem('adminAuthData');
@@ -242,6 +256,10 @@ export default function AdminDashboard() {
     const [selectedBatchBooks, setSelectedBatchBooks] = useState([]);
     const [isBatchRunning, setIsBatchRunning] = useState(false);
     const [batchProgressText, setBatchProgressText] = useState('');
+    const [showIphonePreview, setShowIphonePreview] = useState(false);
+    const [iphoneUrl, setIphoneUrl] = useState('https://archiview.store/');
+    const [showAndroidPreview, setShowAndroidPreview] = useState(false);
+    const [androidUrl, setAndroidUrl] = useState('https://archiview.store/');
     // ── 배치 전용 상태 ─────────────────────────────────────────
     const [batchLogs, setBatchLogs] = useState([]);
     const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -272,6 +290,7 @@ export default function AdminDashboard() {
 
     // Real-time Data States (기존 로직 유지)
     const [realUsers, setRealUsers] = useState([]);
+    const [memberSearch, setMemberSearch] = useState('');
     const [realSales, setRealSales] = useState([]);
     const realBooks = useMemo(() => {
         // useBookData의 overrides가 변경될 때마다 getAllBooks가 새로 생성되므로 
@@ -292,16 +311,24 @@ export default function AdminDashboard() {
     const [sectionData, setSectionData] = useState({ weekly_focus: [], weekly_viewed: [], growth: [], economy: [], business: [], humanities: [], psychology: [] });
     const [sectionSearch, setSectionSearch] = useState({ weekly_focus: '', weekly_viewed: '', growth: '', economy: '', business: '', humanities: '', psychology: '' });
     const [sectionSaving, setSectionSaving] = useState({ weekly_focus: false, weekly_viewed: false, growth: false, economy: false, business: false, humanities: false, psychology: false });
+    const [weeklySchedule, setWeeklySchedule] = useState([{books:[]},{books:[]},{books:[]},{books:[]}]);
+    const [scheduleSearches, setScheduleSearches] = useState(['','','','']);
+    const [scheduleSaving, setScheduleSaving] = useState(false);
+    const [aiRecommending, setAiRecommending] = useState(false);
 
 
     // 1. Listen for Users
     useEffect(() => {
-        const q = query(collection(db, "users"), orderBy("lastLogin", "desc"));
+        const q = collection(db, "users");
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const usersData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            }));
+            })).sort((a, b) => {
+                const ta = a.lastLogin?.toMillis?.() ?? a.lastLogin ?? 0;
+                const tb = b.lastLogin?.toMillis?.() ?? b.lastLogin ?? 0;
+                return tb - ta;
+            });
             setRealUsers(usersData);
             setIsLoading(false);
         }, (error) => {
@@ -347,6 +374,14 @@ export default function AdminDashboard() {
             })
         );
         return () => unsubs.forEach(u => u());
+    }, []);
+
+    // 5b. Load weekly focus schedule
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'site_config', 'weekly_focus_schedule'), (snap) => {
+            if (snap.exists() && snap.data().weeks?.length) setWeeklySchedule(snap.data().weeks);
+        });
+        return () => unsub();
     }, []);
 
     // 6. Listen for YouTube Videos
@@ -658,10 +693,12 @@ export default function AdminDashboard() {
                 if (!lines.length) return { 총점: null, 오류: '대본 비어있음' };
 
                 // WAV 매칭
-                const idLower = bookId.toLowerCase();
+                const bookTitle = realBooks.find(b => b.id === bookId)?.title || '';
+                const normStr = s => s.replace(/[\s\-_]+/g, '').toLowerCase();
                 const wavName = Object.keys(localWavFileMap).find(n => {
-                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
-                    return base === idLower || base.includes(idLower) || idLower.includes(base);
+                    const base = n.split('/').pop().replace(/\.wav$/i, '');
+                    return normStr(base) === normStr(bookId) || normStr(base) === normStr(bookTitle) ||
+                        base.toLowerCase().includes(bookId.toLowerCase()) || bookId.toLowerCase().includes(base.toLowerCase());
                 });
                 if (!wavName) return { 총점: null, 오류: 'WAV 파일 없음 (스킵)' };
 
@@ -736,10 +773,12 @@ export default function AdminDashboard() {
                 }
 
                 // 2. 오디오 소스 결정: WAV 폴더 우선, 없으면 MP3 fetch
-                const idLower = bookId.toLowerCase();
+                const bookTitleForWav = realBooks.find(b => b.id === bookId)?.title || '';
+                const normWav = s => s.replace(/[\s\-_]+/g, '').toLowerCase();
                 const wavName = Object.keys(localWavFileMap).find(n => {
-                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
-                    return base === idLower || base.includes(idLower) || idLower.includes(base);
+                    const base = n.split('/').pop().replace(/\.wav$/i, '');
+                    return normWav(base) === normWav(bookId) || normWav(base) === normWav(bookTitleForWav) ||
+                        base.toLowerCase().includes(bookId.toLowerCase()) || bookId.toLowerCase().includes(base.toLowerCase());
                 });
 
                 let audioBuffer;
@@ -844,6 +883,22 @@ export default function AdminDashboard() {
         }
     };
 
+    // 무료 체험 즉시 종료
+    const handleEndTrial = async (userId) => {
+        if (!window.confirm('무료 체험을 즉시 종료하시겠습니까?')) return;
+        try {
+            const past = new Date();
+            past.setDate(past.getDate() - 8); // 8일 전으로 설정 → D-0 만료
+            await updateDoc(doc(db, "users", userId), {
+                trialStartDate: Timestamp.fromDate(past),
+                updatedAt: serverTimestamp()
+            });
+            alert('✅ 무료 체험 종료 완료');
+        } catch (error) {
+            alert('❌ 업데이트 실패: ' + error.message);
+        }
+    };
+
     // 7일 무료 체험 재시작
     const handleResetTrial = async (userId) => {
         if (!window.confirm('7일 무료 체험을 재시작하시겠습니까?')) return;
@@ -928,6 +983,14 @@ export default function AdminDashboard() {
                 [field]: value,
                 updatedAt: serverTimestamp()
             }, { merge: true });
+            // top70- 같은 prefix가 있으면 제거한 ID에도 동시 저장 (celebrities.js 매칭용)
+            const strippedId = bookId.replace(/^[a-z]+\d+-/, '');
+            if (strippedId !== bookId) {
+                await setDoc(doc(db, "book_overrides", strippedId), {
+                    [field]: value,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+            }
             alert(`${field} 정보가 저장되었습니다.`);
         } catch (error) {
             console.error(`Error updating ${field}:`, error);
@@ -1050,14 +1113,23 @@ export default function AdminDashboard() {
     const [batchTsRunning, setBatchTsRunning] = useState(false);
     const [batchTsCurrent, setBatchTsCurrent] = useState('');
     const [batchTsResults, setBatchTsResults] = useState({});
+    const [tsExistsMap, setTsExistsMap] = useState({}); // { bookId: true/false }
+    const [tsExistsLoading, setTsExistsLoading] = useState(false);
 
     // ── E-book 생성 탭 상태 ─────────────────────────────────
     const [isGeneratingEbook, setIsGeneratingEbook] = useState(false);
     const [ebookLogs, setEbookLogs] = useState([]);
+    const [isBatchEbookRunning, setIsBatchEbookRunning] = useState(false);
+    const [batchEbookProgress, setBatchEbookProgress] = useState({ current: 0, total: 0 });
     const [generatedEbook, setGeneratedEbook] = useState('');
     const [isLoadingEbook, setIsLoadingEbook] = useState(false);
     const [existingEbook, setExistingEbook] = useState(null);
     const [showEbookPreviewModal, setShowEbookPreviewModal] = useState(false);
+    // 일괄 이북 생성 — 스캔/선택 UI
+    const [batchEbookMissingList, setBatchEbookMissingList] = useState([]); // 누락 도서 목록
+    const [batchEbookSelected, setBatchEbookSelected] = useState(new Set()); // 선택된 bookId
+    const [batchEbookScanned, setBatchEbookScanned] = useState(false); // 스캔 완료 여부
+    const [isScanning, setIsScanning] = useState(false);
 
     // 인트로/아웃트로 병합
     const [mergeIntroFile, setMergeIntroFile] = useState(null);
@@ -1270,13 +1342,33 @@ export default function AdminDashboard() {
 
     // automation / gemini-script 탭 진입 시 Firestore 대본 존재 여부 일괄 조회
     useEffect(() => {
-        if ((activeTab !== 'automation' && activeTab !== 'gemini-script') || !realBooks.length) return;
+        if (!['automation', 'gemini-script', 'tts-verify'].includes(activeTab) || !realBooks.length) return;
         const checkAll = async () => {
             const results = {};
             const optimized = {};
+            // 로컬 bookScripts 먼저 로드 (없으면 동적 import)
+            let localScripts = bookScripts;
+            if (Object.keys(localScripts).length === 0) {
+                try {
+                    const m = await import('../data/bookScripts');
+                    localScripts = m.bookScripts || {};
+                    setBookScripts(localScripts);
+                } catch {}
+            }
             await Promise.all(realBooks.map(async (book) => {
                 try {
-                    const snap = await getDoc(doc(db, 'scripts', book.id));
+                    // 로컬 bookScripts에 있으면 대본 있음으로 처리
+                    if (localScripts[book.id] && Array.isArray(localScripts[book.id]) && localScripts[book.id].length > 0) {
+                        results[book.id] = true;
+                        optimized[book.id] = false;
+                        return;
+                    }
+                    // 영어 ID로 먼저 조회, 없으면 한국어 title slug로도 조회
+                    const koreanSlug = (book.title || '').replace(/\s+/g, '-');
+                    let snap = await getDoc(doc(db, 'scripts', book.id));
+                    if (!snap.exists() && koreanSlug && koreanSlug !== book.id) {
+                        snap = await getDoc(doc(db, 'scripts', koreanSlug));
+                    }
                     if (snap.exists()) {
                         const data = snap.data();
                         const script = data.script || data.lines || data.content || null;
@@ -3083,6 +3175,137 @@ ${themes ? `- 핵심 주제: ${themes}` : ''}
         }
     };
 
+    // 누락 이북 스캔 — 체크리스트 생성
+    const handleScanMissingEbooks = async () => {
+        setIsScanning(true);
+        setBatchEbookScanned(false);
+        setBatchEbookMissingList([]);
+        setBatchEbookSelected(new Set());
+        try {
+            const ebooksSnap = await getDocs(collection(db, 'ebooks'));
+            const existingIds = new Set(ebooksSnap.docs.map(d => d.id));
+            // top70- 접두사 / 한국어 title slug 변형도 체크
+            const missing = realBooks.filter(b => {
+                if (existingIds.has(b.id)) return false;
+                if (existingIds.has('top70-' + b.id)) return false;
+                if (existingIds.has(b.id.replace(/^top70-/, ''))) return false;
+                const koreanSlug = (b.title || '').replace(/\s+/g, '-');
+                if (koreanSlug && existingIds.has(koreanSlug)) return false;
+                if (koreanSlug && existingIds.has('top70-' + koreanSlug)) return false;
+                return true;
+            });
+            setBatchEbookMissingList(missing);
+            setBatchEbookSelected(new Set(missing.map(b => b.id)));
+            setBatchEbookScanned(true);
+        } catch (e) {
+            alert('스캔 실패: ' + e.message);
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const handleBatchGenerateEbooks = async () => {
+        const currentGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!currentGeminiKey) return alert('Gemini API 키가 설정되어 있지 않습니다.');
+
+        // 선택된 도서만 처리
+        const targetBooks = batchEbookScanned
+            ? batchEbookMissingList.filter(b => batchEbookSelected.has(b.id))
+            : [];
+        if (targetBooks.length === 0) return alert('생성할 도서를 선택하세요. 먼저 스캔 버튼을 눌러주세요.');
+        if (!confirm(`선택된 ${targetBooks.length}권의 이북을 생성하시겠습니까?`)) return;
+
+        setIsBatchEbookRunning(true);
+        setEbookLogs([`일괄 생성 시작: ${targetBooks.length}권...`]);
+
+        try {
+            const ebooksSnap = await getDocs(collection(db, 'ebooks'));
+            const existingIds = new Set(ebooksSnap.docs.map(doc => doc.id));
+
+            const missingBooks = targetBooks.filter(b => {
+                if (existingIds.has(b.id)) return false;
+                if (existingIds.has('top70-' + b.id)) return false;
+                if (existingIds.has(b.id.replace(/^top70-/, ''))) return false;
+                const koreanSlug = (b.title || '').replace(/\s+/g, '-');
+                if (koreanSlug && existingIds.has(koreanSlug)) return false;
+                if (koreanSlug && existingIds.has('top70-' + koreanSlug)) return false;
+                return true;
+            });
+
+            if (missingBooks.length === 0) {
+                setEbookLogs(prev => [...prev, '모든 이북이 이미 생성되어 있습니다!']);
+                setIsBatchEbookRunning(false);
+                return;
+            }
+
+            setBatchEbookProgress({ current: 0, total: missingBooks.length });
+            setEbookLogs(prev => [...prev, `총 ${missingBooks.length}권 일괄 생성 시작...`]);
+
+            for (let i = 0; i < missingBooks.length; i++) {
+                
+                const book = missingBooks[i];
+                setEbookLogs(prev => [...prev, `[${i + 1}/${missingBooks.length}] ${book.title} 생성 중...`]);
+                
+                setScriptForm(prev => ({
+                    ...prev,
+                    bookId: book.id,
+                    title: book.title,
+                    author: book.author,
+                    themes: book.description || ''
+                }));
+                
+                try {
+                    const prompt = `# Role: 당신은 통찰력 있는 "전문 도서 비평가"이자 "인사이트 에세이스트"입니다.\n# Goal: 도서 "${book.title}"에 대한 고퀄리티 이북 리뷰를 작성합니다. (4,000자 이상)\n# Guide: ebook.md 가이드 기준\n\n# ⚠️ 핵심 원칙 (반드시 준수):\n1. **비율**: 도서 내용 요약 30% + 나의 독창적 성찰·해석 70%\n2. **반복 금지**: 모든 문장은 고유한 의미를 가짐. 채우기용 filler 문구 절대 금지\n3. **분량**: 4,000자 이상의 밀도 높은 텍스트 (억지로 채우지 말고 깊이 있게)\n4. **내 생각 중심**: 단순 책 소개가 아닌, 책 내용과 나의 생각이 어떻게 연결되는지를 풀어내기\n5. **구조 설명 노출 금지**: "도서요약 (30%)", "성찰 (70%)" 같은 내부 구조 설명은 본문에 절대 노출 금지\n6. **팟캐스트 형식 금지**: 대화체, 대본 형식, 캐릭터 이름 등 절대 사용 금지\n7. **문체**: ~다, ~한다 체의 문어체. 풍부한 수식어와 연결어(게다가, 요컨대 등) 활용\n\n# ⚠️ 인용구 규칙 (엄수):\n- **최대 3개**: 전체 이북에서 직접 인용구는 3개를 초과할 수 없음\n- **중앙 정렬 표기**: 반드시 아래 형식으로 작성\n  <blockquote class="ebook-quote"><p>"인용 문장"</p><cite>— 저자명, 『책 제목』</cite></blockquote>\n- **출처 필수**: 인용구마다 cite 태그로 저자명·책 제목 표기\n\n# 콘텐츠 구성 — 각 PAGE를 반드시 <section class="ebook-page">...</section>으로 감싸기:\n\n### PAGE 1 — 오프닝 + 서론 (약 500자)\n- 이 책에서 가장 인상적인 문장을 blockquote 인용구 형식으로 시작 (독자 몰입도 향상)\n- 책을 선택하게 된 동기, 첫인상, 사회적 배경 서술\n- 출처 표기 포함: <p><em>참고 도서: ${book.title} / 저자: ${book.author}</em></p>\n\n### PAGE 2 — 핵심 갈등과 줄거리 (약 800자)\n- 단순 나열이 아닌 핵심 갈등 위주\n- 중요 사건의 전후 맥락, 긴장감, 심리 변화 서술\n- 인용구 활용 시 공식: [인용문 blockquote] → [의미 해석] → [내 생각] → [현실 세계로의 확장]\n\n### PAGE 3 — 심층 분석 1: 인물·상징 (약 800자)\n- 핵심 인물 분석 및 상징적 의미 해석\n- 비슷한 주제의 영화·뉴스·다른 책과 비교 분석 (선택)\n- "만약 다른 선택을 했다면?" 가정으로 깊이 있는 분석 추가 (선택)\n\n### PAGE 4 — 심층 분석 2: 저자 철학과 사회적 메시지 (약 800자)\n- 저자의 철학 및 사회적 메시지를 현대 맥락으로 연결\n- 소제목(h2) 붙이기, 문답 형식으로 독자에게 질문하고 스스로 답하기\n\n### PAGE 5 — 개인적 성찰 (약 800자)\n- 내 삶과의 연결, 변화된 생각\n- 구체적인 상황·에피소드로 묘사\n- 저작권 방지: 성찰·관점 위주로 작성 (단순 소개 지양)\n\n### PAGE 6 — 결론 + 【지혜의 갈무리】 (약 300자 결론 + 갈무리 필수)\n- 총평과 마무리 문구 (약 300자)\n- 반드시 아래 형식의 【지혜의 갈무리】 포함:\n  <h2>【지혜의 갈무리】</h2>\n  <h3>이 책을 선택한 이유</h3><p>이 책이 현재 사회나 독자에게 왜 필요한지</p>\n  <h3>저자 소개</h3><p>저자의 이력, 집필 배경, 다른 저서와의 연결 고리</p>\n  <h3>추천 대상</h3><p>"이런 고민을 가진 분들이 읽으면 좋습니다" 형태</p>\n  <h3>지혜의 요약</h3><ol><li>핵심 메시지 1</li><li>핵심 메시지 2</li><li>핵심 메시지 3</li></ol>\n\n# Book Information:\n- 제목: ${book.title}\n- 저자: ${book.author}\n${book.description ? `- 핵심 주제: ${book.description}` : ''}\n\n# Output Format:\n- 반드시 순수 HTML 태그만 출력하세요. 마크다운 기호(\`\`\`)는 제외하십시오.\n- 각 PAGE는 반드시 <section class="ebook-page">...</section> 태그로 감싸주세요.\n- h2, h3, p, ul, li, ol, blockquote, cite 태그를 적절히 사용하세요.\n- 이북 뷰어(모바일 flipbook)에서 읽힐 것을 고려하여 단락 구분을 깔끔하게 하세요.`;
+
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentGeminiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { maxOutputTokens: 16000, thinkingConfig: { thinkingBudget: 8192 } }
+                        }),
+                    });
+
+                    if (!res.ok) throw new Error(`API 오류 ${res.status}`);
+                    
+                    const data = await res.json();
+                    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    const cleanedContent = content.replace(/```html/g, '').replace(/```/g, '').trim();
+
+                    await setDoc(doc(db, 'ebooks', book.id), {
+                        content: cleanedContent,
+                        title: book.title,
+                        author: book.author,
+                        updatedAt: serverTimestamp()
+                    });
+                    
+                    await setDoc(doc(db, 'book_overrides', book.id), {
+                        isEbook: true,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+
+                    setGeneratedEbook(cleanedContent);
+                    setExistingEbook({ content: cleanedContent });
+                    setEbookLogs(prev => [...prev, `✅ [${i + 1}/${missingBooks.length}] ${book.title} 리뷰 저장 완료`]);
+
+                } catch (e) {
+                    setEbookLogs(prev => [...prev, `❌ [${i + 1}/${missingBooks.length}] ${book.title} 실패: ${e.message}`]);
+                }
+
+                setBatchEbookProgress({ current: i + 1, total: missingBooks.length });
+                // Rate limit 방지를 위해 2초 대기
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
+            setEbookLogs(prev => [...prev, '🎉 전체 일괄 생성이 완료되었습니다!']);
+            alert('일괄 생성이 완료되었습니다!');
+        } catch (error) {
+            setEbookLogs(prev => [...prev, `❌ 진행 중 치명적 오류: ${error.message}`]);
+        } finally {
+            setIsBatchEbookRunning(false);
+        }
+    };
+
     const handleSyncLocalScript = async () => {
         const bookId = scriptForm.bookId;
         if (!bookId) return alert('Book ID를 먼저 선택하세요.');
@@ -3963,7 +4186,7 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
     // ────────────────────────────────────────────────────────
 
     // 새 책 원스톱 등록
-    const [newBookReg, setNewBookReg] = useState({ bookId: '', title: '', author: '', celebrity: '', customCeleb: '', category: 'NOVEL', customCategory: '', desc: '', purchaseLink: '', section: 'EDITORS_PICK' });
+    const [newBookReg, setNewBookReg] = useState({ bookId: '', title: '', author: '', celebrity: '', customCeleb: '', category: 'NOVEL', customCategory: '', desc: '', purchaseLink: '', coupangLink: '', amazonLink: '', section: 'EDITORS_PICK' });
     const [isRegistering, setIsRegistering] = useState(false);
     const [autoGenScript, setAutoGenScript] = useState(true);
 
@@ -4023,6 +4246,8 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
                 category,
                 description: newBookReg.desc || `${newBookReg.author}의 ${newBookReg.title}`,
                 purchaseLink: newBookReg.purchaseLink || '',
+                coupangLink: newBookReg.coupangLink || '',
+                amazonLink: newBookReg.amazonLink || '',
                 section: newBookReg.section,
                 isPublic: true,
                 updatedAt: serverTimestamp(),
@@ -4041,7 +4266,7 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
                 setLogs(prev => [...prev, `[DONE] ✅ 도서 등록 완료`]);
             }
             setIsRegistering(false);
-            setNewBookReg({ bookId: '', title: '', author: '', celebrity: '', customCeleb: '', category: 'NOVEL', customCategory: '', desc: '', purchaseLink: '', section: 'EDITORS_PICK' });
+            setNewBookReg({ bookId: '', title: '', author: '', celebrity: '', customCeleb: '', category: 'NOVEL', customCategory: '', desc: '', purchaseLink: '', coupangLink: '', amazonLink: '', section: 'EDITORS_PICK' });
         } catch (e) {
             setLogs(prev => [...prev, `[ERROR] 등록 실패: ${e.message}`]);
             setIsRegistering(false);
@@ -4162,9 +4387,13 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
                     <label className="text-[9px] text-slate-500 font-bold ml-1">한 줄 설명</label>
                     <input value={newBookReg.desc} onChange={e => setNewBookReg({ ...newBookReg, desc: e.target.value })} placeholder="인생을 바꾸는 책" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" />
                 </div>
-                <div className="space-y-1 col-span-2">
-                    <label className="text-[9px] text-slate-500 font-bold ml-1">구매 링크 <span className="text-slate-600">(선택)</span></label>
-                    <input value={newBookReg.purchaseLink} onChange={e => setNewBookReg({ ...newBookReg, purchaseLink: e.target.value })} placeholder="쿠팡/아마존/알리 파트너스 링크" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" />
+                <div className="space-y-1">
+                    <label className="text-[9px] text-slate-500 font-bold ml-1">쿠팡 파트너스 링크 <span className="text-slate-600">(선택)</span></label>
+                    <input value={newBookReg.coupangLink} onChange={e => setNewBookReg({ ...newBookReg, coupangLink: e.target.value })} placeholder="쿠팡 파트너스 링크" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] text-slate-500 font-bold ml-1">아마존 어필리에이트 링크 <span className="text-slate-600">(선택)</span></label>
+                    <input value={newBookReg.amazonLink} onChange={e => setNewBookReg({ ...newBookReg, amazonLink: e.target.value })} placeholder="아마존 어필리에이트 링크" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" />
                 </div>
             </div>
             {/* AI 대본 자동 생성 옵션 */}
@@ -4552,16 +4781,7 @@ ${video.content}
         'payment': '결제 설정'
     };
 
-    // If initial loading is still happening from auth or first fetch
-    if (isLoading && realUsers.length === 0 && activeTab === 'dashboard') {
-        return (
-            <div className="bg-background-dark min-h-screen flex items-center justify-center">
-                <div className="text-gold animate-pulse">데이터 로드 중...</div>
-            </div>
-        );
-    }
-
-    // If not authenticated, show password gate
+    // If not authenticated, show password gate (must come before loading check)
     if (!isAuthenticated) {
         return (
             <div className="bg-slate-950 min-h-screen flex items-center justify-center p-6">
@@ -4596,8 +4816,153 @@ ${video.content}
 
     return (
         <div className="admin-pc-exclusive bg-slate-950 font-display text-slate-100 antialiased min-h-screen">
-            {/* 
-                [FIX] 레이아웃 치우침 현상 해결: 
+
+            {/* ── 아이폰 미리보기 모달 ───────────────────────────── */}
+            {showIphonePreview && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center"
+                    onClick={() => setShowIphonePreview(false)}
+                >
+                    <div className="flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
+                        {/* URL 선택 바 */}
+                        <div className="flex items-center gap-2 bg-white/10 rounded-2xl px-4 py-2 border border-white/20">
+                            {[
+                                { label: '홈', url: 'https://archiview.store/' },
+                                { label: 'TEST4', url: 'https://archiview.store/test4' },
+                                { label: '라이브러리', url: 'https://archiview.store/library' },
+                                { label: '에디토리얼', url: 'https://archiview.store/editorial' },
+                            ].map(({ label, url }) => (
+                                <button
+                                    key={url}
+                                    onClick={() => setIphoneUrl(url)}
+                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${iphoneUrl === url ? 'bg-gold text-black' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setShowIphonePreview(false)}
+                                className="ml-2 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                            </button>
+                        </div>
+
+                        {/* 아이폰 프레임 */}
+                        <div className="relative" style={{ width: 390, height: 750 }}>
+                            {/* 아이폰 외곽 */}
+                            <div className="absolute inset-0 rounded-[52px] bg-[#1a1a1a] shadow-[0_0_0_2px_#3a3a3a,0_0_0_4px_#1a1a1a,0_30px_80px_rgba(0,0,0,0.8)] overflow-hidden">
+                                {/* 다이나믹 아일랜드 */}
+                                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-28 h-8 bg-black rounded-full z-10 flex items-center justify-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-[#1a1a1a] border border-[#333]" />
+                                    <div className="w-3 h-3 rounded-full bg-[#1a1a1a] border border-[#2a2a2a]" />
+                                </div>
+                                {/* 화면 영역 */}
+                                <div className="absolute inset-[3px] rounded-[49px] overflow-hidden bg-black">
+                                    <iframe
+                                        key={iphoneUrl}
+                                        src={iphoneUrl}
+                                        style={{
+                                            width: '390px',
+                                            height: '844px',
+                                            border: 'none',
+                                            transformOrigin: 'top left',
+                                            transform: `scale(${384 / 390})`,
+                                            pointerEvents: 'auto',
+                                        }}
+                                        title="iPhone Preview"
+                                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                                    />
+                                </div>
+                                {/* 홈 인디케이터 */}
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/30 rounded-full z-10" />
+                            </div>
+                            {/* 전원 버튼 */}
+                            <div className="absolute right-[-4px] top-28 w-1 h-16 bg-[#3a3a3a] rounded-r-sm" />
+                            {/* 볼륨 버튼 */}
+                            <div className="absolute left-[-4px] top-24 w-1 h-10 bg-[#3a3a3a] rounded-l-sm" />
+                            <div className="absolute left-[-4px] top-36 w-1 h-10 bg-[#3a3a3a] rounded-l-sm" />
+                            <div className="absolute left-[-4px] top-16 w-1 h-7 bg-[#3a3a3a] rounded-l-sm" />
+                        </div>
+
+                        <p className="text-white/30 text-[11px] font-bold tracking-widest">ESC 또는 바깥 클릭으로 닫기</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 안드로이드 미리보기 모달 (Samsung Galaxy S24 스타일) ── */}
+            {showAndroidPreview && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center"
+                    onClick={() => setShowAndroidPreview(false)}
+                >
+                    <div className="flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
+                        {/* URL 선택 바 */}
+                        <div className="flex items-center gap-2 bg-white/10 rounded-2xl px-4 py-2 border border-white/20">
+                            <span className="text-[10px] font-black text-emerald-400 tracking-widest mr-1">🤖 ANDROID</span>
+                            {[
+                                { label: '홈', url: 'https://archiview.store/' },
+                                { label: 'TEST4', url: 'https://archiview.store/test4' },
+                                { label: '라이브러리', url: 'https://archiview.store/library' },
+                                { label: '에디토리얼', url: 'https://archiview.store/editorial' },
+                            ].map(({ label, url }) => (
+                                <button
+                                    key={url}
+                                    onClick={() => setAndroidUrl(url)}
+                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${androidUrl === url ? 'bg-emerald-500 text-black' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setShowAndroidPreview(false)}
+                                className="ml-2 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                            </button>
+                        </div>
+
+                        {/* 삼성 갤럭시 S24 프레임 (360×780) */}
+                        <div className="relative" style={{ width: 370, height: 760 }}>
+                            {/* 외곽 케이스 — 갤럭시 특징: 직각에 가까운 모서리, 얇은 베젤 */}
+                            <div className="absolute inset-0 rounded-[42px] shadow-[0_0_0_2px_#2a2a2a,0_0_0_4px_#111,0_30px_80px_rgba(0,0,0,0.8)]"
+                                style={{ background: 'linear-gradient(145deg,#1c1c1e,#2c2c2e)' }}>
+                                {/* 펀치홀 카메라 (갤럭시: 상단 중앙 원형) */}
+                                <div className="absolute top-[14px] left-1/2 -translate-x-1/2 w-[13px] h-[13px] rounded-full bg-black z-10 border border-[#333]" />
+                                {/* 화면 */}
+                                <div className="absolute inset-[3px] rounded-[39px] overflow-hidden bg-black">
+                                    <iframe
+                                        key={androidUrl}
+                                        src={androidUrl}
+                                        style={{
+                                            width: '360px',
+                                            height: '800px',
+                                            border: 'none',
+                                            transformOrigin: 'top left',
+                                            transform: `scale(${364 / 360})`,
+                                            pointerEvents: 'auto',
+                                        }}
+                                        title="Android Preview"
+                                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                                    />
+                                </div>
+                                {/* 하단 네비 바 (안드로이드 제스처 바) */}
+                                <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 w-24 h-[3px] bg-white/20 rounded-full z-10" />
+                            </div>
+                            {/* 전원 버튼 (오른쪽) */}
+                            <div className="absolute right-[-3px] top-32 w-[3px] h-12 bg-[#2a2a2a] rounded-r-sm" />
+                            {/* 볼륨 버튼 (왼쪽) */}
+                            <div className="absolute left-[-3px] top-28 w-[3px] h-14 bg-[#2a2a2a] rounded-l-sm" />
+                            <div className="absolute left-[-3px] top-44 w-[3px] h-10 bg-[#2a2a2a] rounded-l-sm" />
+                        </div>
+
+                        <p className="text-white/30 text-[11px] font-bold tracking-widest">바깥 클릭으로 닫기 · Samsung Galaxy S24 (360×800)</p>
+                    </div>
+                </div>
+            )}
+
+            {/*
+                [FIX] 레이아웃 치우침 현상 해결:
                 부모 폭 제한이 이미 풀렸으므로 표준 w-full을 사용함.
             */}
             <div className="w-full relative min-h-screen flex flex-col">
@@ -4616,7 +4981,25 @@ ${video.content}
                                 <p className="text-gold/50 text-[10px] font-black tracking-[0.2em]">THE ARCHIVIEW MASTER</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3">
+                            {/* 안드로이드 미리보기 버튼 */}
+                            <button
+                                onClick={() => setShowAndroidPreview(true)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-all text-[11px] font-black tracking-widest"
+                                title="안드로이드로 보기"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">android</span>
+                                <span className="hidden md:block">안드로이드</span>
+                            </button>
+                            {/* 아이폰 미리보기 버튼 */}
+                            <button
+                                onClick={() => setShowIphonePreview(true)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-[11px] font-black tracking-widest"
+                                title="아이폰으로 보기"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">smartphone</span>
+                                <span className="hidden md:block">아이폰</span>
+                            </button>
                             <div className="hidden md:flex flex-col items-end">
                                 <span className="text-white text-xs font-bold uppercase tracking-widest">Admin Uplink</span>
                                 <span className="text-emerald-400 text-[9px] font-mono anim-pulse">● SECURE CONNECTION</span>
@@ -4739,9 +5122,20 @@ ${video.content}
                                     </div>
                                 </div>
                             </div>
+                            <input
+                                type="text"
+                                value={memberSearch}
+                                onChange={e => setMemberSearch(e.target.value)}
+                                placeholder="이름 또는 이메일로 검색..."
+                                className="w-full px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm placeholder-slate-600 outline-none focus:border-gold/40"
+                            />
                             <div className="bg-white/5 rounded-[48px] border border-white/10 overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
                                 <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-px bg-white/10">
-                                    {realUsers.map((user) => {
+                                    {realUsers.filter(u => {
+                                        if (!memberSearch.trim()) return true;
+                                        const q = memberSearch.toLowerCase();
+                                        return (u.displayName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                                    }).map((user) => {
                                         const membership = getMembershipStatus(user);
                                         return (
                                         <div key={user.id} className="p-8 bg-background-dark flex flex-col gap-6 hover:bg-white/5 transition-all group">
@@ -4802,6 +5196,12 @@ ${video.content}
                                                     className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-xl text-[10px] font-black text-blue-400 hover:bg-blue-500/20 transition-all"
                                                 >
                                                     체험 재시작
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEndTrial(user.id)}
+                                                    className="px-3 py-2 bg-orange-500/10 border border-orange-500/30 rounded-xl text-[10px] font-black text-orange-400 hover:bg-orange-500/20 transition-all"
+                                                >
+                                                    체험 종료
                                                 </button>
                                                 <button
                                                     onClick={() => handleRevokePremium(user.id)}
@@ -5100,17 +5500,34 @@ ${video.content}
                                                         </div>
                                                     </div>
                                                     <div className="space-y-3">
-                                                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2">Global Affiliate Link</label>
+                                                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 text-emerald-400">Coupang Link</label>
                                                         <div className="flex gap-2">
                                                             <input
-                                                                id={`link-${bookKey}`}
+                                                                id={`coupang-${bookKey}`}
                                                                 type="text"
-                                                                defaultValue={book.purchaseLink || ''}
+                                                                defaultValue={book.coupangLink || book.purchaseLink || ''}
                                                                 className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none font-mono shadow-inner min-w-0"
+                                                                placeholder="쿠팡 파트너스 링크"
                                                             />
                                                             <button onClick={() => {
-                                                                const val = document.getElementById(`link-${bookKey}`).value;
-                                                                handleUpdatePurchaseLink(bookKey, val);
+                                                                const val = document.getElementById(`coupang-${bookKey}`).value;
+                                                                handleUpdateBookField(bookKey, 'coupangLink', val);
+                                                            }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 text-blue-400">Amazon Link</label>
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                id={`amazon-${bookKey}`}
+                                                                type="text"
+                                                                defaultValue={book.amazonLink || ''}
+                                                                className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none font-mono shadow-inner min-w-0"
+                                                                placeholder="아마존 어필리에이트 링크"
+                                                            />
+                                                            <button onClick={() => {
+                                                                const val = document.getElementById(`amazon-${bookKey}`).value;
+                                                                handleUpdateBookField(bookKey, 'amazonLink', val);
                                                             }} className="px-5 bg-gold text-primary font-black rounded-2xl hover:bg-white transition-colors text-xs shrink-0">수정</button>
                                                         </div>
                                                     </div>
@@ -6633,6 +7050,90 @@ ${video.content}
                                                 <span className="material-symbols-outlined text-2xl font-black">{isGeneratingEbook ? 'sync' : 'magic_button'}</span>
                                                 {isGeneratingEbook ? 'GENERATING...' : 'GENERATE INSIGHT ESSAY'}
                                             </button>
+
+                                            <div className="pt-2">
+                                                {/* ── 일괄 이북 생성 섹션 ── */}
+                                                <div className="border border-white/10 rounded-xl overflow-hidden">
+                                                    <div className="bg-white/5 px-4 py-3 flex items-center justify-between">
+                                                        <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">일괄 이북 생성</span>
+                                                        <button
+                                                            onClick={handleScanMissingEbooks}
+                                                            disabled={isScanning || isBatchEbookRunning}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[11px] font-bold hover:bg-indigo-500/30 transition-all disabled:opacity-40"
+                                                        >
+                                                            <span className={`material-symbols-outlined text-[14px] ${isScanning ? 'animate-spin' : ''}`}>search</span>
+                                                            {isScanning ? '스캔 중...' : '이북 없는 도서 스캔'}
+                                                        </button>
+                                                    </div>
+
+                                                    {batchEbookScanned && (
+                                                        <div className="p-3">
+                                                            {batchEbookMissingList.length === 0 ? (
+                                                                <p className="text-emerald-400 text-[11px] text-center py-2">모든 도서에 이북이 존재합니다 ✅</p>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-[10px] text-slate-400">총 {batchEbookMissingList.length}권 누락 | {batchEbookSelected.size}권 선택</span>
+                                                                        <div className="flex gap-2">
+                                                                            <button onClick={() => setBatchEbookSelected(new Set(batchEbookMissingList.map(b => b.id)))} className="text-[10px] text-indigo-400 hover:text-indigo-300">전체선택</button>
+                                                                            <button onClick={() => setBatchEbookSelected(new Set())} className="text-[10px] text-slate-500 hover:text-slate-300">전체해제</button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="max-h-48 overflow-y-auto space-y-1 mb-3">
+                                                                        {batchEbookMissingList.map(book => (
+                                                                            <label key={book.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={batchEbookSelected.has(book.id)}
+                                                                                    onChange={e => {
+                                                                                        const next = new Set(batchEbookSelected);
+                                                                                        e.target.checked ? next.add(book.id) : next.delete(book.id);
+                                                                                        setBatchEbookSelected(next);
+                                                                                    }}
+                                                                                    className="accent-indigo-500"
+                                                                                />
+                                                                                <span className="text-[11px] text-white/80 truncate">{book.title}</span>
+                                                                                <span className="text-[10px] text-slate-500 ml-auto shrink-0">{book.author}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={handleBatchGenerateEbooks}
+                                                                        disabled={isBatchEbookRunning || batchEbookSelected.size === 0}
+                                                                        className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                                                                            isBatchEbookRunning || batchEbookSelected.size === 0
+                                                                                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                                                                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg'
+                                                                        }`}
+                                                                    >
+                                                                        {isBatchEbookRunning ? (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-lg animate-spin">sync</span>
+                                                                                생성 중... ({batchEbookProgress.current}/{batchEbookProgress.total})
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-lg">electric_bolt</span>
+                                                                                선택한 {batchEbookSelected.size}권 이북 생성
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+
+                                                                    {isBatchEbookRunning && batchEbookProgress.total > 0 && (
+                                                                        <div className="mt-3 flex items-center gap-3">
+                                                                            <div className="flex-1 bg-white/5 rounded-full h-1.5 overflow-hidden">
+                                                                                <div className="bg-indigo-500 h-full rounded-full transition-all duration-300" style={{ width: `${(batchEbookProgress.current / batchEbookProgress.total) * 100}%` }} />
+                                                                            </div>
+                                                                            <span className="text-[10px] text-slate-400 font-mono">{Math.round((batchEbookProgress.current / batchEbookProgress.total) * 100)}%</span>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -7102,6 +7603,172 @@ ${video.content}
                         const removeFromList = (id) => setCurList(prev => prev.filter(b => b.id !== id));
                         const moveUp         = (i) => { if (i === 0) return; setCurList(prev => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; }); };
                         const moveDown       = (i) => { if (i === curList.length - 1) return; setCurList(prev => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; }); };
+
+                        // AI 추천 — 예스24·교보문고 실시간 베스트셀러 기반
+                        const handleAiRecommend = async () => {
+                            if (realBooks.length === 0) { alert('도서 데이터 로딩 중입니다.'); return; }
+                            const key = import.meta.env.VITE_GEMINI_API_KEY;
+                            if (!key) { alert('Gemini API 키가 없습니다.'); return; }
+                            setAiRecommending(true);
+
+                            // 섹션별 검색 쿼리
+                            const queryMap = {
+                                popular:      `예스24 종합 베스트셀러 현재 TOP ${curSection.max} 도서 제목 목록`,
+                                weekly_focus: `예스24 이번주 베스트셀러 주목 신간 TOP ${curSection.max} 도서 제목`,
+                                weekly_viewed:`교보문고 이번주 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                growth:       `예스24 자기계발 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                economy:      `예스24 경제 투자 재테크 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                business:     `교보문고 경영 비즈니스 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                humanities:   `예스24 인문 역사 철학 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                psychology:   `예스24 심리 자기계발 힐링 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                            };
+                            const query = queryMap[popularSubTab] || queryMap.popular;
+
+                            const prompt = `${query} 결과를 아래 형식으로만 답해줘. 다른 설명 없이 번호 목록만:
+1. 도서제목
+2. 도서제목
+3. 도서제목
+(저자명, 출판사, 가격 등 제목 외 정보는 제외)`;
+
+                            try {
+                                const res = await fetch(
+                                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+                                    {
+                                        method: 'POST',
+                                        headers: { 'content-type': 'application/json' },
+                                        body: JSON.stringify({
+                                            contents: [{ parts: [{ text: prompt }] }],
+                                            generationConfig: { temperature: 0.1, maxOutputTokens: 512, thinkingConfig: { thinkingBudget: 0 } }
+                                        })
+                                    }
+                                );
+                                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                const data = await res.json();
+                                const raw = (data.candidates?.[0]?.content?.parts || [])
+                                    .filter(p => !p.thought && p.text).map(p => p.text || '').join('');
+
+                                // 번호 목록 파싱: "1. 제목", "- 제목", "• 제목" 등 처리
+                                const bestsellerTitles = raw.split('\n')
+                                    .map(l => l.replace(/^[\s\d]+[.\-\)•·*]\s*/, '').replace(/\(.*?\)/g, '').replace(/\s*[-–]\s*저자.*$/i, '').trim())
+                                    .filter(l => l.length > 1 && l.length < 80 && !/^[#\[{]/.test(l));
+
+                                if (!Array.isArray(bestsellerTitles) || bestsellerTitles.length === 0) throw new Error('베스트셀러 목록 파싱 실패');
+
+                                // 베스트셀러 순위 기반으로 realBooks 매칭
+                                const toBookObj = (b) => ({ id: b.id, title: b.title, cover: b.cover || '', author: b.author || '', purchaseLink: b.purchaseLink || '', listens: b.listens || '' });
+                                const normalize = (s) => (s || '').replace(/[:\s·\-「」『』《》\[\]【】]/g, '').toLowerCase();
+
+                                const matched = [];
+                                const usedIds = new Set();
+                                for (const bsTitle of bestsellerTitles) {
+                                    const bsNorm = normalize(bsTitle);
+                                    // 부분 매칭: 베스트셀러 제목 포함 or realBook 제목 포함
+                                    const found = realBooks.find(b => {
+                                        if (usedIds.has(b.id)) return false;
+                                        const bn = normalize(b.title);
+                                        return bn.includes(bsNorm) || bsNorm.includes(bn) ||
+                                            // 3글자 이상 공통 부분
+                                            (bsNorm.length >= 3 && bn.length >= 3 &&
+                                             [...bsNorm].some((_, i) => bsNorm.length - i >= 3 && bn.includes(bsNorm.slice(i, i + 4))));
+                                    });
+                                    if (found) { matched.push(found); usedIds.add(found.id); }
+                                    if (matched.length >= curSection.max) break;
+                                }
+
+                                // 부족하면 section 기반 fallback으로 채움
+                                const sectionFallback = {
+                                    growth:     ['MINDSET','HABIT','SUCCESS','GENERAL'],
+                                    economy:    ['ECONOMY','WEALTH'],
+                                    business:   ['BUSINESS','SUCCESS','WEALTH'],
+                                    humanities: ['HISTORY','PHILOSOPHY','SCIENCE','GENERAL'],
+                                    psychology: ['HEALING','BURNOUT','PHILOSOPHY','MINDSET'],
+                                };
+                                if (matched.length < curSection.max) {
+                                    const sections = sectionFallback[popularSubTab];
+                                    const fallback = realBooks
+                                        .filter(b => !usedIds.has(b.id) && (!sections || sections.includes(b.section)))
+                                        .sort((a, b) => {
+                                            const pl = (v) => parseInt(String(v || '0').replace(/[^0-9]/g, '')) || 0;
+                                            return pl(b.listens) - pl(a.listens);
+                                        });
+                                    matched.push(...fallback.slice(0, curSection.max - matched.length));
+                                }
+
+                                setCurList(matched.slice(0, curSection.max).map(toBookObj));
+                                if (matched.length === 0) alert('보유한 도서 중 베스트셀러와 일치하는 도서가 없습니다. 직접 추가해주세요.');
+                                else if (matched.length < curSection.max) alert(`베스트셀러 ${matched.length}권 매칭 완료. 나머지는 카테고리 인기순으로 채웠습니다.`);
+
+                            } catch (e) {
+                                console.error('AI 추천 오류:', e);
+                                alert('베스트셀러 검색 실패: ' + e.message + '\n내부 데이터로 추천합니다.');
+                                // 완전 fallback: section 기반
+                                const parseListens = (v) => parseInt(String(v || '0').replace(/[^0-9]/g, '')) || 0;
+                                const sortedAll = [...realBooks].sort((a, b) => parseListens(b.listens) - parseListens(a.listens));
+                                const toBookObj = (b) => ({ id: b.id, title: b.title, cover: b.cover || '', author: b.author || '', purchaseLink: b.purchaseLink || '', listens: b.listens || '' });
+                                setCurList(sortedAll.slice(0, curSection.max).map(toBookObj));
+                            }
+                            setAiRecommending(false);
+                        };
+
+                        // 4주 스케줄 — 위클리포커스 전용
+                        const mondays = getNext4Mondays();
+                        const scheduleWithDates = mondays.map((monday, i) => {
+                            const isoDate = monday.toISOString().split('T')[0] + 'T06:00:00';
+                            const stored = weeklySchedule[i];
+                            return { weekStart: isoDate, books: stored?.books || [], monday };
+                        });
+                        const saveSchedule = async () => {
+                            setScheduleSaving(true);
+                            try {
+                                await setDoc(doc(db, 'site_config', 'weekly_focus_schedule'), {
+                                    weeks: scheduleWithDates.map(w => ({ weekStart: w.weekStart, books: w.books }))
+                                });
+                                alert('스케줄 저장 완료! ✅');
+                            } catch(e) { alert('저장 실패: ' + e.message); }
+                            setScheduleSaving(false);
+                        };
+                        const handleScheduleAiRecommend = () => {
+                            if (realBooks.length === 0) { alert('도서 데이터 로딩 중입니다.'); return; }
+                            setAiRecommending(true);
+                            const parseListens = (v) => parseInt(String(v || '0').replace(/[^0-9]/g, '')) || 0;
+                            const currentIds = new Set((sectionData.weekly_focus || []).map(b => b.id));
+                            // 팟캐스트 있는 책 우선, 현재 위클리포커스 제외, 청취수 순
+                            const all = [...realBooks].filter(b => !currentIds.has(b.id)).sort((a, b) => parseListens(b.listens) - parseListens(a.listens));
+                            const hasPodcast = all.filter(b => b.isPodcast || b.audioUrl || b.voiceAudioUrl);
+                            const rest = all.filter(b => !b.isPodcast && !b.audioUrl && !b.voiceAudioUrl);
+                            const sortedBooks = [...hasPodcast, ...rest];
+                            const newSchedule = mondays.map((monday, i) => {
+                                const isoDate = monday.toISOString().split('T')[0] + 'T06:00:00';
+                                const books = [sortedBooks[i * 2], sortedBooks[i * 2 + 1]].filter(Boolean).map(b => ({
+                                    id: b.id, title: b.title, cover: b.cover || '', author: b.author || '', purchaseLink: b.purchaseLink || '', listens: b.listens || ''
+                                }));
+                                return { weekStart: isoDate, books };
+                            });
+                            setWeeklySchedule(newSchedule);
+                            setAiRecommending(false);
+                        };
+                        const addBookToWeek = (weekIdx, book) => {
+                            const current = scheduleWithDates[weekIdx].books;
+                            if (current.length >= 2) { alert('주당 최대 2권까지 등록 가능합니다.'); return; }
+                            if (current.some(b => b.id === book.id)) { alert('이미 등록된 도서입니다.'); return; }
+                            setWeeklySchedule(prev => {
+                                const updated = [...prev];
+                                while (updated.length < 4) updated.push({ books: [] });
+                                const isoDate = mondays[weekIdx].toISOString().split('T')[0] + 'T06:00:00';
+                                updated[weekIdx] = { weekStart: isoDate, books: [...current, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '' }] };
+                                return [...updated];
+                            });
+                            setScheduleSearches(prev => { const a = [...prev]; a[weekIdx] = ''; return a; });
+                        };
+                        const removeBookFromWeek = (weekIdx, bookId) => {
+                            setWeeklySchedule(prev => {
+                                const updated = [...prev];
+                                if (updated[weekIdx]) updated[weekIdx] = { ...updated[weekIdx], books: updated[weekIdx].books.filter(b => b.id !== bookId) };
+                                return [...updated];
+                            });
+                        };
+                        const fmt = (d) => `${d.getMonth()+1}월 ${d.getDate()}일 월요일`;
+
                         return (
                             <div className="space-y-8">
                                 <div className="flex justify-between items-center">
@@ -7109,10 +7776,17 @@ ${video.content}
                                         <h3 className="text-white font-black text-5xl italic tracking-tighter uppercase">Popular Archives</h3>
                                         <p className="text-slate-500 text-xl font-medium italic">메인 화면 각 섹션의 도서 순위를 관리합니다.</p>
                                     </div>
-                                    <button onClick={saveSection} disabled={curSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
-                                        <span className="material-symbols-outlined text-2xl">{curSaving ? 'sync' : 'save'}</span>
-                                        {curSaving ? '저장 중...' : '메인에 저장'}
-                                    </button>
+                                    <div className="flex gap-3 items-center">
+                                        <button onClick={handleAiRecommend} disabled={aiRecommending}
+                                            className="px-6 py-4 rounded-2xl bg-purple-500/20 text-purple-300 font-black text-sm flex items-center gap-2 border border-purple-500/30 hover:bg-purple-500/40 transition-all disabled:opacity-50">
+                                            <span className="material-symbols-outlined text-lg">{aiRecommending ? 'sync' : 'auto_awesome'}</span>
+                                            {aiRecommending ? '분석 중...' : 'AI 추천'}
+                                        </button>
+                                        <button onClick={saveSection} disabled={curSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
+                                            <span className="material-symbols-outlined text-2xl">{curSaving ? 'sync' : 'save'}</span>
+                                            {curSaving ? '저장 중...' : '메인에 저장'}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* 8개 섹션 서브탭 */}
@@ -7162,6 +7836,83 @@ ${video.content}
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* 4주 스케줄 예약 — 위클리포커스 전용 */}
+                                {popularSubTab === 'weekly_focus' && (
+                                    <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-5">
+                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                            <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                                <span className="material-symbols-outlined text-purple-400">calendar_month</span>
+                                                4주 스케줄 예약
+                                                <span className="text-slate-500 text-sm font-normal">· 월요일 오전 6시 자동 적용</span>
+                                            </h4>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleScheduleAiRecommend} disabled={aiRecommending}
+                                                    className="px-5 py-2.5 rounded-xl bg-purple-500/20 text-purple-400 text-xs font-black border border-purple-500/30 hover:bg-purple-500/40 transition-all disabled:opacity-50 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-sm">{aiRecommending ? 'sync' : 'auto_awesome'}</span>
+                                                    {aiRecommending ? '분석 중...' : 'AI 4주 자동채우기'}
+                                                </button>
+                                                <button onClick={saveSchedule} disabled={scheduleSaving}
+                                                    className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-xs font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-50 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-sm">{scheduleSaving ? 'sync' : 'event_available'}</span>
+                                                    {scheduleSaving ? '저장 중...' : '스케줄 저장'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {scheduleWithDates.map((week, weekIdx) => {
+                                                const sq = scheduleSearches[weekIdx] || '';
+                                                const sqResults = sq.trim() ? realBooks.filter(b => b.title?.includes(sq) || b.author?.includes(sq)).slice(0, 8) : [];
+                                                return (
+                                                    <div key={weekIdx} className="bg-black/30 rounded-2xl p-5 border border-white/5 space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[11px] font-black text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/20">{weekIdx+1}주차</span>
+                                                            <span className="text-slate-300 text-sm font-bold">{fmt(week.monday)} 오전 6시</span>
+                                                            <span className="text-slate-600 text-xs">{week.books.length}/2권</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-3 items-start">
+                                                            {week.books.map(book => (
+                                                                <div key={book.id} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+                                                                    {book.cover && <img src={book.cover} alt="" className="w-8 h-11 object-cover rounded" />}
+                                                                    <div>
+                                                                        <p className="text-white text-xs font-black max-w-[110px] truncate">{book.title}</p>
+                                                                        <p className="text-slate-500 text-[10px]">{book.author}</p>
+                                                                    </div>
+                                                                    <button onClick={() => removeBookFromWeek(weekIdx, book.id)}
+                                                                        className="size-5 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all">
+                                                                        <span className="material-symbols-outlined text-[11px] text-red-400">close</span>
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            {week.books.length < 2 && (
+                                                                <div className="flex-1 min-w-[200px] space-y-2">
+                                                                    <input type="text" placeholder="도서 검색..."
+                                                                        value={sq}
+                                                                        onChange={e => setScheduleSearches(prev => { const a=[...prev]; a[weekIdx]=e.target.value; return a; })}
+                                                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold outline-none focus:border-purple-500/50 placeholder:text-slate-600" />
+                                                                    {sqResults.length > 0 && (
+                                                                        <div className="bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl">
+                                                                            {sqResults.map(book => (
+                                                                                <div key={book.id} onClick={() => addBookToWeek(weekIdx, book)}
+                                                                                    className="flex items-center gap-2 px-3 py-2.5 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
+                                                                                    {book.cover && <img src={book.cover} alt="" className="w-7 h-10 object-cover rounded flex-shrink-0" />}
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-white text-xs font-black truncate">{book.title}</p>
+                                                                                        <p className="text-slate-500 text-[10px]">{book.author}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* 도서 검색 & 추가 */}
                                 <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-6">
@@ -7496,7 +8247,15 @@ ${video.content}
                                 {/* 도서 체크리스트 */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
                                     {realBooks.filter(b => b.id).map(b => {
-                                        const hasWav = Object.keys(localWavFileMap).some(n => n.toLowerCase() === `${b.id}.wav`);
+                                        const hasWav = Object.keys(localWavFileMap).some(n => {
+                                            const norm = s => s.normalize('NFC').replace(/[\s\-_·]+/g, '').toLowerCase();
+                                            const base = n.split('/').pop().replace(/\.wav$/i, '');
+                                            const id = b.id;
+                                            const title = b.title || '';
+                                            return norm(base) === norm(id) || norm(base) === norm(title) ||
+                                                norm(base).includes(norm(id)) || norm(id).includes(norm(base)) ||
+                                                norm(base).includes(norm(title)) || norm(title).includes(norm(base));
+                                        });
                                         const checked = batchVerifyIds.includes(b.id);
                                         return (
                                             <label key={b.id}
@@ -7690,18 +8449,49 @@ ${video.content}
                                         <h4 className="text-white font-black text-lg">🤖 일괄 AssemblyAI 1차 자동계산</h4>
                                         <p className="text-slate-500 text-xs mt-0.5">여러 도서의 타임스탬프를 한 번에 생성합니다. WAV 폴더 선택 후 사용하세요.</p>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 flex-wrap">
+                                        <button
+                                            onClick={async () => {
+                                                setTsExistsLoading(true);
+                                                const norm = s => s.normalize('NFC').replace(/[\s\-_·]+/g, '').toLowerCase();
+                                                const booksWithWav = realBooks.filter(b => b.id && Object.keys(localWavFileMap).some(n => {
+                                                    const base = n.split('/').pop().replace(/\.wav$/i, '');
+                                                    return norm(base) === norm(b.id) || norm(base) === norm(b.title || '') ||
+                                                        norm(base).includes(norm(b.id)) || norm(b.id).includes(norm(base)) ||
+                                                        norm(base).includes(norm(b.title || '')) || norm(b.title || '').includes(norm(base));
+                                                }));
+                                                const results = await Promise.all(
+                                                    booksWithWav.map(b => getDoc(doc(db, 'timestamps', b.id)).then(s => ({ id: b.id, has: s.exists() })))
+                                                );
+                                                const map = {};
+                                                results.forEach(r => { map[r.id] = r.has; });
+                                                setTsExistsMap(map);
+                                                setTsExistsLoading(false);
+                                            }}
+                                            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-black text-slate-400 hover:text-white transition-all"
+                                        >{tsExistsLoading ? '⏳ 확인 중...' : '🔍 싱크 상태 확인'}</button>
+                                        {Object.keys(tsExistsMap).length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    const noSync = Object.entries(tsExistsMap).filter(([, has]) => !has).map(([id]) => id);
+                                                    setBatchTsIds(noSync);
+                                                }}
+                                                className="px-3 py-1.5 bg-violet-500/20 border border-violet-400/40 rounded-lg text-xs font-black text-violet-300 hover:text-white transition-all"
+                                            >⚡ 미완료만 선택 ({Object.values(tsExistsMap).filter(v => !v).length}권)</button>
+                                        )}
                                         <button
                                             onClick={() => {
+                                                const norm = s => s.normalize('NFC').replace(/[\s\-_·]+/g, '').toLowerCase();
                                                 const booksWithWav = realBooks.filter(b => b.id && Object.keys(localWavFileMap).some(n => {
-                                                    const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
-                                                    const id = b.id.toLowerCase();
-                                                    return base === id || base.includes(id) || id.includes(base);
+                                                    const base = n.split('/').pop().replace(/\.wav$/i, '');
+                                                    return norm(base) === norm(b.id) || norm(base) === norm(b.title || '') ||
+                                                        norm(base).includes(norm(b.id)) || norm(b.id).includes(norm(base)) ||
+                                                        norm(base).includes(norm(b.title || '')) || norm(b.title || '').includes(norm(base));
                                                 }));
                                                 setBatchTsIds(booksWithWav.map(b => b.id));
                                             }}
                                             className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-black text-slate-400 hover:text-white transition-all"
-                                        >WAV 있는 도서 전체 선택</button>
+                                        >전체 선택</button>
                                         <button
                                             onClick={() => setBatchTsIds([])}
                                             className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-black text-slate-400 hover:text-white transition-all"
@@ -7717,9 +8507,11 @@ ${video.content}
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
                                         {realBooks.filter(b => b.id).map(b => {
                                             const hasWav = Object.keys(localWavFileMap).some(n => {
-                                                const base = n.split('/').pop().replace(/\.wav$/i, '').toLowerCase();
-                                                const id = b.id.toLowerCase();
-                                                return base === id || base.includes(id) || id.includes(base);
+                                                const norm = s => s.normalize('NFC').replace(/[\s\-_·]+/g, '').toLowerCase();
+                                                const base = n.split('/').pop().replace(/\.wav$/i, '');
+                                                return norm(base) === norm(b.id) || norm(base) === norm(b.title || '') ||
+                                                    norm(base).includes(norm(b.id)) || norm(b.id).includes(norm(base)) ||
+                                                    norm(base).includes(norm(b.title || '')) || norm(b.title || '').includes(norm(base));
                                             });
                                             const checked = batchTsIds.includes(b.id);
                                             const result = batchTsResults[b.id];
@@ -7740,6 +8532,10 @@ ${video.content}
                                                             : result.status === 'noWav'
                                                                 ? <span className="text-slate-500 flex-shrink-0">—</span>
                                                                 : <span className="text-red-400 flex-shrink-0">❌</span>
+                                                    ) : tsExistsMap[b.id] !== undefined ? (
+                                                        tsExistsMap[b.id]
+                                                            ? <span className="text-emerald-400 flex-shrink-0" title="싱크 완료">✅</span>
+                                                            : <span className="text-orange-400 flex-shrink-0" title="싱크 없음">⚡</span>
                                                     ) : hasWav ? (
                                                         <span className="text-emerald-400 flex-shrink-0">🎵</span>
                                                     ) : null}

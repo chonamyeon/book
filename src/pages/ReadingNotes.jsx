@@ -6,6 +6,7 @@ import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { celebrities } from '../data/celebrities';
+import KakaoAdFit from '../components/KakaoAdFit';
 import { db } from '../firebase';
 import {
     collection, addDoc, getDocs, deleteDoc,
@@ -1167,6 +1168,11 @@ export default function ReadingNotes() {
                         </div>
                     )
                 }
+
+                {/* ── Kakao AdFit Banner ── */}
+                <div className="flex justify-center py-10 px-6">
+                    <KakaoAdFit unit="DAN-8TOvfml5bpBYgcZ0" />
+                </div>
 
                 <Footer />
                 <BottomNavigation />

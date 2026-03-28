@@ -87,7 +87,7 @@ export default function BottomNavigation() {
         /* 📍 [애드센스 심사용 추가: 메인 노출을 위해 순서 변경됨] 📍 */
         { path: '/review-board', label: '라이브러리', icon: 'library_books' },
         /* ========================================================= */
-        { path: '/editorial', label: '에디토리얼', icon: 'auto_awesome' },
+        /* { path: '/editorial', label: '에디토리얼', icon: 'auto_awesome' }, */
         { path: '/library', label: '서재', icon: 'auto_stories' },
         { path: '/reading-notes', label: '기록노트', icon: 'edit_note' },
         { path: '/profile', label: '프로필', icon: 'person' },

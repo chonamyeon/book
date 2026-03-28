@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBookData } from '../hooks/useBookData';
 import { motion } from 'framer-motion';
 import BottomNavigation from '../components/BottomNavigation';
+import TopNavigation from '../components/TopNavigation';
+import KakaoAdFit from '../components/KakaoAdFit';
 
 export default function ReviewBoard() {
   const navigate = useNavigate();
@@ -43,51 +45,68 @@ export default function ReviewBoard() {
 
   // Extract full plain text for SEO from the review and ebook
   const getFullReviewText = (book) => {
+    if (!book) return "";
     let finalTexts = [];
     const tmp = document.createElement("DIV");
     
+    // 1. Review HTML
     if (book.review) {
       try {
         tmp.innerHTML = book.review;
         let text = tmp.textContent || tmp.innerText || "";
         text = text.replace(/\[.*?\]/g, '').trim();
-        if (text) finalTexts.push(text);
+        if (text) finalTexts.push("### 도서 리뷰\n" + text);
       } catch (e) {
         console.error(e);
       }
     }
 
+    // 2. e-Book / Original Content
     if (book.ebookText) {
       try {
         tmp.innerHTML = book.ebookText;
         let eText = tmp.textContent || tmp.innerText || "";
         eText = eText.replace(/\[.*?\]/g, '').trim();
-        if (eText) finalTexts.push(eText);
+        if (eText) finalTexts.push("### 핵심 텍스트\n" + eText);
       } catch (e) {
         console.error(e);
       }
     }
 
+    // 3. Podcast Script (High word count)
+    if (book.podcastScript) {
+        finalTexts.push("### 오디오 스크립트 전문\n" + book.podcastScript);
+    }
+    
+    // 4. Insights
+    if (book.insights && Array.isArray(book.insights) && book.insights.length > 0) {
+        finalTexts.push("### 💡 핵심 인사이트\n" + book.insights.map((ins, i) => `${i+1}. ${ins.title}\n${ins.description}`).join("\n\n"));
+    }
+    
+    // 5. Action Guide
+    if (book.actionGuide && Array.isArray(book.actionGuide) && book.actionGuide.length > 0) {
+        finalTexts.push("### 🎯 액션 플랜\n" + book.actionGuide.map((act, i) => `${i+1}. ${act.title}\n${act.description}`).join("\n\n"));
+    }
+    
+    // 6. Description (Fallback base)
+    if (book.description && book.description.length > 30) finalTexts.push("### 작품 요약\n" + book.description);
+
     if (finalTexts.length === 0) {
-      return book.desc || "도서 리뷰 및 인사이트가 준비되어 있습니다.";
+      return book.desc || "이 도서의 심층 리뷰와 핵심 인사이트가 준비되어 있습니다.";
     }
 
-    return finalTexts.join("\n\n--- [ 이북 내용 포함 ] ---\n\n");
+    return finalTexts.join("\n\n------------------------\n\n");
   };
 
   return (
     <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative selection:bg-indigo-500/30">
       {/* Header */}
-      <div className="bg-[#101218] px-4 py-4 sticky top-0 z-50 border-b border-white/5 flex items-center justify-between" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))' }}>
-        <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="text-white/70 hover:text-white transition-colors">
-            <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-            </button>
-            <h1 className="text-[18px] font-black tracking-tight flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-400 text-[20px]">library_books</span>
-                리뷰 라이브러리
-            </h1>
-        </div>
+      <TopNavigation type="sub" />
+      <div className="bg-[#101218] px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h1 className="text-[17px] font-black tracking-tight flex items-center gap-2">
+              <span className="material-symbols-outlined text-indigo-400 text-[20px]">library_books</span>
+              리뷰 라이브러리
+          </h1>
       </div>
 
       {/* Main Content */}
@@ -111,7 +130,7 @@ export default function ReviewBoard() {
                 className="bg-zinc-900 border border-white/5 shadow-2xl overflow-hidden group hover:border-indigo-500/30 transition-colors"
                 style={{ scrollMarginTop: '80px' }}
             >
-                <Link to={`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`} className="block">
+                <Link to={`/review-board/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`} className="block">
                     <div className="p-5 pb-3">
                         <div className="flex flex-col pt-1">
                             {book.category && (
@@ -133,7 +152,7 @@ export default function ReviewBoard() {
                     <div className="bg-black/50 p-4 border-t border-white/5 relative">
                         <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50"></div>
                         <p className="text-[12.5px] text-gray-300 leading-[1.7] font-medium break-keep whitespace-pre-wrap">
-                            {getFullReviewText(book)}
+                            {getFullReviewText(book).substring(0, 200)}...
                         </p>
                         <div className="mt-6 flex items-center justify-between">
                             <span className="text-gray-500 text-[10px] uppercase font-bold tracking-widest bg-white/5 px-2 py-1">인사이트 읽기 (Read More)</span>
@@ -144,6 +163,9 @@ export default function ReviewBoard() {
             </motion.article>
             ))}
         </div>
+
+        {/* Kakao AdFit */}
+        <KakaoAdFit unit="DAN-8TOvfml5bpBYgcZ0" width="320" height="100" />
       </main>
 
       <BottomNavigation />

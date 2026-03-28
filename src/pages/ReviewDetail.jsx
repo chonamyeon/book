@@ -12,6 +12,7 @@ import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/fire
 import { useAuth } from '../hooks/useAuth';
 import { useBookData } from '../hooks/useBookData';
 import SubscriptionModal from '../components/SubscriptionModal';
+import KakaoAdFit from '../components/KakaoAdFit';
 import { chatWithGemini } from '../services/gemini';
 import { shareCard } from '../utils/shareCard';
 import './ReviewDetail.css';
@@ -616,8 +617,49 @@ export default function ReviewDetail() {
 
     const podcastSrc = useMemo(() => {
         if (!book) return '';
-        return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile || `/audio/${book.id}.mp3`;
+        // 로컬 파일이 availableAudio에 있으면 항상 로컬 우선 (Firestore URL이 만료돼도 안전)
+        // 영어 ID 먼저 체크 (URL 인코딩 이슈 없음)
+        if (book.id && availableAudio[`${book.id}.mp3`]) return `/audio/${book.id}.mp3`;
+        const koreanSlug = (book.title || '').replace(/\s+/g, '-');
+        if (koreanSlug && availableAudio[`${koreanSlug}.mp3`]) return `/audio/${koreanSlug}.mp3`;
+        // 로컬 파일 없으면 Firestore/override URL 사용
+        if (firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile) {
+            return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile;
+        }
+        if (koreanSlug && koreanSlug !== book.id) return `/audio/${koreanSlug}.mp3`;
+        return `/audio/${book.id}.mp3`;
     }, [book, firestoreAudioUrl]);
+
+    const coupangUrl = useMemo(() => {
+        if (!book) return '';
+        // 1. 고정된 쿠팡 링크 최우선
+        if (book.coupangLink) return book.coupangLink;
+        // 2. 검색 링크로 폴백 (쿠팡 전용)
+        return `https://www.coupang.com/np/search?q=${encodeURIComponent(book.title || '')}&channel=relate`;
+    }, [book]);
+
+    const amazonUrl = useMemo(() => {
+        if (!book) return '';
+        const rawAmazon = book.amazonLink || '';
+        if (rawAmazon) {
+            if (rawAmazon.includes('amazon.com') && !rawAmazon.includes('tag=')) {
+                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=archiview2026-20';
+            }
+            return rawAmazon;
+        }
+        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=archiview2026-20`;
+    }, [book]);
+
+    const hasRealAmazon = useMemo(() => !!book?.amazonLink, [book]);
+
+    const podcastDuration = useMemo(() => {
+        if (!book) return 0;
+        const fileName = `${book.id}.mp3`;
+        if (availableAudio[fileName]) return availableAudio[fileName];
+        const koreanSlug = (book.title || '').replace(/\s+/g, '-');
+        if (availableAudio[`${koreanSlug}.mp3`]) return availableAudio[`${koreanSlug}.mp3`];
+        return duration || 0;
+    }, [book, duration]);
 
     const ebookPages = useMemo(() => firestoreEbook || [], [firestoreEbook]);
     const hasEbook = ebookPages.length > 0;
@@ -639,7 +681,7 @@ export default function ReviewDetail() {
             // podcast 탭으로 URL 진입 시 자동 재생 (사용자 제스처 유효성 위해 지연 최소화)
             if (tab === 'podcast' && book && podcastSrc && isPodcast) {
                 if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
-                    try { playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id); } catch (e) {}
+                    try { playPodcastMP3(podcastSrc, book.title || id, book.coverUrl || book.cover, book.id); } catch (e) {}
                 }
             }
         } else if (book && !hasReview) {
@@ -656,20 +698,34 @@ export default function ReviewDetail() {
     // Firestore에서 대본 + 오디오 URL + isPodcast 실시간 로드
     useEffect(() => {
         if (!id) return;
-        // Firestore 대본 항상 조회 (로컬보다 우선)
-        getDoc(doc(db, 'scripts', id)).then(snap => {
-            if (snap.exists() && snap.data().script) {
+        // Firestore 대본 조회 — 영어 ID 실패 시 한국어 title slug로 재시도
+        const loadScript = async () => {
+            const parseScript = (snap) => {
+                if (!snap.exists()) return false;
                 const d = snap.data();
-                if (Array.isArray(d.script) && d.script.length > 0) {
-                    setFirestoreScript(d.script.map(l => ({
-                        role: l.role || (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
-                        text: l.text || l.message || ''
-                    })));
-                } else if (d.script.length === 0) {
-                    setFirestoreScript([]);
+                const arr = (Array.isArray(d.script) && d.script.length > 0) ? d.script
+                    : (Array.isArray(d.lines) && d.lines.length > 0) ? d.lines
+                    : (Array.isArray(d.content) && d.content.length > 0) ? d.content
+                    : null;
+                if (!arr) return false;
+                setFirestoreScript(arr.map(l => ({
+                    role: l.role ? l.role : (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
+                    text: l.text || l.message || ''
+                })));
+                return true;
+            };
+            try {
+                let snap = await getDoc(doc(db, 'scripts', id));
+                if (parseScript(snap)) return;
+                // 한국어 title slug로 재시도 (예: hitchhikers-guide → 은하수를-여행하는-히치하이커를-위한-안내서)
+                const koreanSlug = (book?.title || '').replace(/\s+/g, '-');
+                if (koreanSlug && koreanSlug !== id) {
+                    snap = await getDoc(doc(db, 'scripts', koreanSlug));
+                    parseScript(snap);
                 }
-            }
-        }).catch(() => { });
+            } catch {}
+        };
+        loadScript();
         // 성우 MP3 / 오디오 URL / isPodcast / Cover URL Firestore 오버라이드 조회
         getDoc(doc(db, 'book_overrides', id)).then(snap => {
             if (snap.exists()) {
@@ -717,16 +773,60 @@ export default function ReviewDetail() {
         }).catch(() => setEbookLoading(false));
     }, [id]);
 
+    // book이 나중에 로딩되면 한국어 slug로 스크립트 재시도
+    useEffect(() => {
+        if (!book?.title || (firestoreScript && firestoreScript.length > 0)) return;
+        const koreanSlug = book.title.replace(/\s+/g, '-');
+        if (!koreanSlug || koreanSlug === id) return;
+        getDoc(doc(db, 'scripts', koreanSlug)).then(snap => {
+            if (!snap.exists()) return;
+            const d = snap.data();
+            const arr = (Array.isArray(d.script) && d.script.length > 0) ? d.script
+                : (Array.isArray(d.lines) && d.lines.length > 0) ? d.lines
+                : (Array.isArray(d.content) && d.content.length > 0) ? d.content
+                : null;
+            if (!arr) return;
+            setFirestoreScript(arr.map(l => ({
+                role: l.role ? l.role : (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
+                text: l.text || l.message || ''
+            })));
+        }).catch(() => {});
+    }, [book?.title, id]);
+
     const bubbleRefs = useRef([]);
 
     // 수동 타임스탬프 (Firestore timestamps/{id}) 로드 + mode
     // localStorage 캐시로 매번 Firestore 호출 방지 (24시간 유효)
-    const [timestampSegments, setTimestampSegments] = useState(null);
-    const [syncMode, setSyncMode] = useState(false);
+    // 첫 렌더부터 올바른 위치 표시 — localStorage에서 동기적으로 초기화
+    const [timestampSegments, setTimestampSegments] = useState(() => {
+        if (!id) return null;
+        try {
+            const cached = localStorage.getItem(`rv_ts_${id}`);
+            if (cached) {
+                const { segments, cachedAt } = JSON.parse(cached);
+                if (segments?.length && Date.now() - cachedAt < 5 * 60 * 1000)
+                    return segments;
+            }
+        } catch(e) {}
+        return null;
+    });
+    const [syncMode, setSyncMode] = useState(() => {
+        if (!id) return false;
+        try {
+            const cached = localStorage.getItem(`rv_ts_${id}`);
+            if (cached) {
+                const { mode, cachedAt } = JSON.parse(cached);
+                if (Date.now() - cachedAt < 5 * 60 * 1000)
+                    return mode === 'sync';
+            }
+        } catch(e) {}
+        return false;
+    });
     useEffect(() => {
         if (!id) return;
-        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
+        const CACHE_TTL = 5 * 60 * 1000; // 5분 — Admin 수정 후 최대 5분 내 반영
         const cacheKey = `rv_ts_${id}`;
+        // 캐시 있으면 즉시 렌더 (미니플레이어 클릭 시 처음으로 튀는 현상 방지)
         try {
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
@@ -734,7 +834,7 @@ export default function ReviewDetail() {
                 if (segments?.length && Date.now() - cachedAt < CACHE_TTL) {
                     setTimestampSegments(segments);
                     setSyncMode(mode === 'sync');
-                    return; // Firestore 호출 없이 캐시 사용
+                    return;
                 }
             }
         } catch (e) {}
@@ -744,7 +844,7 @@ export default function ReviewDetail() {
                 const { segments, mode } = snap.data();
                 setTimestampSegments(segments);
                 setSyncMode(mode === 'sync');
-                localStorage.setItem(cacheKey, JSON.stringify({ segments, mode, cachedAt: Date.now() }));
+                try { localStorage.setItem(cacheKey, JSON.stringify({ segments, mode, cachedAt: Date.now() })); } catch(e) {}
             } else {
                 setTimestampSegments(null);
                 setSyncMode(false);
@@ -772,6 +872,21 @@ export default function ReviewDetail() {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [syncMode, activeTurnIndex]);
 
+    // 팟캐스트 탭으로 돌아올 때 현재 오디오 위치로 스크롤 복원
+    useEffect(() => {
+        if (activeTab !== 'podcast' || script.length === 0) return;
+        const timer = setTimeout(() => {
+            // 싱크 데이터 있으면 activeTurnIndex, 없으면 오디오 진행률로 추정
+            let idx = activeTurnIndex >= 0 ? activeTurnIndex
+                : (duration > 0 ? Math.floor((currentTime / duration) * script.length) : 0);
+            idx = Math.max(0, Math.min(idx, script.length - 1));
+            const el = bubbleRefs.current[idx];
+            if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }, 120);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]); // activeTab 변경 시에만 실행 (탭 전환할 때만)
+
     // 타이머 비활성화 (버튼 고정 요청)
     const resetHideTimer = useCallback(() => {
         setShowUI(true);
@@ -783,6 +898,14 @@ export default function ReviewDetail() {
 
     const onFlip = useCallback((e) => {
         setPageIdx(e.data);
+        // 마지막 페이지(final page) 도달 시 해당 페이지 wrapper의 overflow를 scroll로 강제 설정
+        setTimeout(() => {
+            const finalPage = document.querySelector('.rv-ebook-final-page');
+            if (finalPage) {
+                finalPage.style.overflowY = 'auto';
+                finalPage.style.webkitOverflowScrolling = 'touch';
+            }
+        }, 50);
     }, []);
 
     useEffect(() => {
@@ -976,19 +1099,22 @@ ${scriptContext}
         >
             {/* ── Top Bar ── */}
             <div className={`rv-topbar ${showUI ? 'visible' : 'hidden'}`}>
-                <button className="rv-close-btn" onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}>
+                <button className="rv-close-btn" onClick={() => { try { navigate(-1); } catch(e) { navigate('/'); } }}>
                     <span className="material-symbols-outlined">close</span>
                 </button>
                 <div className="rv-topbar-title-wrap">
                     <span className="rv-topbar-title">{book.title}</span>
-                    <span className="rv-topbar-count">{pageIdx} / {total - 1}</span>
+                    <span className="rv-topbar-count">
+                        {activeTab === 'podcast' ? (
+                            <span style={{ color: '#c8a870' }}>{formatTime(currentTime)} / {formatTime(podcastDuration)}</span>
+                        ) : (
+                            <>{pageIdx} / {total - 1}</>
+                        )}
+                    </span>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
-                    <button className="rv-close-btn" onClick={() => setShowShareMenu(v => !v)} title="공유">
-                        <span className="material-symbols-outlined">ios_share</span>
-                    </button>
-                    <button className="rv-close-btn" onClick={() => navigate('/')}>
-                        <span className="material-symbols-outlined">home</span>
+                    <button className="rv-close-btn" onClick={() => navigate('/')} title="홈">
+                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>home</span>
                     </button>
                 </div>
             </div>
@@ -1058,7 +1184,7 @@ ${scriptContext}
                     className={`rv-tab ${activeTab === 'ebook' || activeTab === 'review' ? 'active' : ''}`}
                     onClick={() => setActiveTab('ebook')}
                 >
-                    이북보기
+                    e-book
                 </button>
 
                 {isPodcast && (
@@ -1066,7 +1192,8 @@ ${scriptContext}
                         className={`rv-tab ${activeTab === 'podcast' ? 'active' : ''}`}
                         onClick={() => {
                             setActiveTab('podcast');
-                            if (!podcastPlaying || podcastInfo?.src !== podcastSrc) {
+                            // 이미 탭에 들어와 있는데 재생 중이 아니거나 다른 도서의 소스인 경우 재생
+                            if (!podcastPlaying || (podcastInfo?.src !== podcastSrc && podcastSrc)) {
                                 playPodcastMP3(podcastSrc, book.title, book.coverUrl || book.cover, book.id);
                             }
                         }}
@@ -1075,13 +1202,37 @@ ${scriptContext}
                     </button>
                 )}
 
+                {/* 
                 <button
                     className={`rv-tab ${activeTab === 'chat' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chat')}
                 >
                     인사이트 챗
                 </button>
+                */}
             </div>
+
+            {/* ── 팟캐스트 재생 중 배너 (이북/인사이트 탭에서만) ── */}
+            {podcastPlaying && activeTab !== 'podcast' && isPodcast && (
+                <button
+                    onClick={() => {
+                        setActiveTab('podcast');
+                    }}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        width: '100%', padding: '6px 16px',
+                        background: 'rgba(249,115,22,0.12)',
+                        borderTop: '1px solid rgba(249,115,22,0.2)',
+                        borderBottom: '1px solid rgba(249,115,22,0.2)',
+                        border: 'none', cursor: 'pointer', color: 'rgba(251,146,60,0.9)',
+                        fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
+                        zIndex: 10,
+                    }}
+                >
+                    <span className="material-symbols-outlined" style={{ fontSize: 14, animation: 'pulse 1.5s ease-in-out infinite' }}>graphic_eq</span>
+                    팟캐스트 재생 중 — 탭하면 대화 화면으로 이동
+                </button>
+            )}
 
             {/* ── Stage (FlipBook Container) ── */}
             {(activeTab === 'review' || activeTab === 'ebook') ? (
@@ -1116,24 +1267,28 @@ ${scriptContext}
                             {hasEbook ? (
                                 // --- Ebook Layout Content ---
                                 [
-                                    <EbookPage key="ebook-cover" className="rv-ebook-cover-page">
+                                    <EbookPage key="ebook-cover" className="rv-ebook-cover-page" bookTitle={book.title} pageNum={0} totalPages={ebookPages.length}>
                                         <div className="rv-ebook-cover-inner">
                                             <div className="rv-ebook-glow"></div>
-                                            <BookCoverImage book={book} className="rv-ebook-cover-frame" isBackground={true}>
-                                                <div className="rv-ebook-cover-shadow"></div>
-                                            </BookCoverImage>
                                             <h1 className="rv-ebook-title">{book.title}</h1>
                                             <div className="rv-ebook-author-box">
                                                 <p className="rv-ebook-author">{book.author}</p>
                                                 <div className="rv-ebook-divider"></div>
                                             </div>
-                                            <p className="rv-ebook-tagline">"통찰의 아카이브, 당신의 성장을 위한 기록"</p>
-                                            <p className="rv-ebook-hint">스와이프하여 읽기 →</p>
+                                            <BookCoverImage book={book} className="rv-ebook-cover-frame" isBackground={true}>
+                                                <div className="rv-ebook-cover-shadow"></div>
+                                            </BookCoverImage>
+                                            <iframe src="https://ads-partners.coupang.com/widgets.html?id=976191&template=banner&trackingCode=AF5571749&subId=&width=320&height=50" width="320" height="50" frameBorder="0" scrolling="no" referrerPolicy="unsafe-url" style={{ border: 'none', marginTop: '16px' }} />
                                         </div>
                                     </EbookPage>,
                                     ...ebookPages.map((pageHtml, i) => (
-                                        <EbookPage key={`ebook-p-${i}`} className="rv-ebook-content-page">
-
+                                        <EbookPage 
+                                            key={`ebook-p-${i}`} 
+                                            className="rv-ebook-content-page"
+                                            bookTitle={book.title}
+                                            pageNum={i + 1}
+                                            totalPages={ebookPages.length}
+                                        >
                                             <div className="rv-ebook-body-container">
                                                 {i === 0 && (
                                                     <div className="rv-ebook-page-cover-thumb">
@@ -1143,44 +1298,26 @@ ${scriptContext}
                                                 <div
                                                     className="rv-ebook-body-html"
                                                     dangerouslySetInnerHTML={{ 
-                                                        __html: pageHtml.replace(/(<blockquote>.*?<p>)\s*["“”](.*?)\s*["“”](\s*<\/p>)/gs, '$1$2$3') 
+                                                        __html: pageHtml
+                                                            .replace(/(<blockquote>.*?<p>)\s*["“”](.*?)\s*["“”](\s*<\/p>)/gs, '$1$2$3')
+                                                            .replace(/&nbsp;/g, ' ')
+                                                            .replace(/\s{2,}/g, ' ')
                                                     }}
                                                 />
                                             </div>
                                         </EbookPage>
                                     )),
-                                    <EbookPage key="ebook-final" className="rv-ebook-final-page">
-                                        <div className="rv-ebook-final-inner">
-                                            <div className="rv-ebook-final-top">
-                                                <div className="rv-ebook-final-brand-row">
-                                                    <span className="rv-ebook-final-ornament">✦</span>
-                                                    <span className="rv-ebook-final-brand-name">THE ARCHIVIEW</span>
-                                                    <span className="rv-ebook-final-ornament">✦</span>
-                                                </div>
-                                                <h2 className="rv-ebook-final-booktitle" style={{marginBottom:'16px'}}>{book.title}</h2>
-                                                <div className="rv-ebook-final-rule"></div>
+                                    <EbookPage key="ebook-final" className="rv-ebook-final-page" bookTitle={book.title} pageNum={ebookPages.length + 1} totalPages={ebookPages.length}>
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 28px', textAlign: 'center', gap: '12px' }}>
+                                            <div className="rv-ebook-final-brand-row">
+                                                <span className="rv-ebook-final-ornament">✦</span>
+                                                <span className="rv-ebook-final-brand-name">THE ARCHIVIEW</span>
+                                                <span className="rv-ebook-final-ornament">✦</span>
                                             </div>
-                                            {book.actionGuide?.length > 0 && (
-                                                <div className="rv-ebook-final-action">
-                                                    <div className="rv-ebook-inline-action-header">✦ 오늘의 실전기록노트</div>
-                                                    {book.actionGuide.map((item, idx) => (
-                                                        <div key={idx} className="rv-ebook-inline-action-box">
-                                                            <span className="rv-ebook-inline-action-num">{idx + 1}</span>
-                                                            <div className="rv-ebook-inline-action-body">
-                                                                <p className="rv-ebook-inline-action-title">{item.title}</p>
-                                                                <p className="rv-ebook-inline-action-desc">{item.description}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    <button className="rv-ebook-inline-action-btn" onClick={(e) => { e.stopPropagation(); navigate(`/reading-notes?bookId=${book.id}`); }}>
-                                                        기록노트 바로가기 →
-                                                    </button>
-                                                </div>
-                                            )}
-                                            <div className="rv-ebook-final-bottom">
-                                                <p className="rv-ebook-final-copyright">본 콘텐츠는 독자의 인사이트를 담은 창작 에세이 리뷰이며, 더 풍부한 내용은 가까운 서점이나 온라인 서점에서 구매하여 보시기 바랍니다.</p>
-                                                <p className="rv-ebook-final-copyright-mark">© The Archiview — All Rights Reserved</p>
-                                            </div>
+                                            <h2 className="rv-ebook-final-booktitle">{book.title}</h2>
+                                            <div className="rv-ebook-final-rule"></div>
+                                            <p style={{ fontSize: '11px', color: 'rgba(200,168,112,0.5)', letterSpacing: '0.5px' }}>아래로 스크롤하여 더보기</p>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'rgba(200,168,112,0.4)', animation: 'bounce 1.5s infinite' }}>keyboard_arrow_down</span>
                                         </div>
                                     </EbookPage>
                                 ]
@@ -1261,8 +1398,82 @@ ${scriptContext}
                                         <div className="rv-final-inner">
                                             <div className="rv-final-logo">ARCHIVIEW</div>
                                             <div className="rv-final-divider"></div>
-                                            <h3>READ & ASCEND</h3>
-                                            <p>기록은 영감이 되고,<br />영감은 행동이 됩니다.</p>
+                                            <h3 style={{marginBottom: '10px'}}>READ & ASCEND</h3>
+                                            <p style={{marginBottom: '25px'}}>기록은 영감이 되고,<br />영감은 행동이 됩니다.</p>
+                                            
+                                            {/* 도서 구매 버튼 섹션 추가 - 2x2 Grid */}
+                                            <div className="rv-purchase-section" style={{marginBottom: '30px', width: '100%', padding: '0 20px'}}>
+                                                 <div className="grid grid-cols-2 gap-2 w-full">
+                                                         <a
+                                                             href={coupangUrl}
+                                                             target="_blank"
+                                                             rel="noopener noreferrer"
+                                                             onClick={(e) => e.stopPropagation()}
+                                                             className={`${hasRealAmazon ? 'aspect-square' : 'col-span-2 py-4'} rounded-full flex flex-col items-center justify-center gap-1 bg-[#0074E9] text-white shadow-lg hover:shadow-xl transition-all`}
+                                                         >
+                                                             <span className="material-symbols-outlined text-[24px]">shopping_cart</span>
+                                                             <span className={`${hasRealAmazon ? 'text-[11px]' : 'text-[14px]'} font-black underline-offset-2`}>쿠팡구매</span>
+                                                         </a>
+                                                         {hasRealAmazon && (
+                                                             <a
+                                                                 href={amazonUrl}
+                                                                 target="_blank"
+                                                                 rel="noopener noreferrer"
+                                                                 onClick={(e) => e.stopPropagation()}
+                                                                 className="aspect-square rounded-full flex flex-col items-center justify-center gap-1 bg-[#232f3e] text-white shadow-lg hover:shadow-xl transition-all border border-white/10"
+                                                             >
+                                                                 <span className="material-symbols-outlined text-[24px]">public</span>
+                                                                 <span className="text-[11px] font-black">아마존</span>
+                                                             </a>
+                                                         )}
+                                                         <button
+                                                             onClick={() => {
+                                                                 if (window.Kakao) {
+                                                                     window.Kakao.Share.sendDefault({
+                                                                         objectType: 'feed',
+                                                                         content: {
+                                                                             title: book.title,
+                                                                             description: `${book.author} | 기록은 영감이 되고, 행동이 됩니다.`,
+                                                                             imageUrl: book.cover || 'https://archiview.store/logo192.png',
+                                                                             link: {
+                                                                                 mobileWebUrl: window.location.href,
+                                                                                 webUrl: window.location.href,
+                                                                             },
+                                                                         },
+                                                                         buttons: [
+                                                                             {
+                                                                                 title: '리뷰 전체보기',
+                                                                                 link: {
+                                                                                     mobileWebUrl: window.location.href,
+                                                                                     webUrl: window.location.href,
+                                                                                 },
+                                                                             },
+                                                                         ],
+                                                                     });
+                                                                 }
+                                                             }}
+                                                             className="aspect-square rounded-full flex flex-col items-center justify-center gap-1 bg-[#FAE100] text-[#3C1E1E] shadow-lg hover:shadow-xl transition-all"
+                                                         >
+                                                             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                                                 <path d="M12 3c-4.97 0-9 3.185-9 7.115 0 2.557 1.707 4.8 4.33 6.091l-.828 3.066c-.052.193.174.351.327.245l3.607-2.399c.504.07 1.028.112 1.564.112 4.97 0 9-3.185 9-7.115S16.97 3 12 3z"/>
+                                                             </svg>
+                                                             <span className="text-[11px] font-black">카톡공유</span>
+                                                         </button>
+                                                         <button
+                                                             onClick={() => {
+                                                                 const currentUrl = window.location.href;
+                                                                 navigator.clipboard.writeText(currentUrl).then(() => {
+                                                                     alert('링크가 복사되었습니다!');
+                                                                 });
+                                                             }}
+                                                             className="aspect-square rounded-full flex flex-col items-center justify-center gap-1 bg-white/10 text-white shadow-lg hover:shadow-xl transition-all border border-white/20 backdrop-blur-sm"
+                                                         >
+                                                             <span className="material-symbols-outlined text-[24px]">link</span>
+                                                             <span className="text-[11px] font-black">링크복사</span>
+                                                         </button>
+                                                 </div>
+                                             </div>
+
                                             <div className="rv-final-footer">THE ARCHIVIEW ORIGINAL</div>
                                         </div>
                                     </Page>
@@ -1291,6 +1502,105 @@ ${scriptContext}
                     >
                         <span className="material-symbols-outlined">chevron_right</span>
                     </button>
+
+                    {/* ── Ebook Final Page Scrollable Overlay ── */}
+                    {hasEbook && pageIdx === ebookPages.length + 1 && (
+                        <div
+                            style={{
+                                position: 'fixed', inset: 0, zIndex: 200,
+                                overflowY: 'auto', overflowX: 'hidden',
+                                WebkitOverflowScrolling: 'touch',
+                                background: 'linear-gradient(160deg, #120f08 0%, #2a2010 55%, #1a1508 100%)',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                padding: '0 0 100px 0',
+                            }}
+                            onClick={e => e.stopPropagation()}
+                            onTouchStart={e => e.stopPropagation()}
+                        >
+                            {/* 상단 헤더 (닫기 + 홈) */}
+                            <div style={{ position: 'sticky', top: 0, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(18,15,8,0.95)', backdropFilter: 'blur(8px)', zIndex: 10 }}>
+                                <button onClick={() => ebookFlipBook.current?.pageFlip()?.flipPrev()} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(200,168,112,0.8)', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_left</span>
+                                    이전 페이지
+                                </button>
+                                <button onClick={() => navigate('/')} style={{ color: 'rgba(200,168,112,0.6)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>home</span>
+                                </button>
+                            </div>
+
+                            {/* 본문 */}
+                            <div style={{ width: '100%', maxWidth: '520px', padding: '28px 24px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0', textAlign: 'center' }}>
+                                {/* 카카오 애드핏 배너 - 제목 위 */}
+                                <KakaoAdFit unit="DAN-8TOvfml5bpBYgcZ0" width="320" height="50" />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '8px', color: '#c8a870', opacity: 0.7 }}>✦</span>
+                                    <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '4px', color: 'rgba(200,168,112,0.6)', textTransform: 'uppercase' }}>THE ARCHIVIEW</span>
+                                    <span style={{ fontSize: '8px', color: '#c8a870', opacity: 0.7 }}>✦</span>
+                                </div>
+                                <h2 style={{ fontSize: 'clamp(15px,4vw,18px)', fontWeight: 700, color: '#f5ead8', marginBottom: '16px', wordBreak: 'keep-all' }}>{book.title}</h2>
+                                <div style={{ width: '40px', height: '1px', background: 'linear-gradient(to right, transparent, #c8a870, transparent)', marginBottom: '24px' }}></div>
+
+                                {book.actionGuide?.length > 0 && (
+                                    <div className="rv-ebook-final-action" style={{ width: '100%' }}>
+                                        <div className="rv-ebook-inline-action-header">✦ 오늘의 실전기록노트</div>
+                                        {book.actionGuide.map((item, idx) => (
+                                            <div key={idx} className="rv-ebook-inline-action-box">
+                                                <span className="rv-ebook-inline-action-num">{idx + 1}</span>
+                                                <div className="rv-ebook-inline-action-body">
+                                                    <p className="rv-ebook-inline-action-title">{item.title}</p>
+                                                    <p className="rv-ebook-inline-action-desc">{item.description}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button className="rv-ebook-inline-action-btn" onClick={() => navigate(`/reading-notes?bookId=${book.id}`)}>
+                                            기록노트 바로가기 →
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* ── 구매 & 공유 버튼 ── */}
+                                <div style={{ width: '100%', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {/* 쿠팡 구매 */}
+                                    <a href={coupangUrl} target="_blank" rel="noopener noreferrer"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'rgba(200,168,112,0.12)', border: '1px solid rgba(200,168,112,0.25)', borderRadius: '12px', color: '#f0e8d8', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>
+                                        <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#c8a870' }}>shopping_cart</span>
+                                        <span style={{ flex: 1, textAlign: 'left' }}>쿠팡에서 구매하기</span>
+                                        <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'rgba(200,168,112,0.45)' }}>arrow_forward_ios</span>
+                                    </a>
+                                    {/* 아마존 구매 */}
+                                    {hasRealAmazon && (
+                                        <a href={amazonUrl} target="_blank" rel="noopener noreferrer"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#d4c8b4', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#c8a870' }}>public</span>
+                                            <span style={{ flex: 1, textAlign: 'left' }}>Amazon에서 구매하기</span>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'rgba(200,168,112,0.3)' }}>arrow_forward_ios</span>
+                                        </a>
+                                    )}
+                                    {/* 카카오 공유 + 링크 복사 */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <button
+                                            onClick={() => { if (window.Kakao) { window.Kakao.Share.sendDefault({ objectType: 'feed', content: { title: book.title, description: `${book.author} | 기록은 영감이 되고, 행동이 됩니다.`, imageUrl: book.cover || 'https://archiview.store/logo192.png', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }, buttons: [{ title: '리뷰 전체보기', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }] }); } }}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: 'rgba(200,168,112,0.8)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 3.185-9 7.115 0 2.557 1.707 4.8 4.33 6.091l-.828 3.066c-.052.193.174.351.327.245l3.607-2.399c.504.07 1.028.112 1.564.112 4.97 0 9-3.185 9-7.115S16.97 3 12 3z"/></svg>
+                                            카카오톡 공유
+                                        </button>
+                                        <button
+                                            onClick={() => navigator.clipboard.writeText(window.location.href).then(() => alert('링크가 복사되었습니다!'))}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: 'rgba(200,168,112,0.8)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>link</span>
+                                            링크 복사
+                                        </button>
+                                    </div>
+                                </div>
+
+
+                                <div style={{ width: '100%', marginTop: '20px', padding: '0 4px' }}>
+                                    <p style={{ fontSize: '8px', lineHeight: 1.7, color: 'rgba(200,168,112,0.35)', padding: '0 10px', marginBottom: '5px' }}>본 콘텐츠는 독자의 인사이트를 담은 창작 에세이 리뷰이며, 더 풍부한 내용은 가까운 서점이나 온라인 서점에서 구매하여 보시기 바랍니다.</p>
+                                    <p style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(200,168,112,0.5)' }}>© The Archiview — All Rights Reserved</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
 
@@ -1323,24 +1633,28 @@ ${scriptContext}
                             </div>
                         )}
                         {script.map((turn, i) => {
-                            // 싱크 모드: 최근 3개 메시지만 표시 (현재 + 이전 2개), -1일 경우 0번 보여줌
                             if (syncMode && hasSyncData) {
-                                const renderIdx = activeTurnIndex < 0 ? 0 : activeTurnIndex;
-                                if (i > renderIdx) return null;
-                                if (i < renderIdx - 2) return null;
+                                const center = activeTurnIndex < 0 ? 1 : activeTurnIndex;
+                                if (i < center - 1 || i > center + 1) return null;
                             }
+                            const isActive = i === activeTurnIndex;
                             return (
                                 <div
                                     key={i}
                                     ref={el => bubbleRefs.current[i] = el}
-                                    className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}
+                                    className={`rv-chat-row ${turn.role === 'A' ? 'james' : 'stella'}${isActive ? ' active' : ''}`}
+                                    style={syncMode && hasSyncData ? {
+                                        transform: isActive ? 'scale(1.03)' : 'scale(0.95)',
+                                        opacity: isActive ? 1 : 0.45,
+                                        transition: 'transform 0.35s ease, opacity 0.35s ease',
+                                    } : undefined}
                                 >
                                     <div className={`rv-chat-avatar ${turn.role === 'A' ? 'james' : 'stella'}`}>
                                         <Avatar role={turn.role} />
                                     </div>
                                     <div className="rv-chat-bubble-wrap">
                                         <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
-                                        <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${i === activeTurnIndex ? ' active' : ''}`}>
+                                        <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${isActive ? ' active' : ''}`}>
                                             {turn.text}
                                         </div>
                                     </div>
@@ -1459,16 +1773,32 @@ ${scriptContext}
                     trialDaysLeft={trialDaysLeft}
                 />
             )}
+
+            {/* Kakao AdFit Bottom Banner - Removed for immersive E-book/Podcast experience as requested */}
+                                            {/* {activeTab !== 'ebook' && activeTab !== 'podcast' && <KakaoAdFit unit="DAN-8TOvfml5bpBYgcZ0" width="320" height="100" />} */}
         </div>
         </>
     );
 }
 // ── Ebook Page Component ──
-const EbookPage = React.forwardRef(({ children, className }, ref) => {
+const EbookPage = React.forwardRef(({ children, className, bookTitle, pageNum, totalPages }, ref) => {
     return (
         <div className={`rv-page-wrapper ebook-page ${className}`} ref={ref}>
             <div className="rv-sheet">
-                {children}
+                {/* 프리미엄 러닝 헤더 (책에서 흔히 보는 상단 정보) */}
+                <div className="rv-ebook-page-header">
+                    <span className="rv-ebook-chapter-label">{bookTitle || 'THE ARCHIVIEW ORIGINAL'}</span>
+                    <span className="rv-ebook-brand">ARCHIVIEW</span>
+                </div>
+
+                <div className="rv-ebook-body-content">
+                    {children}
+                </div>
+
+                {/* 프리미엄 푸터 (페이지 번호) */}
+                <div className="rv-ebook-page-footer">
+                    <span className="rv-ebook-page-number">{pageNum} / {totalPages}</span>
+                </div>
             </div>
         </div>
     );
