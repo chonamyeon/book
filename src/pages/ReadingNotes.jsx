@@ -137,7 +137,7 @@ export default function ReadingNotes() {
         }
     };
 
-    useEffect(() => { if (!loading && !user) navigate('/login'); }, [user, loading, navigate]);
+    // 비로그인 시 navigate 제거 — 아래 조건부 렌더링으로 처리
 
     useEffect(() => {
         if (bodyRef.current) {
@@ -380,7 +380,53 @@ export default function ReadingNotes() {
              <div className="relative"><div className="absolute inset-0 bg-gold/20 blur-3xl rounded-none animate-pulse" /><div className="size-12 rounded-none border-t-2 border-gold animate-spin relative" /></div>
         </div>
     );
-    if (!user) return null;
+    if (!user) return (
+        <div className="bg-[#101218] text-white font-sans antialiased min-h-screen flex justify-center selection:bg-orange-500/30">
+            <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-x-hidden">
+                <TopNavigation type="sub" />
+                <main className="px-6 pt-10 pb-24 flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                    <div className="space-y-3 mb-4">
+                        <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em]">Reading Journal</span>
+                        <h2 className="text-2xl text-white font-black tracking-tight">기록노트</h2>
+                        <p className="text-white/50 text-[13px] leading-relaxed break-keep max-w-xs mx-auto">
+                            책에서 받은 감동과 인사이트를<br />나만의 노트에 기록해보세요.
+                        </p>
+                    </div>
+                    <div className="w-full space-y-3 max-w-xs">
+                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-orange-500 text-2xl">edit_note</span>
+                            <div>
+                                <p className="text-white text-[13px] font-black">독서 메모 & 감상</p>
+                                <p className="text-white/40 text-[11px]">책을 읽으며 떠오른 생각을 기록</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-orange-500 text-2xl">mood</span>
+                            <div>
+                                <p className="text-white text-[13px] font-black">감정 태그 & 별점</p>
+                                <p className="text-white/40 text-[11px]">나만의 감정으로 독서 기록 완성</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-orange-500 text-2xl">share</span>
+                            <div>
+                                <p className="text-white text-[13px] font-black">카드 이미지 저장</p>
+                                <p className="text-white/40 text-[11px]">독서 기록을 이미지로 저장 & 공유</p>
+                            </div>
+                        </div>
+                    </div>
+                    <Link
+                        to="/login"
+                        className="w-full max-w-xs h-[52px] bg-orange-600 flex items-center justify-center text-white font-black rounded-sm text-[13px] tracking-wide hover:bg-orange-500 transition-colors shadow-lg shadow-orange-600/20"
+                    >
+                        로그인 후 기록노트 이용하기
+                    </Link>
+                </main>
+                <Footer />
+                <BottomNavigation />
+            </div>
+        </div>
+    );
 
     const StarRating = ({ value, onChange, interactive = false }) => (
         <div className="flex gap-1.5">

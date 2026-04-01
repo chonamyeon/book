@@ -161,32 +161,33 @@ export default function Login() {
                         <p className="text-slate-400 text-sm">당신의 지적 여정을 기록하는 프리미엄 아카이브</p>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center min-h-[60px] relative space-y-4">
-                        {isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-background-dark/80 z-20">
-                                <div className="size-8 border-3 border-gold/20 border-t-gold rounded-full animate-spin"></div>
+                    <div className="relative w-full min-h-[56px]">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                                <div className="size-8 border-[3px] border-gold/20 border-t-gold rounded-full animate-spin"></div>
                             </div>
-                        )}
-                        
-                        {/* PC: Show Google Button, Hide Mobile Button */}
-                        <div ref={googleBtnRef} className="hidden md:flex w-full justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl transition-opacity duration-500 min-h-[50px]"></div>
+                        ) : (
+                            <>
+                                {/* PC: Google Identity Button */}
+                                <div ref={googleBtnRef} className="hidden md:flex w-full justify-center py-2 bg-white rounded-xl overflow-hidden shadow-2xl min-h-[50px]"></div>
 
-                        {/* Mobile Google Button */}
-                        <button
-                            onClick={async (e) => {
-                                setIsLoading(true);
-                                try {
-                                    await loginWithGoogleRedirect();
-                                } catch (error) {
-                                    setIsLoading(false);
-                                }
-                            }}
-                            className="md:hidden w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3"
-                            style={{ zIndex: 50, position: 'relative' }}
-                        >
-                            <span className="material-symbols-outlined">touch_app</span>
-                            구글 계정으로 로그인
-                        </button>
+                                {/* Mobile: Redirect Button */}
+                                <button
+                                    onClick={async () => {
+                                        setIsLoading(true);
+                                        try {
+                                            await loginWithGoogleRedirect();
+                                        } catch (error) {
+                                            setIsLoading(false);
+                                        }
+                                    }}
+                                    className="md:hidden w-full py-4 px-6 bg-white text-slate-900 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3"
+                                >
+                                    <span className="material-symbols-outlined">touch_app</span>
+                                    구글 계정으로 로그인
+                                </button>
+                            </>
+                        )}
                     </div>
 
                     <div className="mt-12 p-5 bg-white/5 rounded-2xl border border-white/10 text-center">

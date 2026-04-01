@@ -7,6 +7,7 @@ import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import CookieConsent from './components/CookieConsent';
 
 // 청크 로드 실패 시 자동 새로고침 (시간 기반 1회) + 오류 fallback
 const lazyWithRetry = (factory) =>
@@ -41,10 +42,30 @@ const lazyWithRetry = (factory) =>
     })
   );
 
+// 404 Not Found
+const NotFound = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-950 px-6">
+    <div className="text-center space-y-5 max-w-sm">
+      <p className="text-6xl font-black text-amber-400">404</p>
+      <h1 className="text-white font-black text-xl tracking-tight">페이지를 찾을 수 없습니다</h1>
+      <p className="text-slate-500 text-sm leading-relaxed break-keep">
+        요청하신 페이지가 존재하지 않거나 이동되었습니다.<br />
+        아래 버튼을 눌러 메인으로 돌아가세요.
+      </p>
+      <a
+        href="/"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-amber-400 text-black font-black text-sm rounded-2xl hover:bg-amber-300 transition-colors"
+      >
+        메인으로 돌아가기
+      </a>
+    </div>
+  </div>
+);
+
 // 코드 스플리팅
-const Home          = lazyWithRetry(() => import('./pages/Home'));
-const Test4         = lazyWithRetry(() => import('./pages/Test4'));
-const Test5         = lazyWithRetry(() => import('./pages/Test5'));
+import Home from './pages/Home';
+import StaticReview from './pages/AdSense/StaticReview';
+
 const Editorial     = lazyWithRetry(() => import('./pages/Editorial'));
 const Result        = lazyWithRetry(() => import('./pages/Result'));
 const Celebrity     = lazyWithRetry(() => import('./pages/Celebrity'));
@@ -62,6 +83,9 @@ const Membership    = lazyWithRetry(() => import('./pages/Membership'));
 const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
 const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
 const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
+const Terms         = lazyWithRetry(() => import('./pages/Terms'));
+const Test4         = lazyWithRetry(() => import('./pages/Test4'));
+
 
 // 페이지 로딩 스피너
 const PageLoader = () => (
@@ -96,14 +120,12 @@ export default function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<MobileLayout><Home /></MobileLayout>} />
-                  <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
-                  <Route path="/test5" element={<MobileLayout><Test5 /></MobileLayout>} />
                   <Route path="/editorial" element={<MobileLayout><Editorial /></MobileLayout>} />
                   <Route path="/result" element={<ProtectedRoute><MobileLayout><Result /></MobileLayout></ProtectedRoute>} />
                   <Route path="/celebrity/:id" element={<MobileLayout><Celebrity /></MobileLayout>} />
                   <Route path="/celebrity" element={<MobileLayout><Celebrity /></MobileLayout>} />
                   <Route path="/quiz" element={<MobileLayout><Quiz /></MobileLayout>} />
-                  <Route path="/library" element={<ProtectedRoute><MobileLayout><Library /></MobileLayout></ProtectedRoute>} />
+                  <Route path="/library" element={<MobileLayout><Library /></MobileLayout>} />
                   <Route path="/profile" element={<ProtectedRoute><MobileLayout><Profile /></MobileLayout></ProtectedRoute>} />
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
                   <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
@@ -111,11 +133,15 @@ export default function App() {
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
                   <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
+                  <Route path="/terms" element={<MobileLayout><Terms /></MobileLayout>} />
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
                   <Route path="/review/:id" element={<MobileLayout><ReviewDetail /></MobileLayout>} />
                   <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
                   <Route path="/review-board/:id" element={<MobileLayout><ReviewBoardDetail /></MobileLayout>} />
-                  <Route path="/reading-notes" element={<ProtectedRoute><MobileLayout><ReadingNotes /></MobileLayout></ProtectedRoute>} />
+                  <Route path="/story/:id" element={<StaticReview />} />
+                  <Route path="/reading-notes" element={<MobileLayout><ReadingNotes /></MobileLayout>} />
+                  <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>
@@ -125,6 +151,7 @@ export default function App() {
             <ErrorBoundary fallback={null}>
               <PodcastScriptModal />
             </ErrorBoundary>
+            <CookieConsent />
           </div>
         </Router>
       </AudioProvider>
