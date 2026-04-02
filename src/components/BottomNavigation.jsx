@@ -264,7 +264,7 @@ export default function BottomNavigation() {
                                                         {pickId && (
                                                             <div className="grid grid-cols-2 gap-2 pb-2">
                                                                 <Link
-                                                                    to={`/review/${pickId}`}
+                                                                    to={`/story/${pickId}`}
                                                                     onClick={() => setIsFinderOpen(false)}
                                                                     className="h-9 rounded-none bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1.5"
                                                                 >

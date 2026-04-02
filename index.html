@@ -3,16 +3,23 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- iOS 홈 화면 아이콘 (180x180 PNG) -->
-  <link rel="apple-touch-icon" sizes="180x180" href="/icon-apple.png" />
-  <!-- viewport-fit=cover: iOS 노치/홈 인디케이터 safe area 활성화 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="manifest" href="/manifest.json" />
-  <title>ARCHIVIEW - 출퇴근길 성공한 사람들의 이야기를 듣다.</title>
+  <title>아카이뷰(ArchiView) — 성공한 사람들의 인사이트를 읽다</title>
 
   <!-- SEO -->
-  <meta name="description" content="프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스">
+  <meta name="description" content="아카이뷰 - 자기계발·경제·경영·인문·심리 분야 베스트셀러의 독창적인 비평과 실전 인사이트. 단순 요약이 아닌 에디터의 관점으로 성공한 사람들의 생각을 깊이 분석합니다.">
+  <meta name="keywords" content="아카이뷰, 책비평, 독서인사이트, 자기계발, 경제책, 경영책, 인문학, 심리학, 직장인, 독서, 베스트셀러분석, 책추천">
+  <meta name="author" content="ARCHIVIEW">
+  <meta property="og:title" content="ARCHIVIEW - 출퇴근길 성공한 사람들의 인사이트를 듣다">
+  <meta property="og:description" content="바쁜 직장인을 위한 오디오 인사이트 플랫폼. 세계적 베스트셀러의 핵심을 15분으로 만나보세요.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://archiview.store">
+  <meta property="og:image" content="https://archiview.store/images/hero_expert_v5.png">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://archiview.store">
 
   <!-- iOS & PWA Settings -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,6 +55,22 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap">
   </noscript>
 
+  <!-- Google Consent Mode v2 - 기본 비동의 설정 (광고/분석 스크립트 로드 전에 반드시 선행) -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    // 기본값: 모두 비동의 상태 (사용자 동의 배너 표시 전)
+    gtag('consent', 'default', {
+      'analytics_storage': 'denied',
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'wait_for_update': 800
+    });
+    // 한국 사용자 지역 설정
+    gtag('set', 'url_passthrough', true);
+  </script>
+
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7628221060447189"
      crossorigin="anonymous"></script>
@@ -66,35 +89,38 @@
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-1WBL218LEF"></script>
   <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-1WBL218LEF');
   </script>
 
 
-  <!-- Meta Pixel Code -->
+  <!-- Meta Pixel Code: 쿠키 동의 후에만 실행 -->
   <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '34999557622968690');
-    fbq('track', 'PageView');
+    window._fbPixelId = '34999557622968690';
+    function _initFbPixel() {
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', window._fbPixelId);
+      fbq('track', 'PageView');
+    }
+    // 쿠키 전체 동의가 된 경우에만 Pixel 초기화
+    try {
+      if (localStorage.getItem('archiview_cookie_consent') === 'all') {
+        _initFbPixel();
+      }
+    } catch(e) {}
   </script>
   <!-- End Meta Pixel Code -->
 
 </head>
 
 <body class="text-slate-100 antialiased overflow-x-hidden" style="background:#090b10;margin:0;padding:0;">
-  <!-- Meta Pixel noscript fallback -->
-  <noscript><img height="1" width="1" style="display:none"
-  src="https://www.facebook.com/tr?id=34999557622968690&ev=PageView&noscript=1"
-  /></noscript>
   <div id="root"></div>
   <!-- Google Sign-In SDK - defer로 렌더링 블로킹 방지 -->
   <script src="https://accounts.google.com/gsi/client" defer></script>

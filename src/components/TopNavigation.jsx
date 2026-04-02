@@ -21,10 +21,10 @@ export default function TopNavigation({ title, type = 'main' }) {
                 )}
             </div>
 
-            <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-center">
+            <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-center" aria-label="Archiview 홈">
                 <div className="flex items-center gap-[7px]">
                     {/* 🔊 Gray Waveform Graphic Logo */}
-                    <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]">
+                    <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]" aria-hidden="true">
                         <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-sm" />
                         <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-sm" />
                         <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-sm" />

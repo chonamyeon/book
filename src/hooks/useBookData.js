@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
+import { adsenseBooks as staticAdsenseBooksArr } from '../data/adsense/books';
+
+// 정적 adsense 데이터를 ID 맵으로 변환 (모듈 레벨, 한 번만 실행)
+const STATIC_ADSENSE_MAP = Object.fromEntries(staticAdsenseBooksArr.map(b => [b.id, b]));
 
 const CACHE_KEY = 'archiview_book_overrides_cache';
 
@@ -66,9 +70,9 @@ export const useBookData = () => {
             console.warn("Firestore offline (ebooks):", err.code);
         });
 
-        return () => { 
-            isMounted = false; 
-            unsubscribeOverrides(); 
+        return () => {
+            isMounted = false;
+            unsubscribeOverrides();
             unsubscribeEbooks();
         };
     }, []);
@@ -76,6 +80,7 @@ export const useBookData = () => {
     const getBook = useCallback((bookId) => {
         const localBook = celebrities.flatMap(c => c.books || []).find(b => (b.id || b.title.toLowerCase().replace(/\s+/g, '-')) === bookId);
         const normStr = s => s.normalize('NFC');
+        const adsense = STATIC_ADSENSE_MAP[bookId];
         const override = overrides[bookId] ||
             Object.entries(overrides).find(([k]) => {
                 const nk = normStr(k);
@@ -83,7 +88,7 @@ export const useBookData = () => {
                 return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
             })?.[1];
 
-        if (!localBook && !override) return null;
+        if (!localBook && !override && !adsense) return null;
 
         const fileName = `${bookId}.mp3`;
         const koreanFileName = `${(localBook?.title || '').replace(/\s+/g, '-')}.mp3`;
@@ -94,15 +99,19 @@ export const useBookData = () => {
         return {
             ...(localBook || {}),
             ...(override || {}),
-            isPodcast: override?.isPodcast || localBook?.isPodcast || hasAudioFile,
-            cover: override?.cover || localBook?.cover,
-            audioPath: override?.audioPath || localBook?.audioPath || `/audio/${bookId}.mp3`,
-            podcastScript: override?.podcastScript || '',
+            ...(adsense || {}),
+            id: bookId,
+            isAdsense: !!adsense,
+            isPodcast: override?.isPodcast || localBook?.isPodcast || adsense?.isPodcast || hasAudioFile,
+            cover: override?.cover || localBook?.cover || adsense?.cover,
+            audioPath: override?.audioPath || localBook?.audioPath || adsense?.audioUrl || `/audio/${bookId}.mp3`,
+            podcastScript: override?.podcastScript || adsense?.script || '',
             ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
         };
     }, [overrides, celebrities, ebooks]);
 
     const getAllBooks = useCallback((adminMode = false) => {
+        const adsenseBooks = STATIC_ADSENSE_MAP;
         const allLocalBooks = celebrities.flatMap(celeb =>
             (celeb.books || []).map(book => ({
                 ...book,
@@ -168,6 +177,31 @@ export const useBookData = () => {
                     voiceAudioUrl: data.voiceAudioUrl || '',
                     ...data,
                     ebookText: ebook ? (ebook.pages ? ebook.pages.join('\n\n') : ebook.content) || null : null
+                });
+            }
+        });
+
+        // adsenseBooks 추가 (정적 데이터 사용 — Firestore 중복 구독 제거)
+        Object.entries(STATIC_ADSENSE_MAP).forEach(([id, data]) => {
+            if (!bookMap.has(id)) {
+                bookMap.set(id, {
+                    id,
+                    isAdsense: true,
+                    title: data.title,
+                    author: data.author || '',
+                    cover: data.cover || '',
+                    category: data.category || 'SELF_DEV',
+                    description: data.desc || data.description || '',
+                    isPodcast: !!(data.script || data.audioUrl),
+                    ...data
+                });
+            } else {
+                // 기존 데이터에 정보가 부족하면 보강
+                const existing = bookMap.get(id);
+                bookMap.set(id, {
+                    ...existing,
+                    ...data,
+                    isAdsense: true // override가 있더라도 우선은 story 페이지로 보낼 수 있게
                 });
             }
         });

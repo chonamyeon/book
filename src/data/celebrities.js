@@ -312,7 +312,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0593135202?tag=archiview2026-20"
             },
             {
-                "id": "one-thing",
+                "id": "the-one-thing",
                 "section": "BURNOUT",
                 "isPodcast": true,
                 "podcastFile": "/audio/one-thing.mp3",
@@ -509,7 +509,7 @@ export const celebrities = [
         "quote": "저에게 독서는 타인의 머릿속을 빌려 춤을 추는 것과 같습니다.",
         "books": [
             {
-                "id": "demian",
+                "id": "top70-데미안",
                 "section": "PHILOSOPHY",
                 "isPodcast": true,
                 "podcastFile": "/audio/demian.mp3",
@@ -538,7 +538,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0486414132?tag=archiview2026-20"
             },
             {
-                "id": "almond",
+                "id": "top70-아몬드",
                 "section": "HEALING",
                 "title": "아몬드",
                 "author": "손원평",
@@ -565,7 +565,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0062941372?tag=archiview2026-20"
             },
             {
-                "id": "lightness-of-being",
+                "id": "top70-참을-수-없는-존재의-가벼움",
                 "section": "WEALTH",
                 "title": "참을 수 없는 존재의 가벼움",
                 "author": "밀란 쿤데라",
@@ -592,7 +592,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0061731013?tag=archiview2026-20"
             },
             {
-                "id": "vegetarian",
+                "id": "top70-채식주의자",
                 "section": "WEALTH",
                 "isPodcast": true,
                 "podcastFile": "/audio/vegetarian-hk.mp3",
@@ -621,7 +621,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1101906111?tag=archiview2026-20"
             },
             {
-                "id": "human-acts",
+                "id": "top70-소년이-온다",
                 "section": "HEALING",
                 "title": "소년이 온다",
                 "author": "한강",
@@ -648,7 +648,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1101906100?tag=archiview2026-20"
             },
             {
-                "id": "the-stranger",
+                "id": "top70-이방인",
                 "section": "PHILOSOPHY",
                 "title": "이방인",
                 "author": "알베르 카뮈",
@@ -675,9 +675,9 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0679720200?tag=archiview2026-20"
             },
             {
-                "id": "1984",
+                "id": "top70-1984",
                 "section": "PHILOSOPHY",
-                "title": "1984",
+                "title": "top70-1984",
                 "author": "조지 오웰",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780451524935.jpg",
                 "desc": "감시 사회에 대한 소름 끼치는 예언.",
@@ -702,7 +702,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0451524934?tag=archiview2026-20"
             },
             {
-                "id": "catcher-in-the-rye",
+                "id": "top70-호밀밭의-파수꾼",
                 "section": "HEALING",
                 "title": "호밀밭의 파수꾼",
                 "author": "J.D. 샐린저",
@@ -740,7 +740,7 @@ export const celebrities = [
         "quote": "인간이 인간에게 폭력이 아니기를.",
         "books": [
             {
-                "id": "the-white-book",
+                "id": "top70-흰",
                 "section": "HEALING",
                 "title": "흰",
                 "author": "한강",
@@ -767,7 +767,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0525520279?tag=archiview2026-20"
             },
             {
-                "id": "we-do-not-part",
+                "id": "top70-작별하지-않는다",
                 "section": "HEALING",
                 "title": "작별하지 않는다",
                 "author": "한강",
@@ -794,7 +794,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "greek-lessons",
+                "id": "top70-희랍어-시간",
                 "section": "HEALING",
                 "title": "희랍어 시간",
                 "author": "한강",
@@ -1195,7 +1195,7 @@ export const celebrities = [
         "quote": "지식은 복리처럼 쌓인다.",
         "books": [
             {
-                "id": "intelligent-investor",
+                "id": "top70-현명한-투자자",
                 "section": "WEALTH",
                 "isPodcast": true,
                 "podcastFile": "/audio/현명한-투자자.mp3",
@@ -1223,7 +1223,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0060555661?tag=archiview2026-20"
             },
             {
-                "id": "security-analysis",
+                "id": "top70-증권분석",
                 "section": "WEALTH",
                 "isPodcast": true,
                 "podcastFile": "/audio/security-analysis.mp3",
@@ -1370,7 +1370,7 @@ export const celebrities = [
         "quote": "용기는 두려움이 없는 것이 아니라, 두려움보다 더 중요한 것이 있다는 판단이다.",
         "books": [
             {
-                "id": "mans-search-for-meaning",
+                "id": "top70-죽음의-수용소에서",
                 "section": "PHILOSOPHY",
                 "isPodcast": true,
                 "podcastFile": "/audio/mans-search-for-meaning.mp3",
@@ -1516,7 +1516,7 @@ export const celebrities = [
                     }
                 ],
                 "amazonLink": "https://www.amazon.com/dp/0811204812?tag=archiview2026-20",
-                "id": "no-longer-human"
+                "id": "top70-카라마조프-가의-형제들"
             },
             {
                 "title": "카라마조프 가의 형제들",
@@ -1543,7 +1543,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0374528373?tag=archiview2026-20"
             },
             {
-                "id": "brahms",
+                "id": "top70-브람스를-좋아하세요",
                 "section": "HEALING",
                 "title": "브람스를 좋아하세요...",
                 "author": "프랑수아즈 사강",
@@ -1790,7 +1790,7 @@ export const celebrities = [
         "quote": "나를 죽이지 못하는 것은 나를 더 강하게 만든다.",
         "books": [
             {
-                "id": "ubermensch",
+                "id": "top70-위버맨쉬",
                 "section": "PHILOSOPHY",
                 "title": "위버맨쉬",
                 "author": "프리드리히 니체",
@@ -1856,7 +1856,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "psychology",
+                "id": "psychology-of-money",
                 "section": "WEALTH",
                 "isPodcast": true,
                 "podcastFile": "/audio/psychology.mp3",
@@ -1896,7 +1896,7 @@ export const celebrities = [
         "quote": "거장의 시선이 머무는 곳에 당신의 성장이 있습니다.",
         "books": [
             {
-                "id": "your-name",
+                "id": "top70-너의-이름은",
                 "section": "HEALING",
                 "title": "너의 이름은",
                 "author": "신카이 마코토",
@@ -1923,7 +1923,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "property-money",
+                "id": "nature-of-money",
                 "section": "WEALTH",
                 "title": "돈의 속성",
                 "author": "김승호",
@@ -1950,7 +1950,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "stoner",
+                "id": "top70-스토너",
                 "section": "PHILOSOPHY",
                 "title": "스토너",
                 "author": "존 윌리엄스",
@@ -1977,7 +1977,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1590171993?tag=archiview2026-20"
             },
             {
-                "id": "small-things",
+                "id": "top70-이처럼-사소한-것들",
                 "section": "HEALING",
                 "title": "이처럼 사소한 것들",
                 "author": "클레어 키건",
@@ -2006,7 +2006,7 @@ export const celebrities = [
         ]
     },
     {
-        "id": "failure-asset-framework",
+        "id": "top70-실패-자산화-프레임워크",
         "section": "BURNOUT",
         "name": "Archiview Original",
         "role": "Archiview Editors",
@@ -2016,7 +2016,7 @@ export const celebrities = [
         "quote": "실패는 유료 데이터다. 비싸게 샀다면 반드시 수익을 내야 한다.",
         "books": [
             {
-                "id": "failure-asset-framework",
+                "id": "top70-실패-자산화-프레임워크",
                 "section": "BURNOUT",
                 "isPodcast": true,
                 "podcastFile": "/audio/failure-asset-framework_v1.mp3",
@@ -2056,7 +2056,7 @@ export const celebrities = [
         "quote": "세상의 모든 지혜를 당신의 일상으로.",
         "books": [
             {
-                "id": "brain-desire",
+                "id": "top70-뇌-욕망의-비밀을-풀다",
                 "section": "WEALTH",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -2078,7 +2078,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "think-again",
+                "id": "top70-싱크-어게인",
                 "section": "MINDSET",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -2100,7 +2100,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0593395780?tag=archiview2026-20"
             },
             {
-                "id": "thinking-fast-slow",
+                "id": "top70-생각-빠르고-느리게",
                 "section": "MINDSET",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -2122,7 +2122,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
             },
             {
-                "id": "optimize-brain",
+                "id": "top70-당신의-뇌는-최적화를-원한다",
                 "section": "MINDSET",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -2144,7 +2144,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "billionaire-framework",
+                "id": "top70-억만장자의-사고법-7가지",
                 "section": "WEALTH",
                 "isPodcast": true,
                 "podcastFile": "/audio/billionaire-framework.mp3",
@@ -2184,7 +2184,7 @@ export const celebrities = [
         "quote": "읽은 책이 곧 나의 미래를 결정한다.",
         "books": [
             {
-                "id": "yeok-haeng-ja",
+                "id": "reverse-runner",
                 "section": "WEALTH",
                 "title": "역행자",
                 "author": "자청",
@@ -2265,7 +2265,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1328683788?tag=archiview2026-20"
             },
             {
-                "id": "rich-dad-poor-dad",
+                "id": "top70-부자-아빠-가난한-아빠",
                 "section": "WEALTH",
                 "title": "부자 아빠 가난한 아빠",
                 "author": "로버트 기요사키",
@@ -2292,7 +2292,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1612680194?tag=archiview2026-20"
             },
             {
-                "id": "guns-germs-and-steel",
+                "id": "guns-germs-steel",
                 "section": "HISTORY",
                 "title": "총, 균, 쇠",
                 "author": "재레드 다이아몬드",
@@ -2346,7 +2346,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0671027034?tag=archiview2026-20"
             },
             {
-                "id": "grit",
+                "id": "top70-그릿-grit",
                 "section": "SUCCESS",
                 "title": "그릿 (GRIT)",
                 "author": "앤절라 더크워스",
@@ -2373,7 +2373,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1501111108?tag=archiview2026-20"
             },
             {
-                "id": "miracle-morning",
+                "id": "top70-미라클-모닝",
                 "section": "HABIT",
                 "title": "미라클 모닝",
                 "author": "할 엘로드",
@@ -2400,7 +2400,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0979019710?tag=archiview2026-20"
             },
             {
-                "id": "mindset",
+                "id": "top70-마인드셋",
                 "section": "MINDSET",
                 "title": "마인드셋",
                 "author": "캐럴 드웩",
@@ -2427,7 +2427,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0345472322?tag=archiview2026-20"
             },
             {
-                "id": "think-and-grow-rich",
+                "id": "top70-생각하라-그리고-부자가-되어라",
                 "section": "WEALTH",
                 "title": "생각하라 그리고 부자가 되어라",
                 "author": "나폴레온 힐",
@@ -2454,7 +2454,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1788441029?tag=archiview2026-20"
             },
             {
-                "id": "outliers",
+                "id": "top70-아웃라이어",
                 "section": "SUCCESS",
                 "title": "아웃라이어",
                 "author": "말콤 글래드웰",
@@ -2481,7 +2481,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0316017930?tag=archiview2026-20"
             },
             {
-                "id": "7-habits",
+                "id": "top70-성공하는-사람들의-7가지-습관",
                 "section": "SUCCESS",
                 "title": "성공하는 사람들의 7가지 습관",
                 "author": "스티븐 코비",
@@ -2508,7 +2508,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1451639619?tag=archiview2026-20"
             },
             {
-                "id": "essentialism",
+                "id": "top70-에센셜리즘",
                 "section": "MINDSET",
                 "title": "에센셜리즘",
                 "author": "그렉 맥커운",
@@ -2535,7 +2535,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0804137382?tag=archiview2026-20"
             },
             {
-                "id": "give-and-take",
+                "id": "top70-기브-앤-테이크",
                 "section": "SUCCESS",
                 "title": "기브 앤 테이크",
                 "author": "애덤 그랜트",
@@ -2562,7 +2562,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0143124986?tag=archiview2026-20"
             },
             {
-                "id": "the-secret",
+                "id": "top70-시크릿",
                 "section": "MINDSET",
                 "title": "시크릿",
                 "author": "론다 번",
@@ -2589,7 +2589,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1582701709?tag=archiview2026-20"
             },
             {
-                "id": "4-hour-workweek",
+                "id": "top70-나는-4시간만-일한다",
                 "section": "WEALTH",
                 "title": "나는 4시간만 일한다",
                 "author": "팀 페리스",
@@ -2616,7 +2616,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0307465357?tag=archiview2026-20"
             },
             {
-                "id": "millionaire-fastlane",
+                "id": "top70-부의-추월차선",
                 "section": "WEALTH",
                 "title": "부의 추월차선",
                 "author": "엠제이 드마코",
@@ -2643,7 +2643,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0984358145?tag=archiview2026-20"
             },
             {
-                "id": "money-vessel",
+                "id": "top70-부자의-그릇",
                 "section": "WEALTH",
                 "title": "부자의 그릇",
                 "author": "이즈미 마사토",
@@ -2670,7 +2670,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "richest-man-in-babylon",
+                "id": "top70-바빌론-부자들의-돈-버는-지혜",
                 "section": "WEALTH",
                 "title": "바빌론 부자들의 돈 버는 지혜",
                 "author": "조지 S. 클레이슨",
@@ -2697,7 +2697,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0451205362?tag=archiview2026-20"
             },
             {
-                "id": "millionaire-next-door",
+                "id": "top70-이웃집-백만장자",
                 "section": "WEALTH",
                 "title": "이웃집 백만장자",
                 "author": "토머스 J. 스탠리",
@@ -2724,7 +2724,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1589795474?tag=archiview2026-20"
             },
             {
-                "id": "secret-of-thought",
+                "id": "top70-생각의-비밀",
                 "section": "WEALTH",
                 "title": "생각의 비밀",
                 "author": "김승호",
@@ -2751,7 +2751,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "secrets-millionaire-mind",
+                "id": "top70-백만장자-시크릿",
                 "section": "MINDSET",
                 "title": "백만장자 시크릿",
                 "author": "하브 에커",
@@ -2778,7 +2778,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "fire-era",
+                "id": "top70-파이어-시대",
                 "section": "WEALTH",
                 "title": "파이어 시대",
                 "author": "강환국",
@@ -2805,7 +2805,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "latte-factor",
+                "id": "top70-가장-먼저-부자되는-법",
                 "section": "WEALTH",
                 "title": "가장 먼저 부자되는 법",
                 "author": "데이비드 바흐",
@@ -2832,7 +2832,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "capitalism-ebs",
+                "id": "top70-자본주의",
                 "section": "ECONOMY",
                 "title": "자본주의",
                 "author": "EBS 자본주의 제작팀",
@@ -2859,7 +2859,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "economy-3years",
+                "id": "top70-앞으로-3년-경제전쟁의-미래",
                 "section": "ECONOMY",
                 "title": "앞으로 3년 경제전쟁의 미래",
                 "author": "오건영",
@@ -2886,7 +2886,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "history-of-money",
+                "id": "top70-돈의-역사",
                 "section": "HISTORY",
                 "title": "돈의 역사",
                 "author": "홍춘욱",
@@ -2913,7 +2913,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "undercover-economist",
+                "id": "top70-경제학-콘서트",
                 "section": "ECONOMY",
                 "title": "경제학 콘서트",
                 "author": "팀 하포드",
@@ -2967,7 +2967,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "nudge",
+                "id": "top70-넛지",
                 "section": "ECONOMY",
                 "title": "넛지",
                 "author": "리처드 탈러",
@@ -2994,7 +2994,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0143137523?tag=archiview2026-20"
             },
             {
-                "id": "wealth-of-nations",
+                "id": "top70-국부론",
                 "section": "ECONOMY",
                 "title": "국부론",
                 "author": "애덤 스미스",
@@ -3021,7 +3021,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0553585975?tag=archiview2026-20"
             },
             {
-                "id": "financial-scenario",
+                "id": "top70-부의-시나리오",
                 "section": "ECONOMY",
                 "title": "부의 시나리오",
                 "author": "오건영",
@@ -3101,7 +3101,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0307887898?tag=archiview2026-20"
             },
             {
-                "id": "principles",
+                "id": "top70-원칙-principles",
                 "section": "BUSINESS",
                 "title": "원칙 (Principles)",
                 "author": "레이 달리오",
@@ -3128,7 +3128,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1501124021?tag=archiview2026-20"
             },
             {
-                "id": "drucker-manager",
+                "id": "top70-피터-드러커의-훌륭한-관리자",
                 "section": "BUSINESS",
                 "title": "피터 드러커의 훌륭한 관리자",
                 "author": "피터 드러커",
@@ -3182,7 +3182,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1451648537?tag=archiview2026-20"
             },
             {
-                "id": "blue-ocean",
+                "id": "top70-블루오션-전략",
                 "section": "BUSINESS",
                 "title": "블루오션 전략",
                 "author": "위찬김",
@@ -3209,7 +3209,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1591396190?tag=archiview2026-20"
             },
             {
-                "id": "amoeba-mgmt",
+                "id": "top70-아메바-경영",
                 "section": "BUSINESS",
                 "title": "아메바 경영",
                 "author": "이나모리 가즈오",
@@ -3236,7 +3236,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "flywheel",
+                "id": "top70-플라이휠을-돌려라",
                 "section": "BUSINESS",
                 "title": "플라이휠을 돌려라",
                 "author": "짐 콜린스",
@@ -3263,7 +3263,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1400231582?tag=archiview2026-20"
             },
             {
-                "id": "jidawel",
+                "id": "top70-지적-대화를-위한-넓고-얕은-지식",
                 "section": "PHILOSOPHY",
                 "title": "지적 대화를 위한 넓고 얕은 지식",
                 "author": "채사장",
@@ -3344,7 +3344,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0374532508?tag=archiview2026-20"
             },
             {
-                "id": "selfish-gene",
+                "id": "top70-이기적-유전자",
                 "section": "SCIENCE",
                 "title": "이기적 유전자",
                 "author": "리처드 도킨스",
@@ -3371,7 +3371,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0198788606?tag=archiview2026-20"
             },
             {
-                "id": "zarathustra",
+                "id": "top70-짜라투스트라는-이렇게-말했다",
                 "section": "PHILOSOPHY",
                 "title": "짜라투스트라는 이렇게 말했다",
                 "author": "프리드리히 니체",
@@ -3398,7 +3398,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0140441189?tag=archiview2026-20"
             },
             {
-                "id": "what-is-history",
+                "id": "top70-역사란-무엇인가",
                 "section": "HISTORY",
                 "title": "역사란 무엇인가",
                 "author": "E.H. 카",
@@ -3425,7 +3425,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0394703073?tag=archiview2026-20"
             },
             {
-                "id": "prince-machiavelli",
+                "id": "top70-군주론",
                 "section": "HISTORY",
                 "title": "군주론",
                 "author": "마키아벨리",
@@ -3452,7 +3452,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0486272745?tag=archiview2026-20"
             },
             {
-                "id": "on-liberty",
+                "id": "top70-자유론",
                 "section": "PHILOSOPHY",
                 "title": "자유론",
                 "author": "존 스튜어트 밀",
@@ -3479,7 +3479,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0140432078?tag=archiview2026-20"
             },
             {
-                "id": "eichmann-jerusalem",
+                "id": "top70-예루살렘의-아이히만",
                 "section": "PHILOSOPHY",
                 "title": "예루살렘의 아이히만",
                 "author": "한나 아렌트",
@@ -3506,7 +3506,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0143039881?tag=archiview2026-20"
             },
             {
-                "id": "courage-to-disliked",
+                "id": "courage-to-be-disliked",
                 "section": "MINDSET",
                 "title": "미움받을 용기",
                 "author": "기시미 이치로",
@@ -3533,7 +3533,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1501197274?tag=archiview2026-20"
             },
             {
-                "id": "frame-psychology",
+                "id": "frame",
                 "section": "MINDSET",
                 "title": "프레임",
                 "author": "최인철",
@@ -3587,7 +3587,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/006124189X?tag=archiview2026-20"
             },
             {
-                "id": "thinking-fast-slow",
+                "id": "top70-생각-빠르고-느리게",
                 "section": "MINDSET",
                 "title": "생각, 빠르고 느리게",
                 "author": "대니얼 카너먼",
@@ -3614,7 +3614,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
             },
             {
-                "id": "resilience",
+                "id": "top70-회복탄력성",
                 "section": "HEALING",
                 "title": "회복탄력성",
                 "author": "김주환",
@@ -3641,7 +3641,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "you-are-right",
+                "id": "top70-당신이-옳다",
                 "section": "HEALING",
                 "title": "당신이 옳다",
                 "author": "정혜신",
@@ -3668,7 +3668,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
-                "id": "laws-of-nature",
+                "id": "top70-인간-본성의-법칙",
                 "section": "MINDSET",
                 "title": "인간 본성의 법칙",
                 "author": "로버트 그린",
@@ -3695,7 +3695,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1101984310?tag=archiview2026-20"
             },
             {
-                "id": "inner-comms",
+                "id": "top70-내면소통",
                 "section": "HEALING",
                 "title": "내면소통",
                 "author": "김주환",
@@ -3749,7 +3749,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0547304153?tag=archiview2026-20"
             },
             {
-                "id": "live-again",
+                "id": "top70-만일-내가-인생을-다시-산다면",
                 "section": "HEALING",
                 "title": "만일 내가 인생을 다시 산다면",
                 "author": "김혜남",
@@ -3874,10 +3874,10 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0544633792?tag=archiview2026-20"
             },
             {
-                "id": "top70-퓨처-셀프",
+                "id": "future-self",
                 "section": "GENERAL",
                 "isPodcast": true,
-                "podcastFile": "/audio/top70-퓨처-셀프.mp3",
+                "podcastFile": "/audio/future-self.mp3",
                 "title": "퓨처 셀프",
                 "author": "벤저민 하디",
                 "cover": "/images/covers/default_custom.jpg",
@@ -3903,7 +3903,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1401967574?tag=archiview2026-20"
             },
             {
-                "id": "top70-몰입",
+                "id": "immersion",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4309,7 +4309,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1591845564?tag=archiview2026-20"
             },
             {
-                "id": "top70-좋은-기업을-넘어-위대한-기업으로",
+                "id": "good-to-great",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4367,7 +4367,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1455554790?tag=archiview2026-20"
             },
             {
-                "id": "top70-규칙-없음",
+                "id": "no-rules-rules",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4396,7 +4396,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/1984877860?tag=archiview2026-20"
             },
             {
-                "id": "deep-work",
+                "id": "top70-딥-워크",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4483,7 +4483,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0140441387?tag=archiview2026-20"
             },
             {
-                "id": "meditations",
+                "id": "top70-명상록",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4541,7 +4541,7 @@ export const celebrities = [
                 "amazonLink": "https://www.amazon.com/dp/0374289982?tag=archiview2026-20"
             },
             {
-                "id": "sparks-of-genius",
+                "id": "top70-생각의-탄생",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",

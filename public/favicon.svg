@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#090b10"/>
+  <!-- Sound wave bars (Archiview brand) -->
+  <rect x="5"  y="17" width="4" height="9"  rx="2" fill="#D4AF37"/>
+  <rect x="11" y="10" width="4" height="16" rx="2" fill="#F9E498"/>
+  <rect x="17" y="13" width="4" height="13" rx="2" fill="#D4AF37"/>
+  <rect x="23" y="7"  width="4" height="18" rx="2" fill="#F9E498"/>
+</svg>

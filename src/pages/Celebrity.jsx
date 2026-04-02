@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link, useParams } from 'react-router-dom';
 import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
@@ -69,6 +70,9 @@ export default function Celebrity() {
 
     return (
         <div className="bg-white text-slate-900 dark:text-slate-100 antialiased font-display min-h-screen pb-24 flex justify-center">
+            <Helmet>
+                <meta name="robots" content="noindex, nofollow" />
+            </Helmet>
             {/* Main Layout Container: Everything constrained to max-w-lg */}
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-x-hidden border-t border-white/5" style={{ touchAction: 'pan-y' }}>
                 <TopNavigation title="에디토리얼 시리즈" type="sub" />

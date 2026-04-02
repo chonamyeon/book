@@ -10,20 +10,7 @@
     "lang": "ko",
     "description": "프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스",
     "categories": ["books", "education", "lifestyle"],
-    "icons": [
-        {
-            "src": "/icon-192.png",
-            "type": "image/png",
-            "sizes": "192x192",
-            "purpose": "any"
-        },
-        {
-            "src": "/icon-512.png",
-            "type": "image/png",
-            "sizes": "512x512",
-            "purpose": "any maskable"
-        }
-    ],
+    "icons": [],
     "screenshots": [],
     "prefer_related_applications": false
 }

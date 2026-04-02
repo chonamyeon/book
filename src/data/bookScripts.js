@@ -9,7 +9,7 @@
 // 6. Spoiler Policy: STRONGLY PROHIBITED. Do not reveal critical plot twists or endings. Focus on themes, insights, and relatable office situations.
 
 export const bookScripts = {
-	"우리-본성의-선한-천사": [
+	"better-angels-of-nature": [
 		{
 				"role": "A",
 				"text": "이 커피 머신 왜 이렇게 느려? 나 지금 당장 카페인 수혈 필요한 상태거든."
@@ -123,7 +123,7 @@ export const bookScripts = {
 				"text": "핑커도 그 부분에서 엄청 신랄하게 까거든. 낭만적인 통념이 얼마나 사실과 다른지. 근데 나도 이 책 읽으면서 정말 깨달은 게 많아."
 		}
 ],
-	"벤자민-프랭클린-인생의-발견": [
+	"benjamin-franklin": [
 		{
 				"role": "A",
 				"text": "야, 자리 진짜 잘 잡았다. 3루 쪽이라 그늘도 있고, 딱이네요. 시원하고 좋습니다."
@@ -421,7 +421,7 @@ export const bookScripts = {
 				"text": "어, 진짜다. 자, 일단 핫도그 접고 집중합시다! 경기를 봐야죠!"
 		}
 ],
-	"네가-누구든-얼마나-외롭든": [
+	"no-matter-who-you-are": [
 		{
 				"role": "A",
 				"text": "오늘 저희가 함께 이야기 나눌 책은 제목부터가 좀 묵직한데요. 바로 김연수 작가님의 장편소설 '네가 누구든 얼마나 외롭든'입니다. 이 책 제목만으로도 많은 생각을 하게 하네요."
@@ -6287,7 +6287,7 @@ export const bookScripts = {
                 "text": "당연하죠. 저희 다음 주에 원씽 실천 후기로 또 만나요. 그때는 스텔라 씨가 저한테 꿀팁 알려줄 수도 있겠네요."
         }
 ],
-    "top70-퓨처-셀프": [
+    "future-self": [
         {
                 "role": "A",
                 "text": "아- 스텔라, 좋다. 찜질방 온도가 아주 그냥 지지기 딱 좋은 온도야."

@@ -1008,6 +1008,51 @@ app.post('/api/timestamps/generate', async (req, res) => {
     }
 });
 // ─────────────────────────────────────────────────────────────
+app.post('/api/adsense/register', (req, res) => {
+    const { id, title, author, category, gradient, icon, desc, fullReview, script, actionGuide } = req.body;
+    if (!id || !title) return res.status(400).json({ error: 'ID와 제목은 필수입니다.' });
+
+    try {
+        const filePath = path.resolve(__dirname, '../src/data/adsense/books.js');
+        let content = fs.readFileSync(filePath, 'utf-8');
+        const lastBraceIndex = content.lastIndexOf('];');
+        
+        if (lastBraceIndex !== -1) {
+            // object string
+            let newObjStr = `\n    {\n`;
+            newObjStr += `        id: "${id.replace(/"/g, '\\"')}",\n`;
+            newObjStr += `        title: "${title.replace(/"/g, '\\"')}",\n`;
+            newObjStr += `        author: "${(author || '').replace(/"/g, '\\"')}",\n`;
+            newObjStr += `        category: "${(category || '').replace(/"/g, '\\"')}",\n`;
+            newObjStr += `        desc: "${(desc || '').replace(/"/g, '\\"')}",\n`;
+            newObjStr += `        gradient: "${(gradient || 'from-green-700 to-teal-950')}",\n`;
+            newObjStr += `        icon: "${(icon || 'book')}",\n`;
+            newObjStr += `        fullReview: \`${(fullReview || '').replace(/`/g, '\\`')}\`,\n`;
+            
+            if (script && Array.isArray(script)) {
+                newObjStr += `        script: ${JSON.stringify(script, null, 12).replace(/\\n/g, ' ')},\n`;
+            } else {
+                newObjStr += `        script: [],\n`;
+            }
+            if (actionGuide && Array.isArray(actionGuide)) {
+                newObjStr += `        actionGuide: ${JSON.stringify(actionGuide, null, 12).replace(/\\n/g, ' ')}\n`;
+            } else {
+                newObjStr += `        actionGuide: []\n`;
+            }
+            newObjStr += `    }\n`;
+
+            const inserted = `    ,${newObjStr}`;
+            content = content.slice(0, lastBraceIndex) + inserted + content.slice(lastBraceIndex);
+            fs.writeFileSync(filePath, content, 'utf-8');
+            res.json({ success: true, message: 'AdSense review added successfully.', id });
+        } else {
+            res.status(500).json({ error: 'Could not find array end in books.js' });
+        }
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// ─────────────────────────────────────────────────────────────
 
 const PORT = 3001;
 server.listen(PORT, () => {

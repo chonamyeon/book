@@ -23,7 +23,7 @@ export default function MiniPlayer() {
 
     const goToPodcast = () => {
         if (podcastInfo.id) {
-            navigate(`/review/${podcastInfo.id}?tab=podcast`);
+            navigate(`/story/${podcastInfo.id}`);
         }
     };
 

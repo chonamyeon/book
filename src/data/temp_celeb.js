@@ -3655,7 +3655,7 @@ module.exports = [
         "quote": "좋은 책을 읽는다는 것은 과거의 가장 훌륭한 사람들과 대화하는 것이다.",
         "books": [
             {
-                "id": "top70-총-균-쇠",
+                "id": "guns-germs-steel",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -3739,10 +3739,10 @@ module.exports = [
                 ]
             },
             {
-                "id": "top70-퓨처-셀프",
+                "id": "future-self",
                 "section": "GENERAL",
                 "isPodcast": true,
-                "podcastFile": "/audio/top70-퓨처-셀프.mp3",
+                "podcastFile": "/audio/future-self.mp3",
                 "title": "퓨처 셀프",
                 "author": "벤저민 하디",
                 "cover": "/images/covers/default_custom.jpg",
@@ -3767,7 +3767,7 @@ module.exports = [
                 ]
             },
             {
-                "id": "top70-몰입",
+                "id": "immersion",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4159,7 +4159,7 @@ module.exports = [
                 ]
             },
             {
-                "id": "top70-좋은-기업을-넘어-위대한-기업으로",
+                "id": "good-to-great",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",
@@ -4215,7 +4215,7 @@ module.exports = [
                 ]
             },
             {
-                "id": "top70-규칙-없음",
+                "id": "no-rules-rules",
                 "section": "GENERAL",
                 "isPodcast": false,
                 "podcastFile": "",

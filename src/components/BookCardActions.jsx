@@ -91,6 +91,7 @@ export default function BookCardActions({ book, className = '' }) {
     }, [book, overrides, findInOverrides]);
 
     const safeId = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
+    const reviewPath = book.isAdsense ? `/story/${safeId}` : `/review/${safeId}`;
 
     const addToLibrary = (e) => {
         e.stopPropagation();
@@ -134,7 +135,7 @@ export default function BookCardActions({ book, className = '' }) {
         if (!window.Kakao.isInitialized()) {
             window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
-        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+        const shareUrl = `${SITE_ORIGIN}${reviewPath}`;
         const shareImage = book.cover?.startsWith('http')
             ? book.cover
             : `${SITE_ORIGIN}${book.cover}`;
@@ -163,7 +164,7 @@ export default function BookCardActions({ book, className = '' }) {
 
     const handleCopyLink = (e) => {
         e.stopPropagation();
-        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+        const shareUrl = `${SITE_ORIGIN}${reviewPath}`;
         navigator.clipboard.writeText(shareUrl)
             .then(() => alert('링크 복사됨! ✅'))
             .catch(() => {
@@ -180,7 +181,7 @@ export default function BookCardActions({ book, className = '' }) {
 
     const handleCardShare = async (e) => {
         e.stopPropagation();
-        const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
+        const shareUrl = `${SITE_ORIGIN}${reviewPath}`;
         try {
             await shareCard(book, shareUrl);
         } catch {
@@ -241,7 +242,7 @@ export default function BookCardActions({ book, className = '' }) {
                 {/* 1층: 리뷰 디테일 & 팟캐스트 */}
                 <div className="grid grid-cols-2 gap-2">
                     <button
-                        onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=ebook`)}
+                        onClick={(e) => handlePremiumNav(e, `${reviewPath}${reviewPath.includes('?') ? '&' : '?'}tab=ebook`)}
                         className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-[14px]">menu_book</span>
@@ -249,7 +250,7 @@ export default function BookCardActions({ book, className = '' }) {
                     </button>
 
                     <button
-                        onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=podcast`, true)}
+                        onClick={(e) => handlePremiumNav(e, `${reviewPath}${reviewPath.includes('?') ? '&' : '?'}tab=podcast`, true)}
                         className="group flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>

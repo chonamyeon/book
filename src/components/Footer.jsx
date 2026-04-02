@@ -5,8 +5,8 @@ export default function Footer() {
     return (
         <section className="px-8 pt-16 pb-12 text-center border-t border-white/5 bg-background-dark/30">
             <div className="flex flex-col items-center mb-10">
-                <div className="flex items-center justify-center gap-2 mb-4">
-                    <div className="flex items-end gap-[3px] h-[20px] opacity-80 pb-0.5">
+                <div className="flex items-center justify-center gap-2 mb-4" aria-label="Archiview 홈">
+                    <div className="flex items-end gap-[3px] h-[20px] opacity-80 pb-0.5" aria-hidden="true">
                         <div className="w-1 bg-slate-400 h-[60%]"></div>
                         <div className="w-1 bg-slate-200 h-[100%]"></div>
                         <div className="w-1 bg-slate-400 h-[40%]"></div>
@@ -25,11 +25,25 @@ export default function Footer() {
                 </p>
             </div>
 
+            {/* Popular Story Links */}
+            <div className="pt-8 border-t border-white/5 mb-6">
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4">추천 도서 인사이트</p>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                    <Link to="/story/atomic-habits" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">아토믹 해빗</Link>
+                    <Link to="/story/top70-돈의-심리학" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">돈의 심리학</Link>
+                    <Link to="/story/top70-사피엔스" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">사피엔스</Link>
+                    <Link to="/story/top70-미움받을-용기" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">미움받을 용기</Link>
+                    <Link to="/story/top70-역행자" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">역행자</Link>
+                    <Link to="/story/제로-투-원" className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors">제로 투 원</Link>
+                </div>
+            </div>
+
             {/* Information Links */}
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 pt-8 border-t border-white/5 mb-8">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 border-t border-white/5 pt-6 mb-8">
                 <Link to="/about" className="text-[11px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">About</Link>
                 <Link to="/contact" className="text-[11px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">Contact</Link>
                 <Link to="/privacy" className="text-[11px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="text-[11px] font-bold text-slate-500 hover:text-gold uppercase tracking-[0.2em] transition-colors">Terms</Link>
             </div>
 
             <div className="max-w-[320px] mx-auto mb-8">

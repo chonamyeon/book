@@ -200,10 +200,10 @@ export default function Library() {
                                             <span className="text-orange-500 text-[8px] font-black uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-sm border border-orange-500/20">FOUND</span>
                                         </div>
                                         <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden shadow-lg">
-                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
                                         </div>
                                         <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
-                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                             <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
                                             <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc || '당신을 위해 특별히 찾아낸 도서입니다.'}"</p>
                                             <BookCardActions book={enrichBook(book)} className="mt-auto" />
@@ -213,10 +213,10 @@ export default function Library() {
                                 {myRecs.map((book, idx) => (
                                     <div key={`persona-${idx}`} className="flex gap-4 p-4 glass-card bg-white/[0.02] rounded-sm border border-white/5 hover:bg-white/[0.05] transition-colors relative group">
                                         <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden">
-                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                            <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
                                         </div>
                                         <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
-                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                            <h4 className="text-white text-[15px] font-black truncate mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                             <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
                                             <p className="text-white/60 text-[11px] font-medium line-clamp-2 leading-relaxed break-keep mb-4">"{book.desc}"</p>
                                             <BookCardActions book={enrichBook(book)} className="mt-auto" />
@@ -245,10 +245,10 @@ export default function Library() {
                                         <span className="material-symbols-outlined text-[16px] font-medium">close</span>
                                     </button>
                                     <div className="w-[100px] aspect-[3/4.2] shrink-0 bg-black/40 rounded-sm border border-white/5 overflow-hidden shadow-lg relative">
-                                        <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
+                                        <img src={book.cover} alt={book.title} loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} />
                                     </div>
                                     <div className="flex-1 min-w-0 py-1 flex flex-col justify-start">
-                                        <h4 className="text-white text-[15px] font-black truncate pr-6 mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
+                                        <h4 className="text-white text-[15px] font-black truncate pr-6 mb-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => navigate(`/story/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}>{book.title}</h4>
                                         <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-2">{book.author}</p>
                                         <BookCardActions book={enrichBook(book)} className="mt-auto" />
                                     </div>

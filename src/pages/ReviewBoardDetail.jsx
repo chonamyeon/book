@@ -99,14 +99,14 @@ export default function ReviewBoardDetail() {
     <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative selection:bg-indigo-500/30">
       {/* Header */}
       <TopNavigation type="sub" />
-      <div className="bg-[#101218] px-5 py-4 border-b border-white/5 flex items-center justify-between">
+      <div className="bg-[#101218] px-2 py-4 border-b border-white/5 flex items-center justify-between">
           <h1 className="text-[17px] font-black tracking-tight flex items-center gap-2">
               <span className="material-symbols-outlined text-indigo-400 text-[20px]">menu_book</span>
               리뷰 라이브러리 문서
           </h1>
       </div>
 
-      <main className="flex-grow px-5 py-8 space-y-6 pb-32">
+      <main className="flex-grow px-1 py-8 space-y-6 pb-32">
         <motion.article 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -140,7 +140,7 @@ export default function ReviewBoardDetail() {
             </div>
             
             <div className="p-5 bg-zinc-900 flex justify-center border-t border-white/5">
-                <button onClick={() => navigate(`/review/${book.id}`)} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors w-full shadow-lg">
+                <button onClick={() => navigate(`/story/${book.id}`)} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors w-full shadow-lg">
                     이 도서의 15분 팟캐스트 듣기
                 </button>
             </div>

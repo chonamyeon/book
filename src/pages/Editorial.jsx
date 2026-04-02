@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
@@ -136,6 +137,12 @@ export default function Editorial() {
 
     return (
         <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
+            <Helmet>
+                <title>에디토리얼 — 아카이뷰 큐레이션 인사이트 | ArchiView</title>
+                <meta name="description" content="아카이뷰 에디터가 엄선한 분야별 베스트셀러 큐레이션. 자기계발·경제·경영·인문·심리 카테고리별 도서 인사이트를 만나보세요." />
+                <meta name="robots" content="noindex, nofollow" />
+                <link rel="canonical" href="https://archiview.store/editorial" />
+            </Helmet>
             <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
                 <TopNavigation type="sub" />
 
@@ -153,7 +160,7 @@ export default function Editorial() {
                             className="absolute inset-0 w-full h-full object-cover"
                             style={{ transform: 'scale(1.1) translateX(30px)' }}
                         />
-                        <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
+                        <div className="relative z-20 h-full flex flex-col justify-end px-1 pb-16">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="flex items-end gap-[2px] h-4">
                                     {[1, 2, 3, 4, 5].map((i) => (
@@ -202,7 +209,7 @@ export default function Editorial() {
 
                     {/* 🚀 2. Trending Now Horizontal Scroll */}
                     <section className="relative">
-                        <div className="px-6 mb-6 flex justify-between items-end">
+                        <div className="px-2 mb-6 flex justify-between items-end">
                             <h3 className="text-xl font-bold tracking-tighter">직장인이 가장 많이 듣는 아카이뷰</h3>
                             <button className="text-orange-500 text-xs font-bold tracking-widest uppercase mt-2 block text-right" style={{ width: "auto" }}>VIEW ALL</button>
                         </div>
@@ -227,7 +234,7 @@ export default function Editorial() {
                                 <span className="material-symbols-outlined text-[32px] font-light">chevron_right</span>
                             </button>
 
-                            <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pb-2">
+                            <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-2 pb-2">
                                 {sliderItems.map((item, idx) => (
                                     <motion.div
                                         key={idx}
@@ -251,10 +258,10 @@ export default function Editorial() {
                     </section>
 
                     {/* 🚀 3. Category Anchor Tabs */}
-                    <div className="px-6 my-[28px]">
+                    <div className="px-2 my-[28px]">
                         <div className="h-[1px] bg-white/5 w-full"></div>
                     </div>
-                    <section className="px-4 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
+                    <section className="px-1 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
                         <div className="flex gap-1.5 w-full">
                             {categoriesInfo.map((cat) => (
                                 <button
@@ -269,7 +276,7 @@ export default function Editorial() {
                     </section>
 
                     {/* 🚀 4. Active Category Section */}
-                    <section className="px-6 space-y-20 mb-20 animate-fade-in">
+                    <section className="px-2 space-y-20 mb-20 animate-fade-in">
                         {(() => {
                             const cat = categoriesInfo.find(c => c.id === selectedCategoryId);
                             const books = visibleBooks;
@@ -297,7 +304,7 @@ export default function Editorial() {
                                     </div>
 
                                     {/* Embedded Book List (Vertical 5 books) */}
-                                    <div className="bg-white/5 rounded-none p-6 space-y-10 border border-white/5">
+                                    <div className="bg-white/5 rounded-none p-2 space-y-10 border border-white/5">
                                         <div className="flex items-center justify-between mb-2">
                                             <h4 className="text-xs font-black text-orange-500 uppercase tracking-widest">Recommended Books</h4>
                                             <span className="text-[10px] text-white/30 font-bold uppercase">10 Picked</span>

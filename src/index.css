@@ -233,4 +233,124 @@ a {
     .wave-delay-3 { animation-delay: 0.0s; }
     .wave-delay-4 { animation-delay: 0.4s; }
     .wave-delay-5 { animation-delay: 0.2s; }
+
+    /* ===== Premium E-book Styles ===== */
+    .ebook-content-wrapper {
+        font-family: 'Noto Serif KR', Georgia, serif;
+        line-height: 1.8;
+        color: #1a1a1a;
+        background: #fff;
+    }
+
+    .ebook-cover {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 3rem 2rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .ebook-cover h1 {
+        font-size: 2.7rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+        color: #000;
+        letter-spacing: -0.02em;
+    }
+
+    .ebook-cover p {
+        font-size: 1.25rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+    }
+
+    .ebook-page {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .ebook-page blockquote {
+        margin: 2rem 0;
+        padding: 2.5rem;
+        background: #fdfcf8;
+        border-left: 4px solid #d4af37;
+        position: relative;
+    }
+
+    .ebook-page blockquote p {
+        font-size: 1.4rem;
+        line-height: 1.6;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-style: italic;
+    }
+
+    .ebook-page blockquote cite {
+        display: block;
+        font-size: 0.9rem;
+        color: #95a5a6;
+        font-style: normal;
+        text-align: right;
+    }
+
+    .ebook-page p {
+        margin-bottom: 1.5rem;
+        font-size: 1.15rem;
+        color: #333;
+        text-align: justify;
+    }
+
+    .ebook-page h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 3rem 0 1.5rem;
+        color: #000;
+        border-bottom: 2px solid #000;
+        display: inline-block;
+        padding-bottom: 0.25rem;
+    }
+}
+
+/* ===== E-book 모바일 반응형 ===== */
+@media (max-width: 768px) {
+    .ebook-page {
+        max-width: 100% !important;
+        padding: 0.5rem 0 !important;
+    }
+    .ebook-page h1 {
+        font-size: 1.3rem !important;
+        margin: 0.4rem 0 0.3rem !important;
+    }
+    .ebook-page h2 {
+        font-size: 1.1rem !important;
+        margin: 0.4rem 0 0.3rem !important;
+    }
+    .ebook-page h3 {
+        font-size: 1rem !important;
+        margin: 0.3rem 0 0.2rem !important;
+    }
+    .ebook-page p {
+        font-size: 0.95rem !important;
+        line-height: 1.75 !important;
+        margin-bottom: 0.75rem !important;
+    }
+    .ebook-page blockquote {
+        padding: 0.75rem 1rem !important;
+        margin: 0.75rem 0 !important;
+    }
+    .ebook-page blockquote p {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .ebook-content-wrapper {
+        font-size: 0.95rem;
+    }
 }

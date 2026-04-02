@@ -1,4 +1,12 @@
 User-agent: *
+
+# 검색 노출 제외 경로 (애드센스 심사 기준)
+Disallow: /celebrity/
+Disallow: /category/
+Disallow: /review/
+Disallow: /editorial
+
+# 나머지 전체 허용 (기본값)
 Allow: /
 
 Sitemap: https://archiview.store/sitemap.xml

@@ -133,9 +133,10 @@ export default function App() {
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
                   <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
+                  <Route path="/privacy-policy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
                   <Route path="/terms" element={<MobileLayout><Terms /></MobileLayout>} />
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
-                  <Route path="/review/:id" element={<MobileLayout><ReviewDetail /></MobileLayout>} />
+                  <Route path="/review/:id" element={<ProtectedRoute><MobileLayout><ReviewDetail /></MobileLayout></ProtectedRoute>} />
                   <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
                   <Route path="/review-board/:id" element={<MobileLayout><ReviewBoardDetail /></MobileLayout>} />
                   <Route path="/story/:id" element={<StaticReview />} />
