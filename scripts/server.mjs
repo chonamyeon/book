@@ -1009,6 +1009,82 @@ app.post('/api/timestamps/generate', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────
 
+// ── 오디오 파일 → Firebase Storage 직접 업로드 API ────────────────
+// 브라우저 CORS 우회: 로컬 서버가 Firebase Storage REST API로 직접 업로드
+const audioUploadStorage = multer.memoryStorage();
+const audioUploadMiddleware = multer({ storage: audioUploadStorage, limits: { fileSize: 200 * 1024 * 1024 } });
+
+app.post('/api/audio/upload-to-firebase', audioUploadMiddleware.single('audioFile'), async (req, res) => {
+    try {
+        const { bookId } = req.body;
+        if (!bookId) return res.status(400).json({ error: 'bookId 필요' });
+
+        let fileBuffer, fileName, mimeType;
+
+        if (req.file) {
+            // 브라우저에서 파일 직접 전송
+            fileBuffer = req.file.buffer;
+            fileName = req.file.originalname;
+            mimeType = req.file.mimetype || 'audio/mpeg';
+        } else {
+            // 로컬 build_output/audio 에서 읽기
+            const localPath = path.resolve(__dirname, `../build_output/audio/${bookId}.mp3`);
+            if (!fs.existsSync(localPath)) {
+                return res.status(404).json({ error: `로컬 파일 없음: build_output/audio/${bookId}.mp3` });
+            }
+            fileBuffer = fs.readFileSync(localPath);
+            fileName = `${bookId}.mp3`;
+            mimeType = 'audio/mpeg';
+        }
+
+        const FIREBASE_API_KEY = process.env.VITE_FIREBASE_API_KEY;
+        const BUCKET = 'book-site-123.firebasestorage.app';
+        const storagePath = encodeURIComponent(`audio/${fileName}`);
+
+        // Firebase Storage REST API 업로드
+        const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o?uploadType=media&name=${storagePath}&key=${FIREBASE_API_KEY}`;
+        const uploadRes = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': mimeType },
+            body: fileBuffer,
+        });
+        if (!uploadRes.ok) {
+            const errText = await uploadRes.text();
+            throw new Error(`Storage 업로드 실패 (${uploadRes.status}): ${errText}`);
+        }
+        const uploadData = await uploadRes.json();
+        const downloadToken = uploadData.downloadTokens;
+        const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${storagePath}?alt=media&token=${downloadToken}`;
+
+        // Firestore REST API로 book_overrides 업데이트
+        const PROJECT_ID = 'book-site-123';
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/book_overrides/${bookId}?key=${FIREBASE_API_KEY}`;
+        const patchRes = await fetch(firestoreUrl + '&updateMask.fieldPaths=audioUrl&updateMask.fieldPaths=isPodcast&updateMask.fieldPaths=updatedAt', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fields: {
+                    audioUrl: { stringValue: downloadURL },
+                    isPodcast: { booleanValue: true },
+                    updatedAt: { timestampValue: new Date().toISOString() },
+                }
+            }),
+        });
+        if (!patchRes.ok) {
+            const errText = await patchRes.text();
+            throw new Error(`Firestore 저장 실패 (${patchRes.status}): ${errText}`);
+        }
+
+        console.log(`✅ [${bookId}] 오디오 서버 등록 완료: ${downloadURL}`);
+        res.json({ success: true, bookId, downloadURL });
+    } catch (e) {
+        console.error('[AUDIO UPLOAD ERROR]', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────
+
 const PORT = 3001;
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

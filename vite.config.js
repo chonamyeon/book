@@ -1,59 +1,65 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  build: { sourcemap: true,
-
+  build: {
     outDir: 'build_output',
     chunkSizeWarningLimit: 1500,
-    // ?�로?�션 ?�스�??�거 (빌드 ?�도 ?�상, 번들 ?�기 감소)
-    sourcemap: true,
-    // 최신 브라?��? ?��? ?�리??최소??
+    sourcemap: false,
     target: ['es2020', 'chrome80', 'safari14'],
-    // CSS 코드 ?�플리팅
     cssCodeSplit: true,
-    // ?�축 ?�기 계산 ?�략 (빌드 ?�도 ?�상)
     reportCompressedSize: false,
+    minify: 'esbuild',
+    // 모듈 프리로드 폴리필 제거 (모던 브라우저 타겟이므로 불필요)
+    modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // react 계열: ??�� ?�요, 공유 �?���?분리
+          // React 코어 (react + react-dom + react-router)
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
             return 'vendor-react'
           }
-          // firebase: ??�� ?�요, 공유 �?���?분리
+          // Firebase SDK
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'vendor-firebase'
           }
-          // framer-motion: ?�러 ?�이지 공유
+          // Framer Motion (애니메이션)
           if (id.includes('node_modules/framer-motion')) {
             return 'vendor-framer'
           }
-          // ?�이??�?��: celebrities (436KB) ??공유 �?��
+          // 대용량 데이터: celebrities (577KB) 별도 청크
           if (id.includes('src/data/celebrities')) {
             return 'data-celebrities'
           }
-          // ?�이??�?��: bookScripts + recommendations ??공유 �?��
-          if (id.includes('src/data/bookScripts') || id.includes('src/data/recommendations')) {
+          // 대용량 데이터: bookScripts (325KB) 별도 청크
+          if (id.includes('src/data/bookScripts')) {
+            return 'data-scripts'
+          }
+          // 중형 데이터: recommendations + questions + resultData
+          if (id.includes('src/data/recommendations') || id.includes('src/data/questions') || id.includes('src/data/resultData')) {
             return 'data-content'
           }
-          // ?�머지 node_modules: Rollup??�??�이지별로 ?�동 분리
+          // react-pageflip: ReviewDetail에서만 사용
+          if (id.includes('node_modules/react-pageflip') || id.includes('node_modules/page-flip')) {
+            return 'vendor-pageflip'
+          }
+          // html2canvas (공유 카드 생성용): 사용 시에만 로드
+          if (id.includes('node_modules/html2canvas')) {
+            return 'vendor-canvas'
+          }
         },
-        // ?�셋 ?�일�??�시 ?�함 (캐시 버스??
+        // 해시 기반 파일명으로 장기 캐싱 활성화
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
       },
     },
   },
-  // 개발 ?�버 최적??
   server: {
     port: 5173,
     host: true,
   },
-  // 모듈 ?�석 최적??
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },

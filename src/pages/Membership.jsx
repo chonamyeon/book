@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
@@ -21,7 +21,7 @@ export default function Membership() {
 
     return (
         <div className="bg-[#0a0c10] min-h-screen pb-24 font-display text-slate-200 selection:bg-gold/30">
-            <TopNavigation type="sub" title="Premium Pass" />
+            <MainHeader showBack />
 
             <main className="pt-12 pb-20">
                 {/* 🎯 Target Audience Hero Section */}

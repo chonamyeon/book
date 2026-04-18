@@ -9,7 +9,7 @@ service cloud.firestore {
     // 2. User profiles
     match /users/{userId} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
-      allow list: if request.auth != null;
+      allow list: if true; // 관리자 대시보드(localStorage 인증)에서 전체 조회 허용
     }
 
     // 3. Sales collection
@@ -34,6 +34,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+    
+    // 6.1. Site Config (Camel Case - 결제 관리용)
+    match /siteConfig/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
 
     // 7. E-books
     match /ebooks/{bookId} {
@@ -43,6 +49,18 @@ service cloud.firestore {
 
     // 8. Timestamps (오디오 싱크)
     match /timestamps/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 9. Site Design (디자인 관리 - 관리자 페이지)
+    match /site_design/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 10. YouTube Videos (팟캐스트 소스 등록)
+    match /youtube_videos/{videoId} {
       allow read: if true;
       allow write: if true;
     }

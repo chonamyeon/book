@@ -178,7 +178,7 @@ export const AudioProvider = ({ children }) => {
 
     const speakReview = (text, id) => playPodcast([], id);
 
-    const playPodcastMP3 = useCallback((src, title, cover, id = null) => {
+    const playPodcastMP3 = useCallback((src, title, cover, id = null, forcePlay = false) => {
         const pa = podcastAudioRef.current;
         if (!pa) return;
 
@@ -192,16 +192,17 @@ export const AudioProvider = ({ children }) => {
             if (cover && cover !== podcastInfo?.cover) {
                 setPodcastInfo(prev => ({ ...prev, cover }));
             }
-            if (podcastPlaying) {
+            if (podcastPlaying && !forcePlay) {
                 pa.pause();
                 setPodcastPlaying(false);
-            } else {
-                // 일시정지 후 재개: src 재설정하면 처음부터 재생되므로 그냥 play()만 호출
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+            } else if (!podcastPlaying) {
                 pa.play().catch((err) => {
                     console.error("Podcast play failed:", err);
                     setPodcastPlaying(false);
                 });
                 setPodcastPlaying(true);
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
             }
             return;
         }
@@ -219,10 +220,41 @@ export const AudioProvider = ({ children }) => {
             pa.src = src;
             setPodcastPlaying(true);
             setPodcastInfo({ src, title, cover, id });
-            pa.play().catch((err) => { 
+            pa.play().catch((err) => {
                 console.error("New podcast play failed:", err);
-                setPodcastPlaying(false); 
+                setPodcastPlaying(false);
             });
+
+            // 잠금화면/미디어 컨트롤 센터에 책 정보 표시
+            if ('mediaSession' in navigator) {
+                const artworkSrc = cover
+                    ? (cover.startsWith('http') ? cover : window.location.origin + cover)
+                    : window.location.origin + '/images/covers/default_custom.jpg';
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: title || 'Archiview',
+                    artist: 'Archiview',
+                    album: 'THE ARCHIVIEW',
+                    artwork: [
+                        { src: artworkSrc, sizes: '512x512', type: 'image/jpeg' },
+                        { src: artworkSrc, sizes: '256x256', type: 'image/jpeg' },
+                        { src: artworkSrc, sizes: '128x128', type: 'image/jpeg' },
+                    ],
+                });
+                navigator.mediaSession.setActionHandler('play', () => {
+                    pa.play().catch(() => {});
+                    setPodcastPlaying(true);
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    pa.pause();
+                    setPodcastPlaying(false);
+                });
+                navigator.mediaSession.setActionHandler('seekbackward', () => {
+                    pa.currentTime = Math.max(0, pa.currentTime - 10);
+                });
+                navigator.mediaSession.setActionHandler('seekforward', () => {
+                    pa.currentTime = Math.min(pa.duration || 0, pa.currentTime + 10);
+                });
+            }
         }
     }, [podcastInfo, podcastPlaying]);
 

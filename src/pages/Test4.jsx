@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { celebrities } from '../data/celebrities';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -12,15 +12,23 @@ import BookCardActions from '../components/BookCardActions';
 import { db } from '../firebase';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 
 export default function Test4() {
+    const { design } = useSiteDesign();
     const { user } = useAuth();
     const navigate = useNavigate();
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { playPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [isScrolled, setIsScrolled] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [showAllCelebs, setShowAllCelebs] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
+    const [contentMode, setContentMode] = useState('paid'); // 'free' | 'paid'
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showIphoneModal, setShowIphoneModal] = useState(false);
+    const [showAndroidModal, setShowAndroidModal] = useState(false);
+    const [pwaInstalled, setPwaInstalled] = useState(false);
 
     const getAudioDurationMin = (podcastFile) => {
         if (!podcastFile) return 15;
@@ -63,11 +71,43 @@ export default function Test4() {
     };
 
     useEffect(() => {
+        let ticking = false;
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    setIsScrolled(window.scrollY > 20);
+                    ticking = false;
+                });
+                ticking = true;
+            }
         };
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+        window.addEventListener('beforeinstallprompt', handler);
+        window.addEventListener('appinstalled', () => setPwaInstalled(true));
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleAndroidInstall = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') setPwaInstalled(true);
+            setDeferredPrompt(null);
+        } else {
+            setShowAndroidModal(true);
+        }
+    };
+
+    // 결제 설정 로드 (회원가입 7일 이후 콘텐츠 모드)
+    useEffect(() => {
+        getDoc(doc(db, 'siteConfig', 'trialAccess')).then(snap => {
+            if (snap.exists()) setContentMode(snap.data().mode || 'paid');
+        }).catch(() => {});
     }, []);
 
     const userReviews = [
@@ -90,12 +130,17 @@ export default function Test4() {
         return () => clearInterval(interval);
     }, [userReviews.length]);
 
-    const categories = [
+    // 카테고리 이미지: Firestore(useSiteDesign) 데이터 우선, 없으면 기본값
+    const DEFAULT_CATEGORIES = [
         { label: "일이 손에 안 잡히고 지칠 때", subLabel: "(번아웃 & 커리어 슬럼프)", img: '/images/cat_burnout_v10.png', id: 'BURNOUT' },
         { label: "내 가치를 증명하고 부를 쌓고 싶을 때", subLabel: "(연봉협상 & 경제적 자유)", img: '/images/cat_wealth_v11.png', id: 'WEALTH' },
         { label: "마음이 답답하고 위로가 필요할 때", subLabel: "(우울 & 고독 & 치유)", img: '/images/cat_healing_v8.png', id: 'HEALING' },
         { label: "어떻게 살아야 할지 막막할 때", subLabel: "(자아성찰 & 인생철학)", img: '/images/cat_philosophy_v8.png', id: 'PHILOSOPHY' }
     ];
+    const firestoreCategories = design?.main_categories;
+    const categories = (Array.isArray(firestoreCategories) && firestoreCategories.length === DEFAULT_CATEGORIES.length)
+        ? DEFAULT_CATEGORIES.map((def, i) => ({ ...def, img: firestoreCategories[i]?.img || def.img }))
+        : DEFAULT_CATEGORIES;
 
     // Memoized all books for efficiency
     const allBooks = useMemo(() => {
@@ -129,6 +174,10 @@ export default function Test4() {
         { id: "leverage", title: "레버리지: 부의 추월차선", listens: "7.5k" },
         { id: "story-power", title: "스토리의 힘", listens: "6.8k" },
     ]);
+
+    useEffect(() => {
+        document.title = "The Archiview | 출퇴근 15분, 성공한 사람들의 인사이트";
+    }, []);
 
     // 위클리포커스 스케줄 자동 적용 — 월요일 6시 이후 Firestore 업데이트
     useEffect(() => {
@@ -170,12 +219,24 @@ export default function Test4() {
         return () => { unsub1(); unsub2(); unsub3(); };
     }, []);
 
-    const enrich = (list) => list.map(item => {
-        const bookData = allBooks.find(b => b.id === item.id) || {};
-        return { ...bookData, ...item, cover: item.cover || bookData.cover || '', purchaseLink: item.purchaseLink || bookData.purchaseLink || '', author: item.author || bookData.author || '' };
-    });
+    const bookLookup = useMemo(() => {
+        const map = new Map();
+        allBooks.forEach(b => map.set(b.id, b));
+        return map;
+    }, [allBooks]);
 
-    const enrichedPopularArchives = useMemo(() => enrich(popularArchives), [popularArchives, allBooks]);
+    const enrich = useCallback((list) => list.map(item => {
+        const bookData = bookLookup.get(item.id) || {};
+        return { 
+            ...bookData, 
+            ...item, 
+            cover: item.cover || bookData.cover || '', 
+            purchaseLink: item.purchaseLink || bookData.purchaseLink || '', 
+            author: item.author || bookData.author || '' 
+        };
+    }), [bookLookup]);
+
+    const enrichedPopularArchives = useMemo(() => enrich(popularArchives), [popularArchives, enrich]);
 
     // Weekly Focus: 캐시 우선 표시 → allBooks 로드 후 enriched 버전으로 교체
     const weeklyFocusBooks = useMemo(() => {
@@ -191,14 +252,17 @@ export default function Test4() {
             } catch {}
             return enriched;
         }
-        return allBooks.filter(b => b.section === 'WEEKLY_FOCUS').sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).slice(0, 5);
-    }, [weeklyFocusRaw, allBooks]);
+        return allBooks
+            .filter(b => b.section === 'WEEKLY_FOCUS')
+            .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
+            .slice(0, 5);
+    }, [weeklyFocusRaw, allBooks, enrich]);
 
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
         if (weeklyMostViewedRaw.length > 0) return enrich(weeklyMostViewedRaw);
         return enrichedPopularArchives;
-    }, [weeklyMostViewedRaw, enrichedPopularArchives, allBooks]);
+    }, [weeklyMostViewedRaw, enrichedPopularArchives, enrich]);
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -258,12 +322,152 @@ export default function Test4() {
                                     <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                                 </div>
                             </Link>
-                            <div className="flex items-center gap-[25px]">
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"></path></svg>
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"></path></svg>
+                            <div className="flex items-center gap-3">
+                                {/* Android | iPhone 버튼 */}
+                                <button
+                                    onClick={handleAndroidInstall}
+                                    disabled={pwaInstalled}
+                                    className="flex items-center gap-1 py-[5px] text-[10px] font-bold text-white/75 hover:text-white active:scale-95 transition-all whitespace-nowrap"
+                                >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>android</span>
+                                    {pwaInstalled ? '✓ Android' : 'Android'}
+                                </button>
+                                <span className="text-white/20 text-[11px] select-none">|</span>
+                                <button
+                                    onClick={() => setShowIphoneModal(true)}
+                                    className="flex items-center gap-1 py-[5px] text-[10px] font-bold text-white/75 hover:text-white active:scale-95 transition-all whitespace-nowrap"
+                                >
+                                    <svg width="11" height="13" viewBox="0 0 814 1000" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 192.8-49 31.2 0 134.2 2.9 209.4 100.5zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/>
+                                    </svg>
+                                    iPhone
+                                </button>
+                                {/* 햄버거 메뉴 */}
+                                <button onClick={() => setMenuOpen(true)} className="flex flex-col justify-center gap-[5px] w-5 h-5 flex-shrink-0">
+                                    <span className="block w-full h-[2px] bg-white rounded-full"></span>
+                                    <span className="block w-3 h-[2px] bg-white rounded-full"></span>
+                                    <span className="block w-full h-[2px] bg-white rounded-full"></span>
+                                </button>
                             </div>
                         </header>
                     </div>
+
+                    {/* 🍔 Side Drawer */}
+                    {menuOpen && (
+                        <div className="fixed inset-0 z-[200] flex">
+                            {/* Backdrop */}
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+                            {/* Drawer */}
+                            <div className="relative ml-auto w-[280px] h-full bg-[#0d0f15] flex flex-col overflow-y-auto" style={{ maxWidth: '80vw' }}>
+                                {/* Header */}
+                                <div className="flex items-center justify-between px-5 pt-8 pb-6 border-b border-white/10">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-end h-[16px] gap-[2px]">
+                                            <div className="w-[3px] h-[8px] bg-orange-400 rounded-none" />
+                                            <div className="w-[3px] h-[14px] bg-orange-400 rounded-none" />
+                                            <div className="w-[3px] h-[16px] bg-orange-400 rounded-none" />
+                                            <div className="w-[3px] h-[10px] bg-orange-400 rounded-none" />
+                                            <div className="w-[3px] h-[13px] bg-orange-400 rounded-none" />
+                                        </div>
+                                        <span className="text-[17px] font-black tracking-tight uppercase" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
+                                    </div>
+                                    <button onClick={() => setMenuOpen(false)} className="text-white/50 hover:text-white">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+
+                                {/* 카테고리 섹션 */}
+                                <div className="px-5 pt-5 pb-3">
+                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">카테고리</p>
+                                    <div className="flex flex-col gap-1">
+                                        {[
+                                            { label: '자기계발', path: '/category/SELF_DEV', icon: 'trending_up' },
+                                            { label: '경제',     path: '/category/ECONOMY',    icon: 'bar_chart' },
+                                            { label: '경영',     path: '/category/MANAGEMENT', icon: 'business' },
+                                            { label: '인문',     path: '/category/HUMANITIES', icon: 'history_edu' },
+                                            { label: '심리',     path: '/category/PSYCHOLOGY', icon: 'psychology' },
+                                        ].map(cat => (
+                                            <Link key={cat.path} to={cat.path} onClick={() => setMenuOpen(false)}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors">
+                                                <span className="material-symbols-outlined text-orange-400 text-[18px]">{cat.icon}</span>
+                                                <span className="text-[14px] font-bold text-white">{cat.label}</span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mx-5 h-px bg-white/10 my-2" />
+
+                                {/* 섹션 바로가기 */}
+                                <div className="px-5 pt-3 pb-3">
+                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">섹션</p>
+                                    <div className="flex flex-col gap-1">
+                                        {[
+                                            { label: '위클리 포커스',        icon: 'calendar_today', anchor: '#weekly-focus' },
+                                            { label: '직장인 인사이트',      icon: 'headphones',     anchor: '#insight' },
+                                            { label: '최다 조회 아카이뷰',   icon: 'leaderboard',    anchor: '#most-viewed' },
+                                            { label: '아카이뷰 오리지널',    icon: 'auto_awesome',   anchor: '#original' },
+                                            { label: '셀럽 아카이뷰',        icon: 'star',           anchor: '#celeb' },
+                                        ].map(sec => (
+                                            <button key={sec.anchor}
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    setTimeout(() => {
+                                                        const el = document.querySelector(sec.anchor);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                                    }, 150);
+                                                }}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors text-left w-full">
+                                                <span className="material-symbols-outlined text-white/40 text-[18px]">{sec.icon}</span>
+                                                <span className="text-[14px] font-bold text-white/70">{sec.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mx-5 h-px bg-white/10 my-2" />
+
+                                {/* 하단 링크 */}
+                                <div className="px-5 pt-3 pb-8 flex flex-col gap-1">
+                                    {[
+                                        { label: '서비스 소개', path: '/about' },
+                                        { label: '멤버십',      path: '/membership' },
+                                        { label: '문의하기',    path: '/contact' },
+                                    ].map(item => (
+                                        <Link key={item.path} to={item.path} onClick={() => setMenuOpen(false)}
+                                            className="px-3 py-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+                                            {item.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 📌 Category Tab Navigation */}
+                    <div className="bg-[#101218] border-b border-white/10">
+                        <div className="flex items-center w-full">
+                            <div className="flex-1 flex items-center justify-center py-2.5 border-b-2 border-orange-500">
+                                <span className="text-[14px] font-black text-white tracking-tight">NOW</span>
+                            </div>
+                            {[
+                                { label: '자기계발', path: '/category/SELF_DEV' },
+                                { label: '경제',     path: '/category/ECONOMY' },
+                                { label: '경영',     path: '/category/MANAGEMENT' },
+                                { label: '인문',     path: '/category/HUMANITIES' },
+                                { label: '심리',     path: '/category/PSYCHOLOGY' },
+                            ].map((cat) => (
+                                <Link
+                                    key={cat.path}
+                                    to={cat.path}
+                                    className="flex-1 flex items-center justify-center py-2.5 text-[14px] font-bold text-white hover:text-white transition-colors border-b-2 border-transparent hover:border-white/30"
+                                >
+                                    {cat.label}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
                     <section className="relative pt-0 pb-0 overflow-hidden" style={{ minHeight: '376px' }}>
                         {/* Full background image - face focused */}
                         <div className="absolute inset-0 z-0 overflow-hidden">
@@ -273,7 +477,8 @@ export default function Test4() {
                                 width={450}
                                 height={376}
                                 fetchpriority="high"
-                                decoding="async"
+                                loading="eager"
+                                decoding="sync"
                                 className="object-cover"
                                 style={{
                                     width: '450px',
@@ -319,24 +524,6 @@ export default function Test4() {
                                 </p>
                             </motion.div>
 
-                            {/* 🏷️ Category Chips placed here (full width) */}
-                            <motion.div
-                                initial="hidden"
-                                animate="visible"
-                                variants={sectionVariants}
-                                className="flex gap-1.5 w-full mb-4"
-                            >
-                                {Object.keys(chipToIdMap).map((chip) => (
-                                    <button
-                                        key={chip}
-                                        onClick={() => navigate(`/category/${chipToIdMap[chip]}`)}
-                                        className="flex-1 min-w-0 py-1.5 flex items-center justify-center rounded-none border bg-black/40 backdrop-blur-md border-white/10 text-gray-300 font-bold transition-all active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:bg-orange-500/20 hover:border-orange-500/50 hover:text-orange-400"
-                                    >
-                                        <span className="text-[9px] opacity-70 mr-[1px]">#</span>
-                                        <span className="text-[11px] tracking-tight truncate">{chip}</span>
-                                    </button>
-                                ))}
-                            </motion.div>
                         </div>
 
                         {/* ⭐ Social Proof Section */}
@@ -370,7 +557,7 @@ export default function Test4() {
 
 
                          {/* 2️⃣ Weekly Focus */}
-                        <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                        <div id="weekly-focus" className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Weekly Focus</h2>
@@ -404,7 +591,7 @@ export default function Test4() {
                                     <div key={idx} className="relative group">
                                         <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
                                             <div className="w-[70px] h-[98px] mt-[30px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
-                                                <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                                                <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} loading="lazy" decoding="async" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                             </div>
                                             <div className="flex-grow min-w-0">
                                                 <h3 className="font-black text-[16px] mb-1.5 leading-snug truncate text-white">{book.title}</h3>
@@ -423,7 +610,7 @@ export default function Test4() {
 
 
                     {/* 3️⃣ 직장인이 많이 듣는 컨텐츠 */}
-                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-0">
+                    <motion.section id="insight" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-0">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5">직장인이 가장 많이 듣는 인사이트</h2>
@@ -488,21 +675,21 @@ export default function Test4() {
                     </motion.section>
 
                     {/* 쿠팡 파트너스 배너 */}
-                    <div style={{ width: '100%', overflow: 'hidden', padding: '0 24px 6px' }}>
+                    <div style={{ width: '100%', textAlign: 'center', paddingTop: '25px', paddingBottom: '6px' }}>
                         <iframe
-                            src="https://ads-partners.coupang.com/widgets.html?id=976186&template=banner&trackingCode=AF5571749&subId=&width=320&height=90"
-                            width="100%"
-                            height="90"
+                            src="https://ads-partners.coupang.com/widgets.html?id=976190&template=banner&trackingCode=AF5571749&subId=&width=320&height=100"
+                            width="320"
+                            height="100"
                             frameBorder="0"
                             scrolling="no"
                             referrerPolicy="unsafe-url"
-                            style={{ border: 'none', display: 'block' }}
+                            style={{ border: 'none', display: 'inline-block' }}
                         />
-                        <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', margin: '2px 0 0', lineHeight: 1.2 }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+                        <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', margin: '2px 0 0', lineHeight: 1.2, textAlign: 'center' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
                     </div>
 
                     {/* 4️⃣ 인기 아카이뷰 */}
-                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-5 pb-7">
+                    <motion.section id="most-viewed" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-5 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 아카이뷰</h2>
@@ -519,7 +706,7 @@ export default function Test4() {
                                     <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`} className="flex-shrink-0">
                                         <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
                                             {item.cover
-                                                ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                                                ? <img src={item.cover} alt={item.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                                 : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-xl">menu_book</span></div>
                                             }
                                         </div>
@@ -540,9 +727,96 @@ export default function Test4() {
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
+                    {/* 📖 나의 도서습관 알아보기 Section */}
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-4 pt-8 pb-6"
+                    >
+                        {/* Section Header */}
+                        <div className="mb-6 px-1">
+                            <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">나를 위한 다음 단계</h2>
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-[2px]" style={{ background: '#8b5cf6' }}></div>
+                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">READING PERSONALITY TEST</p>
+                            </div>
+                        </div>
+
+                        {/* Card */}
+                        <div style={{ background: '#0e0a1a', border: '1px solid rgba(139,92,246,0.25)' }}>
+                            {/* Card Top: badges + image */}
+                            <div className="relative flex items-start justify-between px-5 pt-5 pb-4 gap-3">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-[9px] font-black px-2 py-1 tracking-[0.15em] uppercase" style={{ background: '#8b5cf6', color: '#fff' }}>무료 테스트</span>
+                                        <span className="text-[9px] font-bold tracking-[0.1em] uppercase" style={{ color: 'rgba(167,139,250,0.8)' }}>아카이뷰 추천</span>
+                                    </div>
+                                    <h3 className="text-[19px] font-black text-white leading-[1.25] tracking-tight break-keep">
+                                        "지금 나에게 맞는 책"을<br />찾고 싶다면, 먼저<br />나를 알아야 합니다
+                                    </h3>
+                                </div>
+                                <div className="flex-shrink-0 w-[88px] h-[88px] overflow-hidden" style={{ border: '1px solid rgba(139,92,246,0.3)' }}>
+                                    <img src="/images/photo_selfdev.png" alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <p className="px-5 pb-4 text-[12px] text-white/45 leading-relaxed">
+                                12가지 질문으로 분석하는 나만의 독서 유형. 성장형·공감형·사색형·창의형 중 어떤 유형인지 확인하고, 딱 맞는 도서와 콘텐츠를 추천받으세요.
+                            </p>
+
+                            {/* Checklist */}
+                            <div className="px-5 pb-5 space-y-2.5">
+                                {[
+                                    '나의 독서 성향과 강점 파악',
+                                    '유형별 맞춤 도서 & 오디오 추천',
+                                    '독서 습관을 바꿀 1년·5년·10년 로드맵',
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-start gap-2.5">
+                                        <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 15, marginTop: 1, color: '#8b5cf6' }}>check_circle</span>
+                                        <span className="text-[12px] text-white/60 font-medium leading-snug">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* CTA Button */}
+                            <div className="px-5 pb-5">
+                                <button
+                                    onClick={() => {
+                                        if (!user) {
+                                            sessionStorage.setItem('loginRedirect', '/quiz');
+                                            navigate('/login');
+                                        } else {
+                                            const savedResult = localStorage.getItem('quizResult');
+                                            const savedScores = localStorage.getItem('quizScores');
+                                            if (savedResult && savedScores) {
+                                                navigate('/result', { state: { resultType: savedResult, scores: JSON.parse(savedScores) } });
+                                            } else {
+                                                navigate('/quiz');
+                                            }
+                                        }
+                                    }}
+                                    className="w-full h-[54px] flex items-center justify-center gap-2 font-black text-[14px] tracking-tight transition-all active:scale-95"
+                                    style={{ background: user && localStorage.getItem('quizResult') ? '#111111' : '#8b5cf6', color: '#fff', border: user && localStorage.getItem('quizResult') ? '1px solid rgba(255,255,255,0.15)' : 'none' }}
+                                >
+                                    {user && localStorage.getItem('quizResult') ? '내 결과 보기' : '독서 성향 테스트 시작하기'}
+                                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+                                </button>
+                                <p className="text-center text-[10px] text-white/20 mt-2.5 leading-snug">
+                                    * 약 3분 소요 · 무료 · 회원가입 불필요
+                                </p>
+                            </div>
+                        </div>
+                    </motion.section>
+
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+
                     {/* 🎬 2.5 아카이뷰 Originals Section */}
                     {originalContents.length > 0 && (
                         <motion.section
+                            id="original"
                             initial="hidden"
                             whileInView="visible"
                             viewport={{ once: true }}
@@ -573,6 +847,8 @@ export default function Test4() {
                                             <img
                                                 src={content.cover}
                                                 alt={content.title}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                 onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                                             />
@@ -597,7 +873,7 @@ export default function Test4() {
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
                     {/* ✨ 2.8 Celeb Picks Section */}
-                    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
+                    <motion.section id="celeb" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">유명인들의 추천 아카이뷰</h2>
@@ -665,6 +941,8 @@ export default function Test4() {
                                         <img 
                                             src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=300&auto=format&fit=crop" 
                                             alt="Video Production" 
+                                            loading="eager"
+                                            fetchpriority="high"
                                             className="w-full h-full object-cover"
                                         />
                                     </div>
@@ -881,25 +1159,47 @@ export default function Test4() {
                         className="px-6 pb-16"
                     >
                         <div className="relative group">
-                            {/* Card Background Bloom */}
                             <div className="absolute inset-0 bg-orange-600/5 blur-[50px] rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
                             <div className="relative glass-card bg-zinc-900/40 rounded-none p-10 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
-                                <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">커피 한 잔 가격으로</h2>
-                                <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">성공한 사람들의 생각을 듣다</p>
-
-                                <button
-                                    onClick={() => navigate('/membership')}
-                                    className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-none font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] mb-6"
-                                >
-                                    <span className="material-symbols-outlined text-[20px] font-black">rocket_launch</span>
-                                    지금 시작하기
-                                </button>
-
-                                <div onClick={() => navigate('/membership')} className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer py-1 px-3 rounded-none hover:bg-white/5">
-                                    <span className="text-[12px] font-black tracking-widest uppercase">월 4,900원</span>
-                                    <span className="material-symbols-outlined text-[14px] font-black">arrow_forward_ios</span>
-                                </div>
+                                {contentMode === 'free' ? (
+                                    <>
+                                        <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">무료 이용 중</h2>
+                                        <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">지금 바로 시작하세요</p>
+                                        <div className="flex flex-col gap-3">
+                                            <button
+                                                onClick={() => navigate('/login')}
+                                                className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-none font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)]"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px] font-black">person_add</span>
+                                                회원가입하기
+                                            </button>
+                                            <button
+                                                onClick={() => navigate('/login')}
+                                                className="w-full h-[56px] bg-white/10 hover:bg-white/15 text-white rounded-none font-bold text-[15px] flex items-center justify-center gap-3 transition-all border border-white/10"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">login</span>
+                                                로그인하기
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">월 4,900원,</h2>
+                                        <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">지금 내 삶을 바꿀 시간</p>
+                                        <button
+                                            onClick={() => navigate('/membership')}
+                                            className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-none font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] mb-6"
+                                        >
+                                            <span className="material-symbols-outlined text-[20px] font-black">rocket_launch</span>
+                                            첫 달 900원으로 시작하기
+                                        </button>
+                                        <div onClick={() => navigate('/membership')} className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer py-1 px-3 rounded-none hover:bg-white/5">
+                                            <span className="text-[12px] font-black tracking-widest uppercase">월 4,900원</span>
+                                            <span className="material-symbols-outlined text-[14px] font-black">arrow_forward_ios</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.section>
@@ -910,6 +1210,176 @@ export default function Test4() {
                 {/* 🧭 Bottom Navigation Dock (Editorial Premium Style) */}
                 <BottomNavigation />
             </div >
+
+            {/* 🤖 안드로이드 홈화면 추가 레이어 팝업 */}
+            {showAndroidModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} onClick={() => setShowAndroidModal(false)}>
+                    <div className="w-full max-w-[320px] rounded-2xl overflow-hidden" style={{ background: '#1a1a2a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-xl overflow-hidden flex-shrink-0">
+                                    <img src="/app-icon2.png" alt="Archiview" className="w-full h-full object-cover" />
+                                </div>
+                                <span className="text-white/60 text-[11px] font-bold">아카이뷰 앱 설치</span>
+                            </div>
+                            <button onClick={() => setShowAndroidModal(false)} className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                                <span className="material-symbols-outlined text-white/50 text-[13px]">close</span>
+                            </button>
+                        </div>
+
+                        {/* 안내 문구 */}
+                        <div className="px-4 py-3 text-center">
+                            <p className="text-white font-bold text-[13px] leading-relaxed">
+                                아카이뷰 서비스를 쉽고 편하게<br />
+                                이용하시려면 <span style={{ color: '#3ddc84' }}>"홈화면에 추가"</span>를<br />
+                                하신 후 이용하시기 바랍니다.
+                            </p>
+                        </div>
+
+                        {/* Step 1 */}
+                        <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#1db954' }}>1</div>
+                                <p className="text-white text-[11px] font-bold">크롬으로 접속 후 우측 상단 ⋮ 탭</p>
+                            </div>
+                            <div className="px-3 py-2">
+                                <div className="rounded-lg overflow-hidden" style={{ background: '#111' }}>
+                                    <div className="px-3 py-1.5 border-b flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                        <div className="flex-1 rounded px-2 py-1 text-[9px] text-white/30 font-mono" style={{ background: 'rgba(255,255,255,0.06)' }}>archiview.store</div>
+                                        <div className="flex flex-col gap-[3px] px-1">
+                                            {[0,1,2].map(i => <div key={i} className="w-[3px] h-[3px] rounded-full" style={{ background: '#3ddc84', boxShadow: i===2?'0 0 6px rgba(61,220,132,0.8)':undefined }} />)}
+                                        </div>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <div className="rounded px-3 py-1.5 text-[10px] font-bold" style={{ background: 'rgba(61,220,132,0.15)', border: '1px solid rgba(61,220,132,0.3)', color: '#3ddc84' }}>
+                                            앱 설치 / 홈 화면에 추가 👆
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="mx-3 mb-3 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#1db954' }}>2</div>
+                                <p className="text-white text-[11px] font-bold">"설치" 탭 → 홈화면에 아이콘 추가</p>
+                            </div>
+                            <div className="px-3 py-2.5 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 shadow-lg">
+                                    <img src="/app-icon2.png" alt="icon" className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <p className="text-white text-[11px] font-bold">Archiview</p>
+                                    <p className="text-white/40 text-[10px] mt-0.5">홈화면에 추가되면 앱처럼 실행됩니다</p>
+                                </div>
+                                <div className="ml-auto w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1db954,#0a8a3a)' }}>
+                                    <span className="material-symbols-outlined text-white text-[14px]">add</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 확인 버튼 */}
+                        <div className="px-3 pb-4">
+                            <button onClick={() => setShowAndroidModal(false)} className="w-full py-3 rounded-xl text-[13px] font-black text-white" style={{ background: 'linear-gradient(135deg,#1db954,#0a8a3a)' }}>
+                                확인했습니다
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 📱 아이폰 홈화면 추가 레이어 팝업 */}
+            {showIphoneModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} onClick={() => setShowIphoneModal(false)}>
+                    <div className="w-full max-w-[320px] rounded-2xl overflow-hidden" style={{ background: '#1a1a2a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-xl overflow-hidden flex-shrink-0">
+                                    <img src="/app-icon2.png" alt="Archiview" className="w-full h-full object-cover" />
+                                </div>
+                                <span className="text-white/60 text-[11px] font-bold">아카이뷰 앱 설치</span>
+                            </div>
+                            <button onClick={() => setShowIphoneModal(false)} className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                                <span className="material-symbols-outlined text-white/50 text-[13px]">close</span>
+                            </button>
+                        </div>
+
+                        {/* 안내 문구 */}
+                        <div className="px-4 py-3 text-center">
+                            <p className="text-white font-bold text-[13px] leading-relaxed">
+                                아카이뷰 서비스를 쉽고 편하게<br />
+                                이용하시려면 <span style={{ color: '#4fc3f7' }}>"홈화면에 추가"</span>를<br />
+                                하신 후 이용하시기 바랍니다.
+                            </p>
+                        </div>
+
+                        {/* Step 1 */}
+                        <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#0288d1' }}>1</div>
+                                <p className="text-white text-[11px] font-bold">사파리로 접속 후 하단 공유 버튼 탭</p>
+                            </div>
+                            <div className="px-3 py-2">
+                                <div className="rounded-lg overflow-hidden" style={{ background: '#111' }}>
+                                    <div className="px-3 py-1.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                        <div className="rounded px-2 py-1 text-[9px] text-white/30 font-mono" style={{ background: 'rgba(255,255,255,0.06)' }}>archiview.store</div>
+                                    </div>
+                                    <div className="flex items-center justify-around px-2 py-1.5">
+                                        {['arrow_back_ios','arrow_forward_ios','','bookmark','tab'].map((icon, i) => (
+                                            i === 2 ? (
+                                                <div key={i} className="flex flex-col items-center gap-0.5">
+                                                    <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)', boxShadow: '0 0 10px rgba(79,195,247,0.5)' }}>
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l-4 4h3v8h2V6h3l-4-4zm-7 14v4h14v-4h-2v2H7v-2H5z"/></svg>
+                                                    </div>
+                                                    <span className="text-[7px] font-bold" style={{ color: '#4fc3f7' }}>공유</span>
+                                                </div>
+                                            ) : (
+                                                <span key={i} className="material-symbols-outlined text-white/25 text-[15px]">{icon}</span>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="mx-3 mb-3 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#0288d1' }}>2</div>
+                                <p className="text-white text-[11px] font-bold">"홈 화면에 추가" 선택 → "추가" 탭</p>
+                            </div>
+                            <div className="px-3 py-2">
+                                <div className="rounded-lg overflow-hidden" style={{ background: '#1e1e22' }}>
+                                    {['AirDrop으로 공유', '메시지', '메일'].map((item, i) => (
+                                        <div key={i} className="px-3 py-1.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                            <span className="text-white/25 text-[10px]">{item}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(79,195,247,0.1)' }}>
+                                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)' }}>
+                                            <span className="material-symbols-outlined text-white text-[12px]">add_box</span>
+                                        </div>
+                                        <span className="text-[12px] font-black" style={{ color: '#4fc3f7' }}>홈 화면에 추가</span>
+                                        <span className="ml-auto text-[14px]">👆</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 확인 버튼 */}
+                        <div className="px-3 pb-4">
+                            <button onClick={() => setShowIphoneModal(false)} className="w-full py-3 rounded-xl text-[13px] font-black text-white" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)' }}>
+                                확인했습니다
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

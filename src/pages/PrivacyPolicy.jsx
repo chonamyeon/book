@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
 
     return (
         <div className="bg-white dark:bg-slate-950 font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
-            <TopNavigation title="Privacy Policy" />
+            <MainHeader showBack />
 
             <main className="px-6 pt-24 pb-12 overflow-y-auto">
                 <article className="prose prose-sm dark:prose-invert">

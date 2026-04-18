@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { availableAudio } from '../data/availableAudio';
 import { useAuth } from '../hooks/useAuth';
@@ -16,28 +17,26 @@ const SITE_ORIGIN = 'https://archiview.store';
  */
 export default function BookCardActions({ book, className = '' }) {
     const [toast, setToast] = useState('');
+    const [cardModal, setCardModal] = useState(null); // { dataUrl, title }
+    const [cardLoading, setCardLoading] = useState(false);
     const navigate = useNavigate();
-    const { playPodcastMP3 } = useAudio();
+    const { playPodcastMP3, openScriptModal, podcastInfo: podInfo, podcastPlaying: podPlaying } = useAudio();
     const { overrides } = useBookData();
 
     const handlePremiumNav = (e, path, isPodcastAction = false) => {
         e.stopPropagation();
         e.preventDefault();
-        
-        if (isPodcastAction) {
-            const validId = book.id || book.title?.toLowerCase()?.replace(/\s+/g, '-');
-            const fileName = `${validId}.mp3`;
-            const hasAudioFile = !!(availableAudio[fileName] || availableAudio[validId]);
-            const src = book.voiceAudioUrl || book.audioUrl || book.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null);
-            
-            if (src) {
-                try {
-                    playPodcastMP3(src, book.title, book.coverUrl || book.cover, validId);
-                } catch (err) {}
-            }
-        }
-        
         navigate(path);
+    };
+
+    // 팟캐스트: 오디오 즉시 재생(사용자 제스처 유지) + ReviewDetail 팟캐스트 탭으로 이동
+    const handlePodcastPlay = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const sid = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
+        const src = book.podcastFile || `/audio/${sid}.mp3`;
+        try { playPodcastMP3(src, book.title, book.cover || book.coverUrl, sid, true); } catch {}
+        navigate(`/review/${sid}?tab=podcast`);
     };
 
     // 구매 링크 로직 — book에 없으면 Firestore override에서 직접 조회
@@ -180,17 +179,89 @@ export default function BookCardActions({ book, className = '' }) {
 
     const handleCardShare = async (e) => {
         e.stopPropagation();
+        if (cardLoading) return;
+        setCardLoading(true);
         const shareUrl = `${SITE_ORIGIN}/review/${safeId}`;
         try {
-            await shareCard(book, shareUrl);
-        } catch {
-            alert('카드 생성 실패. 다시 시도해주세요.');
+            const dataUrl = await shareCard(book, shareUrl);
+            setCardModal({ dataUrl, title: book.title || '도서카드', shareUrl });
+        } catch (err) {
+            console.error('[ShareCard]', err);
+            alert('카드 생성에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setCardLoading(false);
         }
     };
     const hasAmazon = !!(findInOverrides('amazonLink') || book.amazonLink);
 
+    // 카드 이미지 모달에서 저장/공유
+    const handleModalSave = async () => {
+        if (!cardModal) return;
+        const fileName = `archiview-${safeId}.png`;
+        const shareUrl = cardModal.shareUrl || `${SITE_ORIGIN}/review/${safeId}`;
+        // 모바일: Web Share API로 파일 공유 시도
+        try {
+            const res = await fetch(cardModal.dataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: `[아카이뷰] ${cardModal.title}`,
+                    text: `『${cardModal.title}』 아카이뷰에서 읽어보세요!\n${shareUrl}`,
+                });
+                return;
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return; // 사용자가 취소
+        }
+        // 폴백: 다운로드 + 링크 복사
+        const a = document.createElement('a');
+        a.href = cardModal.dataUrl;
+        a.download = fileName;
+        a.click();
+        setTimeout(() => {
+            navigator.clipboard?.writeText(shareUrl).catch(() => {});
+        }, 500);
+    };
+
     return (
         <div className={`w-full relative ${className}`}>
+            {/* 카드 미리보기 모달 — Portal로 body에 직접 렌더링 (stacking context 이슈 방지) */}
+            {cardModal && createPortal(
+                <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', padding: '16px' }}
+                    onClick={() => setCardModal(null)}
+                >
+                    <div
+                        style={{ position: 'relative', maxWidth: '340px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <img
+                            src={cardModal.dataUrl}
+                            alt="북카드"
+                            style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
+                        />
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', textAlign: 'center' }}>꾹 눌러서 이미지 저장 · 또는 아래 버튼으로 공유</p>
+                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                            <button
+                                onClick={handleModalSave}
+                                style={{ flex: 1, padding: '12px', background: '#fbbf24', color: '#000', fontWeight: 900, fontSize: '14px', border: 'none', cursor: 'pointer' }}
+                            >
+                                저장 / 공유
+                            </button>
+                            <button
+                                onClick={() => setCardModal(null)}
+                                style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer' }}
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* 토스트 알림 */}
             {toast && (
                 <div className="absolute -top-7 left-0 right-0 flex justify-center z-50 pointer-events-none">
@@ -218,7 +289,7 @@ export default function BookCardActions({ book, className = '' }) {
                 <div className="flex gap-2" style={{ alignItems: 'center' }}>
                     {/* 원형 아이콘: 32×32 고정 */}
                     {[
-                        { onClick: handleCardShare, bg: 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400', icon: 'qr_code_2', isIcon: true },
+                        { onClick: handleCardShare, bg: `bg-indigo-500/10 border border-indigo-500/30 text-indigo-400${cardLoading ? ' opacity-50' : ''}`, icon: cardLoading ? 'hourglass_empty' : 'qr_code_2', isIcon: true },
                         { onClick: handleKakaoShare, bg: 'bg-[#FAE100]', icon: null, isIcon: false },
                         { onClick: handleCopyLink, bg: 'bg-blue-500/10 border border-blue-500/30 text-blue-400', icon: 'link', isIcon: true },
                     ].map((btn, i) => (
@@ -249,7 +320,7 @@ export default function BookCardActions({ book, className = '' }) {
                     </button>
 
                     <button
-                        onClick={(e) => handlePremiumNav(e, `/review/${safeId}?tab=podcast`, true)}
+                        onClick={handlePodcastPlay}
                         className="group flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>

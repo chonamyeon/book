@@ -1,7 +1,20 @@
 import React from 'react';
 
-export default function SubscriptionModal({ onClose, trialDaysLeft }) {
+export default function SubscriptionModal({ onClose, trialDaysLeft, siteConfig }) {
     const isExpired = !trialDaysLeft || trialDaysLeft === 0;
+    
+    // 관리자 설정 가격 (팟캐스트 또는 트라이얼)
+    const podcastConfig = siteConfig?.podcastAccess || {};
+    const trialConfig = siteConfig?.trialAccess || {};
+    
+    // 팟캐스트 설정이 free이면 모달 자체를 닫기 (안전장치)
+    if (podcastConfig.mode === 'free' && trialConfig.mode === 'free') {
+        setTimeout(onClose, 100);
+        return null;
+    }
+
+    const price = podcastConfig.price || trialConfig.price || 4900;
+    const originalPrice = podcastConfig.originalPrice || trialConfig.originalPrice || 9900;
 
     return (
         <div
@@ -48,9 +61,19 @@ export default function SubscriptionModal({ onClose, trialDaysLeft }) {
                 {/* 가격 */}
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-center">
                     <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">월 구독</p>
-                    <p className="text-white font-black text-3xl">
-                        4,900<span className="text-lg font-medium text-slate-400">원</span>
-                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                        {originalPrice > price && (
+                            <span className="text-slate-500 line-through text-sm">₩{originalPrice.toLocaleString()}</span>
+                        )}
+                        <p className="text-white font-black text-3xl">
+                            {price.toLocaleString()}<span className="text-lg font-medium text-slate-400">원</span>
+                        </p>
+                        {originalPrice > price && (
+                            <span className="text-xs font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
+                                {Math.round((1 - price / originalPrice) * 100)}% OFF
+                            </span>
+                        )}
+                    </div>
                     <p className="text-slate-500 text-xs mt-1">언제든 해지 가능</p>
                 </div>
 

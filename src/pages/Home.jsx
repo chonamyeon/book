@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { celebrities } from '../data/celebrities';
 import { Link, useNavigate } from 'react-router-dom';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
 import { useBookData } from '../hooks/useBookData';
@@ -50,7 +51,9 @@ const ABSTRACT_IMGS = [
 ];
 
 export default function Home() {
+    const { design } = useSiteDesign();
     const { user } = useAuth();
+    const [mainCategories, setMainCategories] = useState(null);
     const navigate = useNavigate();
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { playPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
@@ -58,6 +61,21 @@ export default function Home() {
     const [showAllCelebs, setShowAllCelebs] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
+    const [openOS, setOpenOS] = useState(null);
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showIphoneModal, setShowIphoneModal] = useState(false);
+    const [pwaInstalled, setPwaInstalled] = useState(false);
+
+    // 메인 카테고리 - Firestore 직접 구독
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'site_design', 'main'), (snap) => {
+            if (snap.exists()) {
+                const cats = snap.data().main_categories;
+                if (Array.isArray(cats) && cats.length) setMainCategories(cats);
+            }
+        });
+        return () => unsub();
+    }, []);
 
     const getAudioDurationMin = (podcastFile) => {
         if (!podcastFile) return 15;
@@ -107,6 +125,30 @@ export default function Home() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    useEffect(() => {
+        const handler = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        window.addEventListener('appinstalled', () => setPwaInstalled(true));
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handler);
+        };
+    }, []);
+
+    const handleAndroidInstall = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') setPwaInstalled(true);
+            setDeferredPrompt(null);
+        } else {
+            // 이미 설치됐거나 지원 안 되는 경우 안내
+            alert('크롬 브라우저에서 주소창 우측 설치 아이콘을 탭하거나,\n메뉴 > "앱 설치"를 선택하세요.');
+        }
+    };
+
     const userReviews = [
         { name: "3년차 마케터", text: "출퇴근 시간이 낭비되지 않아 너무 좋아요. 15분 만에 핵심만 듣고 출근합니다." },
         { name: "스타트업 CEO", text: "매주 선별된 책이 카톡으로 오니까 무슨 책을 읽을지 고민할 필요가 없습니다." },
@@ -127,12 +169,7 @@ export default function Home() {
         return () => clearInterval(interval);
     }, [userReviews.length]);
 
-    const categories = [
-        { label: "일이 손에 안 잡히고 지칠 때", subLabel: "(번아웃 & 커리어 슬럼프)", img: '/images/cat_burnout_v10.png', id: 'BURNOUT' },
-        { label: "내 가치를 증명하고 부를 쌓고 싶을 때", subLabel: "(연봉협상 & 경제적 자유)", img: '/images/cat_wealth_v11.png', id: 'WEALTH' },
-        { label: "마음이 답답하고 위로가 필요할 때", subLabel: "(우울 & 고독 & 치유)", img: '/images/cat_healing_v8.png', id: 'HEALING' },
-        { label: "어떻게 살아야 할지 막막할 때", subLabel: "(자아성찰 & 인생철학)", img: '/images/cat_philosophy_v8.png', id: 'PHILOSOPHY' }
-    ];
+    const categories = mainCategories || design.main_categories;
 
     // Memoized all books for efficiency
     const allBooks = useMemo(() => {
@@ -297,17 +334,24 @@ export default function Home() {
                                     <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                                 </div>
                             </Link>
-                            <div className="flex items-center gap-[15px]">
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        placeholder="도서 검색" 
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="bg-white/5 border border-white/20 text-white rounded-full px-4 py-1.5 text-[13px] w-[140px] focus:w-[180px] hover:bg-white/10 transition-all outline-none"
-                                    />
-                                    <span className="material-symbols-outlined absolute right-2.5 top-[6px] text-[16px] text-white/50 pointer-events-none">search</span>
-                                </div>
+                            <div className="flex items-center gap-2">
+                                {/* 안드로이드 PWA 설치 버튼 */}
+                                <button
+                                    onClick={handleAndroidInstall}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-black border transition-all active:scale-95 ${pwaInstalled ? 'bg-[#3ddc84]/20 border-[#3ddc84]/40 text-[#3ddc84]/50' : 'bg-[#3ddc84]/10 border-[#3ddc84]/40 text-[#3ddc84]'}`}
+                                    disabled={pwaInstalled}
+                                >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85 1.23 12.95 1 12 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31C6.97 3.26 6 5.01 6 7h12c0-1.99-.97-3.75-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                                    {pwaInstalled ? '설치됨' : '안드로이드'}
+                                </button>
+                                {/* 아이폰 PWA 안내 버튼 */}
+                                <button
+                                    onClick={() => setShowIphoneModal(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-black border bg-white/8 border-white/25 text-white transition-all active:scale-95"
+                                >
+                                    <svg width="10" height="12" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46 790.9 0 663.5 0 541 0 341.8 129.3 236.2 256.7 236.2c63.3 0 116.2 42.8 155.8 42.8 31.6 0 107.2-45.2 172.9-45.2 34.8-.1 124.9 9.9 192.2 105.1zm-261.3-235.1c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>
+                                    아이폰
+                                </button>
                             </div>
                         </header>
                         {/* 🏷️ Top Menu Category Chips */}
@@ -367,20 +411,19 @@ export default function Home() {
                     <section className="relative pt-0 pb-0 overflow-hidden" style={{ minHeight: '376px' }}>
                         {/* Full background image - face focused */}
                         <div className="absolute inset-0 z-0 overflow-hidden">
-                            <img
-                                src="/images/hero_expert_v5.png"
-                                alt="Expert Listening"
-                                width={450}
-                                height={376}
-                                fetchpriority="high"
-                                decoding="async"
-                                className="object-cover"
-                                style={{
-                                    width: '450px',
-                                    height: '376px',
-                                    objectPosition: 'right top'
-                                }}
-                            />
+                            {design.main_hero?.type === 'video'
+                                ? <video src={design.main_hero.src} autoPlay loop muted playsInline className="object-cover" style={{ width: '450px', height: '376px', objectPosition: 'right top' }} />
+                                : <img
+                                    src={design.main_hero?.src || '/images/hero_expert_v5.png'}
+                                    alt="Expert Listening"
+                                    width={450}
+                                    height={376}
+                                    fetchpriority="high"
+                                    decoding="async"
+                                    className="object-cover"
+                                    style={{ width: '450px', height: '376px', objectPosition: 'right top' }}
+                                />
+                            }
                             {/* Left solid → transparent: 텍스트 왼쪽, 얼굴 오른쪽 */}
                             <div className="absolute inset-0" style={{
                                 background: 'linear-gradient(to right, #101218 35%, rgba(16,18,24,0.6) 60%, transparent 100%)'
@@ -596,6 +639,73 @@ export default function Home() {
                          )}
                          {/* 📍 [애드센스 추가 심사용 5개 카테고리 도서 끝] 📍 */}
 
+                         {/* 📱 앱 설치 가이드 */}
+                         <div className="relative w-full bg-[#0e1118] border border-white/10 px-6 py-7 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+                                 <div className="absolute inset-0 bg-gradient-to-r from-orange-500/8 via-transparent to-orange-500/8 pointer-events-none" />
+                                 <div className="relative z-10">
+                                     <div className="flex items-center gap-2 mb-1">
+                                         <span className="w-1.5 h-4 bg-orange-500 rounded-sm flex-shrink-0"></span>
+                                         <h2 className="text-[15px] font-black text-white tracking-tight uppercase">앱으로 설치하기</h2>
+                                     </div>
+                                     <p className="text-white/40 text-[11px] font-medium mb-5 pl-4">앱 설치 없이 홈 화면에 추가하면 앱처럼 사용할 수 있어요.</p>
+
+                                     <div className="flex gap-3 mb-4">
+                                         {/* 안드로이드 버튼 */}
+                                         <button
+                                             onClick={() => setOpenOS(openOS === 'android' ? null : 'android')}
+                                             className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-black text-[13px] tracking-tight transition-all border ${openOS === 'android' ? 'bg-[#3ddc84] text-black border-[#3ddc84]' : 'bg-[#3ddc84]/10 text-[#3ddc84] border-[#3ddc84]/30 hover:bg-[#3ddc84]/20'}`}
+                                         >
+                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.341l-4.999 2.886-.001-.001L7.478 15.34C5.373 14.12 4 11.88 4 9.333V8.667C4 8.298 4.298 8 4.667 8H19.333C19.702 8 20 8.298 20 8.667v.666c0 2.547-1.373 4.787-3.477 6.008zM14 3.5a.5.5 0 01-.5.5h-3a.5.5 0 010-1h3a.5.5 0 01.5.5zM8.5 5.5A.5.5 0 018 5V3a.5.5 0 011 0v2a.5.5 0 01-.5.5zm7 0A.5.5 0 0115 5V3a.5.5 0 011 0v2a.5.5 0 01-.5.5z"/></svg>
+                                             안드로이드
+                                         </button>
+                                         {/* 아이폰 버튼 */}
+                                         <button
+                                             onClick={() => setOpenOS(openOS === 'iphone' ? null : 'iphone')}
+                                             className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-black text-[13px] tracking-tight transition-all border ${openOS === 'iphone' ? 'bg-white text-black border-white' : 'bg-white/10 text-white border-white/20 hover:bg-white/20'}`}
+                                         >
+                                             <svg width="12" height="14" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46 790.9 0 663.5 0 541C0 341.8 129.3 236.2 256.7 236.2c63.3 0 116.2 42.8 155.8 42.8 31.6 0 107.2-45.2 172.9-45.2 34.8-.1 124.9 9.9 192.2 105.1zm-261.3-235.1c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>
+                                             아이폰
+                                         </button>
+                                     </div>
+
+                                     {/* 안드로이드 단계 */}
+                                     {openOS === 'android' && (
+                                         <ol className="space-y-2 bg-[#3ddc84]/5 border border-[#3ddc84]/20 p-4">
+                                             {[
+                                                 '크롬으로 archiview.store 접속',
+                                                 '우측 상단 ⋮ 메뉴 탭',
+                                                 '"앱 설치" 또는 "홈 화면에 추가" 탭',
+                                                 '설치 완료 → 앱처럼 실행'
+                                             ].map((step, i) => (
+                                                 <li key={i} className="flex items-start gap-2.5 text-white/70 text-[12px]">
+                                                     <span className="w-5 h-5 bg-[#3ddc84]/20 text-[#3ddc84] text-[10px] font-black flex items-center justify-center flex-shrink-0">{i+1}</span>
+                                                     {step}
+                                                 </li>
+                                             ))}
+                                         </ol>
+                                     )}
+
+                                     {/* 아이폰 단계 */}
+                                     {openOS === 'iphone' && (
+                                         <ol className="space-y-2 bg-white/[0.04] border border-white/10 p-4">
+                                             {[
+                                                 '사파리로 archiview.store 접속',
+                                                 '하단 공유 버튼 탭 (□↑)',
+                                                 '"홈 화면에 추가" 탭',
+                                                 '추가 → 앱처럼 실행'
+                                             ].map((step, i) => (
+                                                 <li key={i} className="flex items-start gap-2.5 text-white/70 text-[12px]">
+                                                     <span className="w-5 h-5 bg-white/15 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{i+1}</span>
+                                                     {step}
+                                                 </li>
+                                             ))}
+                                         </ol>
+                                     )}
+
+                                     <p className="text-white/20 text-[10px] text-center mt-4">✓ 무료 · 앱스토어 설치 불필요 · 주소창 없는 앱 모드</p>
+                                 </div>
+                         </div>
+
                          {/* 2️⃣ Weekly Focus */}
                          {false && (
                         <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
@@ -652,7 +762,6 @@ export default function Home() {
 
 
                     {/* 3️⃣ 직장인이 많이 듣는 컨텐츠 */}
-                    {false && (
                     <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
@@ -684,7 +793,7 @@ export default function Home() {
                                                 alt={cat.label}
                                                 loading="lazy"
                                                 decoding="async"
-                                                className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-[1500ms] group-hover:scale-110"
+                                                className="w-full h-full object-cover object-top grayscale-[30%] group-hover:grayscale-0 transition-all duration-[1500ms] group-hover:scale-110"
                                             />
                                             {/* Multi-layered Vignette Header & Footer */}
                                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
@@ -719,7 +828,6 @@ export default function Home() {
                             })}
                         </div>
                     </motion.section>
-                    )}
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
@@ -766,6 +874,71 @@ export default function Home() {
                     </motion.section>
 </>
 )}
+
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+
+                    {/* 📖 나의 페르소나 찾기 Banner */}
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-4 pt-5 pb-6"
+                    >
+                        {/* 섹션 헤더 */}
+                        <div className="mb-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-violet-400 mb-1">Reading Personality Test</p>
+                            <h2 className="text-[20px] font-black text-white leading-tight">나의 페르소나 찾기</h2>
+                            <div className="w-8 h-[2px] bg-violet-500 mt-2 rounded-full"></div>
+                        </div>
+                    </motion.section>
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-4 pb-6"
+                    >
+                        <button
+                            onClick={() => navigate('/quiz')}
+                            className="w-full relative overflow-hidden group"
+                            style={{ background: 'linear-gradient(135deg, #0f1520 0%, #1a1200 100%)', border: '1px solid rgba(212,175,55,0.25)' }}
+                        >
+                            {/* 배경 글로우 */}
+                            <div className="absolute inset-0 opacity-0 group-active:opacity-100 transition-opacity" style={{ background: 'rgba(212,175,55,0.06)' }} />
+
+                            <div className="relative flex items-center gap-4 px-5 py-5">
+                                {/* 아이콘 영역 */}
+                                <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#d4af37' }}>psychology</span>
+                                </div>
+
+                                {/* 텍스트 */}
+                                <div className="flex-1 text-left">
+                                    <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-1" style={{ color: '#d4af37' }}>무료 · 3분 · 회원가입 불필요</p>
+                                    <h3 className="text-[17px] font-black text-white leading-tight mb-1">나의 페르소나 찾기</h3>
+                                    <p className="text-white/45 text-[11px] leading-snug">12가지 질문으로 분석하는<br />나만의 독서 유형과 맞춤 도서 추천</p>
+                                </div>
+
+                                {/* 화살표 */}
+                                <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                                    <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#d4af37' }}>
+                                        <span className="material-symbols-outlined text-black" style={{ fontSize: 18 }}>arrow_forward</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-white/30">3분</span>
+                                </div>
+                            </div>
+
+                            {/* 하단 태그 */}
+                            <div className="flex gap-2 px-5 pb-4">
+                                {['성장형', '공감형', '사색형', '창의형'].map((tag) => (
+                                    <span key={tag} className="text-[9px] font-bold px-2 py-0.5" style={{ background: 'rgba(212,175,55,0.1)', color: 'rgba(212,175,55,0.7)', border: '1px solid rgba(212,175,55,0.15)' }}>
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        </button>
+                    </motion.section>
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
@@ -1051,15 +1224,15 @@ export default function Home() {
                             <div className="absolute inset-0 bg-orange-600/5 blur-[50px] rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
                             <div className="relative glass-card bg-zinc-900/40 rounded-none p-10 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
-                                <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">커피 한 잔 가격으로</h2>
-                                <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">성공한 사람들의 생각을 듣다</p>
+                                <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">월 4,900원,</h2>
+                                <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">지금 내 삶을 바꿀 시간</p>
 
                                 <button
                                     onClick={() => navigate('/membership')}
                                     className="w-full h-[64px] bg-orange-600 hover:bg-orange-500 text-white rounded-none font-black text-[16px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] mb-6"
                                 >
                                     <span className="material-symbols-outlined text-[20px] font-black">rocket_launch</span>
-                                    지금 시작하기
+                                    첫 달 900원으로 시작하기
                                 </button>
 
                                 <div onClick={() => navigate('/membership')} className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer py-1 px-3 rounded-none hover:bg-white/5">
@@ -1077,6 +1250,39 @@ export default function Home() {
                 {/* 🧭 Bottom Navigation Dock (Editorial Premium Style) */}
                 <BottomNavigation />
             </div >
+
+            {/* 📱 아이폰 PWA 안내 모달 */}
+            {showIphoneModal && (
+                <div className="fixed inset-0 z-[200] bg-black/80 flex items-end justify-center" onClick={() => setShowIphoneModal(false)}>
+                    <div className="w-full max-w-lg bg-[#0e1118] border-t border-white/10 px-6 pt-6 pb-10 safe-area-bottom" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <svg width="16" height="18" viewBox="0 0 814 1000" fill="white"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46 790.9 0 663.5 0 541 0 341.8 129.3 236.2 256.7 236.2c63.3 0 116.2 42.8 155.8 42.8 31.6 0 107.2-45.2 172.9-45.2 34.8-.1 124.9 9.9 192.2 105.1zm-261.3-235.1c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>
+                                <span className="text-white font-black text-[15px]">아이폰 홈화면 추가</span>
+                            </div>
+                            <button onClick={() => setShowIphoneModal(false)} className="text-white/40 hover:text-white transition-colors">
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+                        <p className="text-white/40 text-[12px] mb-5">사파리 브라우저에서만 홈화면 추가가 가능합니다.</p>
+                        <ol className="space-y-3">
+                            {[
+                                { step: '01', icon: '🌐', text: '사파리로 archiview.store 접속' },
+                                { step: '02', icon: '⬆️', text: '하단 가운데 공유 버튼 탭 (□↑)' },
+                                { step: '03', icon: '➕', text: '"홈 화면에 추가" 선택' },
+                                { step: '04', icon: '✅', text: '우측 상단 "추가" 탭 → 완료' },
+                            ].map(({ step, icon, text }) => (
+                                <li key={step} className="flex items-center gap-4 p-3 bg-white/[0.04] border border-white/[0.07]">
+                                    <span className="text-[10px] font-black text-white/30 w-6 flex-shrink-0">{step}</span>
+                                    <span className="text-lg flex-shrink-0">{icon}</span>
+                                    <span className="text-white/80 text-[13px] font-medium">{text}</span>
+                                </li>
+                            ))}
+                        </ol>
+                        <p className="text-white/20 text-[10px] text-center mt-5">앱 설치 없이 앱처럼 사용 · 무료</p>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

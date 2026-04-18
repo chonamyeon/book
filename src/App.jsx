@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -41,43 +41,64 @@ const lazyWithRetry = (factory) =>
     })
   );
 
-// 코드 스플리팅
-const Home          = lazyWithRetry(() => import('./pages/Home'));
+// ──────────────────────────────────────────────
+// 주요 페이지 프리로드: idle 시 미리 로드
+// ──────────────────────────────────────────────
+const prefetchRoutes = () => {
+  // 가장 많이 방문하는 페이지 순서대로 프리로드
+  import('./pages/ReviewDetail');
+  import('./pages/Editorial');
+  import('./pages/LibraryLanding');
+};
+
+if (typeof requestIdleCallback !== 'undefined') {
+  requestIdleCallback(prefetchRoutes, { timeout: 4000 });
+} else {
+  setTimeout(prefetchRoutes, 3000);
+}
+
+// ──────────────────────────────────────────────
+// 코드 스플리팅: 각 페이지 lazy 로드
+// ──────────────────────────────────────────────
 const Test4         = lazyWithRetry(() => import('./pages/Test4'));
 const Test5         = lazyWithRetry(() => import('./pages/Test5'));
 const Editorial     = lazyWithRetry(() => import('./pages/Editorial'));
 const Result        = lazyWithRetry(() => import('./pages/Result'));
 const Celebrity     = lazyWithRetry(() => import('./pages/Celebrity'));
 const Quiz          = lazyWithRetry(() => import('./pages/Quiz'));
-const Library       = lazyWithRetry(() => import('./pages/Library'));
-const Profile       = lazyWithRetry(() => import('./pages/Profile'));
+const Library       = lazyWithRetry(() => import('./pages/LibraryLanding'));
+const Profile       = lazyWithRetry(() => import('./pages/ProfileLanding'));
 const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
 const Login         = lazyWithRetry(() => import('./pages/Login'));
 const About         = lazyWithRetry(() => import('./pages/About'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const Contact       = lazyWithRetry(() => import('./pages/Contact'));
 const ReviewDetail  = lazyWithRetry(() => import('./pages/ReviewDetail'));
-const ReadingNotes  = lazyWithRetry(() => import('./pages/ReadingNotes'));
+const YtPodcast     = lazyWithRetry(() => import('./pages/YtPodcast'));
+const ReadingNotes  = lazyWithRetry(() => import('./pages/ReadingNotesLanding'));
 const Membership    = lazyWithRetry(() => import('./pages/Membership'));
 const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
 const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
+const KnowledgeInsights = lazyWithRetry(() => import('./pages/KnowledgeInsights'));
 const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
 
-// 페이지 로딩 스피너
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-950">
+// 페이지 로딩 스피너 — 인라인 CSS와 일치하는 경량 버전
+const PageLoader = memo(() => (
+  <div className="page-loader">
     <div className="flex flex-col items-center gap-4">
-      <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+      <div className="spin" />
       <p className="text-amber-400/60 text-xs font-bold tracking-widest uppercase">Loading</p>
     </div>
   </div>
-);
+));
+PageLoader.displayName = 'PageLoader';
 
-const MobileLayout = ({ children }) => (
+const MobileLayout = memo(({ children }) => (
   <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative flex flex-col">
     {children}
   </div>
-);
+));
+MobileLayout.displayName = 'MobileLayout';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -95,7 +116,7 @@ export default function App() {
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<MobileLayout><Home /></MobileLayout>} />
+                  <Route path="/" element={<MobileLayout><Test4 /></MobileLayout>} />
                   <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
                   <Route path="/test5" element={<MobileLayout><Test5 /></MobileLayout>} />
                   <Route path="/editorial" element={<MobileLayout><Editorial /></MobileLayout>} />
@@ -103,8 +124,8 @@ export default function App() {
                   <Route path="/celebrity/:id" element={<MobileLayout><Celebrity /></MobileLayout>} />
                   <Route path="/celebrity" element={<MobileLayout><Celebrity /></MobileLayout>} />
                   <Route path="/quiz" element={<MobileLayout><Quiz /></MobileLayout>} />
-                  <Route path="/library" element={<ProtectedRoute><MobileLayout><Library /></MobileLayout></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><MobileLayout><Profile /></MobileLayout></ProtectedRoute>} />
+                  <Route path="/library" element={<MobileLayout><Library /></MobileLayout>} />
+                  <Route path="/profile" element={<MobileLayout><Profile /></MobileLayout>} />
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
                   <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
                   <Route path="/admin" element={<AdminDashboard />} />
@@ -113,9 +134,11 @@ export default function App() {
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
                   <Route path="/review/:id" element={<MobileLayout><ReviewDetail /></MobileLayout>} />
+                  <Route path="/yt-podcast/:id" element={<YtPodcast />} />
                   <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
                   <Route path="/review-board/:id" element={<MobileLayout><ReviewBoardDetail /></MobileLayout>} />
-                  <Route path="/reading-notes" element={<ProtectedRoute><MobileLayout><ReadingNotes /></MobileLayout></ProtectedRoute>} />
+                  <Route path="/reading-notes" element={<MobileLayout><ReadingNotes /></MobileLayout>} />
+                  <Route path="/insights" element={<MobileLayout><KnowledgeInsights /></MobileLayout>} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>

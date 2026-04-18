@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBookData } from '../hooks/useBookData';
 import { motion } from 'framer-motion';
 import BottomNavigation from '../components/BottomNavigation';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import KakaoAdFit from '../components/KakaoAdFit';
 
 export default function ReviewBoard() {
@@ -101,7 +101,7 @@ export default function ReviewBoard() {
   return (
     <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative selection:bg-indigo-500/30">
       {/* Header */}
-      <TopNavigation type="sub" />
+      <MainHeader showBack />
       <div className="bg-[#101218] px-5 py-4 border-b border-white/5 flex items-center justify-between">
           <h1 className="text-[17px] font-black tracking-tight flex items-center gap-2">
               <span className="material-symbols-outlined text-indigo-400 text-[20px]">library_books</span>

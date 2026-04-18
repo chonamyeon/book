@@ -3,18 +3,28 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
   <!-- iOS 홈 화면 아이콘 (180x180 PNG) -->
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-apple.png" />
   <!-- viewport-fit=cover: iOS 노치/홈 인디케이터 safe area 활성화 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="manifest" href="/manifest.json" />
   <title>ARCHIVIEW - 출퇴근길 성공한 사람들의 이야기를 듣다.</title>
+  <link rel="canonical" href="https://archiview.store/" />
+  <meta property="og:site_name" content="ARCHIVIEW" />
+  <meta property="og:url" content="https://archiview.store/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ARCHIVIEW - 출퇴근길 성공한 사람들의 이야기를 듣다." />
+  <meta property="og:description" content="프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스" />
+  <meta property="og:image" content="https://archiview.store/images/hero_expert_v5.png" />
 
   <!-- SEO -->
   <meta name="description" content="프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스">
 
   <!-- iOS & PWA Settings -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Archiview">
@@ -22,22 +32,37 @@
   <!-- 모바일 포맷 감지 비활성화 (전화번호 파란 링크 방지) -->
   <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 
-  <!-- DNS Prefetch & Preconnect: 외부 리소스 연결 선행 처리 -->
+  <!-- ============================================================ -->
+  <!--  크리티컬 리소스만 preconnect (최대 4개로 제한 — 초과 시 역효과) -->
+  <!-- ============================================================ -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://book-site-123.firebasestorage.app" crossorigin>
+  <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
+  <link rel="dns-prefetch" href="https://book-site-123.firebasestorage.app">
   <link rel="dns-prefetch" href="https://accounts.google.com">
   <link rel="dns-prefetch" href="https://www.googleapis.com">
+  <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com">
 
-  <!-- LCP 최적화: 히어로 이미지 조기 다운로드 (Largest Contentful Paint) -->
+  <!-- ============================================================ -->
+  <!--  LCP 최적화: 히어로 이미지만 높은 우선순위 프리로드             -->
+  <!-- ============================================================ -->
   <link rel="preload" as="image" href="/images/hero_expert_v5.png" fetchpriority="high">
 
-  <!-- Pretendard (한글 본문 폰트) - display=swap으로 FOIT 방지 -->
+  <!-- ============================================================ -->
+  <!--  폰트: Pretendard — display=swap 적용된 경량 서브셋            -->
+  <!--  media="print" + onload 트릭으로 렌더 블로킹 완전 제거         -->
+  <!-- ============================================================ -->
+  <link rel="preload" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
   <link rel="stylesheet" crossorigin
-    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css" />
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css"
+    media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+  </noscript>
 
   <!-- Material Symbols + 디스플레이 폰트 (비동기 로드로 렌더링 블로킹 제거) -->
   <link rel="preload" as="style"
@@ -48,45 +73,64 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap">
   </noscript>
 
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7628221060447189"
-     crossorigin="anonymous"></script>
+  <!-- ============================================================ -->
+  <!--  인라인 크리티컬 CSS: FOUT 방지 (배경색+폰트 즉시 적용)        -->
+  <!-- ============================================================ -->
+  <style>
+    html,body{margin:0;padding:0;background:#090b10;color:#f1f5f9}
+    #root{min-height:100dvh}
+    .page-loader{min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#090b10}
+    .page-loader .spin{width:32px;height:32px;border:2px solid rgba(251,191,36,.3);border-top-color:#fbbf24;border-radius:50%;animation:s .6s linear infinite}
+    @keyframes s{to{transform:rotate(360deg)}}
+  </style>
 
-  <!-- Microsoft Clarity (defer to not block initial render) -->
+  <!-- ============================================================ -->
+  <!--  3rd-party 분석 스크립트: 모두 load 이벤트 이후 지연 로드       -->
+  <!--  (FCP/LCP/TBT에 영향을 주지 않도록)                            -->
+  <!-- ============================================================ -->
   <script>
-    window.addEventListener('load', function() {
+    // 모든 3rd-party를 window.load 이후 5초 뒤에 로드 (사용자 경험 우선)
+    function loadDeferred(){
+      // Google AdSense
+      var a=document.createElement('script');a.async=1;
+      a.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8121712799499251';
+      a.crossOrigin='anonymous';document.head.appendChild(a);
+
+      // Google Analytics
+      var g=document.createElement('script');g.async=1;
+      g.src='https://www.googletagmanager.com/gtag/js?id=G-1WBL218LEF';
+      document.head.appendChild(g);
+      g.onload=function(){
+        window.dataLayer=window.dataLayer||[];
+        function gtag(){dataLayer.push(arguments);}
+        window.gtag=gtag;
+        gtag('js',new Date());
+        gtag('config','G-1WBL218LEF');
+      };
+
+      // Microsoft Clarity
       (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
       })(window, document, "clarity", "script", "vzbcnwf750");
-    });
-  </script>
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1WBL218LEF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-1WBL218LEF');
+      // Meta Pixel
+      !function(f,b,e,v,n,t,s){
+        if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)
+      }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init','34999557622968690');
+      fbq('track','PageView');
+    }
+    // load 이후 지연 실행 (TTI 보호)
+    if(document.readyState==='complete'){setTimeout(loadDeferred,500)}
+    else{window.addEventListener('load',function(){setTimeout(loadDeferred,500)})}
   </script>
-
-
-  <!-- Meta Pixel Code -->
-  <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '34999557622968690');
-    fbq('track', 'PageView');
-  </script>
-  <!-- End Meta Pixel Code -->
 
 </head>
 
@@ -96,12 +140,25 @@
   src="https://www.facebook.com/tr?id=34999557622968690&ev=PageView&noscript=1"
   /></noscript>
   <div id="root"></div>
-  <!-- Google Sign-In SDK - defer로 렌더링 블로킹 방지 -->
-  <script src="https://accounts.google.com/gsi/client" defer></script>
-  <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
-  <!-- Kakao SDK (공유 기능) -->
-  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous" defer></script>
-  <script type="module" src="/src/main.jsx?v=4"></script>
+  <!-- Google Sign-In SDK - idle 시 로드 -->
+  <script>
+    // Google Sign-In과 Kakao SDK를 idle 시 로드 (초기 렌더링 차단 방지)
+    function loadSDKs(){
+      var gs=document.createElement('script');gs.src='https://accounts.google.com/gsi/client';gs.defer=true;document.body.appendChild(gs);
+      var ka=document.createElement('script');ka.src='https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';ka.crossOrigin='anonymous';ka.defer=true;document.body.appendChild(ka);
+      
+    }
+    if(typeof requestIdleCallback!=='undefined'){requestIdleCallback(loadSDKs,{timeout:5000})}
+    else{setTimeout(loadSDKs,3000)}
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js');
+      });
+    }
+  </script>
+  <script type="module" src="/src/main.jsx?v=5"></script>
 </body>
 
 </html>

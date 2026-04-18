@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
@@ -13,7 +13,7 @@ export default function About() {
 
     return (
         <div className="bg-white dark:bg-slate-950 font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
-            <TopNavigation title="Brand Story" />
+            <MainHeader showBack />
 
             <main className="px-6 pt-24 pb-12">
                 <section className="mb-12 animate-fade-in">

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { celebrities } from '../data/celebrities';
 import BottomNavigation from '../components/BottomNavigation';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
 import { useBookData } from '../hooks/useBookData';
@@ -71,7 +71,7 @@ export default function Celebrity() {
         <div className="bg-white text-slate-900 dark:text-slate-100 antialiased font-display min-h-screen pb-24 flex justify-center">
             {/* Main Layout Container: Everything constrained to max-w-lg */}
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-x-hidden border-t border-white/5" style={{ touchAction: 'pan-y' }}>
-                <TopNavigation title="에디토리얼 시리즈" type="sub" />
+                <MainHeader showBack />
 
                 <main className="pb-24">
                     {/* Hero Section: Block-style Portrait to match Header width */}

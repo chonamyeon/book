@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { celebrities } from '../data/celebrities';
@@ -411,7 +411,7 @@ export default function ReadingNotes() {
             <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10">
 
                 {/* ── Fixed Top Navigation ── */}
-                <TopNavigation title="기록노트" type="sub" />
+                <MainHeader showBack />
 
                 {/* ── Today's Choice Section (Tree of Records) ── */}
                 <header className="px-6 pt-4 pb-8">
@@ -638,11 +638,14 @@ export default function ReadingNotes() {
 
                 {/* ── Archive List ── */}
                 <section className="px-6 space-y-6 pt-6">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-[16px] font-black flex items-center gap-2">
-                            <span className="material-symbols-outlined text-orange-500">history_edu</span>
-                            나의 기록 피드
-                        </h2>
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">나의 기록 피드</h2>
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
+                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">내가 남긴 소중한 기록들</p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Filter Chips inside Feed Section */}
@@ -842,11 +845,11 @@ export default function ReadingNotes() {
                              <div className="absolute right-0 top-0 opacity-5 scale-150 pointer-events-none translate-x-1/4 -translate-y-1/4">
                                  <span className="material-symbols-outlined text-[150px]">ink_pen</span>
                              </div>
-                             <div className="z-10 text-center md:text-left">
-                                 <h3 className="text-lg font-black mb-1">사유의 기록이 쌓이고 있습니다</h3>
+                             <div className="z-10 text-center md:text-left min-w-0">
+                                 <h3 className="text-[15px] font-black mb-1 whitespace-nowrap">나의 기록이 쌓이고 있습니다</h3>
                                  <p className="text-white/60 text-[11px] opacity-80">지금까지 {totalThoughts}개의 소중한 기록을 남겼습니다.</p>
                              </div>
-                             <div className="z-10 flex gap-3 w-full md:w-auto">
+                             <div className="z-10 flex gap-3 flex-shrink-0">
                                  <button
                                      onClick={() => { resetForm(); setShowForm(true); }}
                                      className="flex-1 md:flex-none px-5 py-2 bg-orange-600 text-white rounded-none font-black text-xs shadow-lg hover:bg-orange-500 transition-colors"

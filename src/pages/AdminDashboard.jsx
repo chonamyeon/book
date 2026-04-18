@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useBookData } from '../hooks/useBookData';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 import { availableAudio } from '../data/availableAudio';
 
 // IndexedDB 헬퍼 — TTS 배치 버퍼 영구 저장
@@ -233,6 +234,347 @@ const getNext4Mondays = () => {
     });
 };
 
+/* ── CF 프롬프트 생성기 컴포넌트 ──────────────────────────────────── */
+function CfPromptTab() {
+    const [cfForm, setCfForm] = useState({
+        concept: '', story: '', mood: '', brand: '', target: '', style: 'cinematic',
+    });
+    const [cfResult, setCfResult] = useState(null);
+    const [cfLoading, setCfLoading] = useState(false);
+    const [cfApiKey, setCfApiKey] = useState(import.meta.env.VITE_ANTHROPIC_API_KEY || '');
+    const [copied, setCopied] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editDraft, setEditDraft] = useState('');
+    const [refineRequest, setRefineRequest] = useState('');
+    const [refineLoading, setRefineLoading] = useState(false);
+
+    const styleOptions = [
+        { id: 'cinematic',   label: '🎬 시네마틱',        desc: '영화 같은 깊이감, 극적인 조명' },
+        { id: 'documentary', label: '📹 다큐멘터리',      desc: '사실적, 핸드헬드, 자연광' },
+        { id: 'fashion',     label: '👗 패션/럭셔리',     desc: '슬로우 모션, 클로즈업, 고급감' },
+        { id: 'emotional',   label: '💫 감성/힐링',       desc: '몽환적, 소프트 포커스, 따뜻한 톤' },
+        { id: 'dynamic',     label: '⚡ 다이나믹/에너지', desc: '빠른 컷, 액션, 강렬한 색감' },
+    ];
+
+    const STYLE_DIRECTION = {
+        cinematic:   '영화적 깊이감. 컷 당 3~4초, 느린 달리/크레인 무브, 극적인 단방향 조명, 테알-오렌지 컬러그레이딩.',
+        documentary: '핸드헬드 흔들림으로 현장감. 자연광 위주, 컷 당 3~4초, 인터뷰 스타일 클로즈업 포함.',
+        fashion:     '슬로우모션(120fps) + 익스트림 클로즈업 반복. 하이키 조명, 무채색 배경에 포인트 컬러.',
+        emotional:   '소프트 포커스 + 렌즈플레어. 컷 당 4~5초 긴 호흡, 따뜻한 골든아워 톤, 인물 감정에 집중.',
+        dynamic:     `극도의 속도 대비가 핵심이다. 절대 평균 속도로 흘러가면 안 된다.
+- 빠른 컷(0.5~1초): 극도로 짧은 플래시컷 — 손동작, 눈빛, 텍스트 스플래시를 1초 미만으로 연속 배치
+- 느린 컷(2~3초): 그 직후 갑자기 슬로우모션으로 전환 — 속도 낙차가 클수록 강렬해진다
+- 리듬 패턴: 빠름-빠름-빠름-느림-폭발-느림 패턴으로 구성
+- 카메라: 핸드헬드 + 드론 급강하 + 익스트림 줌인 혼용, 컷마다 앵글을 완전히 다르게
+- 조명: 네온/스트로보 + 역광 실루엣 + 강렬한 콘트라스트, 채도 극대화
+- 사운드: 드롭 전 무음→폭발 베이스드롭, 빠른 컷엔 타격음 레이어
+- 컷 수는 반드시 6컷 이상, 각 컷 길이를 반드시 명시하고 0.5초~3초로 극단적으로 변화시킬 것`,
+    };
+
+    const CF_SYSTEM = (cutCount, style) => `당신은 세계 최고의 광고 영상 감독이자 영상 연출 전문가입니다.
+주어진 상황과 스토리를 분석해서 15초짜리 멀티컷 시네마틱 CF 연출 프롬프트를 만들어주세요.
+모든 내용은 반드시 한국어로만 작성합니다. 영어는 절대 사용하지 마세요.
+
+[선택된 스타일 연출 원칙]
+${STYLE_DIRECTION[style] || STYLE_DIRECTION.cinematic}
+
+출력 형식을 정확히 지켜주세요:
+
+## 🎬 CF 콘셉트 요약
+한 줄로 CF의 핵심 메시지를 정리
+
+## 📋 컷 구성 (15초 / ${cutCount}컷)
+각 컷을 다음 형식으로 작성:
+**CUT [번호] | [시작초]-[끝초]s (총 [X]초) | [카메라 무브먼트]**
+- 장면: (무슨 장면인지 구체적으로 설명)
+- 연출 지시: (감독이 배우/카메라에게 주는 구체적 연출 지시)
+- 카메라: (렌즈, 앵글, 무브먼트, 속도감)
+- 조명/색감: (색온도, 조명 방향, 컬러 그레이딩)
+
+## 🎵 사운드 디자인
+- 배경음악: (장르, 정확한 BPM, 악기 구성, 분위기 — 예: "140BPM 일렉트로닉 베이스 + 신스, 긴박하고 폭발적")
+- 효과음: (컷별 구체적 효과음 — 예: "CUT1~3 드라이 타격음 연속, CUT4 베이스드롭 + 무음 0.3초")
+- 나레이션/카피: (정확한 문구와 화면 타이밍)
+
+## 🎨 전체 비주얼 톤
+- 컬러 팔레트 (3색 + 헥스코드)
+- 전반적인 무드 키워드
+
+## 📝 최종 연출 지시서
+전체 15초 CF를 하나의 흐름으로 설명하는 감독 지시서 (한국어)`;
+
+    const buildClient = async () => {
+        const { Anthropic } = await import('@anthropic-ai/sdk');
+        return new Anthropic({ apiKey: cfApiKey, dangerouslyAllowBrowser: true });
+    };
+
+    const generatePrompt = async () => {
+        if (!cfForm.concept.trim()) return alert('상황/컨셉을 입력해주세요.');
+        if (!cfApiKey) return alert('Anthropic API 키를 입력해주세요.');
+        setCfLoading(true);
+        setCfResult(null);
+        try {
+            const client = await buildClient();
+            const styleLabel = styleOptions.find(s => s.id === cfForm.style)?.label || cfForm.style;
+            const cutCount = cfForm.style === 'dynamic' ? '6~8' : '4';
+            const userMsg = `스타일: ${styleLabel}
+컨셉/상황: ${cfForm.concept}
+${cfForm.story ? `스토리 개요: ${cfForm.story}` : ''}
+${cfForm.mood ? `감성/분위기: ${cfForm.mood}` : ''}
+${cfForm.brand ? `브랜드/제품: ${cfForm.brand}` : ''}
+${cfForm.target ? `타겟 고객: ${cfForm.target}` : ''}
+
+위 정보를 바탕으로 15초 멀티컷 CF 연출 프롬프트를 한국어로 만들어주세요.
+스타일 연출 원칙을 엄격하게 따르고, 컷마다 속도감과 리듬이 명확히 느껴지도록 연출해주세요.`;
+            const response = await client.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2500,
+                messages: [{ role: 'user', content: userMsg }],
+                system: CF_SYSTEM(cutCount, cfForm.style),
+            });
+            setCfResult(response.content[0].text);
+            setRefineRequest('');
+        } catch (e) {
+            alert('생성 실패: ' + e.message);
+        }
+        setCfLoading(false);
+    };
+
+    const refinePrompt = async () => {
+        if (!refineRequest.trim()) return alert('수정 요청 내용을 입력해주세요.');
+        if (!cfResult) return;
+        setRefineLoading(true);
+        try {
+            const client = await buildClient();
+            const response = await client.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2000,
+                system: `당신은 세계 최고의 광고 영상 감독입니다. 기존 CF 연출 프롬프트를 사용자의 수정 요청에 맞게 수정해주세요.
+수정 요청된 부분만 변경하고, 나머지는 최대한 유지하세요.
+모든 내용은 반드시 한국어로만 작성합니다. 기존 형식(##, ** 등)을 그대로 유지해주세요.`,
+                messages: [
+                    {
+                        role: 'user',
+                        content: `[기존 CF 프롬프트]\n${cfResult}\n\n[수정 요청]\n${refineRequest}\n\n위 수정 요청을 반영해서 프롬프트 전체를 다시 작성해주세요.`
+                    }
+                ],
+            });
+            setCfResult(response.content[0].text);
+            setRefineRequest('');
+        } catch (e) {
+            alert('수정 실패: ' + e.message);
+        }
+        setRefineLoading(false);
+    };
+
+    const copyAll = () => {
+        navigator.clipboard.writeText(cfResult || '').then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    return (
+        <div className="space-y-8 max-w-5xl mx-auto">
+            <div className="flex items-center gap-4">
+                <div className="size-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <span className="material-symbols-outlined text-white text-2xl">movie</span>
+                </div>
+                <div>
+                    <h2 className="text-white text-2xl font-black tracking-tight">CF 프롬프트 생성기</h2>
+                    <p className="text-slate-500 text-sm">Claude AI가 15초 멀티컷 시네마틱 영상 프롬프트를 자동 생성합니다</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* 입력 폼 */}
+                <div className="space-y-5">
+                    {!import.meta.env.VITE_ANTHROPIC_API_KEY && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2">
+                            <label className="text-amber-400 text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm">key</span>Anthropic API Key
+                            </label>
+                            <input type="password" value={cfApiKey} onChange={e => setCfApiKey(e.target.value)}
+                                placeholder="sk-ant-..."
+                                className="w-full bg-black/30 border border-amber-500/30 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-amber-400" />
+                        </div>
+                    )}
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                        <label className="text-white text-xs font-black uppercase tracking-widest">영상 스타일</label>
+                        <div className="grid grid-cols-1 gap-2">
+                            {styleOptions.map(s => (
+                                <button key={s.id} onClick={() => setCfForm(p => ({ ...p, style: s.id }))}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${cfForm.style === s.id ? 'bg-purple-600/30 border-purple-500/60 text-white' : 'bg-white/[0.03] border-white/10 text-slate-400 hover:bg-white/[0.08]'}`}>
+                                    <span className="text-lg shrink-0">{s.label.split(' ')[0]}</span>
+                                    <div>
+                                        <div className="text-sm font-bold">{s.label.split(' ').slice(1).join(' ')}</div>
+                                        <div className="text-[11px] text-slate-500">{s.desc}</div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+                        <label className="text-white text-xs font-black uppercase tracking-widest">입력 정보</label>
+                        <div className="space-y-1.5">
+                            <p className="text-slate-400 text-xs font-bold">상황 / 컨셉 <span className="text-red-400">*</span></p>
+                            <textarea value={cfForm.concept} onChange={e => setCfForm(p => ({ ...p, concept: e.target.value }))} rows={3}
+                                placeholder="예: 새벽 3시 야근 중인 직장인이 번아웃을 극복하고 새로운 인사이트를 얻는 순간"
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-purple-500/60 placeholder:text-slate-600" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <p className="text-slate-400 text-xs font-bold">스토리 개요 <span className="text-slate-600">(선택)</span></p>
+                            <textarea value={cfForm.story} onChange={e => setCfForm(p => ({ ...p, story: e.target.value }))} rows={2}
+                                placeholder="예: 지친 직장인이 아카이뷰 앱을 켜고, 15분 요약본을 듣고, 눈이 빛나는 장면"
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-purple-500/60 placeholder:text-slate-600" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <p className="text-slate-400 text-xs font-bold">감성 / 분위기</p>
+                                <input type="text" value={cfForm.mood} onChange={e => setCfForm(p => ({ ...p, mood: e.target.value }))}
+                                    placeholder="예: 희망적, 도전적"
+                                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/60 placeholder:text-slate-600" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <p className="text-slate-400 text-xs font-bold">브랜드 / 제품</p>
+                                <input type="text" value={cfForm.brand} onChange={e => setCfForm(p => ({ ...p, brand: e.target.value }))}
+                                    placeholder="예: 아카이뷰"
+                                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/60 placeholder:text-slate-600" />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <p className="text-slate-400 text-xs font-bold">타겟 고객</p>
+                            <input type="text" value={cfForm.target} onChange={e => setCfForm(p => ({ ...p, target: e.target.value }))}
+                                placeholder="예: 20-30대 직장인, 자기계발에 관심 있는 사람"
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/60 placeholder:text-slate-600" />
+                        </div>
+                    </div>
+
+                    <button onClick={generatePrompt} disabled={cfLoading || !cfForm.concept.trim()}
+                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-sm rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30">
+                        {cfLoading
+                            ? <><div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Claude가 분석 중...</>
+                            : <><span className="material-symbols-outlined text-lg">auto_awesome</span>CF 프롬프트 생성</>
+                        }
+                    </button>
+                </div>
+
+                {/* 결과 영역 */}
+                <div className="space-y-4">
+                    {cfLoading && (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 min-h-[400px]">
+                            <div className="size-16 rounded-2xl bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
+                                <div className="size-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                            </div>
+                            <p className="text-slate-400 text-sm font-bold text-center">Claude가 시네마틱 CF 프롬프트를<br/>분석하고 있습니다...</p>
+                        </div>
+                    )}
+                    {!cfResult && !cfLoading && (
+                        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 flex flex-col items-center justify-center gap-3 min-h-[400px]">
+                            <span className="material-symbols-outlined text-5xl text-slate-700">movie_creation</span>
+                            <p className="text-slate-600 text-sm font-bold text-center">왼쪽에 상황/컨셉을 입력하고<br/>프롬프트 생성 버튼을 누르세요</p>
+                        </div>
+                    )}
+                    {cfResult && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-white text-sm font-black flex items-center gap-2">
+                                    <span className={`material-symbols-outlined text-base ${isEditing ? 'text-amber-400' : 'text-purple-400'}`}>
+                                        {isEditing ? 'edit_note' : 'auto_awesome'}
+                                    </span>
+                                    {isEditing ? '편집 중...' : '생성 완료'}
+                                </span>
+                                <div className="flex gap-2">
+                                    {isEditing ? (
+                                        <>
+                                            <button
+                                                onClick={() => { setCfResult(editDraft); setIsEditing(false); }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-600/30 transition-all">
+                                                <span className="material-symbols-outlined text-sm">check</span>완료
+                                            </button>
+                                            <button
+                                                onClick={() => setIsEditing(false)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 transition-all">
+                                                <span className="material-symbols-outlined text-sm">close</span>취소
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={copyAll}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${copied ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>
+                                                <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
+                                                {copied ? '복사됨!' : '전체 복사'}
+                                            </button>
+                                            <button
+                                                onClick={() => { setEditDraft(cfResult); setIsEditing(true); }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-all">
+                                                <span className="material-symbols-outlined text-sm">edit</span>편집
+                                            </button>
+                                            <button onClick={generatePrompt} disabled={cfLoading}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 transition-all">
+                                                <span className="material-symbols-outlined text-sm">refresh</span>재생성
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {isEditing ? (
+                                <textarea
+                                    value={editDraft}
+                                    onChange={e => setEditDraft(e.target.value)}
+                                    className="w-full bg-slate-900 border border-amber-500/40 rounded-2xl p-6 text-slate-200 text-sm font-mono resize-none focus:outline-none focus:border-amber-400/70 min-h-[680px] leading-relaxed"
+                                    spellCheck={false}
+                                />
+                            ) : (
+                                <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 overflow-y-auto max-h-[680px] space-y-1">
+                                    {cfResult.split('\n').map((line, idx) => {
+                                        if (line.startsWith('## ')) return <h3 key={idx} className="text-purple-400 font-black text-sm mt-4 mb-2 first:mt-0">{line.replace('## ', '')}</h3>;
+                                        if (line.startsWith('**')) return <p key={idx} className="text-orange-300 font-bold text-sm mt-3">{line.replace(/\*\*/g, '')}</p>;
+                                        if (line.startsWith('- ')) return <p key={idx} className="text-slate-300 text-sm pl-3 border-l border-white/10">{line.replace('- ', '')}</p>;
+                                        if (line.trim() === '') return <div key={idx} className="h-1" />;
+                                        return <p key={idx} className="text-slate-200 text-sm">{line}</p>;
+                                    })}
+                                </div>
+                            )}
+
+                            {/* ── 수정 요청 ── */}
+                            {!isEditing && (
+                                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 space-y-3">
+                                    <p className="text-slate-400 text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-sm text-blue-400">auto_fix_high</span>
+                                        수정 요청 — 이 부분을 이렇게 바꿔줘
+                                    </p>
+                                    <textarea
+                                        value={refineRequest}
+                                        onChange={e => setRefineRequest(e.target.value)}
+                                        rows={3}
+                                        placeholder="예: CUT 2의 장면을 사무실 대신 카페로 바꿔줘&#10;예: 배경음악을 더 긴박하고 드라마틱하게&#10;예: 나레이션 카피를 더 감성적인 문장으로"
+                                        className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-blue-500/60 placeholder:text-slate-600"
+                                        onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) refinePrompt(); }}
+                                    />
+                                    <button
+                                        onClick={refinePrompt}
+                                        disabled={refineLoading || !refineRequest.trim()}
+                                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                                    >
+                                        {refineLoading
+                                            ? <><div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Claude가 수정 중...</>
+                                            : <><span className="material-symbols-outlined text-base">auto_fix_high</span>수정 반영하기 (Ctrl+Enter)</>
+                                        }
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
         const storedAuth = localStorage.getItem('adminAuthData');
@@ -253,6 +595,48 @@ export default function AdminDashboard() {
     });
     const [password, setPassword] = useState('');
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    // ── 디자인 관리 상태 ──────────────────────────────────────────
+    const [designSettings, setDesignSettings] = useState({
+        main_hero:      { type: 'image', src: '/images/hero_expert_v5.png' },
+        editorial_hero: { type: 'video', src: '/video/Figure_walking9.mp4' },
+        library_hero:   { type: 'video', src: '/video/Figure_walking6.mp4' },
+        notes_hero:     { type: 'video', src: '/video/Figure_walking7.mp4' },
+        profile_hero:   { type: 'video', src: '/video/Figure_walking10.mp4' },
+        youtube_hero:   { type: 'image', src: '/images/hero_expert_v5.png' },
+        category_heroes: {
+            SELF_DEV:   { type: 'image', src: '/images/cat_success.png' },
+            ECONOMY:    { type: 'image', src: '/images/cat_wealth_mod.png' },
+            MANAGEMENT: { type: 'image', src: '/images/cat_career.png' },
+            HUMANITIES: { type: 'image', src: '/images/cat_philosophy_mod.png' },
+            PSYCHOLOGY: { type: 'image', src: '/images/cat_healing_mod.png' },
+            BURNOUT:    { type: 'image', src: '/images/cat_burnout_new.jpg' },
+            WEALTH:     { type: 'image', src: '/images/cat_wealth_new.jpg' },
+            HEALING:    { type: 'image', src: '/images/cat_healing_new.jpg' },
+            PHILOSOPHY: { type: 'image', src: '/images/cat_philosophy_new.jpg' },
+        },
+        main_categories: [
+            { id: 'BURNOUT',    label: '일이 손에 안 잡히고 지칠 때',        subLabel: '(번아웃 & 커리어 슬럼프)', img: '/images/cat_burnout_new.jpg' },
+            { id: 'WEALTH',     label: '내 가치를 증명하고 부를 쌓고 싶을 때', subLabel: '(연봉협상 & 경제적 자유)',   img: '/images/cat_wealth_new.jpg' },
+            { id: 'HEALING',    label: '마음이 답답하고 위로가 필요할 때',     subLabel: '(우울 & 고독 & 치유)',      img: '/images/cat_healing_new.jpg' },
+            { id: 'PHILOSOPHY', label: '어떻게 살아야 할지 막막할 때',         subLabel: '(자아성찰 & 인생철학)',     img: '/images/cat_philosophy_new.jpg' },
+        ],
+        editorial_slider: [
+            { id: 'BURNOUT',    label: '일이 손에 안 잡히고 지칠 때',        sub: '번아웃 솔루션', img: '/images/cat_burnout_new.jpg' },
+            { id: 'WEALTH',     label: '내 가치를 증명하고 부를 쌓고 싶을 때', sub: '경제/자유',     img: '/images/cat_wealth_new.jpg' },
+            { id: 'HEALING',    label: '마음이 답답하고 위로가 필요한 때',     sub: '치유/명상',     img: '/images/cat_healing_new.jpg' },
+            { id: 'PHILOSOPHY', label: '어떻게 살아야 할지 막막할 때',         sub: '철학/인생',     img: '/images/cat_philosophy_new.jpg' },
+        ],
+        editorial_tabs: [
+            { id: 'SELF_DEV',   label: '자기계발', img: '/images/photo_selfdev.jpg' },
+            { id: 'ECONOMY',    label: '경제',     img: '/images/photo_economy.jpg' },
+            { id: 'MANAGEMENT', label: '경영',     img: '/images/photo_management.jpg' },
+            { id: 'HUMANITIES', label: '인문',     img: '/images/photo_humanities.jpg' },
+            { id: 'PSYCHOLOGY', label: '심리',     img: '/images/photo_psychology.jpg' },
+        ],
+    });
+    const [designUploading, setDesignUploading] = useState({});
+    const [designSaving, setDesignSaving] = useState(false);
     const [selectedBatchBooks, setSelectedBatchBooks] = useState([]);
     const [isBatchRunning, setIsBatchRunning] = useState(false);
     const [batchProgressText, setBatchProgressText] = useState('');
@@ -273,6 +657,7 @@ export default function AdminDashboard() {
     const [batchScriptPreview, setBatchScriptPreview] = useState(null);
     // { bookId, title, script: [{speaker, text}] } | null
     const { getAllBooks, loading: booksLoading, overrides } = useBookData();
+    const { design: liveDesign, loading: liveDesignLoading } = useSiteDesign();
     // bookScripts — 대본 관련 탭 진입 시 동적 로드 (221KB 초기 번들 제외)
     const [bookScripts, setBookScripts] = useState({});
 
@@ -446,6 +831,35 @@ export default function AdminDashboard() {
                 alert('삭제 중 오류가 발생했습니다.');
             }
         }
+    };
+
+    // ── AssemblyAI STT 헬퍼 (URL 직접 전달 — CORS 우회) ─────────────────────
+    const transcribeWithAssemblyAIUrl = async (audioUrl, aaiKey, onLog) => {
+        onLog('🎙️ 전사 요청 중... (URL 직접)');
+        const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+            method: 'POST',
+            headers: { 'authorization': aaiKey, 'content-type': 'application/json' },
+            body: JSON.stringify({ audio_url: audioUrl, language_detection: true, speech_models: ['universal-2'] })
+        });
+        if (!transcriptRes.ok) {
+            const errText = await transcriptRes.text();
+            throw new Error(`전사 요청 실패 (${transcriptRes.status}): ${errText}`);
+        }
+        const { id } = await transcriptRes.json();
+        onLog('⏳ 전사 완료 대기 중...');
+        for (let i = 0; i < 60; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+                headers: { 'authorization': aaiKey }
+            });
+            const result = await poll.json();
+            if (result.status === 'completed') {
+                onLog(`✅ 전사 완료 (${result.words?.length || 0}단어)`);
+                return { text: result.text || '', confidence: result.confidence ?? null, words: result.words || [] };
+            }
+            if (result.status === 'error') throw new Error(`전사 오류: ${result.error}`);
+        }
+        throw new Error('전사 타임아웃 (3분 초과)');
     };
 
     // ── AssemblyAI STT 헬퍼 ─────────────────────────────────────────────────
@@ -1131,6 +1545,24 @@ export default function AdminDashboard() {
     const [batchEbookScanned, setBatchEbookScanned] = useState(false); // 스캔 완료 여부
     const [isScanning, setIsScanning] = useState(false);
 
+    // 퀴즈 결과 결제 설정 상태
+    const [quizPricingMode, setQuizPricingMode] = useState('paid'); // 'free' | 'paid'
+    const [quizPrice, setQuizPrice] = useState(4900);
+    const [quizOriginalPrice, setQuizOriginalPrice] = useState(29000);
+
+    // 회원가입 7일 이후 콘텐츠 결제 설정
+    const [trialPricingMode, setTrialPricingMode] = useState('paid'); // 'free' | 'paid'
+    const [trialPrice, setTrialPrice] = useState(4900);
+    const [trialOriginalPrice, setTrialOriginalPrice] = useState(9900);
+
+    // 팟캐스트 시청 결제 설정
+    const [podcastPricingMode, setPodcastPricingMode] = useState('paid'); // 'free' | 'paid'
+    const [podcastPrice, setPodcastPrice] = useState(4900);
+    const [podcastOriginalPrice, setPodcastOriginalPrice] = useState(9900);
+
+    // 리뷰디테일/팟캐스트 접근 설정
+    const [reviewAccessMode, setReviewAccessMode] = useState('all'); // 'public' | 'all' | 'trial7' | 'paid'
+
     // 인트로/아웃트로 병합
     const [mergeIntroFile, setMergeIntroFile] = useState(null);
     const [mergeMainFile, setMergeMainFile] = useState(null);
@@ -1389,6 +1821,59 @@ export default function AdminDashboard() {
         checkAll();
     }, [activeTab, realBooks.length]);
 
+    // 디자인 탭: 라이브 사이트와 동일한 상태로 초기화 (useSiteDesign과 동기화)
+    useEffect(() => {
+        if (activeTab !== 'design' || liveDesignLoading) return;
+        setDesignSettings({
+            main_hero:        liveDesign.main_hero,
+            editorial_hero:   liveDesign.editorial_hero,
+            library_hero:     liveDesign.library_hero,
+            notes_hero:       liveDesign.notes_hero,
+            profile_hero:     liveDesign.profile_hero,
+            youtube_hero:     liveDesign.youtube_hero,
+            category_heroes:  liveDesign.category_heroes,
+            main_categories:  liveDesign.main_categories,
+            editorial_slider: liveDesign.editorial_slider,
+            editorial_tabs:   liveDesign.editorial_tabs,
+        });
+    }, [activeTab, liveDesignLoading]);
+
+    // 결제 탭 진입 시 Firestore에서 모든 결제 설정 로드
+    useEffect(() => {
+        if (activeTab !== 'payment') return;
+        // 퀴즈 결과 설정
+        getDoc(doc(db, 'siteConfig', 'quizResult')).then(snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                if (d.mode) setQuizPricingMode(d.mode);
+                if (typeof d.price === 'number') setQuizPrice(d.price);
+                if (typeof d.originalPrice === 'number') setQuizOriginalPrice(d.originalPrice);
+            }
+        }).catch(() => {});
+        // 회원가입 7일 이후 설정
+        getDoc(doc(db, 'siteConfig', 'trialAccess')).then(snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                if (d.mode) setTrialPricingMode(d.mode);
+                if (typeof d.price === 'number') setTrialPrice(d.price);
+                if (typeof d.originalPrice === 'number') setTrialOriginalPrice(d.originalPrice);
+            }
+        }).catch(() => {});
+        // 팟캐스트 시청 설정
+        getDoc(doc(db, 'siteConfig', 'podcastAccess')).then(snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                if (d.mode) setPodcastPricingMode(d.mode);
+                if (typeof d.price === 'number') setPodcastPrice(d.price);
+                if (typeof d.originalPrice === 'number') setPodcastOriginalPrice(d.originalPrice);
+            }
+        }).catch(() => {});
+        // 리뷰디테일/팟캐스트 접근 설정
+        getDoc(doc(db, 'siteConfig', 'reviewAccess')).then(snap => {
+            if (snap.exists() && snap.data().mode) setReviewAccessMode(snap.data().mode);
+        }).catch(() => {});
+    }, [activeTab]);
+
     // bookScripts 동적 로드 — 대본/자동화/성우 탭 진입 시 204KB 청크 로드
     useEffect(() => {
         if (['script', 'automation', 'voice', 'tts-verify'].includes(activeTab) && Object.keys(bookScripts).length === 0) {
@@ -1591,9 +2076,16 @@ export default function AdminDashboard() {
     };
 
     // ── TTS 텍스트 최적화 (Gemini Flash) — 단일·배치 공용 ────────
-    const optimizeScriptForTts = async (script, logFn) => {
+    const optimizeScriptForTts = async (script, logFn, isYoutubePodcast = false) => {
         const key = import.meta.env.VITE_GEMINI_API_KEY;
         if (!key) { logFn?.('⚠️ Gemini 키 없음 — 최적화 건너뜀'); return script; }
+        const speechStyleRule = isYoutubePodcast
+            ? `⑥ ⚠️ 말투 규칙 (최우선): 이 대본은 친근한 존댓말 팟캐스트입니다.
+   - 반말로 바꾸지 마. ~해요, ~거든요, ~잖아요, ~죠, ~네요 등 존댓말 유지.
+   - 딱딱한 격식체도 친근한 존댓말로 교체: "~십시오"→"~세요" / "~하겠습니다"→"~할게요" / "감사합니다"→"감사해요" / "~습니다"→"~어요"
+   - 자연스럽고 따뜻한 방송 진행자 말투로 통일.`
+            : `⑥ ⚠️ 존댓말 어미 완전 제거 (최우선): ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 → 전부 반말로 교체
+   예) "맞아요" → "맞아" / "그렇죠" → "그렇지" / "재밌거든요" → "재밌거든" / "힘들잖아요" → "힘들잖아"`;
         const prompt = `너는 한국어 팟캐스트 대본을 TTS 음성 합성에 최적화하는 전문가야.
 아래 JSON 대본을 받아서, TTS가 자연스럽고 명확하게 읽을 수 있도록 text 필드만 수정해.
 
@@ -1603,8 +2095,7 @@ export default function AdminDashboard() {
 ③ 내용·유머·핵심 메시지 100% 유지
 ④ 괄호 지시문 추가 절대 금지 — (웃음), (한숨), (행동묘사) 등 일절 넣지 마
 ⑤ 원본에 없는 새 내용 추가 금지
-⑥ ⚠️ 존댓말 어미 완전 제거 (최우선): ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 → 전부 반말로 교체
-   예) "맞아요" → "맞아" / "그렇죠" → "그렇지" / "재밌거든요" → "재밌거든" / "힘들잖아요" → "힘들잖아"
+${speechStyleRule}
 
 ━━━ text 수정 규칙 ━━━
 
@@ -1694,7 +2185,7 @@ ${JSON.stringify(script)}`;
         }
     };
 
-    const handleRunTts = async () => {
+    const handleRunTts = async (isYoutubePodcast = false, fileId = null, ytTitle = null) => {
         if (!generatedScript.length) return alert('먼저 대본을 생성하세요.');
 
         const geminiKeys = [
@@ -1732,10 +2223,11 @@ ${JSON.stringify(script)}`;
 
         // TTS 최적화 (Gemini Flash) — 문장 분리·숫자 한글화·불필요 표기 제거
         setIsTtsRunning(true);
-        setTtsLogs(['✏️ TTS 최적화 중 (Gemini Flash)...']);
+        setTtsLogs([`✏️ TTS 최적화 중 (Gemini Flash)${isYoutubePodcast ? ' — 존댓말 유지 모드' : ''}...`]);
         const ttsReadyScript = await optimizeScriptForTts(
             generatedScript,
-            (msg) => setTtsLogs(prev => [...prev, msg])
+            (msg) => setTtsLogs(prev => [...prev, msg]),
+            isYoutubePodcast
         );
 
         // 상황극 구간 감정 태그 삽입 + 화자 이름 정규화
@@ -1961,7 +2453,8 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${scriptForm.bookId || 'audio'}_tts.wav`;
+                const safeName = ytTitle ? ytTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) : null;
+                a.download = safeName ? `${safeName}_tts.wav` : fileId ? `youtube_${fileId}_tts.wav` : `${scriptForm.bookId || 'audio'}_tts.wav`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -4063,6 +4556,13 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
     const [podcastSourceType, setPodcastSourceType] = useState('book'); // 'book' | 'youtube'
     const [youtubeLogs, setYoutubeLogs] = useState([]);
     const [youtubeScriptGenerating, setYoutubeScriptGenerating] = useState(false);
+    const [ytScript, setYtScript] = useState([]); // 유튜브 팟캐스트 전용 대본
+    const [ytTimestamps, setYtTimestamps] = useState([]); // [{ start, end }] per turn
+    const [ytAaiKey, setYtAaiKey] = useState(import.meta.env.VITE_ASSEMBLYAI_API_KEY || '');
+    const [ytAaiLoading, setYtAaiLoading] = useState(false);
+    const [ytMp3File, setYtMp3File] = useState(null);
+    const [ytMp3Uploading, setYtMp3Uploading] = useState(false);
+    const [ytMp3Url, setYtMp3Url] = useState('');
 
     // 선택 도서의 대본 (bookScripts 또는 Firestore)
     const [firestoreScript, setFirestoreScript] = useState([]);
@@ -4514,14 +5014,14 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
         setYoutubeContent('');
         setYoutubeLogs(['[START] YouTube 영상 분석 시작...']);
 
-        const geminiKey = [
+        const geminiKeys = [
             import.meta.env.VITE_GEMINI_API_KEY,
             import.meta.env.VITE_GEMINI_API_KEY2,
             import.meta.env.VITE_GEMINI_API_KEY3,
-        ].filter(Boolean)[0];
+        ].filter(Boolean);
 
         try {
-            if (!geminiKey) throw new Error('Gemini API 키가 없습니다. 환경변수를 확인하세요.');
+            if (!geminiKeys.length) throw new Error('Gemini API 키가 없습니다. 환경변수를 확인하세요.');
             setYoutubeLogs(prev => [...prev, '[GEMINI] 영상 내용 분석 중... (최대 2~3분 소요)']);
 
             const analysisPrompt = `이 유튜브 영상을 분석해서 다음 형식으로 한국어로 상세하게 정리해주세요:
@@ -4547,29 +5047,42 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
 [인상적인 발언 & 명언]
 영상에서 가장 인상적인 발언이나 명언 3~5개 (원문 + 한국어)`;
 
-            const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${geminiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [
-                            { text: analysisPrompt },
-                            { fileData: { mimeType: 'video/*', fileUri: youtubeUrl.trim() } }
-                        ]}],
-                        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
-                    })
+            const ytModels = ['gemini-2.5-flash-preview-04-17', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            let res, lastErr;
+            outer: for (const key of geminiKeys) {
+                for (const model of ytModels) {
+                    res = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [
+                                    { text: analysisPrompt },
+                                    { fileData: { mimeType: 'video/*', fileUri: youtubeUrl.trim() } }
+                                ]}],
+                                generationConfig: {
+                                    temperature: 1,
+                                    maxOutputTokens: 16000,
+                                    thinkingConfig: { thinkingBudget: 8000 }
+                                }
+                            })
+                        }
+                    );
+                    if (res.ok) { setYoutubeLogs(prev => [...prev, `[KEY] 모델: ${model}`]); break outer; }
+                    const errData = await res.json();
+                    lastErr = errData.error?.message || `오류 (${res.status})`;
+                    setYoutubeLogs(prev => [...prev, `[RETRY] ${model}: ${lastErr}`]);
                 }
-            );
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`);
             }
 
+            if (!res.ok) throw new Error(lastErr || 'Gemini API 오류');
+
             const data = await res.json();
-            const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!content) throw new Error('응답 내용이 비어있습니다.');
+            // thinking 모드: parts 중 thought가 아닌 첫 번째 텍스트 파트를 추출
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const content = parts.find(p => !p.thought && p.text)?.text || parts[0]?.text;
+            if (!content) throw new Error('응답 내용이 비어있습니다. 응답: ' + JSON.stringify(data).slice(0, 300));
 
             // 제목 자동 추출
             const titleMatch = content.match(/\[제목\]\s*\n(.*?)(?:\n|$)/);
@@ -4766,6 +5279,166 @@ ${video.content}
         }
     };
 
+    // ── Gemini로 유튜브 팟캐스트 대본 생성 (상황극 없는 진짜 스튜디오 팟캐스트) ──
+    const handleGenerateYoutubeScriptGemini = async () => {
+        if (!selectedYoutubeId) return alert('YouTube 영상을 선택해주세요.');
+        const video = youtubeVideos.find(v => v.id === selectedYoutubeId);
+        if (!video) return alert('선택한 영상 정보를 찾을 수 없습니다.');
+
+        const geminiKey = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+        ].filter(Boolean)[0];
+        if (!geminiKey) return alert('Gemini API 키가 없습니다.');
+
+        setYoutubeScriptGenerating(true);
+        setLogs(['[YOUTUBE-GEMINI] 유튜브 팟캐스트 대본 생성 시작 (Gemini 2.5 Flash Thinking)...']);
+
+        const callGemini = async (prompt, temperature = 1, thinkingBudget = 8000) => {
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature,
+                            maxOutputTokens: 16000,
+                            thinkingConfig: { thinkingBudget }
+                        }
+                    })
+                }
+            );
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`);
+            }
+            const data = await res.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const text = parts.find(p => !p.thought && p.text)?.text || parts[0]?.text;
+            if (!text) throw new Error('Gemini 응답이 비어있습니다.');
+            return text;
+        };
+
+        try {
+            // 1단계: 진짜 스튜디오 팟캐스트 대본 생성
+            setLogs(prev => [...prev, '[GEMINI] 1단계: 스튜디오 팟캐스트 대본 생성 중...']);
+            const systemAndPrompt = `당신은 대한민국 최고의 오디오 팟캐스트 대본 작가입니다.
+두 진행자 제임스(남성)와 스텔라(여성)가 실제 녹음 스튜디오에서 진행하는 전문 팟캐스트입니다.
+
+[핵심 방향]
+- 상황극 없음. 처음부터 팟캐스트 스튜디오 오프닝으로 시작
+- 전문 방송 진행자 수준의 존댓말 사용 (시청자와 함께하는 공개 팟캐스트)
+- 딱딱하지 않고 따뜻하고 친근한 존댓말 톤 유지 (~해요, ~거든요, ~잖아요, ~죠 자연스럽게 허용)
+- 책 기반 팟캐스트와 달리, 유튜브/강연의 특성을 살려 "영상에서 본 것"을 논하는 형식
+- 두 진행자가 각자의 관점과 경험을 더해 대화 깊이를 만들어낼 것
+- 청취자에게 직접 말 걸기 허용 전 구간 ("여러분~", "청취자 분들~" 등)
+
+[절대 출력 형식]
+오직 아래 JSON 배열만 출력. 마크다운/코드블록 없이 순수 JSON만.
+[
+  {"speaker": "제임스", "text": "..."},
+  {"speaker": "스텔라", "text": "..."}
+]
+
+[대본 구조 - 반드시 준수]
+턴 1~4 (오프닝):
+  - 제임스가 첫 턴에서 반드시 "지식 인사이트 스튜디오"라는 팟캐스트 이름을 언급하며 오프닝 시작
+  - 예: "안녕하세요, 지식 인사이트 스튜디오입니다. 저는 제임스예요." 형식으로
+  - 두 진행자가 주제에 대한 첫인상과 기대감 나누기
+  - 팟캐스트 이름은 반드시 "지식 인사이트 스튜디오"로만 고정 (다른 이름 절대 사용 금지)
+
+턴 5~52 (본론):
+  - 제임스: 영상 내용과 핵심 인사이트를 단계적으로 설명 (2~4문장씩, 존댓말)
+  - 스텔라: 공감, 질문, 반박, 자신의 경험 연결 (처음 듣는 사람처럼 자연스럽게)
+  - 전문 용어는 쉽게 풀어서
+  - 실생활/직장 적용 사례 최소 3개 포함
+  - 핵심 인사이트는 청취자가 바로 적용 가능한 형태로 정리
+  - 간간이 청취자에게 말 걸기 ("여러분도 이런 경험 있으시죠?", "한번 생각해보세요." 등)
+
+턴 53~60 (클로징):
+  - 오늘 대화의 핵심 요약
+  - 청취자에게 한 가지 실천 과제 제안
+  - 따뜻한 마무리 인사 (다음 에피소드 예고 또는 구독 권유 자연스럽게)
+
+[말투 철칙]
+- 전 구간 친근한 존댓말 (~해요, ~거든요, ~잖아요, ~죠, ~네요 위주)
+- ⚠️ 딱딱한 격식체 절대 금지: ~십시오, ~하겠습니다, ~드립니다, ~바랍니다, ~하시기 바랍니다
+  예) "보내십시오" → "보내세요" / "감사합니다" → "감사해요" / "들으실 수 있습니다" → "들을 수 있어요"
+- 두 진행자끼리도 친근한 존댓말로 대화 (딱딱하지 않게, 방송 진행자지만 친구같은 톤)
+- 각 대사 2문장 이상, 최대 120자 이내
+- 이름 호칭은 자연스러운 범위에서 허용
+
+[화자 역할]
+- 제임스: 영상을 먼저 본 입장. 인사이트를 체계적으로 전달하는 역할
+- 스텔라: 처음 접하는 입장. 청취자를 대변하며 날카로운 질문과 공감 반응
+
+---
+아래 유튜브 영상 정보를 바탕으로 50~60턴 분량의 팟캐스트 대본을 작성하세요.
+
+[영상 정보]
+제목: ${video.title}
+채널: ${video.channel || ''}
+URL: ${video.url}
+
+[영상 내용 분석]
+${video.content}
+
+위 내용을 바탕으로 팟캐스트 대본을 JSON 배열로만 출력하세요.`;
+
+            const raw = await callGemini(systemAndPrompt, 1, 10000);
+
+            // 2단계: 맞춤법·품질 교정
+            setLogs(prev => [...prev, '[GEMINI] 2단계: 맞춤법 및 품질 교정 중...']);
+            const correctionPrompt = `아래 팟캐스트 대본 JSON 배열에서 다음 항목만 수정하세요:
+1. 반말 어미(~해, ~야, ~거든, ~잖아, ~지 등 비격식 종결어미) → 친근한 존댓말로 교체 (~해요, ~거든요, ~잖아요, ~죠, ~네요)
+2. 딱딱한 격식체 → 친근한 존댓말로 교체:
+   "~십시오" → "~세요" / "~하겠습니다" → "~할게요" / "~드립니다" → "~드려요" / "~바랍니다" → "~바라요" / "감사합니다" → "감사해요" / "~습니다" → "~어요/아요"
+3. 맞춤법·띄어쓰기 오류 수정
+4. "야 제임스", "스텔라야" 같은 반말 호칭 → 이름만 또는 자연스러운 호칭으로 교체
+5. 내용, 구조, 분량은 절대 변경하지 말 것
+6. 오직 유효한 JSON 배열만 출력 (마크다운 없이)
+
+${raw}`;
+            const corrected = await callGemini(correctionPrompt, 0.2, 1024);
+
+            // JSON 파싱
+            let cleanJson = corrected.replace(/```(json)?/gi, '').trim();
+            const startIdx = cleanJson.indexOf('[');
+            const endIdx = cleanJson.lastIndexOf(']');
+            if (startIdx !== -1 && endIdx !== -1) cleanJson = cleanJson.slice(startIdx, endIdx + 1);
+
+            const finalScript = tryLooseParseJSON(cleanJson);
+            if (!Array.isArray(finalScript) || finalScript.length === 0) throw new Error('대본 파싱 실패: ' + cleanJson.slice(0, 200));
+
+            // Firestore 저장
+            const scriptId = `yt-${selectedYoutubeId}`;
+            await setDoc(doc(db, 'scripts', scriptId), {
+                script: finalScript,
+                sourceType: 'youtube',
+                youtubeId: selectedYoutubeId,
+                youtubeTitle: video.title,
+                generatedBy: 'gemini',
+                updatedAt: new Date().toISOString()
+            });
+
+            setGeneratedScript(finalScript);
+            setYtScript(finalScript);
+            setYtTimestamps([]);
+            setManualContent(JSON.stringify(finalScript, null, 2));
+            setInputMode('text');
+            setLogs(prev => [...prev, `[DONE] ✅ Gemini 대본 ${finalScript.length}턴 생성 완료! Firestore(scripts/${scriptId}) 저장됨`]);
+            alert(`Gemini 대본 생성 완료! ${finalScript.length}턴\n이제 AI 팟캐스트 탭 → EXECUTE PRODUCTION으로 TTS를 생성하세요.`);
+        } catch (e) {
+            setLogs(prev => [...prev, `[ERROR] ${e.message}`]);
+            alert('대본 생성 실패: ' + e.message);
+        } finally {
+            setYoutubeScriptGenerating(false);
+        }
+    };
+
     const tabNames = {
         'members': '회원 관리',
         'books': '도서 관리',
@@ -4778,7 +5451,9 @@ ${video.content}
         'voice': 'YouTube 등록',
         'tts-verify': 'TTS 검증 🎙️',
         'sales': '매출 관리',
-        'payment': '결제 설정'
+        'payment': '결제 설정',
+        'design': '🎨 디자인',
+        'cf-prompt': '🎬 CF 프롬프트'
     };
 
     // If not authenticated, show password gate (must come before loading check)
@@ -5493,6 +6168,21 @@ ${video.content}
                                                                 defaultValue={book.cover || ''}
                                                                 className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-300 focus:border-gold outline-none font-mono shadow-inner min-w-0"
                                                             />
+                                                            <label className="px-4 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-2xl transition-colors text-xs shrink-0 flex items-center gap-1 cursor-pointer">
+                                                                <span className="material-symbols-outlined text-sm">upload</span>업로드
+                                                                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                                                    const file = e.target.files[0];
+                                                                    if (!file) return;
+                                                                    try {
+                                                                        const ext = file.name.split('.').pop();
+                                                                        const sRef = ref(storage, `book_covers/${bookKey}_${Date.now()}.${ext}`);
+                                                                        await uploadBytes(sRef, file);
+                                                                        const url = await getDownloadURL(sRef);
+                                                                        document.getElementById(`cover-${bookKey}`).value = url;
+                                                                        await handleUpdateCoverPath(bookKey, url);
+                                                                    } catch (err) { alert('업로드 실패: ' + err.message); }
+                                                                }} />
+                                                            </label>
                                                             <button onClick={() => {
                                                                 const val = document.getElementById(`cover-${bookKey}`).value;
                                                                 handleUpdateCoverPath(bookKey, val);
@@ -7211,7 +7901,23 @@ ${video.content}
                                             <p className="text-slate-700 text-xs">「성우 다이렉트」 탭에서 먼저 영상을 등록하세요.</p>
                                         </div>
                                     ) : (
-                                        <select value={selectedYoutubeId} onChange={e => setSelectedYoutubeId(e.target.value)} className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-red-400/60 outline-none transition-all font-bold appearance-none cursor-pointer">
+                                        <select value={selectedYoutubeId} onChange={async e => {
+                                                const id = e.target.value;
+                                                setSelectedYoutubeId(id);
+                                                setYtScript([]);
+                                                if (!id) return;
+                                                try {
+                                                    const snap = await getDoc(doc(db, 'scripts', `yt-${id}`));
+                                                    if (snap.exists()) {
+                                                        const lines = snap.data().script || snap.data().lines || [];
+                                                        if (lines.length > 0) {
+                                                            setYtScript(lines);
+                                                            setGeneratedScript(lines);
+                                                            setYoutubeLogs([`✅ 기존 대본 불러옴 (${lines.length}턴)`]);
+                                                        }
+                                                    }
+                                                } catch(e) { console.error(e); }
+                                            }} className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-red-400/60 outline-none transition-all font-bold appearance-none cursor-pointer">
                                             <option value="">영상을 선택하세요</option>
                                             {youtubeVideos.map(v => (<option key={v.id} value={v.id}>{v.title}</option>))}
                                         </select>
@@ -7227,49 +7933,185 @@ ${video.content}
                                     })()}
                                 </div>
 
-                                {/* STEP 2: 상황극 선택 */}
-                                <div className="bg-white/5 rounded-[32px] border border-white/10 p-8 space-y-4">
-                                    <h4 className="text-white font-black text-lg flex items-center gap-3">
-                                        <span className="size-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-black text-amber-400">2</span>
-                                        상황극 선택 <span className="text-slate-600 text-sm font-normal ml-1">(선택 사항)</span>
-                                    </h4>
-                                    <select
-                                        value={selectedSituation ? SCRIPT_SITUATIONS.indexOf(selectedSituation) : ''}
-                                        onChange={e => setSelectedSituation(e.target.value === '' ? null : SCRIPT_SITUATIONS[parseInt(e.target.value)])}
-                                        className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-sm text-white focus:border-amber-400/60 outline-none transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value="">랜덤 / 스튜디오 기본 설정</option>
-                                        {SCRIPT_SITUATIONS.map((s, i) => (<option key={i} value={i}>{s.scene}</option>))}
-                                    </select>
-                                </div>
-
-                                {/* STEP 3: 대본 생성 버튼 */}
+                                {/* STEP 2: 대본 생성 버튼 */}
                                 <button
-                                    onClick={handleGenerateYoutubeScript}
+                                    onClick={handleGenerateYoutubeScriptGemini}
                                     disabled={youtubeScriptGenerating || !selectedYoutubeId}
-                                    className={`w-full py-7 rounded-[32px] font-black text-xl flex items-center justify-center gap-5 transition-all ${youtubeScriptGenerating || !selectedYoutubeId ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-red-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(239,68,68,0.3)]'}`}
+                                    className={`w-full py-7 rounded-[32px] font-black text-xl flex items-center justify-center gap-5 transition-all ${youtubeScriptGenerating || !selectedYoutubeId ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(99,102,241,0.3)]'}`}
                                 >
-                                    {youtubeScriptGenerating ? (<><span className="material-symbols-outlined animate-spin text-3xl">sync</span>Claude 대본 생성 중...</>) : (<><span className="material-symbols-outlined text-3xl">auto_awesome</span>Claude 대본 생성 (3단계)</>)}
+                                    {youtubeScriptGenerating ? (<><span className="material-symbols-outlined animate-spin text-3xl">sync</span>Gemini 대본 생성 중...</>) : (<><span className="material-symbols-outlined text-3xl">radio</span>Gemini 스튜디오 대본 생성</>)}
                                 </button>
 
-                                {/* 생성된 대본 미리보기 */}
-                                {generatedScript.length > 0 && (
-                                    <div className="bg-black rounded-[32px] border border-white/10 overflow-hidden">
-                                        <div className="px-6 py-4 border-b border-white/10 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-emerald-400 text-base">check_circle</span>
-                                            <p className="text-white font-black text-sm">대본 생성 완료 ({generatedScript.length}턴)</p>
+                                {/* ── 카카오톡 스타일 대본 뷰어 + AssemblyAI 타임스탬프 ── */}
+                                {ytScript.length > 0 && (() => {
+                                    const fmtTime = (sec) => {
+                                        if (sec == null || isNaN(sec)) return '--:--';
+                                        const m = Math.floor(sec / 60);
+                                        const s = Math.floor(sec % 60);
+                                        const ms = Math.round((sec % 1) * 10);
+                                        return `${m}:${String(s).padStart(2,'0')}.${ms}`;
+                                    };
+                                    const handleYtAai = async () => {
+                                        if (!ytAaiKey.trim()) return alert('AssemblyAI API 키를 입력하세요.');
+                                        const videoId = youtubeVideos.find(v => v.id === selectedYoutubeId)?.id;
+                                        if (!videoId) return alert('유튜브 영상이 선택되지 않았습니다.');
+                                        // Firestore timestamps/yt-{id} 에서 오디오 URL 확인
+                                        const scriptId = `yt-${selectedYoutubeId}`;
+                                        setYtAaiLoading(true);
+                                        setLogs(prev => [...prev, '[AAI] AssemblyAI 타임스탬프 자동계산 시작...']);
+                                        try {
+                                            // timestamps → scripts 순서로 오디오 URL 확인
+                                            const { getDoc: fsGetDoc, doc: fsDoc2 } = await import('firebase/firestore');
+                                            const tsSnap = await fsGetDoc(fsDoc2(db, 'timestamps', scriptId));
+                                            const scSnap = await fsGetDoc(fsDoc2(db, 'scripts', scriptId));
+                                            const audioUrl =
+                                                (tsSnap.exists() && (tsSnap.data().audioUrl)) ||
+                                                (scSnap.exists() && (scSnap.data().audioUrl)) ||
+                                                null;
+                                            if (!audioUrl) throw new Error('오디오 URL 없음. 먼저 TTS를 생성하고 오디오를 업로드하세요.');
+                                            setLogs(prev => [...prev, `[AAI] AssemblyAI에 URL 직접 전달...`]);
+                                            const result = await transcribeWithAssemblyAIUrl(audioUrl, ytAaiKey.trim(), msg => setLogs(prev => [...prev, `[AAI] ${msg}`]));
+                                            const segs = generateTurnSegments(ytScript, result.words || []);
+                                            if (!segs) throw new Error('타임스탬프 계산 실패');
+                                            setYtTimestamps(segs);
+                                            // Firestore 저장
+                                            const { setDoc: fsSetDoc, doc: fsDoc3, serverTimestamp: fsST } = await import('firebase/firestore');
+                                            await fsSetDoc(fsDoc3(db, 'timestamps', scriptId), {
+                                                segments: segs,
+                                                lines: ytScript,
+                                                source: 'assemblyai',
+                                                updatedAt: fsST()
+                                            });
+                                            setLogs(prev => [...prev, `[AAI] ✅ 타임스탬프 ${segs.length}턴 저장 완료 (timestamps/${scriptId})`]);
+                                        } catch(e) {
+                                            setLogs(prev => [...prev, `[AAI] ❌ ${e.message}`]);
+                                            alert('AssemblyAI 오류: ' + e.message);
+                                        } finally {
+                                            setYtAaiLoading(false);
+                                        }
+                                    };
+                                    return (
+                                    <div className="bg-[#0d0f14] rounded-[32px] border border-white/10 overflow-hidden">
+                                        {/* 헤더 */}
+                                        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-emerald-400 text-base">check_circle</span>
+                                                <p className="text-white font-black text-sm">대본 미리보기 ({ytScript.length}턴)</p>
+                                                {ytTimestamps.length > 0 && <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full font-black">타임스탬프 ✅</span>}
+                                            </div>
+                                            <span className="text-[10px] text-slate-600 font-mono">{ytScript.reduce((s,t)=>s+(t?.text?.replace(/\s/g,'').length||0),0).toLocaleString()}자</span>
                                         </div>
-                                        <div className="p-5 space-y-2 max-h-56 overflow-y-auto scrollbar-hide">
-                                            {generatedScript.slice(0, 8).map((line, i) => (
-                                                <div key={i} className={`flex gap-2 ${line.speaker === '스텔라' ? 'flex-row-reverse' : ''}`}>
-                                                    <div className={`shrink-0 size-5 rounded-full flex items-center justify-center text-[8px] font-black ${line.speaker === '제임스' ? 'bg-gold/20 text-gold' : 'bg-violet-500/20 text-violet-400'}`}>{line.speaker === '제임스' ? 'J' : 'S'}</div>
-                                                    <p className="text-xs text-slate-400 leading-relaxed max-w-[85%]">{line.text}</p>
+
+                                        {/* 카카오톡 버블 뷰어 */}
+                                        <div className="p-4 space-y-3 max-h-[520px] overflow-y-auto scrollbar-hide bg-[#0a0c12]">
+                                            {ytScript.map((line, i) => {
+                                                const isJames = line.speaker === '제임스';
+                                                const ts = ytTimestamps[i];
+                                                return (
+                                                <div key={i} className={`flex gap-2.5 items-end ${isJames ? '' : 'flex-row-reverse'}`}>
+                                                    {/* 아바타 */}
+                                                    <div className={`shrink-0 size-8 rounded-2xl flex items-center justify-center text-xs font-black shadow-lg ${isJames ? 'bg-blue-600/30 text-blue-300 border border-blue-500/30' : 'bg-purple-600/30 text-purple-300 border border-purple-500/30'}`}>
+                                                        {isJames ? 'J' : 'S'}
+                                                    </div>
+                                                    <div className={`flex flex-col gap-1 max-w-[78%] ${isJames ? 'items-start' : 'items-end'}`}>
+                                                        {/* 화자명 + 타임스탬프 */}
+                                                        <div className={`flex items-center gap-2 px-1 ${isJames ? '' : 'flex-row-reverse'}`}>
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${isJames ? 'text-blue-400' : 'text-purple-400'}`}>{line.speaker}</span>
+                                                            <span className="text-[9px] text-slate-700 font-mono">STEP {i+1}</span>
+                                                            {ts && <span className="text-[9px] text-violet-500 font-mono bg-violet-500/10 px-1.5 py-0.5 rounded-md">{fmtTime(ts.start)}</span>}
+                                                        </div>
+                                                        {/* 말풍선 */}
+                                                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed text-slate-200 shadow-lg ${isJames ? 'bg-[#1e2433] border border-blue-500/10 rounded-tl-none' : 'bg-[#231e33] border border-purple-500/10 rounded-tr-none'}`}>
+                                                            {line.text}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            ))}
-                                            {generatedScript.length > 8 && <p className="text-center text-slate-700 text-[10px] pt-2">+{generatedScript.length - 8}개 더...</p>}
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* ── STEP 1: MP3 업로드 → Firebase Storage ── */}
+                                        <div className="px-5 py-4 border-t border-white/5 bg-[#0a0c10] space-y-3">
+                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">① MP3 업로드 → 서버 등록</p>
+                                            <div className="flex gap-2 items-center">
+                                                <label className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-all text-xs font-bold ${ytMp3File ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-black/40 text-slate-500 hover:border-white/20'}`}>
+                                                    <span className="material-symbols-outlined text-sm">audio_file</span>
+                                                    {ytMp3File ? ytMp3File.name : 'MP3 파일 선택...'}
+                                                    <input type="file" accept=".mp3,audio/mpeg" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setYtMp3File(f); }} />
+                                                </label>
+                                                <button
+                                                    disabled={!ytMp3File || ytMp3Uploading || !selectedYoutubeId}
+                                                    onClick={async () => {
+                                                        if (!ytMp3File || !selectedYoutubeId) return;
+                                                        setYtMp3Uploading(true);
+                                                        setLogs(prev => [...prev, `[MP3] 업로드 시작: ${ytMp3File.name}`]);
+                                                        try {
+                                                            const fileName = `youtube_${selectedYoutubeId}.mp3`;
+                                                            const sRef = ref(storage, `audio/${fileName}`);
+                                                            await uploadBytes(sRef, ytMp3File, { contentType: 'audio/mpeg' });
+                                                            const url = await getDownloadURL(sRef);
+                                                            setYtMp3Url(url);
+                                                            // Firestore 저장
+                                                            const scriptId = `yt-${selectedYoutubeId}`;
+                                                            await setDoc(doc(db, 'timestamps', scriptId), { audioUrl: url, videoId: selectedYoutubeId, updatedAt: new Date() }, { merge: true });
+                                                            await setDoc(doc(db, 'scripts', scriptId), { audioUrl: url, updatedAt: new Date() }, { merge: true });
+                                                            setLogs(prev => [...prev, `[MP3] ✅ 업로드 완료! URL 저장됨`]);
+                                                            alert(`✅ 업로드 완료!\n${url}`);
+                                                        } catch(e) {
+                                                            setLogs(prev => [...prev, `[MP3] ❌ 오류: ${e.message}`]);
+                                                            alert('업로드 실패: ' + e.message);
+                                                        } finally {
+                                                            setYtMp3Uploading(false);
+                                                        }
+                                                    }}
+                                                    className={`px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap ${!ytMp3File || ytMp3Uploading || !selectedYoutubeId ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                                                >
+                                                    {ytMp3Uploading ? <><span className="material-symbols-outlined text-sm animate-spin">sync</span>업로드 중...</> : <><span className="material-symbols-outlined text-sm">cloud_upload</span>서버 등록</>}
+                                                </button>
+                                            </div>
+                                            {ytMp3Url && (
+                                                <p className="text-[10px] text-emerald-400 font-mono break-all bg-emerald-500/5 px-3 py-2 rounded-lg border border-emerald-500/20">✅ {ytMp3Url}</p>
+                                            )}
+                                        </div>
+
+                                        {/* ── STEP 2: AssemblyAI 타임스탬프 ── */}
+                                        <div className="px-5 py-4 border-t border-white/5 bg-[#0d0f14] space-y-3">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">② AssemblyAI 자동 타임스탬프</p>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={ytAaiKey}
+                                                    onChange={e => setYtAaiKey(e.target.value)}
+                                                    placeholder="AssemblyAI API Key..."
+                                                    className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white font-mono outline-none focus:border-violet-500/50 transition-all"
+                                                />
+                                                <button
+                                                    onClick={handleYtAai}
+                                                    disabled={ytAaiLoading || !ytAaiKey.trim()}
+                                                    className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${ytAaiLoading || !ytAaiKey.trim() ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-violet-600 hover:bg-violet-500 text-white'}`}
+                                                >
+                                                    {ytAaiLoading ? <><span className="material-symbols-outlined text-sm animate-spin">sync</span>계산 중...</> : <><span className="material-symbols-outlined text-sm">timer</span>자동계산</>}
+                                                </button>
+                                            </div>
+                                            {ytTimestamps.length > 0 && (
+                                                <div className="grid gap-1 max-h-36 overflow-y-auto scrollbar-hide">
+                                                    <div className="grid text-[9px] font-black text-slate-600 uppercase px-1 mb-1" style={{gridTemplateColumns:'2rem 2rem 1fr 5.5rem'}}>
+                                                        <span>#</span><span>화자</span><span>대사</span><span>시작</span>
+                                                    </div>
+                                                    {ytScript.map((line, i) => (
+                                                        <div key={i} className="grid items-center bg-black/30 rounded-lg px-2 py-1.5 gap-1" style={{gridTemplateColumns:'2rem 2rem 1fr 5.5rem'}}>
+                                                            <span className="text-[9px] text-slate-600 font-mono tabular-nums">{i+1}</span>
+                                                            <span className={`text-[9px] font-black px-1 py-0.5 rounded text-center ${line.speaker === '제임스' ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'}`}>{line.speaker === '제임스' ? 'J' : 'S'}</span>
+                                                            <span className="text-[10px] text-slate-400 truncate">{line.text?.slice(0,35)}{line.text?.length > 35 ? '...' : ''}</span>
+                                                            <span className="text-[9px] text-violet-400 font-mono">{fmtTime(ytTimestamps[i]?.start)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                )}
+                                    );
+                                })()}
 
                                 {/* 로그 터미널 */}
                                 <div className="bg-black rounded-[32px] border-4 border-white/5 overflow-hidden flex flex-col h-56 shadow-2xl">
@@ -7323,7 +8165,7 @@ ${video.content}
 
                                 {/* TTS 실행 버튼 */}
                                 <button
-                                    onClick={handleRunTts}
+                                    onClick={() => handleRunTts(true, selectedYoutubeId, youtubeVideos.find(v => v.id === selectedYoutubeId)?.title)}
                                     disabled={isTtsRunning || generatedScript.length === 0}
                                     className={`w-full py-7 rounded-[28px] font-black text-xl flex items-center justify-center gap-5 transition-all ${isTtsRunning || generatedScript.length === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gold text-primary hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(212,175,55,0.3)]'}`}
                                 >
@@ -7437,32 +8279,59 @@ ${video.content}
                                             <p className="text-slate-700 text-xs">왼쪽에서 YouTube URL을 입력하고 등록하세요</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4 max-h-[640px] overflow-y-auto scrollbar-hide pr-1">
-                                            {youtubeVideos.map(v => (
-                                                <div key={v.id} className="group bg-black/40 rounded-3xl border border-white/5 p-5 hover:border-red-500/20 transition-all space-y-3">
-                                                    <div className="flex items-start gap-4">
-                                                        <div className="size-10 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                                                            <span className="material-symbols-outlined text-red-400 text-lg">smart_display</span>
+                                        <div className="grid grid-cols-5 gap-3 max-h-[640px] overflow-y-auto scrollbar-hide pr-1">
+                                            {youtubeVideos.map(v => {
+                                                const thumb = v.url?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1];
+                                                const thumbUrl = thumb ? `https://img.youtube.com/vi/${thumb}/mqdefault.jpg` : null;
+                                                const catColors = { '자기계발': 'blue', '경제': 'emerald', '경영': 'amber', '인문': 'purple', '심리': 'pink' };
+                                                const col = catColors[v.category] || 'slate';
+                                                return (
+                                                <div key={v.id} className="group bg-black/40 rounded-2xl border border-white/5 overflow-hidden hover:border-red-500/20 transition-all flex flex-col">
+                                                    {/* 썸네일 */}
+                                                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                                                        {thumbUrl
+                                                            ? <img src={thumbUrl} alt={v.title} className="absolute inset-0 w-full h-full object-cover" />
+                                                            : <div className="absolute inset-0 bg-slate-900 flex items-center justify-center"><span className="material-symbols-outlined text-slate-700 text-3xl">smart_display</span></div>
+                                                        }
+                                                        {/* 공개/비공개 배지 */}
+                                                        <div className="absolute top-1.5 left-1.5">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const { updateDoc, doc: ud } = await import('firebase/firestore');
+                                                                    await updateDoc(ud(db, 'youtube_videos', v.id), { hidden: !v.hidden });
+                                                                }}
+                                                                className={`px-2 py-0.5 rounded-full text-[9px] font-black transition-all ${v.hidden ? 'bg-red-900/80 text-red-300 border border-red-500/40' : 'bg-emerald-900/80 text-emerald-300 border border-emerald-500/40'}`}
+                                                            >
+                                                                {v.hidden ? '비공개' : '공개'}
+                                                            </button>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-white font-black text-sm leading-tight mb-1">{v.title}</p>
-                                                            {v.channel && <p className="text-red-400/70 text-[10px] font-bold mb-1">{v.channel}</p>}
-                                                            <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-slate-700 text-[10px] hover:text-red-400 transition-colors truncate block">{v.url}</a>
-                                                        </div>
-                                                        <button onClick={() => handleDeleteYoutubeVideo(v.id)} className="shrink-0 size-8 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-600 hover:text-red-400 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                            <span className="material-symbols-outlined text-base">delete</span>
+                                                        {/* 삭제 */}
+                                                        <button onClick={() => handleDeleteYoutubeVideo(v.id)} className="absolute top-1.5 right-1.5 size-6 rounded-lg bg-black/70 text-slate-400 hover:text-red-400 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <span className="material-symbols-outlined text-sm">delete</span>
                                                         </button>
                                                     </div>
-                                                    {v.content && (
-                                                        <p className="text-slate-600 text-[10px] leading-relaxed line-clamp-2 pl-14">{v.content.slice(0, 150)}...</p>
-                                                    )}
-                                                    <div className="pl-14">
-                                                        <button onClick={() => { setSelectedYoutubeId(v.id); setActiveTab('podcast'); }} className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black hover:bg-red-500/20 transition-all">
-                                                            이 영상으로 팟캐스트 제작 →
+                                                    <div className="p-2.5 flex flex-col gap-2 flex-1">
+                                                        <p className="text-white font-black text-[11px] leading-tight line-clamp-2">{v.title}</p>
+                                                        {v.channel && <p className="text-red-400/70 text-[9px] font-bold">{v.channel}</p>}
+                                                        {/* 카테고리 선택 */}
+                                                        <select
+                                                            value={v.category || ''}
+                                                            onChange={async (e) => {
+                                                                const { updateDoc, doc: ud } = await import('firebase/firestore');
+                                                                await updateDoc(ud(db, 'youtube_videos', v.id), { category: e.target.value });
+                                                            }}
+                                                            className="w-full bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none"
+                                                        >
+                                                            <option value="">카테고리 선택</option>
+                                                            {['자기계발','경제','경영','인문','심리'].map(c => <option key={c} value={c}>{c}</option>)}
+                                                        </select>
+                                                        <button onClick={() => { setSelectedYoutubeId(v.id); setActiveTab('podcast'); }} className="mt-auto px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black hover:bg-red-500/20 transition-all w-full">
+                                                            팟캐스트 제작 →
                                                         </button>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -8811,27 +9680,514 @@ ${video.content}
                     )}
 
                     {activeTab === 'payment' && (
-                        <div className="flex flex-col items-center justify-center py-32 space-y-12">
+                        <div className="flex flex-col items-center py-16 space-y-12 max-w-5xl mx-auto w-full">
                             <h3 className="text-white font-black text-6xl italic tracking-tighter uppercase leading-none text-center">Financial<br />Core System</h3>
-                            <div className="bg-white/5 rounded-[80px] border border-white/10 p-24 w-full max-w-4xl text-center space-y-12 backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-gold to-transparent opacity-30"></div>
-                                <div className="size-32 bg-gold/10 rounded-full flex items-center justify-center mx-auto border-2 border-gold/20 shadow-2xl">
-                                    <span className="material-symbols-outlined text-7xl text-gold">account_balance_wallet</span>
+
+                            {/* ── 퀴즈 결과 결제 설정 ────────────────────────────────── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-10 w-full backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-40"></div>
+
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                                        <span className="material-symbols-outlined text-4xl text-emerald-400">quiz</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-2xl tracking-tight">퀴즈 결과 페이지 결제 설정</h4>
+                                        <p className="text-slate-500 text-sm">/result 페이지의 프리미엄 잠금 해제 방식을 설정합니다</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-6">
-                                    <h4 className="text-white font-black text-4xl tracking-tight">TOSS PAYMENTS SETTINGS</h4>
-                                    <p className="text-slate-500 text-lg font-light leading-relaxed max-w-2xl mx-auto">
-                                        시스템의 결제 게이트웨이 설정을 관리합니다. 현재 **샌드박스(테스트)** 환경이 활성화되어 있으며, 실결제 전환 시 인증키 교체가 필요합니다.
-                                    </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* 무료/유료 토글 */}
+                                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">결과 열람 모드</label>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setQuizPricingMode('free')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${quizPricingMode === 'free'
+                                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock_open</span>
+                                                무료 공개
+                                            </button>
+                                            <button
+                                                onClick={() => setQuizPricingMode('paid')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${quizPricingMode === 'paid'
+                                                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock</span>
+                                                유료 결제
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-3 text-center">
+                                            {quizPricingMode === 'free'
+                                                ? '✅ 모든 사용자가 결과를 무료로 열람할 수 있습니다'
+                                                : '🔒 결제를 완료해야 결과를 열람할 수 있습니다'}
+                                        </p>
+                                    </div>
+
+                                    {/* 가격 설정 */}
+                                    <div className={`bg-white/5 rounded-2xl p-6 border border-white/10 transition-opacity ${quizPricingMode === 'free' ? 'opacity-40 pointer-events-none' : ''}`}>
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">결제 금액 설정</label>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="text-white text-2xl font-black">₩</span>
+                                            <input
+                                                type="number"
+                                                value={quizPrice}
+                                                onChange={(e) => setQuizPrice(Number(e.target.value))}
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-2xl font-black text-center focus:outline-none focus:ring-2 focus:ring-gold/50"
+                                                min={0}
+                                                step={100}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {[0, 1900, 3900, 4900, 9900].map(p => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setQuizPrice(p)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${quizPrice === p ? 'bg-gold text-black' : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'}`}
+                                                >
+                                                    {p === 0 ? '무료' : `₩${p.toLocaleString()}`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2 block">정가 (취소선 표시용)</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-500 text-lg font-bold">₩</span>
+                                                <input
+                                                    type="number"
+                                                    value={quizOriginalPrice}
+                                                    onChange={(e) => setQuizOriginalPrice(Number(e.target.value))}
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-gold/50"
+                                                    min={0}
+                                                    step={1000}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex gap-6 justify-center">
+
+                                {/* 현재 적용 상태 미리보기 */}
+                                <div className="mt-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-2xl p-6 border border-white/5">
+                                    <h5 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">현재 적용 중인 설정 미리보기</h5>
+                                    <div className="flex items-center gap-6">
+                                        <div className={`px-5 py-2 rounded-full text-sm font-black ${quizPricingMode === 'free' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                            {quizPricingMode === 'free' ? '🟢 무료 모드' : '🔴 유료 모드'}
+                                        </div>
+                                        {quizPricingMode === 'paid' && (
+                                            <div className="text-white">
+                                                <span className="text-slate-500 line-through text-sm mr-2">₩{quizOriginalPrice.toLocaleString()}</span>
+                                                <span className="text-2xl font-black text-gold">₩{quizPrice.toLocaleString()}</span>
+                                                {quizOriginalPrice > 0 && quizPrice < quizOriginalPrice && (
+                                                    <span className="ml-2 text-xs font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
+                                                        {Math.round((1 - quizPrice / quizOriginalPrice) * 100)}% OFF
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {quizPricingMode === 'free' && (
+                                            <span className="text-emerald-400 text-lg font-bold">잠금 해제 CTA 없이 전체 결과 공개</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 저장 버튼 */}
+                                <div className="mt-8 flex justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await setDoc(doc(db, 'siteConfig', 'quizResult'), {
+                                                    mode: quizPricingMode,
+                                                    price: quizPrice,
+                                                    originalPrice: quizOriginalPrice,
+                                                    updatedAt: serverTimestamp()
+                                                });
+                                                alert('✅ 퀴즈 결과 결제 설정이 저장되었습니다.');
+                                            } catch (err) {
+                                                alert('❌ 저장 실패: ' + err.message);
+                                            }
+                                        }}
+                                        className="px-10 py-4 bg-gold text-black font-black text-lg rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all tracking-wide flex items-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined">save</span>
+                                        설정 저장 및 즉시 적용
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ── 회원가입 7일 이후 콘텐츠 결제 설정 ────────────────────── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-10 w-full backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40"></div>
+
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-16 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
+                                        <span className="material-symbols-outlined text-4xl text-blue-400">schedule</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-2xl tracking-tight">회원가입 7일 이후 콘텐츠 결제 설정</h4>
+                                        <p className="text-slate-500 text-sm">7일 무료 체험 종료 후 콘텐츠 열람 유료/무료를 설정합니다</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* 무료/유료 토글 */}
+                                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">7일 이후 콘텐츠 모드</label>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setTrialPricingMode('free')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${trialPricingMode === 'free'
+                                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock_open</span>
+                                                무료 공개
+                                            </button>
+                                            <button
+                                                onClick={() => setTrialPricingMode('paid')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${trialPricingMode === 'paid'
+                                                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock</span>
+                                                유료 결제
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-3 text-center">
+                                            {trialPricingMode === 'free'
+                                                ? '✅ 7일 이후에도 모든 콘텐츠 무료 열람 가능'
+                                                : '🔒 7일 무료 체험 후 구독 결제가 필요합니다'}
+                                        </p>
+                                    </div>
+
+                                    {/* 가격 설정 */}
+                                    <div className={`bg-white/5 rounded-2xl p-6 border border-white/10 transition-opacity ${trialPricingMode === 'free' ? 'opacity-40 pointer-events-none' : ''}`}>
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">구독 금액 설정</label>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="text-white text-2xl font-black">₩</span>
+                                            <input
+                                                type="number"
+                                                value={trialPrice}
+                                                onChange={(e) => setTrialPrice(Number(e.target.value))}
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-2xl font-black text-center focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                                                min={0}
+                                                step={100}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {[0, 1900, 3900, 4900, 9900].map(p => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setTrialPrice(p)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${trialPrice === p ? 'bg-blue-400 text-black' : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'}`}
+                                                >
+                                                    {p === 0 ? '무료' : `₩${p.toLocaleString()}`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2 block">정가 (취소선 표시용)</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-500 text-lg font-bold">₩</span>
+                                                <input
+                                                    type="number"
+                                                    value={trialOriginalPrice}
+                                                    onChange={(e) => setTrialOriginalPrice(Number(e.target.value))}
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                                                    min={0}
+                                                    step={1000}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 미리보기 */}
+                                <div className="mt-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-2xl p-6 border border-white/5">
+                                    <h5 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">현재 적용 중인 설정 미리보기</h5>
+                                    <div className="flex items-center gap-6">
+                                        <div className={`px-5 py-2 rounded-full text-sm font-black ${trialPricingMode === 'free' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                            {trialPricingMode === 'free' ? '🟢 무료 모드' : '🔴 유료 모드'}
+                                        </div>
+                                        {trialPricingMode === 'paid' && (
+                                            <div className="text-white">
+                                                <span className="text-slate-500 line-through text-sm mr-2">₩{trialOriginalPrice.toLocaleString()}</span>
+                                                <span className="text-2xl font-black text-blue-400">₩{trialPrice.toLocaleString()}</span>
+                                                {trialOriginalPrice > 0 && trialPrice < trialOriginalPrice && (
+                                                    <span className="ml-2 text-xs font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
+                                                        {Math.round((1 - trialPrice / trialOriginalPrice) * 100)}% OFF
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {trialPricingMode === 'free' && (
+                                            <span className="text-emerald-400 text-lg font-bold">7일 이후에도 전체 콘텐츠 무료 공개</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 저장 버튼 */}
+                                <div className="mt-8 flex justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await setDoc(doc(db, 'siteConfig', 'trialAccess'), {
+                                                    mode: trialPricingMode,
+                                                    price: trialPrice,
+                                                    originalPrice: trialOriginalPrice,
+                                                    updatedAt: serverTimestamp()
+                                                });
+                                                alert('✅ 7일 이후 콘텐츠 결제 설정이 저장되었습니다.');
+                                            } catch (err) {
+                                                alert('❌ 저장 실패: ' + err.message);
+                                            }
+                                        }}
+                                        className="px-10 py-4 bg-blue-500 text-white font-black text-lg rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all tracking-wide flex items-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined">save</span>
+                                        설정 저장 및 즉시 적용
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ── 팟캐스트 시청 결제 설정 ────────────────────────────── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-10 w-full backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent opacity-40"></div>
+
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-16 bg-purple-500/10 rounded-2xl flex items-center justify-center border border-purple-500/20">
+                                        <span className="material-symbols-outlined text-4xl text-purple-400">podcasts</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-2xl tracking-tight">팟캐스트 시청 결제 설정</h4>
+                                        <p className="text-slate-500 text-sm">팟캐스트/오디오 콘텐츠의 유료/무료 열람을 설정합니다</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* 무료/유료 토글 */}
+                                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">팟캐스트 시청 모드</label>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setPodcastPricingMode('free')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${podcastPricingMode === 'free'
+                                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock_open</span>
+                                                무료 공개
+                                            </button>
+                                            <button
+                                                onClick={() => setPodcastPricingMode('paid')}
+                                                className={`flex-1 py-4 rounded-xl font-black text-lg transition-all ${podcastPricingMode === 'paid'
+                                                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105'
+                                                    : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-2xl block mb-1">lock</span>
+                                                유료 결제
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-3 text-center">
+                                            {podcastPricingMode === 'free'
+                                                ? '✅ 누구나 팟캐스트를 무료로 시청할 수 있습니다'
+                                                : '🔒 7일 이후 팟캐스트 시청 시 결제가 필요합니다'}
+                                        </p>
+                                    </div>
+
+                                    {/* 가격 설정 */}
+                                    <div className={`bg-white/5 rounded-2xl p-6 border border-white/10 transition-opacity ${podcastPricingMode === 'free' ? 'opacity-40 pointer-events-none' : ''}`}>
+                                        <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 block">팟캐스트 구독 금액</label>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="text-white text-2xl font-black">₩</span>
+                                            <input
+                                                type="number"
+                                                value={podcastPrice}
+                                                onChange={(e) => setPodcastPrice(Number(e.target.value))}
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-2xl font-black text-center focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+                                                min={0}
+                                                step={100}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {[0, 1900, 3900, 4900, 9900].map(p => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setPodcastPrice(p)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${podcastPrice === p ? 'bg-purple-400 text-black' : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'}`}
+                                                >
+                                                    {p === 0 ? '무료' : `₩${p.toLocaleString()}`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2 block">정가 (취소선 표시용)</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-500 text-lg font-bold">₩</span>
+                                                <input
+                                                    type="number"
+                                                    value={podcastOriginalPrice}
+                                                    onChange={(e) => setPodcastOriginalPrice(Number(e.target.value))}
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+                                                    min={0}
+                                                    step={1000}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 미리보기 */}
+                                <div className="mt-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-2xl p-6 border border-white/5">
+                                    <h5 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">현재 적용 중인 설정 미리보기</h5>
+                                    <div className="flex items-center gap-6">
+                                        <div className={`px-5 py-2 rounded-full text-sm font-black ${podcastPricingMode === 'free' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                            {podcastPricingMode === 'free' ? '🟢 무료 모드' : '🔴 유료 모드'}
+                                        </div>
+                                        {podcastPricingMode === 'paid' && (
+                                            <div className="text-white">
+                                                <span className="text-slate-500 line-through text-sm mr-2">₩{podcastOriginalPrice.toLocaleString()}</span>
+                                                <span className="text-2xl font-black text-purple-400">₩{podcastPrice.toLocaleString()}</span>
+                                                {podcastOriginalPrice > 0 && podcastPrice < podcastOriginalPrice && (
+                                                    <span className="ml-2 text-xs font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
+                                                        {Math.round((1 - podcastPrice / podcastOriginalPrice) * 100)}% OFF
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {podcastPricingMode === 'free' && (
+                                            <span className="text-emerald-400 text-lg font-bold">모든 팟캐스트 무료 시청 가능</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 저장 버튼 */}
+                                <div className="mt-8 flex justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await setDoc(doc(db, 'siteConfig', 'podcastAccess'), {
+                                                    mode: podcastPricingMode,
+                                                    price: podcastPrice,
+                                                    originalPrice: podcastOriginalPrice,
+                                                    updatedAt: serverTimestamp()
+                                                });
+                                                alert('✅ 팟캐스트 시청 결제 설정이 저장되었습니다.');
+                                            } catch (err) {
+                                                alert('❌ 저장 실패: ' + err.message);
+                                            }
+                                        }}
+                                        className="px-10 py-4 bg-purple-500 text-white font-black text-lg rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all tracking-wide flex items-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined">save</span>
+                                        설정 저장 및 즉시 적용
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ── 리뷰디테일/팟캐스트 접근 설정 ──────────────────────── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-10 w-full backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-40"></div>
+
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                                        <span className="material-symbols-outlined text-4xl text-emerald-400">lock_open</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-2xl tracking-tight">리뷰디테일 / 팟캐스트 접근 설정</h4>
+                                        <p className="text-slate-500 text-sm">도서 리뷰 및 팟캐스트 콘텐츠의 접근 권한을 설정합니다</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 mb-8">
+                                    {[
+                                        { mode: 'public', label: '비회원 시청', desc: '누구나 시청 가능', icon: 'public' },
+                                        { mode: 'all', label: '전체 무료회원 시청', desc: '로그인 회원 전체', icon: 'group' },
+                                        { mode: 'trial7', label: '7일 무료회원 시청', desc: '가입 후 7일 이내', icon: 'schedule' },
+                                        { mode: 'paid', label: '유료회원 시청', desc: '프리미엄 구독 필요', icon: 'workspace_premium' },
+                                    ].map(({ mode, label, desc, icon }) => (
+                                        <button
+                                            key={mode}
+                                            onClick={() => setReviewAccessMode(mode)}
+                                            className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${reviewAccessMode === mode ? 'border-emerald-400 bg-emerald-500/10 text-white' : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                            <span className={`material-symbols-outlined text-3xl ${reviewAccessMode === mode ? 'text-emerald-400' : 'text-slate-500'}`}>{icon}</span>
+                                            <span className="font-black text-sm text-center leading-tight">{label}</span>
+                                            <span className="text-xs text-slate-500 text-center">{desc}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* 현재 설정 미리보기 */}
+                                <div className="mb-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-2xl p-6 border border-white/5">
+                                    <h5 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">현재 적용 중인 설정</h5>
+                                    <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-black ${
+                                        reviewAccessMode === 'public' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' :
+                                        reviewAccessMode === 'all' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                        reviewAccessMode === 'trial7' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                        'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                    }`}>
+                                        <span className="material-symbols-outlined text-base">
+                                            {reviewAccessMode === 'public' ? 'public' : reviewAccessMode === 'all' ? 'group' : reviewAccessMode === 'trial7' ? 'schedule' : 'workspace_premium'}
+                                        </span>
+                                        {reviewAccessMode === 'public' && '🌐 비회원 포함 누구나 시청 가능'}
+                                        {reviewAccessMode === 'all' && '🟢 로그인한 모든 회원 시청 가능'}
+                                        {reviewAccessMode === 'trial7' && '🟡 가입 후 7일 이내 무료회원 시청 가능'}
+                                        {reviewAccessMode === 'paid' && '🔴 유료 구독회원만 시청 가능'}
+                                    </div>
+                                </div>
+
+                                {/* 저장 버튼 */}
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await setDoc(doc(db, 'siteConfig', 'reviewAccess'), {
+                                                    mode: reviewAccessMode,
+                                                    updatedAt: serverTimestamp()
+                                                });
+                                                alert('✅ 접근 설정이 저장되었습니다.');
+                                            } catch (err) {
+                                                alert('❌ 저장 실패: ' + err.message);
+                                            }
+                                        }}
+                                        className="px-10 py-4 bg-emerald-500 text-white font-black text-lg rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all tracking-wide flex items-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined">save</span>
+                                        설정 저장 및 즉시 적용
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ── Toss Payments 게이트웨이 설정 ──────────────────────── */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-10 w-full backdrop-blur-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold to-transparent opacity-30"></div>
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-16 bg-gold/10 rounded-2xl flex items-center justify-center border border-gold/20">
+                                        <span className="material-symbols-outlined text-4xl text-gold">account_balance_wallet</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-2xl tracking-tight">TOSS PAYMENTS SETTINGS</h4>
+                                        <p className="text-slate-500 text-sm">시스템의 결제 게이트웨이 설정을 관리합니다. 현재 샌드박스(테스트) 환경</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 justify-center">
                                     <button
                                         onClick={handlePayment}
-                                        className="px-16 py-8 bg-blue-600 text-white font-black text-xl rounded-[32px] shadow-2xl hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
+                                        className="px-10 py-5 bg-blue-600 text-white font-black text-base rounded-2xl shadow-2xl hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
                                     >
                                         Execute Gateway Test
                                     </button>
-                                    <button className="px-16 py-8 bg-white/5 border-2 border-white/10 text-white font-black text-xl rounded-[32px] hover:bg-white/10 transition-all uppercase tracking-widest">
+                                    <button className="px-10 py-5 bg-white/5 border-2 border-white/10 text-white font-black text-base rounded-2xl hover:bg-white/10 transition-all uppercase tracking-widest">
                                         View Live API Keys
                                     </button>
                                 </div>
@@ -9358,6 +10714,281 @@ ${video.content}
                             })()}
                         </div>
                     )}
+
+                    {/* ── 🎨 디자인 탭 (NEW) ─────────────────────────────────────── */}
+                    {activeTab === 'design' && (() => {
+                        /* ── 공통 헬퍼 ── */
+                        const uploadMedia = async (storageKey, file, onDone) => {
+                            if (!file) return;
+                            setDesignUploading(prev => ({ ...prev, [storageKey]: true }));
+                            try {
+                                const ext = file.name.split('.').pop();
+                                const ts = Date.now();
+                                const sRef = ref(storage, `site_design/${storageKey}_${ts}.${ext}`);
+                                await uploadBytes(sRef, file);
+                                const url = await getDownloadURL(sRef);
+                                onDone(url);
+                            } catch (e) { alert('업로드 실패: ' + e.message); }
+                            setDesignUploading(prev => ({ ...prev, [storageKey]: false }));
+                        };
+
+                        const saveSection = async (fields, label) => {
+                            setDesignSaving(true);
+                            try {
+                                const { setDoc: _setDoc, doc: _doc } = await import('firebase/firestore');
+                                await _setDoc(_doc(db, 'site_design', 'main'), fields, { merge: true });
+                                alert(`✅ ${label} 저장 완료! 사이트에 즉시 반영됩니다.`);
+                            } catch (e) { alert('❌ 저장 실패: ' + e.message); }
+                            setDesignSaving(false);
+                        };
+
+                        /* ── 히어로 섹션 컴포넌트 ── */
+                        const HeroSection = ({ title, icon, fieldKey, hint, mediaHint }) => {
+                            const hero = designSettings[fieldKey] || { type: 'video', src: '' };
+                            const isVideo = hero.type !== 'image';
+                            const storageKey = `hero/${fieldKey}`;
+                            return (
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-white font-black text-base flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500">{icon}</span>
+                                            {title} 히어로
+                                        </h3>
+                                        <button
+                                            onClick={() => saveSection({ [fieldKey]: designSettings[fieldKey] }, title + ' 히어로')}
+                                            disabled={designSaving}
+                                            className="px-4 py-2 bg-orange-500 text-white font-black text-xs rounded-xl hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">save</span>저장
+                                        </button>
+                                    </div>
+                                    {hint && <p className="text-slate-500 text-xs">{hint}</p>}
+
+                                    {/* 타입 토글 */}
+                                    <div className="flex gap-2">
+                                        {['video', 'image'].map(t => (
+                                            <button key={t} onClick={() => setDesignSettings(prev => { const cur = prev[fieldKey]; if (cur?.type === t) return prev; return { ...prev, [fieldKey]: { type: t, src: '' } }; })}
+                                                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${hero.type === t ? 'bg-orange-500 text-white' : 'bg-white/10 text-slate-400 hover:bg-white/20'}`}>
+                                                {t === 'video' ? '🎬 동영상' : '🖼️ 이미지'}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* 미리보기 */}
+                                    <div className="w-full aspect-video rounded-xl overflow-hidden bg-slate-800 border border-white/10 relative">
+                                        {hero.src
+                                            ? (isVideo
+                                                ? <video src={hero.src} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                                                : <img src={hero.src} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />)
+                                            : null}
+                                        {!hero.src && <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-600"><span className="material-symbols-outlined text-4xl">image</span><p className="text-xs font-bold">URL 입력 또는 파일 업로드</p></div>}
+                                    </div>
+
+                                    {/* URL 입력 */}
+                                    <div className="flex gap-2 items-center">
+                                        <input type="text" value={hero.src}
+                                            onChange={e => setDesignSettings(prev => ({ ...prev, [fieldKey]: { ...prev[fieldKey], src: e.target.value } }))}
+                                            className="flex-1 bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-mono"
+                                            placeholder={isVideo ? '/video/Figure_walking9.mp4' : '/images/photo.jpg'} />
+                                        <label className="px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1 shrink-0">
+                                            <span className="material-symbols-outlined text-sm">upload</span>업로드
+                                            <input type="file" accept={isVideo ? 'video/*' : 'image/*'} className="hidden"
+                                                onChange={e => uploadMedia(storageKey, e.target.files[0], url => setDesignSettings(prev => ({ ...prev, [fieldKey]: { type: hero.type, src: url } })))} />
+                                        </label>
+                                    </div>
+                                    {mediaHint && <p className="text-slate-600 text-[10px]">{mediaHint}</p>}
+                                    {designUploading[storageKey] && <p className="text-orange-400 text-xs animate-pulse">업로드 중...</p>}
+                                </div>
+                            );
+                        };
+
+                        /* ── 이미지 그리드 컴포넌트 ── */
+                        const ImageGrid = ({ title, icon, sectionKey, items, sizeHint, cols = 4 }) => {
+                            const uploadKey = (i) => `${sectionKey}/${i}`;
+                            const isFirebaseUrl = (url) => url && (url.startsWith('https://firebasestorage') || url.startsWith('https://storage.googleapis'));
+                            const localCount = items.filter(it => !isFirebaseUrl(it.img)).length;
+                            return (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-white font-black text-base flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500">{icon}</span>
+                                            {title}
+                                        </h3>
+                                        <p className="text-slate-500 text-[11px] mt-0.5">권장 사이즈: <span className="text-orange-400 font-bold">{sizeHint}</span> · 이미지를 클릭하면 교체됩니다</p>
+                                        {localCount > 0 && (
+                                            <p className="text-red-400 text-[11px] font-bold mt-1">
+                                                ⚠️ {localCount}개 이미지가 아직 로컬 경로입니다 — 클릭해서 업로드하세요
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={`grid grid-cols-2 md:grid-cols-${cols} gap-3`}>
+                                    {items.map((item, i) => {
+                                        const isSaved = isFirebaseUrl(item.img);
+                                        const uploading = designUploading[uploadKey(i)];
+                                        return (
+                                            <div key={item.id || i} className="group cursor-pointer" onClick={() => {
+                                                const inp = document.createElement('input');
+                                                inp.type = 'file'; inp.accept = 'image/*';
+                                                inp.onchange = e => uploadMedia(uploadKey(i), e.target.files[0], async url => {
+                                                    try {
+                                                        // Firestore 최신 데이터 읽기 → 해당 인덱스만 업데이트 (다른 이미지 덮어쓰기 방지)
+                                                        const snap = await getDoc(doc(db, 'site_design', 'main'));
+                                                        const base = snap.exists() ? (snap.data()[sectionKey] || items) : items;
+                                                        const toSave = base.map((it, idx) => idx === i ? { ...it, img: url } : it);
+                                                        await setDoc(doc(db, 'site_design', 'main'), { [sectionKey]: toSave }, { merge: true });
+                                                        // 상태도 동기화
+                                                        setDesignSettings(prev => ({ ...prev, [sectionKey]: toSave }));
+                                                        alert(`✅ ${i+1}번 이미지 저장 완료! 메인에 즉시 반영됩니다.`);
+                                                    } catch(e) { alert('❌ 저장 실패: ' + e.message); }
+                                                });
+                                                inp.click();
+                                            }}>
+                                                <div className={`relative aspect-video rounded-xl overflow-hidden bg-slate-800 border-2 transition-all group-hover:border-orange-500/60 ${isSaved ? 'border-green-500/50' : 'border-red-500/50'}`}>
+                                                    <img src={item.img} alt={item.label || item.sub} className="w-full h-full object-cover" onError={e => { e.target.style.opacity='0.2'; }} />
+                                                    {/* 저장 상태 뱃지 */}
+                                                    <div className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-black ${isSaved ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                                                        {isSaved ? '✓ Firebase' : '⚠ 로컬'}
+                                                    </div>
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-white text-2xl">upload</span>
+                                                    </div>
+                                                    {uploading && <div className="absolute inset-0 bg-black/70 flex items-center justify-center"><div className="w-5 h-5 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"/></div>}
+                                                </div>
+                                                <p className="text-slate-400 text-[10px] font-bold mt-1 text-center truncate">{item.label || item.sub || `#${i+1}`}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            );
+                        };
+
+                        /* ── 카테고리 히어로 그리드 ── */
+                        const categoryHeroIds = ['SELF_DEV','ECONOMY','MANAGEMENT','HUMANITIES','PSYCHOLOGY','BURNOUT','WEALTH','HEALING','PHILOSOPHY'];
+                        const catLabels = { SELF_DEV:'자기계발', ECONOMY:'경제', MANAGEMENT:'경영', HUMANITIES:'인문', PSYCHOLOGY:'심리', BURNOUT:'번아웃', WEALTH:'재테크', HEALING:'치유', PHILOSOPHY:'철학' };
+
+                        const saveCategoryHero = async (catId) => {
+                            setDesignSaving(true);
+                            try {
+                                const { setDoc: _sd, doc: _d, getDoc: _gd } = await import('firebase/firestore');
+                                const snap = await _gd(_d(db, 'site_design', 'main'));
+                                const existing = snap.exists() ? (snap.data().category_heroes || {}) : {};
+                                await _sd(_d(db, 'site_design', 'main'), {
+                                    category_heroes: { ...existing, [catId]: designSettings.category_heroes?.[catId] }
+                                }, { merge: true });
+                                alert(`✅ ${catLabels[catId]} 히어로 저장 완료!`);
+                            } catch(e) { alert('❌ 저장 실패: ' + e.message); }
+                            setDesignSaving(false);
+                        };
+
+                        return (
+                        <div className="p-6 space-y-6 max-w-5xl mx-auto pb-20">
+                            <div>
+                                <h2 className="text-white font-black text-2xl tracking-tighter">🎨 디자인 관리</h2>
+                                <p className="text-slate-500 text-sm mt-1">각 섹션을 수정 후 해당 섹션의 <span className="text-orange-400 font-bold">저장</span> 버튼을 누르면 사이트에 즉시 반영됩니다.</p>
+                            </div>
+
+                            {/* ── 메인 히어로 ── */}
+                            <HeroSection title="메인" icon="home" fieldKey="main_hero"
+                                hint="메인 홈 화면 상단 히어로 영역"
+                                mediaHint="동영상: mp4 권장 (10MB 이하) · 이미지: 1080×1920px (세로형) 또는 1920×1080px (가로형)" />
+
+                            {/* ── 메인 카테고리 이미지 ── */}
+                            <ImageGrid title="메인 — 직장인이 가장 많이 듣는 인사이트" icon="grid_view"
+                                sectionKey="main_categories" items={designSettings.main_categories}
+                                sizeHint="800×600px (가로형)" cols={4} />
+
+                            {/* ── 에디토리얼 히어로 ── */}
+                            <HeroSection title="에디토리얼" icon="auto_stories" fieldKey="editorial_hero"
+                                hint="에디토리얼 페이지 상단 히어로 영역"
+                                mediaHint="동영상: mp4 권장 (10MB 이하) · 이미지: 430×480px" />
+
+                            {/* ── 에디토리얼 슬라이더 ── */}
+                            <ImageGrid title="에디토리얼 — 직장인이 가장 많이 듣는 아카이뷰 슬라이더" icon="view_carousel"
+                                sectionKey="editorial_slider" items={designSettings.editorial_slider}
+                                sizeHint="800×600px · 세로형 카드로 표시" cols={4} />
+
+                            {/* ── 에디토리얼 탭 ── */}
+                            <ImageGrid title="에디토리얼 — 카테고리 탭 이미지 (자기계발/경제/경영/인문/심리)" icon="tab"
+                                sectionKey="editorial_tabs" items={designSettings.editorial_tabs}
+                                sizeHint="800×450px (가로형)" cols={5} />
+
+                            {/* ── 서재 히어로 ── */}
+                            <HeroSection title="서재" icon="local_library" fieldKey="library_hero"
+                                hint="서재(비로그인) 페이지 히어로"
+                                mediaHint="동영상: mp4 (10MB 이하) · 이미지: 430×420px" />
+
+                            {/* ── 기억노트 히어로 ── */}
+                            <HeroSection title="기억노트" icon="edit_note" fieldKey="notes_hero"
+                                hint="기억노트(비로그인) 페이지 히어로"
+                                mediaHint="동영상: mp4 (10MB 이하) · 이미지: 430×420px" />
+
+                            {/* ── 프로필 히어로 ── */}
+                            <HeroSection title="프로필" icon="person" fieldKey="profile_hero"
+                                hint="프로필(비로그인) 페이지 히어로"
+                                mediaHint="동영상: mp4 (10MB 이하) · 이미지: 430×420px" />
+
+                            {/* ── 유튜브 인사이트 히어로 ── */}
+                            <HeroSection title="유튜브 인사이트" icon="play_circle" fieldKey="youtube_hero"
+                                hint="/test5 유튜브 인사이트 페이지 히어로"
+                                mediaHint="동영상: mp4 (10MB 이하) · 이미지: 1080×1920px (세로형) 또는 1920×1080px (가로형)" />
+
+                            {/* ── 카테고리 히어로 ── */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                <div>
+                                    <h3 className="text-white font-black text-base flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-orange-500">category</span>
+                                        /category 페이지 히어로 이미지 (카테고리별)
+                                    </h3>
+                                    <p className="text-slate-500 text-[11px] mt-0.5">권장 사이즈: <span className="text-orange-400 font-bold">800×600px 또는 430×480px</span> · 각 카테고리 개별 저장</p>
+                                </div>
+                                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                                    {categoryHeroIds.map(catId => {
+                                        const hero = designSettings.category_heroes?.[catId] || { type: 'image', src: '' };
+                                        const storageKey = `cat_hero/${catId}`;
+                                        return (
+                                            <div key={catId} className="space-y-2">
+                                                <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-800 border border-white/10 group cursor-pointer"
+                                                    onClick={() => {
+                                                        const inp = document.createElement('input');
+                                                        inp.type='file'; inp.accept='image/*,video/*';
+                                                        inp.onchange = e => {
+                                                            const file = e.target.files[0];
+                                                            const isVid = file.type.startsWith('video/');
+                                                            uploadMedia(storageKey, file, url => {
+                                                                setDesignSettings(prev => ({ ...prev, category_heroes: { ...(prev.category_heroes||{}), [catId]: { type: isVid?'video':'image', src: url } } }));
+                                                            });
+                                                        };
+                                                        inp.click();
+                                                    }}>
+                                                    {hero.src ? (
+                                                        hero.type === 'video'
+                                                            ? <video src={hero.src} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                                                            : <img src={hero.src} alt={catLabels[catId]} className="w-full h-full object-cover" onError={e=>{e.target.style.opacity='0.2';}} />
+                                                    ) : <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">없음</div>}
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-white text-xl">upload</span>
+                                                    </div>
+                                                    {designUploading[storageKey] && <div className="absolute inset-0 bg-black/70 flex items-center justify-center"><div className="w-4 h-4 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"/></div>}
+                                                </div>
+                                                <p className="text-slate-400 text-[10px] font-bold text-center">{catLabels[catId]}</p>
+                                                <button onClick={() => saveCategoryHero(catId)} disabled={designSaving}
+                                                    className="w-full py-1 bg-slate-700 hover:bg-orange-500 text-white text-[10px] font-black rounded-lg transition-all disabled:opacity-50">
+                                                    저장
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                        );
+                    })()}
+
+                    {/* ── 🎬 CF 프롬프트 생성기 ─────────────────────────────────────── */}
+                    {activeTab === 'cf-prompt' && <CfPromptTab />}
 </main>
 
                 {/* PC 환경에서는 하단 바를 숨기거나 다르게 처리 */}

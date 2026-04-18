@@ -1,23 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
-import { logout } from '../firebase';
+import { logout, auth, db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
-import { useAudio } from '../contexts/AudioContext';
 import Footer from '../components/Footer';
+import { deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
-const formatTime = (sec) => {
-    if (!sec || isNaN(sec)) return '00:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+const TYPE_META = {
+    growth:        { label: '성장·실행형', icon: 'trending_up',      color: 'text-blue-400',    bg: 'bg-blue-500/20' },
+    entertainment: { label: '창의·탐험형', icon: 'auto_stories',     color: 'text-violet-400',  bg: 'bg-violet-500/20' },
+    empathy:       { label: '공감·관계형', icon: 'favorite',         color: 'text-rose-400',    bg: 'bg-rose-500/20' },
+    mindfulness:   { label: '사색·마음형', icon: 'self_improvement', color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
 };
+
 
 export default function Profile() {
     const { user, loading } = useAuth();
-    const { dailyListenTime, dailyTarget, streak } = useAudio();
     const navigate = useNavigate();
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     // Redirect to login if not authenticated
     useEffect(() => {
@@ -26,12 +30,66 @@ export default function Profile() {
         }
     }, [user, loading, navigate]);
 
-    const handleKakaoChannel = () => {
-        if (!window.Kakao) return;
-        if (!window.Kakao.isInitialized()) {
-            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
+    const memberSince = (() => {
+        const t = user?.metadata?.creationTime;
+        if (!t) return '';
+        const d = new Date(t);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}. ${m}. ${day}`;
+    })();
+
+    const quizResultType = localStorage.getItem('quizResult') || localStorage.getItem('myResultType');
+    const quizScores = (() => { try { return JSON.parse(localStorage.getItem('quizScores')); } catch { return null; } })();
+
+    const handlePersona = () => {
+        if (quizResultType) {
+            navigate('/result', { state: { resultType: quizResultType, scores: quizScores } });
+        } else {
+            navigate('/quiz');
         }
-        window.Kakao.Channel.followChannel({ channelPublicId: '_HssEX' });
+    };
+
+    const handleDeleteAccount = async () => {
+        setDeleteLoading(true);
+        setDeleteError('');
+        try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error('인증 정보 없음');
+
+            // 재인증 (구글)
+            const provider = new GoogleAuthProvider();
+            await reauthenticateWithPopup(currentUser, provider);
+
+            const email = currentUser.email;
+            const uid = currentUser.uid;
+
+            // 1. 블랙리스트에 이메일 저장
+            const safeKey = email.replace(/[.#$\[\]]/g, '_');
+            await setDoc(doc(db, 'deletedUsers', safeKey), {
+                email,
+                uid,
+                deletedAt: serverTimestamp(),
+            });
+
+            // 2. 유저 문서 삭제
+            await deleteDoc(doc(db, 'users', uid));
+
+            // 3. Firebase Auth 계정 삭제
+            await deleteUser(currentUser);
+
+            navigate('/', { replace: true });
+        } catch (err) {
+            console.error('탈퇴 실패:', err);
+            if (err.code === 'auth/popup-closed-by-user') {
+                setDeleteError('재인증을 완료해야 탈퇴가 가능합니다.');
+            } else {
+                setDeleteError('탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+            }
+        } finally {
+            setDeleteLoading(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -61,14 +119,10 @@ export default function Profile() {
 
     if (!user) return null;
 
-    const totalBlocks = 30;
-    const filledBlocks = Math.max(0, Math.min(totalBlocks, dailyTarget > 0 ? Math.floor(dailyListenTime / (dailyTarget / totalBlocks)) : 0));
-    const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(Math.max(0, totalBlocks - filledBlocks));
-
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5">
-                <TopNavigation title="멤버십" type="sub" />
+                <MainHeader showBack />
 
                 <main className="px-6 pt-8 pb-24 animate-fade-in-up space-y-8">
 
@@ -104,59 +158,12 @@ export default function Profile() {
                                 <div className="flex justify-between items-end border-t border-white/10 pt-3">
                                     <div>
                                         <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Member Since</span>
-                                        <span className="text-xs text-slate-300 font-mono">2024. 05. 21</span>
+                                        <span className="text-xs text-slate-300 font-mono">{memberSince}</span>
                                     </div>
                                     <div className="text-right">
                                         <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Status</span>
                                         <span className="text-xs text-emerald-400 font-bold tracking-wide">ACTIVE</span>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Insight Time Banner (Replacing Stats Row) */}
-                    <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm w-full">
-                        {/* Premium Glassmorphism Background */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none" />
-                        
-                        <div className="relative z-10 flex flex-col gap-4">
-                            {/* Header Row */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 인사이트 타임</h3>
-                                </div>
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-orange-500/10 border border-orange-500/20">
-                                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">ON AIR</span>
-                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_5px_rgba(249,115,22,0.8)]" />
-                                </div>
-                            </div>
-
-                            {/* Stats Row */}
-                            <div className="flex items-baseline justify-between">
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-[28px] font-black text-white tracking-tighter tabular-nums leading-none">
-                                        {formatTime(dailyListenTime)}
-                                    </span>
-                                    <span className="text-[10px] font-bold text-white/40 tracking-tight uppercase">Min Listened</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-[14px] font-bold text-white/60 tracking-tight">
-                                        / {formatTime(dailyTarget)} <span className="text-white/20 ml-1 font-black">GOAL</span>
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Progress Row */}
-                            <div className="space-y-2">
-                                <div className="text-[14px] sm:text-[16px] font-mono tracking-[0.12em] text-orange-500/90 leading-none filter drop-shadow-[0_0_8px_rgba(249,115,22,0.4)] whitespace-nowrap overflow-hidden text-clip flex justify-center w-full">
-                                    {progressBar}
-                                </div>
-                                <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-[12px] font-black text-white/70 tracking-tight">{streak}일 연속 달성 중</span>
-                                    </div>
-                                    <span className="text-[9px] font-black text-orange-500/50 uppercase tracking-[0.2em]">Growing Daily</span>
                                 </div>
                             </div>
                         </div>
@@ -185,12 +192,19 @@ export default function Profile() {
                                 </div>
                                 <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
                             </button>
-                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
+                            <button onClick={handlePersona} className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-none bg-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-                                        <span className="material-symbols-outlined text-lg">bookmark</span>
+                                    <div className={`size-8 rounded-none flex items-center justify-center transition-colors ${quizResultType ? (TYPE_META[quizResultType]?.bg || 'bg-orange-500/20') : 'bg-orange-500/20'} group-hover:bg-orange-500`}>
+                                        <span className={`material-symbols-outlined text-lg group-hover:text-white transition-colors ${quizResultType ? (TYPE_META[quizResultType]?.color || 'text-orange-400') : 'text-orange-400'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                                            {quizResultType ? (TYPE_META[quizResultType]?.icon || 'psychology') : 'psychology'}
+                                        </span>
                                     </div>
-                                    <span className="text-sm text-slate-200 font-medium">스크랩북</span>
+                                    <div>
+                                        <span className="text-sm text-slate-200 font-medium">나의 페르소나</span>
+                                        {quizResultType && (
+                                            <span className="block text-[11px] text-slate-500 mt-0.5">{TYPE_META[quizResultType]?.label || ''}</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <span className="material-symbols-outlined text-slate-500 text-sm">arrow_forward_ios</span>
                             </button>
@@ -202,23 +216,16 @@ export default function Profile() {
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Account</h4>
 
                         <div className="bg-white/5 rounded-none overflow-hidden border border-white/5 divide-y divide-white/5">
-                            <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
-                                <div className="flex items-center gap-4">
-                                    <span className="material-symbols-outlined text-slate-400">settings</span>
-                                    <span className="text-sm text-slate-200 font-medium">설정</span>
-                                </div>
-                            </button>
-                            <button onClick={handleKakaoChannel} className="w-full flex items-center justify-between p-4 hover:bg-[#FEE500]/10 transition-colors group">
-                                <div className="flex items-center gap-4">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.477 2 2 5.805 2 10.5c0 3.027 1.86 5.687 4.686 7.25L5.5 22l4.688-2.6A11.6 11.6 0 0012 19c5.523 0 10-3.806 10-8.5S17.523 2 12 2z" fill="#FEE500"/></svg>
-                                    <span className="text-sm text-slate-200 font-medium">카카오 채널 친구추가</span>
-                                </div>
-                                <span className="text-[10px] text-[#FEE500] font-bold">알림 받기</span>
-                            </button>
                             <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 hover:bg-red-500/10 transition-colors group text-red-400">
                                 <div className="flex items-center gap-4">
                                     <span className="material-symbols-outlined">logout</span>
                                     <span className="text-sm font-medium">로그아웃</span>
+                                </div>
+                            </button>
+                            <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center justify-between p-4 hover:bg-red-900/20 transition-colors group text-red-600/70">
+                                <div className="flex items-center gap-4">
+                                    <span className="material-symbols-outlined text-[18px]">person_remove</span>
+                                    <span className="text-sm font-medium">탈퇴하기</span>
                                 </div>
                             </button>
                         </div>
@@ -229,6 +236,47 @@ export default function Profile() {
                         Version 1.4.0 (Build 2024.05)
                     </p>
                     <Footer />
+
+                    {/* 탈퇴 확인 모달 */}
+                    {showDeleteModal && (
+                        <div className="fixed inset-0 z-[500] flex items-center justify-center px-6" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
+                            <div className="w-full max-w-[320px] bg-[#12141c] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                                <div className="p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                                            <span className="material-symbols-outlined text-red-400" style={{ fontSize: 20 }}>warning</span>
+                                        </div>
+                                        <h3 className="text-white font-black text-[16px]">정말 탈퇴하시겠습니까?</h3>
+                                    </div>
+                                    <p className="text-white/50 text-[12px] leading-relaxed mb-2">
+                                        탈퇴 시 모든 데이터가 영구 삭제되며 복구가 불가능합니다.
+                                    </p>
+                                    <p className="text-red-400/80 text-[11px] font-bold leading-relaxed mb-5">
+                                        ※ 탈퇴 후 동일한 구글 계정으로 재가입이 불가능합니다.
+                                    </p>
+                                    {deleteError && (
+                                        <p className="text-red-400 text-[11px] font-bold mb-4 p-3 bg-red-500/10 rounded-lg">{deleteError}</p>
+                                    )}
+                                    <p className="text-white/30 text-[10px] mb-5">본인 확인을 위해 구글 재인증이 필요합니다.</p>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => { setShowDeleteModal(false); setDeleteError(''); }}
+                                            className="flex-1 py-3 bg-white/10 text-white text-[13px] font-bold rounded-xl hover:bg-white/15 transition-colors"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={handleDeleteAccount}
+                                            disabled={deleteLoading}
+                                            className="flex-1 py-3 bg-red-600 text-white text-[13px] font-black rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50"
+                                        >
+                                            {deleteLoading ? '처리중...' : '탈퇴하기'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
 
                 <BottomNavigation />

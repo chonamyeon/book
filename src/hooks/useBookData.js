@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../firebase';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
@@ -102,7 +102,7 @@ export const useBookData = () => {
         };
     }, [overrides, celebrities, ebooks]);
 
-    const getAllBooks = useCallback((adminMode = false) => {
+    const allBooks = useMemo(() => {
         const allLocalBooks = celebrities.flatMap(celeb =>
             (celeb.books || []).map(book => ({
                 ...book,
@@ -110,15 +110,17 @@ export const useBookData = () => {
             }))
         );
 
-        // override 키가 "top70-X" 형태일 때 "X"로도 찾을 수 있도록 (NFC 정규화 포함)
         const normStr = s => s.normalize('NFC');
-        const findOverride = (id) =>
-            overrides[id] ||
-            Object.entries(overrides).find(([k]) => {
-                const nk = normStr(k);
-                const ni = normStr(id);
-                return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
-            })?.[1];
+        const normalizedOverridesEntries = Object.entries(overrides).map(([k, v]) => [normStr(k), v]);
+
+        const findOverride = (id) => {
+            const entry = overrides[id];
+            if (entry) return entry;
+            const ni = normStr(id);
+            return normalizedOverridesEntries.find(([nk]) => 
+                nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni
+            )?.[1];
+        }
 
         const bookMap = new Map();
         allLocalBooks.forEach(book => {
@@ -126,7 +128,8 @@ export const useBookData = () => {
             const override = findOverride(id);
 
             if (override?.isDeleted) return;
-            if (!adminMode && override?.isPublic === false) return;
+            // adminMode 필터링은 호출부에서 처리하도록 변경하거나 인자로 전달
+            // 여기서는 기본적으로 Public 데이터만 생성
 
             const fileName = `${id}.mp3`;
             const koreanFileName = `${(book.title || '').replace(/\s+/g, '-')}.mp3`;
@@ -150,8 +153,7 @@ export const useBookData = () => {
 
         Object.entries(overrides).forEach(([id, data]) => {
             if (data.isDeleted) return;
-
-            if (!bookMap.has(id) && data.title && (adminMode || data.isPublic === true)) {
+            if (!bookMap.has(id) && data.title) {
                 const ebook = ebooks[id];
                 bookMap.set(id, {
                     id,
@@ -174,6 +176,11 @@ export const useBookData = () => {
 
         return Array.from(bookMap.values());
     }, [overrides, celebrities, ebooks]);
+
+    const getAllBooks = useCallback((adminMode = false) => {
+        if (adminMode) return allBooks;
+        return allBooks.filter(b => b.isPublic !== false);
+    }, [allBooks]);
 
     return { getBook, getAllBooks, loading, overrides, ebooks };
 };

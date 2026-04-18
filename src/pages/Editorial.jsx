@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 import { motion, AnimatePresence } from 'framer-motion';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { useBookData } from '../hooks/useBookData';
@@ -16,7 +17,7 @@ const categoriesInfo = [
         id: 'SELF_DEV',
         title: "Growth & Success",
         sub: "내 성장을 가속화하고 싶을 때. 삶의 질을 높이는 강력한 도구들.",
-        img: '/images/photo_selfdev.png',
+        img: '/images/photo_selfdev.jpg',
         readTime: "12 MIN READ",
         author: "TEAM ARCHIVIEW"
     },
@@ -25,7 +26,7 @@ const categoriesInfo = [
         id: 'ECONOMY',
         title: "Wealth & Finance",
         sub: "부의 본질과 경제 흐름을 알고 싶을 때. 시장의 맥락을 짚는 통찰.",
-        img: '/images/photo_economy.png',
+        img: '/images/photo_economy.jpg',
         readTime: "15 MIN READ",
         author: "TEAM ARCHIVIEW"
     },
@@ -34,7 +35,7 @@ const categoriesInfo = [
         id: 'MANAGEMENT',
         title: "Business & Leader",
         sub: "압도적인 성과와 경영의 지혜. 조직과 개인을 이끄는 힘.",
-        img: '/images/photo_management.png',
+        img: '/images/photo_management.jpg',
         readTime: "10 MIN READ",
         author: "TEAM ARCHIVIEW"
     },
@@ -43,7 +44,7 @@ const categoriesInfo = [
         id: 'HUMANITIES',
         title: "Insight & History",
         sub: "시대를 관통하는 통찰과 지혜. 오래된 것에서 발견하는 미래.",
-        img: '/images/photo_humanities.png',
+        img: '/images/photo_humanities.jpg',
         readTime: "14 MIN READ",
         author: "TEAM ARCHIVIEW"
     },
@@ -52,22 +53,23 @@ const categoriesInfo = [
         id: 'PSYCHOLOGY',
         title: "Mind & Healing",
         sub: "내 마음을 돌보고 위로가 필요할 때. 멈춰 서서 나를 들여다보는 시간.",
-        img: '/images/photo_psychology.png',
+        img: '/images/photo_psychology.jpg',
         readTime: "9 MIN READ",
         author: "TEAM ARCHIVIEW"
     }
 ];
 
 const sliderItems = [
-    { label: "일이 손에 안 잡히고 지칠 때", sub: "번아웃 솔루션", id: 'BURNOUT', img: '/images/cat_burnout_v10.png' },
-    { label: "내 가치를 증명하고 부를 쌓고 싶을 때", sub: "경제/자유", id: 'ECONOMY', img: '/images/cat_wealth_v11.png' },
-    { label: "마음이 답답하고 위로가 필요한 때", sub: "치유/명상", id: 'PSYCHOLOGY', img: '/images/cat_healing_v8.png' },
-    { label: "어떻게 살아야 할지 막막할 때", sub: "철학/인생", id: 'HUMANITIES', img: '/images/cat_philosophy_v8.png' }
+    { label: "일이 손에 안 잡히고 지칠 때", sub: "번아웃 솔루션", id: 'BURNOUT', img: '/images/cat_burnout_new.jpg' },
+    { label: "내 가치를 증명하고 부를 쌓고 싶을 때", sub: "경제/자유", id: 'ECONOMY', img: '/images/cat_wealth_new.jpg' },
+    { label: "마음이 답답하고 위로가 필요한 때", sub: "치유/명상", id: 'PSYCHOLOGY', img: '/images/cat_healing_new.jpg' },
+    { label: "어떻게 살아야 할지 막막할 때", sub: "철학/인생", id: 'HUMANITIES', img: '/images/cat_philosophy_new.jpg' }
 ];
 
 export default function Editorial() {
     const navigate = useNavigate();
     const scrollContainerRef = useRef(null);
+    const { design } = useSiteDesign();
     const [selectedCategoryId, setSelectedCategoryId] = useState(categoriesInfo[0].id);
     const [showAllBooks, setShowAllBooks] = useState(false);
     const { getAllBooks, loading: booksLoading } = useBookData();
@@ -76,6 +78,13 @@ export default function Editorial() {
     const allBooks = useMemo(() => {
         return getAllBooks();
     }, [getAllBooks]);
+
+    // design 설정에서 슬라이더/탭 이미지 가져오기 (없으면 파일 상단 상수 사용)
+    const sliderItemsResolved = design.editorial_slider.length ? design.editorial_slider : sliderItems;
+    const categoriesInfoResolved = categoriesInfo.map(cat => {
+        const tabDesign = design.editorial_tabs.find(t => t.id === cat.id);
+        return tabDesign ? { ...cat, img: tabDesign.img } : cat;
+    });
 
     // 카테고리 필터링 메모이제이션: 탭 변경 / showAll 변경 시에만 재계산
     const filteredBooks = useMemo(() => {
@@ -137,22 +146,17 @@ export default function Editorial() {
     return (
         <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
             <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
-                <TopNavigation type="sub" />
+                <MainHeader showBack />
 
                 <main className="flex-grow">
                     {/* 🚀 1. Weekly Insight Section */}
                     <section className="relative h-[480px] w-full overflow-hidden mb-12">
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0e1015] via-[#0e1015]/40 to-transparent z-10"></div>
-                        <video
-                            src="/images/Figure_walking2.mp4"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            preload="none"
-                            className="absolute inset-0 w-full h-full object-cover"
-                            style={{ transform: 'scale(1.1) translateX(30px)' }}
-                        />
+                        {design.editorial_hero.type === 'image' ? (
+                            <img src={design.editorial_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
+                        ) : (
+                            <video src={design.editorial_hero.src} autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
+                        )}
                         <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="flex items-end gap-[2px] h-4">
@@ -228,7 +232,7 @@ export default function Editorial() {
                             </button>
 
                             <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pb-2">
-                                {sliderItems.map((item, idx) => (
+                                {sliderItemsResolved.map((item, idx) => (
                                     <motion.div
                                         key={idx}
                                         whileTap={{ scale: 0.98 }}
@@ -239,7 +243,7 @@ export default function Editorial() {
                                             <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-none flex items-center justify-center font-black text-xs">
                                                 0{idx + 1}
                                             </div>
-                                            <img src={item.img} alt={item.label} loading="lazy" decoding="async" className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+                                            <img src={item.img} alt={item.label} loading="lazy" decoding="async" className="w-full h-full object-cover object-right grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                         <h4 className="font-black text-[15px] tracking-tighter truncate leading-snug">{item.label}</h4>
@@ -256,7 +260,7 @@ export default function Editorial() {
                     </div>
                     <section className="px-4 mb-[19px] sticky top-20 z-40 bg-[#0e1015]/90 backdrop-blur-md pb-4">
                         <div className="flex gap-1.5 w-full">
-                            {categoriesInfo.map((cat) => (
+                            {categoriesInfoResolved.map((cat) => (
                                 <button
                                     key={`tab-${cat.id}`}
                                     onClick={() => setSelectedCategoryId(cat.id)}
@@ -271,7 +275,7 @@ export default function Editorial() {
                     {/* 🚀 4. Active Category Section */}
                     <section className="px-6 space-y-20 mb-20 animate-fade-in">
                         {(() => {
-                            const cat = categoriesInfo.find(c => c.id === selectedCategoryId);
+                            const cat = categoriesInfoResolved.find(c => c.id === selectedCategoryId);
                             const books = visibleBooks;
                             return (
                                 <article key={cat.id} id={`section-${cat.id}`} className="flex flex-col space-y-8 scroll-mt-36">

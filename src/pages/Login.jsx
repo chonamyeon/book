@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, loginWithGoogleRedirect } from '../firebase';
 import { GoogleAuthProvider, signInWithCredential, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
@@ -13,12 +13,18 @@ export default function Login() {
     const googleBtnRef = useRef(null);
 
     useEffect(() => {
-        // 1. Check for redirect result (Mobile/Safari flow)
+        // 1. Check for redirect result (브라우저 redirect flow)
         getRedirectResult(auth).then((result) => {
             if (result) {
-                console.log("Redirect login success");
-                navigate('/profile', { replace: true });
+                const redirectTo = sessionStorage.getItem('loginRedirect');
+                if (redirectTo) {
+                    sessionStorage.removeItem('loginRedirect');
+                    navigate(redirectTo, { replace: true });
+                } else {
+                    navigate('/profile', { replace: true });
+                }
             }
+            // result 없으면(= redirect 아님) 로딩 해제는 onAuthStateChanged에서 처리
         }).catch((error) => {
             console.error("Redirect login error:", error);
             setIsLoading(false);
@@ -51,6 +57,16 @@ export default function Login() {
                 try {
                     const { db } = await import('../firebase');
                     const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+
+                    // 탈퇴 블랙리스트 체크
+                    const safeKey = (user.email || '').replace(/[.#$\[\]]/g, '_');
+                    const blockedSnap = await getDoc(doc(db, 'deletedUsers', safeKey));
+                    if (blockedSnap.exists()) {
+                        await import('firebase/auth').then(({ signOut }) => signOut(auth));
+                        alert('탈퇴된 계정입니다. 동일한 구글 계정으로는 재가입이 불가능합니다.');
+                        return;
+                    }
+
                     const userRef = doc(db, "users", user.uid);
                     const snap = await getDoc(userRef);
                     const updates = {
@@ -74,7 +90,13 @@ export default function Login() {
                 } catch (error) {
                     console.error("Error updating user profile:", error);
                 }
-                navigate('/profile', { replace: true });
+                const redirectTo = sessionStorage.getItem('loginRedirect');
+                if (redirectTo) {
+                    sessionStorage.removeItem('loginRedirect');
+                    navigate(redirectTo, { replace: true });
+                } else {
+                    navigate('/profile', { replace: true });
+                }
             } else {
                 initGoogle();
             }
@@ -93,6 +115,16 @@ export default function Login() {
             // Sync with Firestore
             const { db } = await import('../firebase');
             const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+
+            // 탈퇴 블랙리스트 체크
+            const safeKey = (user.email || '').replace(/[.#$\[\]]/g, '_');
+            const blockedSnap = await getDoc(doc(db, 'deletedUsers', safeKey));
+            if (blockedSnap.exists()) {
+                await import('firebase/auth').then(({ signOut }) => signOut(auth));
+                setIsLoading(false);
+                alert('탈퇴된 계정입니다. 동일한 구글 계정으로는 재가입이 불가능합니다.');
+                return;
+            }
             const userRef = doc(db, "users", user.uid);
             const snap = await getDoc(userRef);
             const updates = {
@@ -112,7 +144,13 @@ export default function Login() {
                 window.fbq('track', 'CompleteRegistration', { method: 'Google' });
             }
 
-            navigate('/profile', { replace: true });
+            const redirectTo = sessionStorage.getItem('loginRedirect');
+            if (redirectTo) {
+                sessionStorage.removeItem('loginRedirect');
+                navigate(redirectTo, { replace: true });
+            } else {
+                navigate('/profile', { replace: true });
+            }
         } catch (error) {
             console.error("Auth Fail:", error);
             setIsLoading(false);
@@ -149,7 +187,7 @@ export default function Login() {
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
-            <TopNavigation title="로그인" type="sub" />
+            <MainHeader showBack />
 
             <main className="flex-1 flex flex-col items-center justify-center p-6 pb-24">
                 <div className="w-full max-w-sm">
@@ -173,11 +211,17 @@ export default function Login() {
 
                         {/* Mobile Google Button */}
                         <button
-                            onClick={async (e) => {
+                            onClick={async () => {
                                 setIsLoading(true);
                                 try {
-                                    await loginWithGoogleRedirect();
+                                    const result = await loginWithGoogleRedirect();
+                                    // PWA popup 방식이면 result가 즉시 반환됨
+                                    if (result?.user) {
+                                        navigate('/profile', { replace: true });
+                                    }
+                                    // redirect 방식이면 페이지가 이동하므로 여기 도달 안 함
                                 } catch (error) {
+                                    console.error("Login error:", error);
                                     setIsLoading(false);
                                 }
                             }}

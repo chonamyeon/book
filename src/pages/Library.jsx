@@ -1,20 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import Footer from '../components/Footer';
-import { resultData } from '../data/resultData';
-import { recommendations } from '../data/recommendations';
+import { resultData, generateResultData } from '../data/resultData';
+import { recommendations, generateRecommendations } from '../data/recommendations';
 import { useAuth } from '../hooks/useAuth';
 import BookCardActions from '../components/BookCardActions';
 import { useBookData } from '../hooks/useBookData';
+import PersonaAvatar from '../components/PersonaAvatar';
+import { useAudio } from '../contexts/AudioContext';
+
+const formatInsightTime = (sec) => {
+    if (!sec || isNaN(sec)) return '00:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+const TYPE_META_LIB = {
+    growth:        { label: '성장·실행형', icon: 'trending_up',     bgFrom: 'from-blue-900',   bgTo: 'to-primary', accentColor: 'text-cyan-400',   borderColor: 'border-cyan-500/30',   bgColor: 'bg-cyan-500/10'   },
+    entertainment: { label: '창의·탐험형', icon: 'auto_stories',    bgFrom: 'from-violet-900', bgTo: 'to-primary', accentColor: 'text-fuchsia-400', borderColor: 'border-fuchsia-500/30',bgColor: 'bg-fuchsia-500/10'},
+    empathy:       { label: '공감·관계형', icon: 'favorite',        bgFrom: 'from-rose-900',   bgTo: 'to-primary', accentColor: 'text-rose-400',    borderColor: 'border-rose-500/30',   bgColor: 'bg-rose-500/10'   },
+    mindfulness:   { label: '사색·마음형', icon: 'self_improvement', bgFrom: 'from-emerald-900',bgTo: 'to-primary', accentColor: 'text-emerald-400', borderColor: 'border-emerald-500/30',bgColor: 'bg-emerald-500/10'},
+};
 
 export default function Library() {
     const { user } = useAuth();
     const { getAllBooks } = useBookData();
+    const { dailyListenTime, dailyTarget, streak } = useAudio();
     const [unlocked, setUnlocked] = useState(false);
     const [myResultType, setMyResultType] = useState(null);
     const [quizResult, setQuizResult] = useState(null);
+    const [quizScores, setQuizScores] = useState(null);
     const [hiddenRecs, setHiddenRecs] = useState([]);
     const [savedBooks, setSavedBooks] = useState([]);
     const [finderRecs, setFinderRecs] = useState([]);
@@ -35,6 +53,15 @@ export default function Library() {
         const isUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
         const type = localStorage.getItem('myResultType');
         const qResult = localStorage.getItem('quizResult');
+        
+        try {
+            const qScoresStr = localStorage.getItem('quizScores');
+            if (qScoresStr) {
+                setQuizScores(JSON.parse(qScoresStr));
+            }
+        } catch (e) {
+            console.error(e);
+        }
 
         setUnlocked(isUnlocked);
         setMyResultType(type);
@@ -67,85 +94,157 @@ export default function Library() {
     };
 
     const result = myResultType ? resultData[myResultType] : null;
-    const myRecs = myResultType ? recommendations[myResultType]?.books.filter(b => !hiddenRecs.includes(b.title)) : [];
-    const isTeaserVisible = user && unlocked && result;
+    
+    // myRecs를 quizScores가 있을 경우 동적 결과로, 없으면 기존 레거시 결과로 폴백
+    const myRecs = (() => {
+        let books = [];
+        if (quizScores) {
+            books = generateRecommendations(quizScores).books || [];
+        } else if (myResultType) {
+            books = recommendations[myResultType]?.books || [];
+        }
+        return books.filter(b => !hiddenRecs.includes(b.title));
+    })();
+
+    const teaserResult = (() => {
+        if (quizScores) return generateResultData(quizScores);
+        if (myResultType) return result;
+        return null;
+    })();
 
     return (
         <div className="bg-[#101218] text-white font-sans antialiased min-h-screen flex justify-center selection:bg-orange-500/30">
             {/* Main Layout Container */}
             <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
-                <TopNavigation type="sub" />
+                <MainHeader showBack />
 
-                <main className="px-6 pt-6 pb-24 space-y-2 animate-fade-in flex-grow">
+                <main className="px-6 pt-6 pb-24 animate-fade-in flex-grow space-y-6">
                     {/* Personal Collection Header */}
-                    <div className="text-center space-y-2 mb-8 mt-4">
+                    <div className="text-center space-y-2 mt-2">
                         <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em]">Personal Archive</span>
-                        <h2 className="text-2xl text-white font-black tracking-tight">
-                            내 서재
-                        </h2>
+                        <h2 className="text-2xl text-white font-black tracking-tight">내 서재</h2>
                         <p className="text-white/40 text-[12px] font-bold uppercase tracking-widest">
                             {savedBooks.length} items collected
                         </p>
                     </div>
 
-                    {/* Personality Test Banner */}
-                    {isTeaserVisible ? (
-                        <div
-                            onClick={() => navigate('/result', { state: { resultType: myResultType } })}
-                            className="relative rounded-sm overflow-hidden border border-orange-500/30 bg-white/[0.02] p-1 group cursor-pointer shadow-[0_0_30px_rgba(234,88,12,0.1)] mb-8 glass-card"
-                        >
-                            <div className="relative bg-black/40 backdrop-blur-xl rounded-sm p-6 flex items-center gap-6">
-                                <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/20 blur-[50px] rounded-full pointer-events-none group-hover:bg-orange-500/30 transition-all duration-700"></div>
-                                <div className="relative size-20 shrink-0">
-                                    <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full"></div>
-                                    <img src={result.image} alt={result.persona} loading="lazy" className="relative w-full h-full object-cover rounded-sm border border-orange-500/30 grayscale group-hover:grayscale-0 transition-all duration-500" />
-                                </div>
-                                <div className="flex-1 min-w-0 text-left relative z-10">
-                                    <span className="text-orange-500 text-[8px] font-black uppercase tracking-widest block mb-1.5">My Persona</span>
-                                    <h3 className="text-white text-[18px] font-black leading-none mb-2 tracking-tight">{result.persona}</h3>
-                                    <p className="text-white/60 text-[10px] font-bold truncate mb-3">{result.subtitle}</p>
-                                    <div className="flex gap-2">
-                                        {Object.entries(result.metrics).slice(0, 2).map(([key, m]) => (
-                                            <div key={key} className="bg-white/5 border border-white/10 rounded-sm px-2.5 py-1.5 flex flex-col items-center min-w-[60px]">
-                                                <span className="text-white/40 text-[7px] uppercase font-bold tracking-wider mb-0.5">{m.label}</span>
-                                                <span className="text-orange-500 text-[10px] font-black">{m.value}</span>
-                                            </div>
-                                        ))}
+                    {/* ── 나의 페르소나 ── */}
+                    <div>
+                        <h3 className="text-[14px] font-black text-white mb-3 tracking-tight uppercase flex items-center gap-2">
+                            <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
+                            나의 페르소나
+                        </h3>
+                        {teaserResult ? (() => {
+                            const resType = myResultType || quizResult || teaserResult.primaryType || 'growth';
+                            const typeMeta = TYPE_META_LIB[resType] || TYPE_META_LIB.growth;
+                            return (
+                                <div
+                                    onClick={() => navigate('/result', { state: { resultType: resType, scores: quizScores } })}
+                                    className="relative overflow-hidden border border-orange-500/30 bg-[#101218]/90 backdrop-blur-3xl group cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none" />
+                                    <div className="relative p-5 flex items-center gap-4 z-10">
+                                        <div className={`absolute -top-8 -right-8 w-28 h-28 ${typeMeta.bgColor} blur-[40px] rounded-full pointer-events-none opacity-60`} />
+                                        <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-orange-500/20 shadow-lg">
+                                            <PersonaAvatar type={resType} />
+                                        </div>
+                                        <div className="flex-1 min-w-0 relative z-10">
+                                            <span className={`text-[8px] font-black uppercase tracking-widest ${typeMeta.accentColor} block mb-1`}>My Persona</span>
+                                            <h3 className="text-white text-base font-black leading-tight mb-0.5 truncate">{teaserResult.subtitle}</h3>
+                                            <p className="text-white/40 text-[10px] font-bold truncate">{teaserResult.persona} · {typeMeta.label}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-orange-500/50 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all">chevron_right</span>
                                     </div>
                                 </div>
-                                <span className="material-symbols-outlined text-orange-500 opacity-50 group-hover:opacity-100 transition-opacity">chevron_right</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="relative rounded-sm overflow-hidden border border-white/10 group mb-8 glass-card bg-white/[0.02]">
-                            <div className="absolute -top-20 -left-20 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-full pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
-
-                            <div className="relative p-8 text-center flex flex-col items-center z-10">
-                                <span className="material-symbols-outlined text-orange-500 text-4xl mb-4 font-light">psychology</span>
-                                <h3 className="text-white text-[18px] font-black mb-2 tracking-tight">나의 페르소나 찾기</h3>
-                                <p className="text-white/40 text-[12px] font-bold mb-6 max-w-xs leading-relaxed break-keep">
-                                    성향 분석을 통해 나에게 딱 맞는 서재를 구성해보세요.
-                                </p>
-                                {quizResult ? (
-                                    <button
-                                        onClick={() => navigate('/result', { state: { resultType: quizResult } })}
-                                        className="w-full h-[52px] bg-white text-black font-black rounded-sm text-[13px] tracking-wide hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        분석 결과 보기 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                                    </button>
-                                ) : (
+                            );
+                        })() : (
+                            <div className="relative rounded-sm overflow-hidden border border-orange-500/20 group bg-[#101218]/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-orange-500/10 blur-xl opacity-50 pointer-events-none" />
+                                <div className="relative p-8 text-center flex flex-col items-center z-10">
+                                    <span className="material-symbols-outlined text-orange-500 text-4xl mb-4 font-light">psychology</span>
+                                    <h3 className="text-white text-[18px] font-black mb-2 tracking-tight">나의 페르소나 찾기</h3>
+                                    <p className="text-white/40 text-[12px] font-bold mb-6 max-w-xs leading-relaxed break-keep">
+                                        성향 분석을 통해 나에게 딱 맞는 서재를 구성해보세요.
+                                    </p>
                                     <Link to="/quiz" className="w-full h-[52px] bg-orange-600 flex items-center justify-center text-white font-black rounded-sm text-[13px] tracking-wide hover:bg-orange-500 transition-colors shadow-lg shadow-orange-600/20">
                                         무료 진단하기
                                     </Link>
-                                )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                        <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">나의 독서 성향을 분석해 맞춤 독서 유형과 페르소나를 확인하세요.</p>
+                    </div>
 
-                    {/* Recommendations (if any) */}
-                    {((myResultType && myRecs.length > 0) || finderRecs.length > 0) && (
-                        <div className="pt-8 mb-8">
-                            <h3 className="text-[14px] font-black text-white mb-4 tracking-tight uppercase flex items-center gap-2">
+                    {/* ── 나의 인사이트 타임 ── */}
+                    {(() => {
+                        const totalBlocks = 30;
+                        const filledBlocks = Math.max(0, Math.min(totalBlocks, dailyTarget > 0 ? Math.floor(dailyListenTime / (dailyTarget / totalBlocks)) : 0));
+                        const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(Math.max(0, totalBlocks - filledBlocks));
+                        return (
+                            <div>
+                                <h3 className="text-[14px] font-black text-white mb-3 tracking-tight uppercase flex items-center gap-2">
+                                    <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
+                                    나의 인사이트 타임
+                                </h3>
+                                <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm w-full">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none rounded-sm" />
+                                    <div className="relative z-10 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 청취 시간</h4>
+                                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-orange-500/10 border border-orange-500/20">
+                                                <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">ON AIR</span>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_5px_rgba(249,115,22,0.8)]" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-[28px] font-black text-white tracking-tighter tabular-nums leading-none">
+                                                    {formatInsightTime(dailyListenTime)}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-white/40 tracking-tight uppercase">Min Listened</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[14px] font-bold text-white/60 tracking-tight">
+                                                    / {formatInsightTime(dailyTarget)} <span className="text-white/20 ml-1 font-black">GOAL</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="text-[14px] sm:text-[16px] font-mono tracking-[0.12em] text-orange-500/90 leading-none filter drop-shadow-[0_0_8px_rgba(249,115,22,0.4)] whitespace-nowrap overflow-hidden text-clip flex justify-center w-full">
+                                                {progressBar}
+                                            </div>
+                                            <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-1">
+                                                <span className="text-[12px] font-black text-white/70 tracking-tight">{streak}일 연속 달성 중</span>
+                                                <span className="text-[9px] font-black text-orange-500/50 uppercase tracking-[0.2em]">Growing Daily</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">오늘 청취한 팟캐스트 시간을 기록하고 매일 꾸준한 독서 습관을 만들어 보세요.</p>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── 쿠팡 파트너스 배너 ── */}
+                    <div className="flex flex-col items-center gap-1.5">
+                        <iframe
+                            src="https://ads-partners.coupang.com/widgets.html?id=976190&template=banner&trackingCode=AF5571749&subId=&width=320&height=100"
+                            width="320"
+                            height="100"
+                            frameBorder="0"
+                            scrolling="no"
+                            referrerPolicy="unsafe-url"
+                            style={{ display: 'block' }}
+                        />
+                        <p className="text-[10px] text-slate-600 text-center leading-snug">
+                            이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+                        </p>
+                    </div>
+
+                    {/* ── 맞춤 추천 ── */}
+                    {((myRecs.length > 0) || finderRecs.length > 0) && (
+                        <div>
+                            <h3 className="text-[14px] font-black text-white mb-3 tracking-tight uppercase flex items-center gap-2">
                                 <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
                                 맞춤 추천
                             </h3>
@@ -193,12 +292,13 @@ export default function Library() {
                                     </div>
                                 ))}
                             </div>
+                            <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">나의 페르소나 분석을 바탕으로 지금 나에게 꼭 맞는 도서를 엄선했습니다.</p>
                         </div>
                     )}
 
-                    {/* Saved Books Grid */}
-                    <div className="pt-2">
-                        <div className="flex items-center justify-between mb-4 mt-2">
+                    {/* ── 보관된 콘텐츠 ── */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
                             <h3 className="text-[14px] font-black text-white tracking-tight uppercase flex items-center gap-2">
                                 <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
                                 보관된 콘텐츠
@@ -242,6 +342,7 @@ export default function Library() {
                                 </Link>
                             </div>
                         )}
+                        <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">관심 있는 도서와 팟캐스트를 저장해두고 언제든 다시 꺼내 보세요.</p>
                     </div>
                     <Footer />
                 </main>

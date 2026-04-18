@@ -1,28 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { recommendations } from '../data/recommendations';
-import { resultData } from '../data/resultData';
+import { resultData, futureVision } from '../data/resultData';
+import { generateResultQRCard } from '../utils/shareCard';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import BookCardActions from '../components/BookCardActions';
+import PersonaAvatar from '../components/PersonaAvatar';
+
+const TYPE_META = {
+    growth:        { label: '성장·실행형', colorFrom: 'from-blue-600',   colorTo: 'to-cyan-400',    key: 'A', icon: 'trending_up',      bgFrom: 'from-blue-900',   bgTo: 'to-primary' },
+    entertainment: { label: '창의·탐험형', colorFrom: 'from-violet-600', colorTo: 'to-fuchsia-400', key: 'B', icon: 'auto_stories',     bgFrom: 'from-violet-900', bgTo: 'to-primary' },
+    empathy:       { label: '공감·관계형', colorFrom: 'from-rose-500',   colorTo: 'to-amber-400',   key: 'C', icon: 'favorite',         bgFrom: 'from-rose-900',   bgTo: 'to-primary' },
+    mindfulness:   { label: '사색·마음형', colorFrom: 'from-emerald-600',colorTo: 'to-teal-400',    key: 'D', icon: 'self_improvement',  bgFrom: 'from-emerald-900',bgTo: 'to-primary' },
+};
+
+const TYPE_ORDER = ['growth', 'entertainment', 'empathy', 'mindfulness'];
+
+const FUTURE_STEP_STYLES = [
+    { border: 'border-gold/30', bg: 'bg-gold/10',  badge: 'bg-gold/20 text-gold border-gold/20',  circle: 'border-gold/60',  year: 'text-gold' },
+    { border: 'border-white/10', bg: 'bg-white/5', badge: 'bg-white/10 text-slate-400 border-white/10', circle: 'border-white/30', year: 'text-slate-400' },
+    { border: 'border-white/5',  bg: 'bg-white/5', badge: 'bg-white/5 text-slate-500 border-white/10',  circle: 'border-white/20', year: 'text-slate-500' },
+];
 
 export default function Result() {
     const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(15 * 60); // 15:00
+    const [timeLeft, setTimeLeft] = useState(15 * 60);
+    const [toastMsg, setToastMsg] = useState('');
+    const [showQRModal, setShowQRModal] = useState(false);
+    const [qrCardUrl, setQrCardUrl] = useState('');
+    const [qrLoading, setQrLoading] = useState(false);
     const location = useLocation();
+
+    const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 2500);
+    };
 
     useEffect(() => {
         const timer = setInterval(() => {
             setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
         }, 1000);
-
-        // Check for existing premium unlock
+        // localStorage 로컬 잠금해제 체크
         const unlocked = localStorage.getItem('premiumUnlocked') === 'true';
-        if (unlocked) {
-            setIsPremiumUnlocked(true);
-        }
-
+        if (unlocked) setIsPremiumUnlocked(true);
+        // Firestore 관리자 무료설정 체크
+        getDoc(doc(db, 'siteConfig', 'quizResult')).then(snap => {
+            if (snap.exists() && snap.data().mode === 'free') {
+                setIsPremiumUnlocked(true);
+            }
+        }).catch(() => {});
         return () => clearInterval(timer);
     }, []);
 
@@ -32,328 +62,457 @@ export default function Result() {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // Default to 'growth' if accessed directly or no result type passed
     const resultType = location.state?.resultType || localStorage.getItem('myResultType') || 'growth';
     const currentRecommendation = recommendations[resultType];
     const data = resultData[resultType];
+    const futureData = futureVision[resultType];
+
+    const scores = data.scores || { A: 8, B: 2, C: 1, D: 1 };
+    const totalScore = scores.A + scores.B + scores.C + scores.D || 1;
+    const scoreMap = { growth: scores.A, entertainment: scores.B, empathy: scores.C, mindfulness: scores.D };
 
     const handleUnlock = () => {
-        // [Adari] Payment logic here
         const confirmed = window.confirm("PG_LINK: [특별 할인가 4,900원] 결제를 진행하시겠습니까? (Toss/Kakao)");
         if (confirmed) {
             setIsPremiumUnlocked(true);
             localStorage.setItem('premiumUnlocked', 'true');
-            // Store the result type so Library can access it
             localStorage.setItem('myResultType', resultType);
         }
     };
 
-    const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'The Archiview - 인지 분석 결과',
-                text: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
-                url: window.location.href,
-            }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(window.location.href).then(() => {
-                alert('링크가 클립보드에 복사되었습니다.');
-            });
+    const handleQRShare = async () => {
+        setShowQRModal(true);
+        if (qrCardUrl) return; // 이미 생성됨
+        setQrLoading(true);
+        try {
+            const url = 'https://archiview.store/result';
+            const dataUrl = await generateResultQRCard(data, resultType, url);
+            setQrCardUrl(dataUrl);
+        } catch {
+            showToast('카드 생성에 실패했습니다.');
+            setShowQRModal(false);
+        } finally {
+            setQrLoading(false);
         }
     };
 
-    const handleInstagramShare = () => {
-        // Direct upload to Instagram is not possible via web API, 
-        // so we prompt for share sheet (where Instagram can be selected) or give instructions.
-        if (navigator.share) {
-            navigator.share({
-                title: 'The Archiview',
-                text: `${data.persona} - 나의 인지 분석 결과! #TheArchiview #독서테스트`,
-                url: window.location.href,
-            }).catch(console.error);
-        } else {
-            alert('인스타그램으로 공유하려면 모바일 기기를 사용하시거나 스크린샷을 찍어 직접 업로드해 주세요.');
+    const handleDownloadQR = () => {
+        if (!qrCardUrl) return;
+        const a = document.createElement('a');
+        a.href = qrCardUrl;
+        a.download = `archiview-result-${resultType}.png`;
+        a.click();
+    };
+
+    const handleShareQRImage = async () => {
+        if (!qrCardUrl) return;
+        try {
+            const res = await fetch(qrCardUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `archiview-result.png`, { type: 'image/png' });
+            if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'The Archiview 결과 카드' });
+            } else {
+                handleDownloadQR();
+                showToast('이미지가 저장되었습니다!');
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') { handleDownloadQR(); showToast('이미지가 저장되었습니다!'); }
         }
     };
 
-    const handleKakaoShare = () => {
-        if (!window.Kakao) return;
-        if (!window.Kakao.isInitialized()) {
-            window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
-        }
-        window.Kakao.Link.sendDefault({
-            objectType: 'feed',
-            content: {
-                title: '아카이뷰 인지 분석 결과',
-                description: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
-                imageUrl: `https://the-archive.web.app${data.image}`,
-                link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
-                },
-            },
-            buttons: [
-                {
-                    title: '결과 보기',
-                    link: {
-                        mobileWebUrl: window.location.href,
-                        webUrl: window.location.href,
+    const handleKakaoShare = async () => {
+        const url = 'https://archiview.store/result';
+        const typeImgMap = {
+            growth:        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop&q=80',
+            entertainment: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=800&h=400&fit=crop&q=80',
+            empathy:       'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&h=400&fit=crop&q=80',
+            mindfulness:   'https://images.unsplash.com/photo-1463453091185-61582044d556?w=800&h=400&fit=crop&q=80',
+        };
+        const imageUrl = typeImgMap[resultType] || typeImgMap.growth;
+
+        const tryShare = () => {
+            try {
+                if (!window.Kakao) throw new Error('no-sdk');
+                if (!window.Kakao.isInitialized()) window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
+                const shareMethod = window.Kakao.Share || window.Kakao.Link;
+                if (!shareMethod) throw new Error('no-method');
+                shareMethod.sendDefault({
+                    objectType: 'feed',
+                    content: {
+                        title: `📖 ${data.subtitle} — 아카이뷰 독서 성향 분석`,
+                        description: `${TYPE_META[resultType]?.label || ''} · ${data.persona}\n\n${(data.summary || '').slice(0, 100)}`,
+                        imageUrl,
+                        link: { mobileWebUrl: url, webUrl: url },
                     },
-                },
-            ],
-        });
+                    buttons: [
+                        { title: '결과 자세히 보기 →', link: { mobileWebUrl: url, webUrl: url } },
+                    ],
+                });
+            } catch {
+                navigator.clipboard.writeText(url)
+                    .then(() => showToast('링크가 복사되었습니다! 카카오톡에 붙여넣기하세요.'))
+                    .catch(() => showToast('링크: ' + url));
+            }
+        };
+        tryShare();
     };
 
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
-            {/* Header */}
-            <TopNavigation type="sub" />
+        <div className="bg-background-dark font-display text-slate-100 antialiased min-h-screen flex flex-col">
+            <MainHeader showBack />
+
+            {/* Toast notification */}
+            {toastMsg && (
+                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#1a2540] border border-white/20 text-white text-xs font-bold px-4 py-2.5 shadow-xl rounded flex items-center gap-2 animate-fade-in">
+                    <span className="material-symbols-outlined text-sm text-gold">check_circle</span>
+                    {toastMsg}
+                </div>
+            )}
 
             <main className="flex-1 pb-24">
-                {/* Hero Section: Reading Persona */}
-                <section className="flex flex-col items-center px-6 py-8 text-center animate-fade-in-up">
-                    <div className="relative mb-6">
-                        {/* Decorative Glow */}
-                        <div className="absolute inset-0 scale-110 rounded-none bg-primary/20 blur-3xl dark:bg-blue-500/10"></div>
-                        {/* Persona Graphic - Dynamic Image */}
-                        <div className="relative flex size-48 items-center justify-center rounded-none border-4 border-primary/20 bg-primary/5 p-4 dark:border-white/10">
-                            <div className="size-40 rounded-none bg-cover bg-center shadow-2xl" style={{ backgroundImage: `url('${data.image}')` }}></div>
-                            <div className="absolute -bottom-2 rounded-none bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-4 ring-background-dark">검증된 분석 결과</div>
+
+                {/* ── 1. HERO ─────────────────────────────────── */}
+                <section className="relative overflow-hidden">
+                    {/* ambient glow */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-primary/50 via-primary/10 to-transparent pointer-events-none" />
+                    <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-80 bg-primary/25 rounded-full blur-[80px] pointer-events-none" />
+
+                    <div className="relative flex flex-col items-center px-6 pt-10 pb-10 text-center">
+                        {/* Character avatar */}
+                        <div className="relative mb-5">
+                            <div className="w-28 h-28 rounded-full overflow-hidden ring-2 ring-gold/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]">
+                                <PersonaAvatar type={resultType} />
+                            </div>
+                            {/* type pill */}
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gold text-primary text-[9px] font-black px-3 py-[3px] tracking-[0.15em] uppercase shadow-lg">
+                                {TYPE_META[resultType].label}
+                            </div>
                         </div>
-                    </div>
-                    <h2 className="text-3xl font-extrabold tracking-tight text-primary dark:text-white">{data.persona}</h2>
-                    <p className="mt-2 text-slate-600 dark:text-slate-400 font-medium">{data.subtitle}</p>
-                    <div className="mt-4 flex items-center gap-2 rounded-none bg-primary/5 px-3 py-1 dark:bg-white/5">
-                        <span className="material-symbols-outlined text-sm text-blue-500">verified</span>
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">과학적으로 입증된 결과</span>
+
+                        {/* subtitle as main title */}
+                        <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-white leading-tight">
+                            {data.subtitle}
+                        </h2>
+                        {/* persona as secondary label */}
+                        <p className="mt-1.5 text-xs text-slate-500 font-medium">{data.persona}</p>
                     </div>
                 </section>
 
-                {/* Metric Cards Grid */}
-                <section className="px-4 py-4 animate-fade-in-up delay-100">
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.wpm.label}</span>
-                            <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.wpm.value}</span>
-                            <span className="text-[10px] font-bold text-emerald-500">{data.metrics.wpm.change}</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.accuracy.label}</span>
-                            <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.accuracy.value}</span>
-                            <span className="text-[10px] font-bold text-emerald-500">{data.metrics.accuracy.rank}</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center rounded-none bg-primary/5 p-4 text-center dark:bg-primary/20 border border-primary/10">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{data.metrics.retention.label}</span>
-                            <span className="text-xl font-extrabold text-primary dark:text-white">{data.metrics.retention.value}</span>
-                            <span className="text-[10px] font-bold text-emerald-500">{data.metrics.retention.rank}</span>
+                {/* ── 2. 독서 성향 프로필 ───────────────────────── */}
+                <section className="px-4 py-4 animate-fade-in-up">
+                    <div className="bg-white/5 border border-white/10 p-5 rounded">
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.18em] mb-4">
+                            독서 성향 프로필
+                        </h3>
+                        <div className="space-y-3.5">
+                            {TYPE_ORDER.map((type) => {
+                                const pct = Math.round((scoreMap[type] / totalScore) * 100);
+                                const isMain = type === resultType;
+                                const meta = TYPE_META[type];
+                                return (
+                                    <div key={type}>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xs font-bold ${isMain ? 'text-white' : 'text-slate-500'}`}>
+                                                    {meta.label}
+                                                </span>
+                                                {isMain && (
+                                                    <span className="text-[9px] font-black bg-gold/20 text-gold px-1.5 py-0.5 tracking-wide uppercase">
+                                                        주 유형
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className={`text-xs font-bold tabular-nums ${isMain ? 'text-gold' : 'text-slate-600'}`}>
+                                                {pct}%
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full bg-gradient-to-r ${meta.colorFrom} ${meta.colorTo} transition-all duration-1000 ease-out`}
+                                                style={{ width: `${pct}%`, opacity: isMain ? 1 : 0.35 }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
+                </section>
 
-                    {/* Metric Interpretation Guide */}
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-none p-4 border border-slate-100 dark:border-white/5">
-                        <h4 className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">info</span> 지표 해석 가이드
-                        </h4>
-                        <ul className="space-y-2 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                            <li><strong className="text-primary dark:text-slate-300">분당 단어 수 (WPM):</strong> 귀하의 인지 반응 속도를 기반으로 예측된 텍스트 처리 효율성입니다.</li>
-                            <li><strong className="text-primary dark:text-slate-300">정확도/논리력:</strong> 텍스트의 핵심 구조와 인과관계를 파악하는 정확성을 의미합니다.</li>
-                            <li><strong className="text-primary dark:text-slate-300">기억력/적용력:</strong> 습득한 정보를 장기 기억으로 전환하고 응용하는 잠재 역량입니다.</li>
-                        </ul>
-                        <p className="mt-2 text-[10px] text-slate-400 italic">
-                            * 위 수치는 귀하의 응답 패턴을 50만 건의 독서 행동 데이터와 대조하여 도출된 예측값입니다.
+                {/* ── 3. 성향 요약 ──────────────────────────────── */}
+                <section className="px-4 py-3 animate-fade-in-up">
+                    <div className="border-l-2 border-gold/50 pl-4 py-1">
+                        <h3 className="text-[10px] font-black text-gold uppercase tracking-[0.18em] mb-2">
+                            당신의 독서 성향
+                        </h3>
+                        <p className="text-sm leading-relaxed text-slate-300">{data.summary}</p>
+                    </div>
+                </section>
+
+                {/* ── 4. 아카이뷰와 함께하면 (미래 타임라인) ──────── */}
+                <section className="px-4 pt-6 pb-4 animate-fade-in-up">
+                    {/* Section header */}
+                    <div className="mb-6">
+                        <span className="text-[10px] font-black text-gold uppercase tracking-[0.18em]">
+                            성장 로드맵
+                        </span>
+                        <h3 className="text-xl font-black text-white mt-1 leading-tight">
+                            아카이뷰와 함께하면<br />
+                            <span className="text-gold">이렇게 달라집니다</span>
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                            매일 출퇴근길 15분의 습관이<br />
+                            <strong className="text-slate-400">{data.persona}</strong> 유형의 당신을 어떻게 바꾸는지 확인하세요.
                         </p>
                     </div>
+
+                    {/* Timeline */}
+                    <div className="relative">
+                        {/* Vertical connector */}
+                        <div className="absolute left-[17px] top-5 bottom-5 w-px bg-gradient-to-b from-gold/50 via-gold/20 to-transparent" />
+
+                        <div className="space-y-4">
+                            {futureData && futureData.map((item, i) => {
+                                const s = FUTURE_STEP_STYLES[i] || FUTURE_STEP_STYLES[2];
+                                return (
+                                    <div key={i} className="relative flex gap-3.5">
+                                        {/* Icon circle */}
+                                        <div className={`relative z-10 flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-base bg-[#0a1020] border ${s.circle}`}>
+                                            {item.icon}
+                                        </div>
+
+                                        {/* Card */}
+                                        <div className={`flex-1 rounded p-4 border ${s.bg} ${s.border}`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${s.year}`}>
+                                                {item.year}
+                                            </span>
+                                            <h4 className="text-sm font-bold text-white mt-1.5 mb-2 leading-snug">
+                                                {item.title}
+                                            </h4>
+                                            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                                                {item.desc}
+                                            </p>
+
+                                            {/* Details checklist */}
+                                            {item.details && item.details.length > 0 && (
+                                                <ul className="space-y-2 mb-3 border-t border-white/5 pt-3">
+                                                    {item.details.map((detail, di) => (
+                                                        <li key={di} className="flex items-start gap-2">
+                                                            <span className={`material-symbols-outlined text-xs leading-tight mt-0.5 flex-shrink-0 ${s.year}`}>
+                                                                check_circle
+                                                            </span>
+                                                            <span className="text-[11px] text-slate-300 leading-snug">{detail}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+
+                                            <div className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded border ${s.badge}`}>
+                                                <span className="material-symbols-outlined text-xs leading-none">star</span>
+                                                {item.highlight}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </section>
 
-                {/* Summary Text */}
-                <section className="px-6 py-4 animate-fade-in-up delay-200">
-                    <h3 className="text-lg font-bold">성과 요약</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{data.summary}</p>
-                </section>
-
-                {/* Share Actions */}
-                <section className="px-6 py-4 flex gap-3 animate-fade-in-up delay-300">
+                {/* ── 5. 공유 ──────────────────────────────────── */}
+                <section className="px-4 py-4 flex gap-2 animate-fade-in-up">
                     <button
-                        onClick={handleShare}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-none bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold transition-all active:scale-95 shadow-xl hover:shadow-primary/20"
+                        onClick={handleQRShare}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-3.5 bg-white/10 border border-white/15 text-white text-xs font-bold active:scale-95 transition-transform rounded"
                     >
-                        <span className="material-symbols-outlined text-xl">share</span>
-                        결과 공유하기
+                        <span className="material-symbols-outlined text-base leading-none">qr_code_2</span>
+                        QR 공유
                     </button>
                     <button
-                        onClick={handleInstagramShare}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-none bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white font-bold transition-all active:scale-95 shadow-xl hover:shadow-[#dc2743]/30"
+                        onClick={handleKakaoShare}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-3.5 bg-[#FEE500] text-[#3C1E1E] text-xs font-bold active:scale-95 transition-transform rounded"
                     >
-                        <span className="material-symbols-outlined text-xl">photo_camera</span>
-                        인스타 업로드
+                        <span className="text-base leading-none">💬</span>
+                        카카오 공유
                     </button>
                 </section>
 
-                {/* Gated Premium Section */}
-                <section className="relative mx-4 mt-8 mb-12 overflow-hidden rounded-none border border-primary/20 dark:border-white/10 bg-white dark:bg-[#0f172a] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-fade-in-up delay-500">
-                    <div className="p-6 md:p-8">
-                        <div className="flex items-center justify-between mb-8">
+                {/* ── QR 공유 모달 ─────────────────────────────── */}
+                {showQRModal && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-5"
+                        onClick={() => setShowQRModal(false)}
+                    >
+                        <div
+                            className="bg-[#0b1525] border border-white/10 rounded w-full max-w-xs shadow-2xl overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* 모달 헤더 */}
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-gold text-base">qr_code_2</span>
+                                    <h3 className="text-sm font-black text-white">결과 공유 카드</h3>
+                                </div>
+                                <button onClick={() => setShowQRModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined text-xl">close</span>
+                                </button>
+                            </div>
+
+                            {/* 카드 미리보기 */}
+                            <div className="p-4">
+                                {qrLoading ? (
+                                    <div className="h-52 flex flex-col items-center justify-center gap-3">
+                                        <span className="material-symbols-outlined text-gold text-3xl animate-spin">progress_activity</span>
+                                        <p className="text-xs text-slate-500">카드 생성 중…</p>
+                                    </div>
+                                ) : qrCardUrl ? (
+                                    <>
+                                        <div className="rounded overflow-hidden border border-white/10 mb-4 shadow-xl">
+                                            <img src={qrCardUrl} alt="QR 공유 카드" className="w-full" />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleDownloadQR}
+                                                className="flex-1 py-3 bg-gold text-primary text-xs font-black flex items-center justify-center gap-1.5 rounded active:scale-95 transition-transform"
+                                            >
+                                                <span className="material-symbols-outlined text-sm leading-none">download</span>
+                                                저장하기
+                                            </button>
+                                            <button
+                                                onClick={handleShareQRImage}
+                                                className="flex-1 py-3 bg-white/10 border border-white/10 text-white text-xs font-bold flex items-center justify-center gap-1.5 rounded active:scale-95 transition-transform"
+                                            >
+                                                <span className="material-symbols-outlined text-sm leading-none">share</span>
+                                                공유하기
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── 쿠팡 파트너스 배너 ──────────────────────────── */}
+                <section className="px-4 pb-1 flex flex-col items-center gap-1.5 animate-fade-in-up">
+                    <iframe
+                        src="https://ads-partners.coupang.com/widgets.html?id=976190&template=banner&trackingCode=AF5571749&subId=&width=320&height=100"
+                        width="320"
+                        height="100"
+                        frameBorder="0"
+                        scrolling="no"
+                        referrerPolicy="unsafe-url"
+                        style={{ display: 'block' }}
+                    />
+                    <p className="text-[10px] text-slate-600 text-center leading-snug">
+                        이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+                    </p>
+                </section>
+
+                {/* ── 6. 프리미엄 정밀 분석 (게이티드) ────────────── */}
+                <section className="relative mx-4 mt-2 mb-12 overflow-hidden border border-white/10 bg-[#080e1a] animate-fade-in-up">
+                    <div className="p-5">
+
+                        {/* Premium header */}
+                        <div className="flex items-center gap-3 mb-6 pb-5 border-b border-white/10">
+                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gold/10 border border-gold/20 rounded">
+                                <span className="material-symbols-outlined text-gold text-xl">workspace_premium</span>
+                            </div>
                             <div>
-                                <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-gold font-bold">workspace_premium</span>
-                                    프리미엄 정밀 분석 리포트
-                                </h3>
-                                <p className="text-[11px] text-slate-500 mt-1 font-bold uppercase tracking-wider">Big Data Cognitive Analysis Suite</p>
+                                <h3 className="text-base font-black text-white">정밀 인지 분석 리포트</h3>
+                                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">
+                                    Cognitive Analysis Suite
+                                </p>
                             </div>
                         </div>
 
-                        {/* Blurred Content / Real Content */}
-                        <div className={`space-y-8 transition-all duration-700 ${!isPremiumUnlocked ? 'filter blur-xl opacity-20 pointer-events-none select-none h-[500px] overflow-hidden' : ''}`}>
-                            {/* 1. Radar Chart Component (SVG) */}
-                            <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-none border border-primary/5 dark:border-white/5 relative">
-                                <h4 className="text-sm font-bold text-primary dark:text-white mb-6 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-blue-500">radar</span>
-                                    5-Dimension 인지 역량 모델
+                        {/* Blurred / Real content */}
+                        <div className={`space-y-6 transition-all duration-700 ${!isPremiumUnlocked ? 'filter blur-xl opacity-20 pointer-events-none select-none h-[500px] overflow-hidden' : ''}`}>
+
+                            {/* 6-1. Radar Chart */}
+                            <div className="bg-white/5 p-5 border border-white/5 rounded">
+                                <h4 className="text-xs font-bold text-white mb-5 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-blue-400 text-base">radar</span>
+                                    6차원 인지 역량 모델
                                 </h4>
-                                <div className="flex flex-col items-center gap-8">
-                                    {/* SVG Radar Chart */}
-                                    <div className="relative size-48 shrink-0">
-                                        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl transform text-xs">
-                                            {/* Background Web */}
-                                            <polygon points="50,5 95,30 95,75 50,95 5,75 5,30" fill="none" stroke="#ddd" strokeWidth="0.5" className="dark:stroke-white/20" />
-                                            <polygon points="50,20 80,35 80,65 50,80 20,65 20,35" fill="none" stroke="#ddd" strokeWidth="0.5" className="dark:stroke-white/20" />
-
-                                            {/* Data Polygon (Dynamic) */}
-                                            <polygon points={data.radarChart.points} fill="rgba(212, 175, 55, 0.4)" stroke="#d4af37" strokeWidth="2" className="animate-pulse-slow" />
-
-                                            {/* Labels */}
-                                            <text x="50" y="4" textAnchor="middle" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">집중력</text>
-                                            <text x="96" y="28" textAnchor="start" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">논리성</text>
-                                            <text x="96" y="78" textAnchor="start" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">속독력</text>
-                                            <text x="50" y="99" textAnchor="middle" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">기억력</text>
-                                            <text x="4" y="78" textAnchor="end" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">공감력</text>
-                                            <text x="4" y="28" textAnchor="end" fontSize="6" className="fill-slate-600 dark:fill-slate-300 font-bold">어휘력</text>
+                                <div className="flex flex-col items-center gap-5">
+                                    <div className="relative w-56 h-56">
+                                        <svg viewBox="-30 -18 160 136" className="w-full h-full drop-shadow-xl overflow-visible">
+                                            <polygon points="50,5 95,30 95,75 50,95 5,75 5,30"
+                                                fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.6" />
+                                            <polygon points="50,20 80,35 80,65 50,80 20,65 20,35"
+                                                fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+                                            <polygon
+                                                points={data.radarChart.points}
+                                                fill="rgba(212,175,55,0.22)"
+                                                stroke="#D4AF37"
+                                                strokeWidth="1.5"
+                                                className="animate-pulse-slow"
+                                            />
+                                            {/* 레이블: 헥사곤 꼭짓점에서 10유닛 바깥, fontSize 7.5 */}
+                                            <text x="50"  y="-4"  textAnchor="middle" fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">집중력</text>
+                                            <text x="103" y="30"  textAnchor="start"  fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">논리성</text>
+                                            <text x="103" y="78"  textAnchor="start"  fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">속독력</text>
+                                            <text x="50"  y="108" textAnchor="middle" fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">기억력</text>
+                                            <text x="-3"  y="78"  textAnchor="end"    fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">공감력</text>
+                                            <text x="-3"  y="30"  textAnchor="end"    fontSize="7.5" fill="rgba(255,255,255,0.85)" fontWeight="bold">어휘력</text>
                                         </svg>
                                     </div>
-                                    <div className="w-full text-center">
-                                        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                                            귀하의 인지 패턴은 <strong className="text-primary dark:text-gold">{data.persona}</strong>에 가깝습니다. 특히 <strong>{data.metrics.accuracy.label}</strong>과 <strong>{data.metrics.retention.label}</strong> 영역에서 탁월한 수치를 보입니다.
-                                        </p>
-                                    </div>
+                                    <p className="text-xs text-slate-300 text-center leading-relaxed">
+                                        <strong className="text-gold">{data.persona}</strong> 유형은<br />
+                                        특히 <strong className="text-white">{data.metrics.accuracy.label}</strong>과{' '}
+                                        <strong className="text-white">{data.metrics.retention.label}</strong> 영역에서 강점을 보입니다.
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* 2. Comparative Bar Charts & Deep Dive */}
-                            <div className="space-y-8">
-                                <h4 className="text-sm font-bold text-primary dark:text-white mb-4 flex items-center gap-2 border-b border-primary/10 dark:border-white/10 pb-2">
-                                    <span className="material-symbols-outlined text-green-500">analytics</span>
-                                    Big Data 비교 분석 (N=50,214)
+                            {/* 6-2. 심층 인지 분석 (텍스트, 수치 없음) */}
+                            <div>
+                                <h4 className="text-xs font-bold text-white mb-3 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-emerald-400 text-base">analytics</span>
+                                    심층 인지 분석
                                 </h4>
-
-                                {/* Analysis Item 1: Cognitive Load */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">인지 부하 처리량 (Cognitive Load Capacity)</span>
-                                            <h5 className="text-lg font-black text-primary dark:text-white">{data.bigData.load.percentile} <span className="text-xs font-normal text-slate-500 ml-1">({data.bigData.load.rank})</span></h5>
+                                <div className="space-y-3">
+                                    {[
+                                        { title: '인지 부하 처리 방식', desc: data.bigData.load.desc,       icon: 'psychology',  color: 'text-blue-400'   },
+                                        { title: '맥락 추론 패턴',       desc: data.bigData.inference.desc,  icon: 'hub',         color: 'text-purple-400' },
+                                        { title: '어휘 다양성',          desc: data.bigData.vocabulary.desc, icon: 'menu_book',   color: 'text-amber-400'  },
+                                    ].map((item, i) => (
+                                        <div key={i} className="bg-white/5 p-4 border border-white/5 rounded">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className={`material-symbols-outlined text-base ${item.color}`}>{item.icon}</span>
+                                                <h5 className="text-xs font-bold text-slate-300">{item.title}</h5>
+                                            </div>
+                                            <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="text-2xl font-black text-green-600">{data.bigData.load.score}</span>
-                                            <span className="text-[10px] text-slate-400 block">/ 100 pt</span>
-                                        </div>
-                                    </div>
-                                    {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
-                                        <div className="absolute top-0 left-0 h-full bg-slate-400 w-[45%] opacity-30"></div> {/* Average Marker Area */}
-                                        <div className="absolute top-0 left-[44%] h-full w-[2px] bg-slate-500 z-10"></div> {/* Average Line */}
-                                        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-gold shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.load.score}%` }}></div> {/* User Score */}
-                                    </div>
-                                    <div className="flex justify-between text-[9px] text-slate-400 font-medium mb-3">
-                                        <span>Average ({data.bigData.load.avg})</span>
-                                        <span>You ({data.bigData.load.score})</span>
-                                    </div>
-                                    <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-white/10 pt-3 mt-2">
-                                        {data.bigData.load.desc}
-                                    </p>
-                                </div>
-
-                                {/* Analysis Item 2: Inference Speed */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">맥락 추론 속도 (Inference Speed)</span>
-                                            <h5 className="text-lg font-black text-primary dark:text-white">{data.bigData.inference.percentile} <span className="text-xs font-normal text-slate-500 ml-1">({data.bigData.inference.rank})</span></h5>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-2xl font-black text-blue-500">{data.bigData.inference.score}</span>
-                                            <span className="text-[10px] text-slate-400 block">/ 100 pt</span>
-                                        </div>
-                                    </div>
-                                    {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
-                                        <div className="absolute top-0 left-0 h-full bg-slate-400 w-[52%] opacity-30"></div>
-                                        <div className="absolute top-0 left-[51%] h-full w-[2px] bg-slate-500 z-10"></div>
-                                        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.inference.score}%` }}></div>
-                                    </div>
-                                    <div className="flex justify-between text-[9px] text-slate-400 font-medium mb-3">
-                                        <span>Average ({data.bigData.inference.avg})</span>
-                                        <span>You ({data.bigData.inference.score})</span>
-                                    </div>
-                                    <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-white/10 pt-3 mt-2">
-                                        {data.bigData.inference.desc}
-                                    </p>
-                                </div>
-
-                                {/* Analysis Item 3: Vocabulary Depth (New) */}
-                                <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-none">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">어휘 다양성 (Lexical Diversity)</span>
-                                            <h5 className="text-lg font-black text-primary dark:text-white">{data.bigData.vocabulary.percentile} <span className="text-xs font-normal text-slate-500 ml-1">({data.bigData.vocabulary.rank})</span></h5>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-2xl font-black text-purple-500">{data.bigData.vocabulary.score}</span>
-                                            <span className="text-[10px] text-slate-400 block">/ 100 pt</span>
-                                        </div>
-                                    </div>
-                                    {/* Comparative Bar */}
-                                    <div className="h-3 bg-slate-200 dark:bg-white/10 rounded-none overflow-hidden relative mb-3">
-                                        <div className="absolute top-0 left-0 h-full bg-slate-400 w-[38%] opacity-30"></div>
-                                        <div className="absolute top-0 left-[37%] h-full w-[2px] bg-slate-500 z-10"></div>
-                                        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-600 to-pink-400 shadow-lg transition-all duration-1000 ease-out" style={{ width: `${data.bigData.vocabulary.score}%` }}></div>
-                                    </div>
-                                    <div className="flex justify-between text-[9px] text-slate-400 font-medium mb-3">
-                                        <span>Average ({data.bigData.vocabulary.avg})</span>
-                                        <span>You ({data.bigData.vocabulary.score})</span>
-                                    </div>
-                                    <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-white/10 pt-3 mt-2">
-                                        {data.bigData.vocabulary.desc}
-                                    </p>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* 3. Expert Comments */}
-                            <div className="bg-primary/5 dark:bg-white/5 p-5 rounded-none border-l-4 border-primary dark:border-gold">
-                                <h4 className="text-sm font-bold text-primary dark:text-white mb-2 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-xl">auto_awesome</span>
-                                    AI 큐레이터의 종합 제언
-                                </h4>
-                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                                    {data.bigData.comment}
-                                </p>
+                            {/* 6-3. AI 큐레이터 종합 제언 */}
+                            <div className="bg-gold/5 border-l-4 border-gold p-4 rounded-r">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="material-symbols-outlined text-gold text-base">auto_awesome</span>
+                                    <h4 className="text-xs font-bold text-gold">AI 큐레이터의 종합 제언</h4>
+                                </div>
+                                <p className="text-xs text-slate-300 leading-relaxed">{data.bigData.comment}</p>
                             </div>
 
-                            {/* 4. Tailored Book Recommendations (Premium) */}
-                            <div className="pt-8 border-t border-primary/10 dark:border-white/10">
-                                <div className="mb-6">
-                                    <span className="text-xs font-bold text-gold uppercase tracking-wider">AI 큐레이션</span>
-                                    <h4 className="text-lg font-bold text-primary dark:text-white mt-1">
-                                        귀하를 위한 추천 도서 Top 5
-                                    </h4>
-                                    <p className="text-xs text-slate-500 mt-1">{currentRecommendation.desc}</p>
+                            {/* 6-4. 추천 도서 Top 5 */}
+                            <div className="pt-4 border-t border-white/10">
+                                <div className="mb-4">
+                                    <span className="text-[10px] font-black text-gold uppercase tracking-[0.18em]">AI 큐레이션</span>
+                                    <h4 className="text-base font-bold text-white mt-1">추천 도서 Top 5</h4>
+                                    <p className="text-xs text-slate-500 mt-0.5">{currentRecommendation?.desc}</p>
                                 </div>
-                                <div className="space-y-4">
-                                    {currentRecommendation.books.map((book, index) => (
+                                <div className="space-y-3">
+                                    {currentRecommendation?.books.map((book, index) => (
                                         <div
                                             key={index}
-                                            className="flex gap-4 p-4 rounded-none bg-white dark:bg-white/5 border border-primary/5 dark:border-white/5 shadow-sm hover:shadow-md transition-all group"
+                                            className="flex gap-3 p-3 bg-white/5 border border-white/5 hover:border-gold/20 transition-all group rounded"
                                         >
-                                            <div className="w-16 h-24 shrink-0 rounded-none overflow-hidden bg-slate-200 shadow-md">
+                                            <div className="w-14 h-20 shrink-0 overflow-hidden bg-slate-800 rounded">
                                                 <img
                                                     src={book.cover}
                                                     alt={book.title}
@@ -362,43 +521,36 @@ export default function Result() {
                                                 />
                                             </div>
                                             <div className="flex-1 flex flex-col justify-center">
-                                                <h5 className="font-bold text-primary dark:text-white text-sm line-clamp-1">{book.title}</h5>
+                                                <h5 className="font-bold text-white text-sm line-clamp-1">{book.title}</h5>
                                                 <p className="text-xs text-slate-500 mb-1">{book.author}</p>
-                                                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight line-clamp-2 mb-3">{book.desc}</p>
-
-                                                <BookCardActions book={book} className="mt-2" />
+                                                <p className="text-[11px] text-slate-400 leading-tight line-clamp-2 mb-2">{book.desc}</p>
+                                                <BookCardActions book={book} className="mt-1" />
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* 5. Tailored Travel Recommendations (Premium) */}
-                            <div className="pt-8 border-t border-primary/10 dark:border-white/10">
-                                <div className="mb-6">
-                                    <span className="text-xs font-bold text-gold uppercase tracking-wider">AI 큐레이션 2</span>
-                                    <h4 className="text-lg font-bold text-primary dark:text-white mt-1">
-                                        귀하에게 딱 맞는 여행지 Top 5
-                                    </h4>
-                                    <p className="text-xs text-slate-500 mt-1">{currentRecommendation.travelDesc}</p>
+                            {/* 6-5. 추천 여행지 Top 5 */}
+                            <div className="pt-4 border-t border-white/10">
+                                <div className="mb-4">
+                                    <span className="text-[10px] font-black text-gold uppercase tracking-[0.18em]">AI 큐레이션 2</span>
+                                    <h4 className="text-base font-bold text-white mt-1">추천 여행지 Top 5</h4>
+                                    <p className="text-xs text-slate-500 mt-0.5">{currentRecommendation?.travelDesc}</p>
                                 </div>
-                                <div className="space-y-4">
-                                    {currentRecommendation.travel && currentRecommendation.travel.map((place, index) => (
-                                        <div
-                                            key={index}
-                                            className="relative overflow-hidden rounded-none bg-slate-900 group shadow-md hover:shadow-xl transition-all"
-                                        >
-                                            {/* Image Background */}
-                                            <div className="absolute inset-0">
-                                                <img src={place.image} alt={place.place} className="w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-50 transition-all duration-700" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="relative p-5 flex flex-col items-start justify-end h-32">
-                                                <span className="text-[10px] font-bold text-gold bg-black/30 px-2 py-0.5 rounded-none mb-2 backdrop-blur-sm border border-white/10">{place.country}</span>
-                                                <h5 className="text-lg font-bold text-white leading-tight mb-1">{place.place}</h5>
-                                                <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{place.desc}</p>
+                                <div className="space-y-2">
+                                    {currentRecommendation?.travel?.map((place, index) => (
+                                        <div key={index} className="relative overflow-hidden group h-28 rounded">
+                                            <img
+                                                src={place.image}
+                                                alt={place.place}
+                                                className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 group-hover:opacity-40 transition-all duration-700"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                                            <div className="relative h-full flex flex-col justify-end p-3.5">
+                                                <span className="text-[9px] font-bold text-gold mb-1">{place.country}</span>
+                                                <h5 className="text-sm font-bold text-white leading-tight">{place.place}</h5>
+                                                <p className="text-[11px] text-slate-300 line-clamp-1 mt-0.5">{place.desc}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -406,62 +558,73 @@ export default function Result() {
                             </div>
 
                             {isPremiumUnlocked && (
-                                <div className="mt-8 p-4 bg-green-500/10 rounded-none text-green-600 text-sm font-bold text-center border border-green-500/20 shadow-inner flex flex-col items-center gap-2 animate-fade-in">
+                                <div className="mt-4 p-4 bg-emerald-500/10 text-emerald-400 text-sm font-bold text-center border border-emerald-500/20 flex flex-col items-center gap-2 animate-fade-in rounded">
                                     <span className="material-symbols-outlined text-2xl">check_circle</span>
-                                    <span>모든 데이터 분석 및 추천 도서 잠금이 해제되었습니다.</span>
+                                    <span>모든 분석 및 추천이 잠금 해제되었습니다.</span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Enhanced Overlay CTA */}
+                        {/* ── Lock Overlay ── */}
                         {!isPremiumUnlocked && (
-                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm p-6 text-center">
-                                {/* Time Sale Badge */}
-                                <div className="mb-8 animate-bounce-subtle">
-                                    <div className="bg-red-600 text-white text-[11px] font-black px-4 py-1.5 rounded-none shadow-[0_0_20px_rgba(220,38,38,0.5)] uppercase tracking-[0.2em] border border-white/20">
-                                        ⚡ Limited Time Sale ⚡
-                                    </div>
-                                </div>
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[6px] p-5">
+                                <div className="bg-[#0b1525]/96 border border-white/10 p-6 w-full max-w-xs shadow-[0_20px_60px_rgba(0,0,0,0.5)] rounded">
 
-                                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-none p-8 border border-white/20 shadow-2xl w-full max-w-sm">
-                                    <div className="mb-4 flex size-20 items-center justify-center rounded-none bg-gradient-to-br from-gold/20 to-gold/5 mx-auto ring-1 ring-gold/30">
-                                        <span className="material-symbols-outlined text-5xl text-gold animate-pulse">lock</span>
-                                    </div>
-
-                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-tight mb-2">당신만을 위한<br />정밀 분석이 완료되었습니다</h4>
-                                    <p className="mb-6 text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
-                                        상위 1%의 인지 처리 패턴과<br />
-                                        인물 기반 맞춤 도서/여행지 추천을 확인하세요.
-                                    </p>
-
-                                    {/* Price Section */}
-                                    <div className="mb-6 flex flex-col items-center">
-                                        <span className="text-slate-400 line-through text-sm font-bold opacity-75 mb-1">정가 ₩29,000</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-4xl font-black text-red-500">₩4,900</span>
-                                            <span className="text-xs font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded">66% OFF</span>
+                                    {/* Sale badge */}
+                                    <div className="flex justify-center mb-5">
+                                        <div className="bg-red-600 text-white text-[10px] font-black px-4 py-1 uppercase tracking-[0.2em]">
+                                            ⚡ Limited Time Sale ⚡
                                         </div>
                                     </div>
 
-                                    {/* Countdown Timer */}
-                                    <div className="mb-8 bg-slate-100 dark:bg-white/5 py-3 rounded-none border border-slate-200 dark:border-white/10">
-                                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">할인 마감까지 남은 시간</p>
-                                        <div className="text-3xl font-black text-slate-900 dark:text-white font-mono tracking-widest flex items-center justify-center gap-2">
-                                            <span className="material-symbols-outlined text-red-500 animate-pulse">alarm</span>
+                                    <div className="flex items-center justify-center mb-4">
+                                        <span className="material-symbols-outlined text-[3.5rem] text-gold animate-pulse">lock</span>
+                                    </div>
+
+                                    <h4 className="text-xl font-black text-white text-center leading-tight mb-2">
+                                        나만을 위한<br />정밀 분석 완료
+                                    </h4>
+                                    <p className="text-xs text-slate-400 text-center leading-relaxed mb-5">
+                                        6차원 인지 역량 심층 분석,<br />
+                                        맞춤 도서 Top 5 + 여행지 Top 5
+                                    </p>
+
+                                    {/* Price */}
+                                    <div className="flex flex-col items-center mb-4">
+                                        <span className="text-slate-600 line-through text-sm mb-1">정가 ₩29,000</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-4xl font-black text-red-400">₩4,900</span>
+                                            <span className="text-xs font-black text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
+                                                66% OFF
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Countdown */}
+                                    <div className="bg-white/5 py-3 mb-5 text-center border border-white/10 rounded">
+                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
+                                            할인 마감까지
+                                        </p>
+                                        <div className="text-3xl font-black text-white font-mono flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-red-400 animate-pulse text-xl">alarm</span>
                                             {formatTime(timeLeft)}
                                         </div>
                                     </div>
 
-                                    <button onClick={handleUnlock} className="group relative w-full overflow-hidden rounded-none bg-gold text-slate-900 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
-                                        <div className="relative flex items-center justify-center gap-3 py-5 px-6">
-                                            <span className="text-base font-black uppercase tracking-tight">리포트 평생 소장하기</span>
-                                            <span className="material-symbols-outlined font-bold">arrow_forward</span>
-                                        </div>
+                                    <button
+                                        onClick={handleUnlock}
+                                        className="w-full py-4 bg-gold text-primary font-black text-sm uppercase tracking-tight hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_4px_24px_rgba(212,175,55,0.28)] rounded"
+                                    >
+                                        리포트 평생 소장하기 →
                                     </button>
 
-                                    <div className="mt-6 flex items-center justify-center gap-4 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-80">
-                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">shield_check</span> 안전 결제</span>
-                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">history_edu</span> 분석 저장</span>
+                                    <div className="mt-4 flex items-center justify-center gap-4 text-[9px] font-bold text-slate-700 uppercase tracking-widest">
+                                        <span className="flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs">shield_check</span> 안전 결제
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs">history_edu</span> 분석 저장
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -472,7 +635,6 @@ export default function Result() {
                 <Footer />
             </main>
 
-            {/* Bottom Navigation */}
             <BottomNavigation />
         </div>
     );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { questions } from '../data/questions';
 import BottomNavigation from '../components/BottomNavigation';
-import TopNavigation from '../components/TopNavigation';
+import MainHeader from '../components/MainHeader';
 import Footer from '../components/Footer';
 
 export default function Quiz() {
@@ -27,40 +27,46 @@ export default function Quiz() {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
             window.scrollTo(0, 0);
         } else {
-            const resultType = calculateResult(answers);
-            localStorage.setItem('quizResult', resultType); // Save result for Library access
-            navigate('/result', { state: { resultType } });
+            const { scores, resultType } = calculateResult(answers);
+            // 상세 점수와 유형 모두 저장
+            localStorage.setItem('quizResult', resultType);
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            navigate('/result', { state: { resultType, scores } });
         }
     };
 
     const calculateResult = (finalAnswers) => {
-        // Score Calculation: A=Growth, B=Entertainment, C=Empathy, D=Mindfulness
+        // 가중치 기반 점수 계산: A=Growth, B=Entertainment, C=Empathy, D=Mindfulness
         const scores = { A: 0, B: 0, C: 0, D: 0 };
 
-        Object.values(finalAnswers).forEach(option => {
-            if (scores[option] !== undefined) {
-                scores[option]++;
+        // 각 질문의 가중치를 반영한 점수 합산
+        Object.entries(finalAnswers).forEach(([questionId, optionId]) => {
+            const question = quizQuestions.find(q => q.id === parseInt(questionId));
+            if (question) {
+                const option = question.options.find(o => o.id === optionId);
+                if (option && option.weights) {
+                    // 가중치가 있는 경우: 다차원 점수 반영
+                    scores.A += option.weights.A || 0;
+                    scores.B += option.weights.B || 0;
+                    scores.C += option.weights.C || 0;
+                    scores.D += option.weights.D || 0;
+                } else {
+                    // 가중치가 없는 기존 질문: 단순 카운트
+                    if (scores[optionId] !== undefined) {
+                        scores[optionId]++;
+                    }
+                }
             }
         });
 
-        let maxScore = -1;
-        let resultType = 'growth';
-
-        const typeMap = {
-            'A': 'growth',
-            'B': 'entertainment',
-            'C': 'empathy',
-            'D': 'mindfulness'
-        };
-
-        for (const [key, value] of Object.entries(scores)) {
-            if (value > maxScore) {
-                maxScore = value;
-                resultType = typeMap[key];
-            }
+        // 주 유형 결정
+        const typeMap = { A: 'growth', B: 'entertainment', C: 'empathy', D: 'mindfulness' };
+        let maxKey = 'A';
+        for (const key of ['B', 'C', 'D']) {
+            if (scores[key] > scores[maxKey]) maxKey = key;
         }
 
-        return resultType;
+        return { scores, resultType: typeMap[maxKey] };
     };
 
     if (quizQuestions.length === 0) return (
@@ -82,7 +88,7 @@ export default function Quiz() {
     return (
         <div className="bg-white font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 flex justify-center">
             <div className="w-full max-w-lg relative bg-background-dark shadow-2xl min-h-screen overflow-hidden border-t border-white/5 flex flex-col">
-                <TopNavigation title="성향 분석" type="sub" />
+                <MainHeader showBack />
 
                 {/* Progress Bar */}
                 <div className="w-full h-1 bg-white/5">

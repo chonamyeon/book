@@ -35,15 +35,23 @@ export const googleProvider = new GoogleAuthProvider();
 setPersistence(auth, browserLocalPersistence)
     .catch(err => console.error("Persistence error:", err));
 
-// iOS Safari robust login: always use redirect
+// PWA standalone 여부 감지
+const isPWA = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+// PWA: popup 우선 (redirect는 PWA에서 세션 격리로 실패 가능)
+// 브라우저: redirect 사용 (iOS Safari popup 차단 대응)
 export const loginWithGoogle = () => {
-    // Popup must be triggered synchronously to avoid blocker
-    // Persistence is already set globally above
     return signInWithPopup(auth, googleProvider);
 };
 
 export const loginWithGoogleRedirect = async () => {
     await setPersistence(auth, browserLocalPersistence);
+    if (isPWA()) {
+        // PWA standalone 모드: popup 방식 (redirect는 복귀 후 결과 유실)
+        return signInWithPopup(auth, googleProvider);
+    }
     return signInWithRedirect(auth, googleProvider);
 };
 export const logout = () => signOut(auth);

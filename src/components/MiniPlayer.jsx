@@ -22,7 +22,10 @@ export default function MiniPlayer() {
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     const goToPodcast = () => {
-        if (podcastInfo.id) {
+        if (!podcastInfo.id) return;
+        if (podcastInfo.id.startsWith('yt-')) {
+            navigate(`/yt-podcast/${podcastInfo.id.replace('yt-', '')}`);
+        } else {
             navigate(`/review/${podcastInfo.id}?tab=podcast`);
         }
     };
