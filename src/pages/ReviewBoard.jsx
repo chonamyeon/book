@@ -60,8 +60,8 @@ export default function ReviewBoard() {
         <meta name="description" content="자기계발·경제·경영·인문·심리 분야 베스트셀러 25권의 핵심 인사이트를 아카이뷰 리뷰 라이브러리에서 만나보세요." />
         <meta property="og:title" content="리뷰 라이브러리 | 아카이뷰 도서 인사이트" />
         <meta property="og:description" content="세계적 베스트셀러 25권 엄선 — 자기계발·경제·경영·인문·심리 핵심 인사이트 컬렉션" />
-        <meta property="og:url" content="https://archiview.store/review-board" />
-        <link rel="canonical" href="https://archiview.store/review-board" />
+        <meta property="og:url" content="https://archiview.shop/review-board" />
+        <link rel="canonical" href="https://archiview.shop/review-board" />
       </Helmet>
       <TopNavigation type="sub" />
 

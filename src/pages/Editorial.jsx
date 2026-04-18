@@ -141,7 +141,7 @@ export default function Editorial() {
                 <title>에디토리얼 — 아카이뷰 큐레이션 인사이트 | ArchiView</title>
                 <meta name="description" content="아카이뷰 에디터가 엄선한 분야별 베스트셀러 큐레이션. 자기계발·경제·경영·인문·심리 카테고리별 도서 인사이트를 만나보세요." />
                 <meta name="robots" content="noindex, nofollow" />
-                <link rel="canonical" href="https://archiview.store/editorial" />
+                <link rel="canonical" href="https://archiview.shop/editorial" />
             </Helmet>
             <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
                 <TopNavigation type="sub" />

@@ -160,7 +160,7 @@ export default function CategoryBooks() {
                 <title>{categoryInfo.subLabel} 추천 도서 비평 & 인사이트 | 아카이뷰(ArchiView)</title>
                 <meta name="description" content={`아카이뷰 에디터가 엄선한 ${categoryInfo.subLabel} 분야 핵심 도서 컬렉션. ${categoryInfo.label} — 단순 목록이 아닌 독창적인 관점으로 선별한 고품질 인사이트를 만나보세요.`} />
                 <meta name="robots" content="noindex, nofollow" />
-                <link rel="canonical" href={`https://archiview.store/category/${categoryInfo.id}`} />
+                <link rel="canonical" href={`https://archiview.shop/category/${categoryInfo.id}`} />
             </Helmet>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');

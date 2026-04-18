@@ -187,7 +187,7 @@ async function drawCard(ctx, W, H, book, shareUrl, coverImg) {
     ctx.textAlign = 'left';
     ctx.font = 'bold 38px Georgia, serif';
     ctx.fillStyle = 'rgba(212,175,55,0.95)';
-    ctx.fillText('archiview.store', 288, botY + 82);
+    ctx.fillText('archiview.shop', 288, botY + 82);
 
     ctx.font = '300 27px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
@@ -214,9 +214,9 @@ export async function generateShareCard(book, shareUrl) {
 
     const src = book.cover?.startsWith('http')
         ? book.cover
-        : `https://archiview.store${book.cover}`;
+        : `https://archiview.shop${book.cover}`;
 
-    // 1. CORS 로드 시도 (archiview.store 등 CORS 지원 서버)
+    // 1. CORS 로드 시도 (archiview.shop 등 CORS 지원 서버)
     let coverImg = null;
     try {
         coverImg = await loadImageCORS(src);

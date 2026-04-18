@@ -6,7 +6,7 @@ import { useAudio } from '../contexts/AudioContext';
 import { shareCard } from '../utils/shareCard';
 import { useBookData } from '../hooks/useBookData';
 
-const SITE_ORIGIN = 'https://archiview.store';
+const SITE_ORIGIN = 'https://archiview.shop';
 
 /**
  * 공유 북카드 액션 버튼 컴포넌트

@@ -15,7 +15,7 @@ export default function Terms() {
             <Helmet>
                 <title>이용약관 | 아카이뷰(ArchiView)</title>
                 <meta name="description" content="아카이뷰 서비스 이용약관입니다. 서비스 이용 전 반드시 확인해 주세요." />
-                <link rel="canonical" href="https://archiview.store/terms" />
+                <link rel="canonical" href="https://archiview.shop/terms" />
             </Helmet>
             <TopNavigation title="이용약관" />
 
@@ -33,7 +33,7 @@ export default function Terms() {
                         <section className="border-l-4 border-amber-400 pl-4">
                             <h2 className="text-base font-black mb-3">제1조 (목적)</h2>
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                                본 약관은 아카이뷰(https://archiview.store)가 제공하는 오디오 인사이트 플랫폼 서비스의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
+                                본 약관은 아카이뷰(https://archiview.shop)가 제공하는 오디오 인사이트 플랫폼 서비스의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
                             </p>
                         </section>
 
@@ -119,7 +119,7 @@ export default function Terms() {
                                 <p>약관과 관련한 문의는 아래 연락처로 해주시기 바랍니다.</p>
                                 <p>• 서비스명: 아카이뷰 (Archiview)</p>
                                 <p>• 이메일: <a href="mailto:gosipass902@gmail.com" className="text-amber-600 underline">gosipass902@gmail.com</a></p>
-                                <p>• 웹사이트: <a href="https://archiview.store" className="text-amber-600 underline">https://archiview.store</a></p>
+                                <p>• 웹사이트: <a href="https://archiview.shop" className="text-amber-600 underline">https://archiview.shop</a></p>
                             </div>
                         </section>
 

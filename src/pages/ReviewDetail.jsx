@@ -957,10 +957,10 @@ export default function ReviewDetail() {
         if (!window.Kakao.isInitialized()) {
             window.Kakao.init('9cbdeec02a8ce33b5deb576a0e63c380');
         }
-        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        const shareUrl = `https://archiview.shop/review/${encodeURIComponent(book.id)}`;
         const shareImage = book.cover?.startsWith('http')
             ? book.cover
-            : `https://archiview.store${book.cover}`;
+            : `https://archiview.shop${book.cover}`;
         window.Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
@@ -986,7 +986,7 @@ export default function ReviewDetail() {
     }, [book]);
 
     const handleInstagramShare = useCallback(() => {
-        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        const shareUrl = `https://archiview.shop/review/${encodeURIComponent(book.id)}`;
         if (navigator.share) {
             navigator.share({
                 title: `[아카이뷰] ${book.title}`,
@@ -1000,13 +1000,13 @@ export default function ReviewDetail() {
     }, [book]);
 
     const handleCopyLink = useCallback(() => {
-        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        const shareUrl = `https://archiview.shop/review/${encodeURIComponent(book.id)}`;
         navigator.clipboard.writeText(shareUrl).then(() => alert('링크 복사됨!'));
         setShowShareMenu(false);
     }, [book]);
 
     const handleCardShare = useCallback(async () => {
-        const shareUrl = `https://archiview.store/review/${encodeURIComponent(book.id)}`;
+        const shareUrl = `https://archiview.shop/review/${encodeURIComponent(book.id)}`;
         setShowShareMenu(false);
         setCardLoading(true);
         try {
@@ -1078,7 +1078,7 @@ ${scriptContext}
         }
     }, [chatMessages]);
 
-    const ogImage = book.cover?.startsWith('http') ? book.cover : `https://archiview.store${book.cover}`;
+    const ogImage = book.cover?.startsWith('http') ? book.cover : `https://archiview.shop${book.cover}`;
 
     return (
         <>
@@ -1087,7 +1087,7 @@ ${scriptContext}
             <meta property="og:title" content={`[아카이뷰] ${book.title || '도서'}`} />
             <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
             <meta property="og:image" content={ogImage} />
-            <meta property="og:url" content={`https://archiview.store/review/${encodeURIComponent(book.id)}`} />
+            <meta property="og:url" content={`https://archiview.shop/review/${encodeURIComponent(book.id)}`} />
             <meta property="og:type" content="article" />
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:image" content={ogImage} />
@@ -1434,7 +1434,7 @@ ${scriptContext}
                                                                          content: {
                                                                              title: book.title,
                                                                              description: `${book.author} | 기록은 영감이 되고, 행동이 됩니다.`,
-                                                                             imageUrl: book.cover || 'https://archiview.store/logo192.png',
+                                                                             imageUrl: book.cover || 'https://archiview.shop/logo192.png',
                                                                              link: {
                                                                                  mobileWebUrl: window.location.href,
                                                                                  webUrl: window.location.href,
@@ -1579,7 +1579,7 @@ ${scriptContext}
                                     {/* 카카오 공유 + 링크 복사 */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         <button
-                                            onClick={() => { if (window.Kakao) { window.Kakao.Share.sendDefault({ objectType: 'feed', content: { title: book.title, description: `${book.author} | 기록은 영감이 되고, 행동이 됩니다.`, imageUrl: book.cover || 'https://archiview.store/logo192.png', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }, buttons: [{ title: '리뷰 전체보기', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }] }); } }}
+                                            onClick={() => { if (window.Kakao) { window.Kakao.Share.sendDefault({ objectType: 'feed', content: { title: book.title, description: `${book.author} | 기록은 영감이 되고, 행동이 됩니다.`, imageUrl: book.cover || 'https://archiview.shop/logo192.png', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }, buttons: [{ title: '리뷰 전체보기', link: { mobileWebUrl: window.location.href, webUrl: window.location.href } }] }); } }}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: 'rgba(200,168,112,0.8)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 3.185-9 7.115 0 2.557 1.707 4.8 4.33 6.091l-.828 3.066c-.052.193.174.351.327.245l3.607-2.399c.504.07 1.028.112 1.564.112 4.97 0 9-3.185 9-7.115S16.97 3 12 3z"/></svg>
                                             카카오톡 공유

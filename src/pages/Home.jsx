@@ -321,7 +321,7 @@ export default function Home() {
             <Helmet>
                 <title>아카이뷰(ArchiView) — 성공한 사람들의 인사이트를 읽다</title>
                 <meta name="description" content="자기계발·경제·경영·인문·심리 분야 베스트셀러의 독창적인 비평과 실전 인사이트. 에디터의 관점으로 성공한 사람들의 생각을 깊이 분석합니다." />
-                <link rel="canonical" href="https://archiview.store" />
+                <link rel="canonical" href="https://archiview.shop" />
             </Helmet>
             {/* Styles Injection for Glassmorphism */}
             <style>{`

@@ -164,11 +164,11 @@ export default function StaticReview() {
         <meta property="og:title" content={`${book.title} 비평 & 인사이트 | 아카이뷰`} />
         <meta property="og:description" content={book.desc} />
         <meta property="og:type" content="article" />
-        <meta property="og:url" content={`https://archiview.store/story/${book.id}`} />
+        <meta property="og:url" content={`https://archiview.shop/story/${book.id}`} />
         <meta property="og:site_name" content="아카이뷰(ArchiView)" />
-        <meta property="og:image" content="https://archiview.store/images/hero_expert_v5.png" />
+        <meta property="og:image" content="https://archiview.shop/images/hero_expert_v5.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <link rel="canonical" href={`https://archiview.store/story/${book.id}`} />
+        <link rel="canonical" href={`https://archiview.shop/story/${book.id}`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [
@@ -176,22 +176,22 @@ export default function StaticReview() {
               "@type": "Article",
               "headline": `${book.title} - 아카이뷰 비평 & 인사이트`,
               "description": book.desc,
-              "image": book.cover || "https://archiview.store/images/hero_expert_v5.png",
+              "image": book.cover || "https://archiview.shop/images/hero_expert_v5.png",
               "datePublished": book.publishedAt || "2026-01-01T00:00:00Z",
               "dateModified": new Date().toISOString().split('T')[0] + 'T00:00:00Z',
-              "author": { "@type": "Organization", "name": "아카이뷰(ArchiView)", "url": "https://archiview.store" },
+              "author": { "@type": "Organization", "name": "아카이뷰(ArchiView)", "url": "https://archiview.shop" },
               "publisher": { 
                 "@type": "Organization", 
                 "name": "아카이뷰(ArchiView)", 
-                "url": "https://archiview.store",
+                "url": "https://archiview.shop",
                 "logo": {
                   "@type": "ImageObject",
-                  "url": "https://archiview.store/favicon.ico"
+                  "url": "https://archiview.shop/favicon.ico"
                 }
               },
-              "url": `https://archiview.store/story/${book.id}`,
+              "url": `https://archiview.shop/story/${book.id}`,
               "inLanguage": "ko",
-              "mainEntityOfPage": { "@type": "WebPage", "@id": `https://archiview.store/story/${book.id}` }
+              "mainEntityOfPage": { "@type": "WebPage", "@id": `https://archiview.shop/story/${book.id}` }
             },
             ...(faq.length > 0 ? [{
               "@type": "FAQPage",
