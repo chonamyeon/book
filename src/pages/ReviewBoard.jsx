@@ -87,12 +87,10 @@ export default function ReviewBoard() {
 
             {/* Book List */}
             {cat.books.map((book, idx) => {
-              const targetLink = book.link || `/story/${book.id}`;
-              const isExternal = targetLink.startsWith('http');
-              const CardTag = isExternal ? 'a' : Link;
-              const cardProps = isExternal
-                ? { href: targetLink }
-                : { to: targetLink };
+              const targetLink = `/story/${book.id}`;
+              const isExternal = false;
+              const CardTag = Link;
+              const cardProps = { to: targetLink };
 
               return (
                 <CardTag

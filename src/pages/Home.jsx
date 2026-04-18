@@ -576,10 +576,10 @@ export default function Home() {
 
                                     <div className="grid grid-cols-1 gap-4">
                                         {displayBooks.map((book, bIdx) => {
-                                            const targetLink = book.link || `/story/${book.id}`;
-                                            const isExternal = targetLink.startsWith('http');
-                                            const linkProps = isExternal ? { href: targetLink } : { to: targetLink };
-                                            const Component = isExternal ? 'a' : Link;
+                                            const targetLink = `/story/${book.id}`;
+                                            const isExternal = false;
+                                            const linkProps = { to: targetLink };
+                                            const Component = Link;
 
                                             return (
                                                 <Component
