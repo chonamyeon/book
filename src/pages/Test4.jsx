@@ -13,6 +13,7 @@ import { db } from '../firebase';
 import { doc, onSnapshot, getDoc, setDoc, collection } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 import { useSiteDesign } from '../hooks/useSiteDesign';
+import { getTodayContents } from '../data/personalization';
 
 export default function Test4() {
     const { design, loading: designLoading } = useSiteDesign();
@@ -345,6 +346,15 @@ export default function Test4() {
             .slice(0, 5);
     }, [weeklyFocusRaw, publicAllBooks, enrich]);
 
+    // 개인화: 퀴즈 페르소나 + 날짜 시드로 Today Contents 선택
+    const persona = localStorage.getItem('quizResult') || localStorage.getItem('myResultType') || null;
+    const { todayBooks, todayVideos } = useMemo(() => {
+        const books = weeklyFocusBooks.length > 0 ? weeklyFocusBooks : [];
+        const videos = weeklyFocusVideos.length > 0 ? weeklyFocusVideos : [];
+        if (!books.length && !videos.length) return { todayBooks: [], todayVideos: [] };
+        return getTodayContents(books, videos, persona);
+    }, [weeklyFocusBooks, weeklyFocusVideos, persona]);
+
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
         if (weeklyMostViewedRaw.length > 0) return enrich(weeklyMostViewedRaw);
@@ -596,7 +606,7 @@ export default function Test4() {
                                     </div>
                                 </div>
                             </div>
-                            {weeklyFocusBooks.length === 0 && booksLoading ? (
+                            {todayBooks.length === 0 && booksLoading ? (
                                 // 첫 방문자용 스켈레톤 (Firestore 로딩 중)
                                 [0, 1].map(i => (
                                     <div key={i} className="glass-card rounded-none p-4 flex gap-5 items-center border border-white/5 animate-pulse">
@@ -610,11 +620,11 @@ export default function Test4() {
                                         </div>
                                     </div>
                                 ))
-                            ) : weeklyFocusBooks.length === 0 ? (
+                            ) : todayBooks.length === 0 ? (
                                 <div className="text-center py-10">
                                     <p className="text-white/30 text-xs font-bold">도서 정보가 없습니다.</p>
                                 </div>
-                            ) : weeklyFocusBooks.map((book, idx) => {
+                            ) : todayBooks.map((book, idx) => {
                                 const isThisPlaying = podcastPlaying && podcastInfo?.id === book.id;
                                 return (
                                     <div key={idx} className="relative group">
@@ -633,7 +643,7 @@ export default function Test4() {
                             })}
 
                             {/* 유튜브 영상 2개 */}
-                            {weeklyFocusVideos.slice(0, 2).map((v, idx) => {
+                            {todayVideos.slice(0, 2).map((v, idx) => {
                                 const ytUrl = v.youtubeUrl || `https://www.youtube.com/watch?v=${v.id}`;
                                 const likesNum = v.likes ? (v.likes >= 1000 ? (v.likes / 1000).toFixed(1) + 'k' : v.likes) : null;
                                 return (
