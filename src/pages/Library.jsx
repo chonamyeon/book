@@ -12,6 +12,7 @@ import { useBookData } from '../hooks/useBookData';
 import PersonaAvatar from '../components/PersonaAvatar';
 import { useAudio } from '../contexts/AudioContext';
 import { motion } from 'framer-motion';
+import { useSavedBooks } from '../hooks/useSavedBooks';
 
 const formatInsightTime = (sec) => {
     if (!sec || isNaN(sec)) return '00:00';
@@ -37,57 +38,58 @@ export default function Library() {
     const [quizResult, setQuizResult] = useState(null);
     const [quizScores, setQuizScores] = useState(null);
     const [hiddenRecs, setHiddenRecs] = useState([]);
-    const [savedBooks, setSavedBooks] = useState([]);
     const [finderRecs, setFinderRecs] = useState([]);
     const navigate = useNavigate();
-
-    const loadSavedBooks = () => {
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        setSavedBooks(saved);
-    };
-
-    const removeSavedBook = (title) => {
-        const updated = savedBooks.filter(b => b.title !== title);
-        localStorage.setItem('savedBooks', JSON.stringify(updated));
-        setSavedBooks(updated);
-    };
+    const { savedBooks, removeBook: removeSavedBook } = useSavedBooks(user);
 
     useEffect(() => {
         const isUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
-        const type = localStorage.getItem('myResultType');
-        const qResult = localStorage.getItem('quizResult');
-        
-        try {
-            const qScoresStr = localStorage.getItem('quizScores');
-            if (qScoresStr) {
-                setQuizScores(JSON.parse(qScoresStr));
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
         setUnlocked(isUnlocked);
-        setMyResultType(type);
-        setQuizResult(qResult);
         const fRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
         setFinderRecs(fRecs);
 
-        // 초기 로드
-        loadSavedBooks();
-
         const handleStorage = () => {
-            loadSavedBooks();
             const updatedFRecs = JSON.parse(localStorage.getItem('finderRecommendations') || '[]');
             setFinderRecs(updatedFRecs);
         };
-        // 같은 탭 내 커스텀 이벤트 + 다른 탭 storage 이벤트 모두 수신
         window.addEventListener('storage', handleStorage);
-        window.addEventListener('savedBooksUpdated', handleStorage);
-        return () => {
-            window.removeEventListener('storage', handleStorage);
-            window.removeEventListener('savedBooksUpdated', handleStorage);
-        };
+        return () => window.removeEventListener('storage', handleStorage);
     }, []);
+
+    // 페르소나: Firestore 우선, localStorage 폴백
+    useEffect(() => {
+        const localType = localStorage.getItem('myResultType');
+        const localQuiz = localStorage.getItem('quizResult');
+        if (user) {
+            import('firebase/firestore').then(({ doc, getDoc }) => {
+                import('../firebase').then(({ db }) => {
+                    getDoc(doc(db, 'users', user.uid)).then(snap => {
+                        const remote = snap.exists() ? snap.data() : {};
+                        const type = remote.myResultType || localType;
+                        const quiz = remote.quizResult || localQuiz;
+                        setMyResultType(type);
+                        setQuizResult(quiz);
+                        if (type) localStorage.setItem('myResultType', type);
+                        if (quiz) localStorage.setItem('quizResult', quiz);
+                        try {
+                            const qScoresStr = remote.quizScores || localStorage.getItem('quizScores');
+                            if (qScoresStr) setQuizScores(typeof qScoresStr === 'string' ? JSON.parse(qScoresStr) : qScoresStr);
+                        } catch {}
+                    }).catch(() => {
+                        setMyResultType(localType);
+                        setQuizResult(localQuiz);
+                    });
+                });
+            });
+        } else {
+            setMyResultType(localType);
+            setQuizResult(localQuiz);
+            try {
+                const qScoresStr = localStorage.getItem('quizScores');
+                if (qScoresStr) setQuizScores(JSON.parse(qScoresStr));
+            } catch {}
+        }
+    }, [user?.uid]);
 
     // getAllBooks()로 Firestore override 병합된 완전한 book 객체를 제목으로 찾아 반환
     const allBooks = getAllBooks();

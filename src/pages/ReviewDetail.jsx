@@ -835,7 +835,13 @@ export default function ReviewDetail() {
                     const mode = siteConfig?.reviewAccess?.mode || 'all';
                     const canPlay = mode === 'public' || (user && (mode === 'all' || (mode === 'trial7' && (isPremium || trialDaysLeft > 0)) || (mode === 'paid' && isPremium)));
                     if (canPlay) {
-                        try { playPodcastMP3(podcastSrc, book.title || id, book.coverUrl || book.cover, book.id, true); } catch (e) {}
+                        const doPlay = () => { try { playPodcastMP3(podcastSrc, book.title || id, book.coverUrl || book.cover, book.id, true); } catch (e) {} };
+                        doPlay();
+                        // 알림에서 진입 시(autoplay=1) 브라우저 정책으로 차단될 수 있어 재시도
+                        if (searchParams.get('autoplay') === '1') {
+                            setTimeout(doPlay, 800);
+                            setTimeout(doPlay, 2000);
+                        }
                     }
                 }
             }

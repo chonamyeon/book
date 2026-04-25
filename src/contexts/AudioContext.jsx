@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { availableAudio } from '../data/availableAudio';
+import { db } from '../firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const AudioCtx = createContext();
 
@@ -104,7 +107,6 @@ export const AudioProvider = ({ children }) => {
             try {
                 const hist = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
                 const srcFile = getSrcFile(info.src);
-                // id 또는 src 파일명이 같은 항목 모두 제거 (중복 방지)
                 const filtered = hist.filter(h => {
                     if (h.id === info.id) return false;
                     if (srcFile && getSrcFile(h.src) === srcFile) return false;
@@ -112,7 +114,11 @@ export const AudioProvider = ({ children }) => {
                 });
                 const entry = { id: info.id, title: info.title, cover: info.cover, src: info.src, currentTime: ct, duration: dur || 0, timestamp: Date.now() };
                 filtered.unshift(entry);
-                localStorage.setItem('archiview_listen_history', JSON.stringify(filtered.slice(0, 20)));
+                const next = filtered.slice(0, 20);
+                localStorage.setItem('archiview_listen_history', JSON.stringify(next));
+                // Firestore 동기화
+                const uid = getAuth().currentUser?.uid;
+                if (uid) setDoc(doc(db, 'users', uid), { listenHistory: next }, { merge: true }).catch(() => {});
             } catch {}
         };
         const onTime = () => {
@@ -267,7 +273,10 @@ export const AudioProvider = ({ children }) => {
                 const entry = { id, title, cover, src, currentTime: prev?.currentTime || 0, duration: prev?.duration || 0, timestamp: Date.now() };
                 const filtered = hist.filter(h => h.id !== id && !(srcFile && getSrcFile(h.src) === srcFile));
                 filtered.unshift(entry);
-                localStorage.setItem('archiview_listen_history', JSON.stringify(filtered.slice(0, 20)));
+                const next = filtered.slice(0, 20);
+                localStorage.setItem('archiview_listen_history', JSON.stringify(next));
+                const uid = getAuth().currentUser?.uid;
+                if (uid) setDoc(doc(db, 'users', uid), { listenHistory: next }, { merge: true }).catch(() => {});
             } catch {}
             pa.play().catch((err) => {
                 console.error("New podcast play failed:", err);

@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useSavedBooks } from '../hooks/useSavedBooks';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainHeader from '../components/MainHeader';
@@ -73,6 +75,8 @@ export default function Editorial() {
     const navigate = useNavigate();
     const scrollContainerRef = useRef(null);
     const { design } = useSiteDesign();
+    const { user } = useAuth();
+    const { addBook: addSavedBook, savedBooks } = useSavedBooks(user);
     const [selectedCategoryId, setSelectedCategoryId] = useState(categoriesInfo[0].id);
     const [showAllBooks, setShowAllBooks] = useState(false);
     const { getAllBooks, loading: booksLoading } = useBookData();
@@ -178,12 +182,10 @@ export default function Editorial() {
     }, [loopedSliderItems.length]);
 
     const addToLibrary = (book) => {
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        if (saved.some(b => b.title === book.title)) {
+        if (savedBooks.some(b => b.title === book.title)) {
             alert('이미 서재에 보관된 도서입니다.'); return;
         }
-        localStorage.setItem('savedBooks', JSON.stringify([...saved, { id: book.id, title: book.title, author: book.author, cover: book.cover }]));
-        window.dispatchEvent(new Event('savedBooksUpdated'));
+        addSavedBook({ id: book.id, title: book.title, author: book.author, cover: book.cover });
         alert('서재에 보관되었습니다. ✅');
     };
 

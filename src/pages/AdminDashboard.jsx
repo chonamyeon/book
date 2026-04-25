@@ -824,6 +824,8 @@ export default function AdminDashboard() {
     const [scheduleSaving, setScheduleSaving] = useState(false);
     const [weeklyFocusVideos, setWeeklyFocusVideos] = useState([]);
     const [wfVideoSearch, setWfVideoSearch] = useState('');
+    const [wfVideoFocused, setWfVideoFocused] = useState(false);
+    const [wfBookFocused, setWfBookFocused] = useState(false);
     const [aiRecommending, setAiRecommending] = useState(false);
 
     const toPopularBookItem = (b) => ({
@@ -9478,7 +9480,7 @@ ${raw}`;
                             { id: 'wealth', label: '연봉협상', dbKey: 'popular_wealth', max: 20 },
                             { id: 'healing', label: '우울/고독/치유', dbKey: 'popular_healing', max: 20 },
                             { id: 'philosophy', label: '자아성찰', dbKey: 'popular_philosophy', max: 20 },
-                            { id: 'weekly_focus', label: '위클리 포커스', dbKey: 'weekly_focus', max: 5 },
+                            { id: 'weekly_focus', label: '위클리 포커스', dbKey: 'weekly_focus', max: 60 },
                             { id: 'weekly_viewed', label: '최다 조회', dbKey: 'weekly_most_viewed', max: 5 },
                             { id: 'original', label: '아카이뷰 오리지널', dbKey: 'original_archives', max: 20 },
                             { id: 'growth', label: '카테고리-자기계발', dbKey: 'category_growth', max: null },
@@ -9796,89 +9798,13 @@ ${raw}`;
                                     </div>
                                 </div>
 
-                                {/* 4주 스케줄 예약 — 위클리포커스 전용 */}
-                                {isWeeklyFocusTab && (
-                                    <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-5">
-                                        <div className="flex items-center justify-between flex-wrap gap-3">
-                                            <h4 className="text-white font-black text-xl flex items-center gap-3">
-                                                <span className="material-symbols-outlined text-purple-400">calendar_month</span>
-                                                4주 스케줄 예약
-                                                <span className="text-slate-500 text-sm font-normal">· 월요일 오전 6시 자동 적용</span>
-                                            </h4>
-                                            <div className="flex gap-2">
-                                                <button onClick={handleScheduleAiRecommend} disabled={aiRecommending}
-                                                    className="px-5 py-2.5 rounded-xl bg-purple-500/20 text-purple-400 text-xs font-black border border-purple-500/30 hover:bg-purple-500/40 transition-all disabled:opacity-50 flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-sm">{aiRecommending ? 'sync' : 'auto_awesome'}</span>
-                                                    {aiRecommending ? '분석 중...' : 'AI 4주 자동채우기'}
-                                                </button>
-                                                <button onClick={saveSchedule} disabled={scheduleSaving}
-                                                    className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-xs font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-50 flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-sm">{scheduleSaving ? 'sync' : 'event_available'}</span>
-                                                    {scheduleSaving ? '저장 중...' : '스케줄 저장'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {scheduleWithDates.map((week, weekIdx) => {
-                                                const sq = scheduleSearches[weekIdx] || '';
-                                                const sqResults = sq.trim() ? realBooks.filter(b => b.title?.includes(sq) || b.author?.includes(sq)).slice(0, 8) : [];
-                                                return (
-                                                    <div key={weekIdx} className="bg-black/30 rounded-2xl p-5 border border-white/5 space-y-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-[11px] font-black text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/20">{weekIdx+1}주차</span>
-                                                            <span className="text-slate-300 text-sm font-bold">{fmt(week.monday)} 오전 6시</span>
-                                                            <span className="text-slate-600 text-xs">{week.books.length}/2권</span>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-3 items-start">
-                                                            {week.books.map(book => (
-                                                                <div key={book.id} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/10">
-                                                                    {book.cover && <img src={book.cover} alt="" className="w-8 h-11 object-cover rounded" />}
-                                                                    <div>
-                                                                        <p className="text-white text-xs font-black max-w-[110px] truncate">{book.title}</p>
-                                                                        <p className="text-slate-500 text-[10px]">{book.author}</p>
-                                                                    </div>
-                                                                    <button onClick={() => removeBookFromWeek(weekIdx, book.id)}
-                                                                        className="size-5 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all">
-                                                                        <span className="material-symbols-outlined text-[11px] text-red-400">close</span>
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            {week.books.length < 2 && (
-                                                                <div className="flex-1 min-w-[200px] space-y-2">
-                                                                    <input type="text" placeholder="도서 검색..."
-                                                                        value={sq}
-                                                                        onChange={e => setScheduleSearches(prev => { const a=[...prev]; a[weekIdx]=e.target.value; return a; })}
-                                                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold outline-none focus:border-purple-500/50 placeholder:text-slate-600" />
-                                                                    {sqResults.length > 0 && (
-                                                                        <div className="bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl">
-                                                                            {sqResults.map(book => (
-                                                                                <div key={book.id} onClick={() => addBookToWeek(weekIdx, book)}
-                                                                                    className="flex items-center gap-2 px-3 py-2.5 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
-                                                                                    {book.cover && <img src={book.cover} alt="" className="w-7 h-10 object-cover rounded flex-shrink-0" />}
-                                                                                    <div className="min-w-0">
-                                                                                        <p className="text-white text-xs font-black truncate">{book.title}</p>
-                                                                                        <p className="text-slate-500 text-[10px]">{book.author}</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
 
                                 {/* 위클리포커스 — 유튜브 영상 2개 추가 */}
                                 {isWeeklyFocusTab && (
                                     <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-5">
                                         <h4 className="text-white font-black text-xl flex items-center gap-3">
                                             <span className="material-symbols-outlined text-red-400">play_circle</span>
-                                            유튜브 영상 추가 (최대 2개)
+                                            유튜브 영상 추가 (최대 10개)
                                             <span className="text-slate-500 text-sm font-normal">· 메인 상단 도서 2개 아래 노출</span>
                                         </h4>
                                         {/* 등록된 영상 목록 */}
@@ -9906,27 +9832,31 @@ ${raw}`;
                                             )}
                                         </div>
                                         {/* 유튜브 영상 검색 */}
-                                        {weeklyFocusVideos.length < 2 && (
-                                            <div className="space-y-3">
+                                        {weeklyFocusVideos.length < 10 && (
+                                            <div className="space-y-3 relative">
                                                 <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-red-400 transition-colors flex items-center px-4">
                                                     <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
-                                                    <input type="text" placeholder="유튜브 영상 제목 검색..."
-                                                        value={wfVideoSearch} onChange={e => setWfVideoSearch(e.target.value)}
+                                                    <input type="text" placeholder="클릭하면 전체 목록 표시 / 제목·채널 검색..."
+                                                        value={wfVideoSearch}
+                                                        onChange={e => setWfVideoSearch(e.target.value)}
+                                                        onFocus={() => setWfVideoFocused(true)}
+                                                        onBlur={() => setTimeout(() => setWfVideoFocused(false), 200)}
                                                         className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
+                                                    {wfVideoSearch && <button onClick={() => setWfVideoSearch('')} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined text-sm">close</span></button>}
                                                 </div>
-                                                {wfVideoSearch.trim() && (() => {
-                                                    const results = youtubeVideos.filter(v =>
-                                                        v.title?.includes(wfVideoSearch) || v.channel?.includes(wfVideoSearch)
-                                                    ).slice(0, 10);
+                                                {wfVideoFocused && (() => {
+                                                    const q = wfVideoSearch.trim().toLowerCase();
+                                                    const results = (q
+                                                        ? youtubeVideos.filter(v => v.title?.toLowerCase().includes(q) || v.channel?.toLowerCase().includes(q))
+                                                        : youtubeVideos
+                                                    ).slice(0, 30);
                                                     return results.length === 0
                                                         ? <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>
-                                                        : <div className="space-y-2 max-h-72 overflow-y-auto">
+                                                        : <div className="space-y-2 max-h-80 overflow-y-auto border border-white/10 rounded-2xl bg-[#0e1015] p-2">
                                                             {results.map(v => (
-                                                                <div key={v.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
+                                                                <div key={v.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-3 border border-white/5 hover:border-white/15 transition-all">
                                                                     <div className="w-[72px] h-[40px] rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
-                                                                        {v.thumbnail
-                                                                            ? <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover" />
-                                                                            : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-sm">play_circle</span></div>}
+                                                                        <img src={v.thumbnail || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`} alt={v.title} className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="text-white font-black text-sm truncate">{v.title}</p>
@@ -9934,7 +9864,7 @@ ${raw}`;
                                                                     </div>
                                                                     <button
                                                                         onClick={() => {
-                                                                            if (weeklyFocusVideos.some(x => x.id === v.id)) { alert('이미 추가된 영상입니다.'); return; }
+                                                                            if (weeklyFocusVideos.some(x => x.id === v.id)) return;
                                                                             setWeeklyFocusVideos(prev => [...prev, v]);
                                                                             setWfVideoSearch('');
                                                                         }}
@@ -9959,14 +9889,22 @@ ${raw}`;
                                     </h4>
                                     <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors flex items-center px-4">
                                         <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
-                                        <input type="text" placeholder="도서 제목 또는 저자 검색..."
-                                            value={curSearch} onChange={(e) => setCurSearch(e.target.value)}
+                                        <input type="text" placeholder="클릭하면 전체 목록 표시 / 제목·저자 검색..."
+                                            value={curSearch}
+                                            onChange={(e) => setCurSearch(e.target.value)}
+                                            onFocus={() => setWfBookFocused(true)}
+                                            onBlur={() => setTimeout(() => setWfBookFocused(false), 200)}
                                             className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
+                                        {curSearch && <button onClick={() => setCurSearch('')} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined text-sm">close</span></button>}
                                     </div>
-                                    {curSearch.trim() && (
-                                        <div className="space-y-2 max-h-96 overflow-y-auto">
-                                            {filteredBooks.length === 0 && <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>}
-                                            {filteredBooks.slice(0, 20).map((book) => (
+                                    {wfBookFocused && (
+                                        <div className="space-y-2 max-h-96 overflow-y-auto border border-white/10 rounded-2xl bg-[#0e1015] p-2">
+                                            {(() => {
+                                                const q = curSearch.trim().toLowerCase();
+                                                const shown = q ? filteredBooks : realBooks;
+                                                return shown.length === 0
+                                                    ? <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>
+                                                    : shown.slice(0, 200).map((book) => (
                                                 <div key={book.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
                                                     <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
                                                         {book.cover ? <img src={book.cover} alt={book.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20">menu_book</span></div>}
@@ -9986,7 +9924,8 @@ ${raw}`;
                                                         {curList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
                                                     </button>
                                                 </div>
-                                            ))}
+                                            ));
+                                            })()}
                                         </div>
                                     )}
                                 </div>

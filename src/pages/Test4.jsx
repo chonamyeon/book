@@ -175,11 +175,28 @@ export default function Test4() {
     const [listenHistory, setListenHistory] = useState(() => {
         try {
             const raw = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
-            const deduped = dedupeHistory(raw);
-            if (deduped.length !== raw.length) localStorage.setItem('archiview_listen_history', JSON.stringify(deduped));
-            return deduped;
+            return dedupeHistory(raw);
         } catch { return []; }
     });
+
+    // 로그인 시 Firestore에서 히스토리 로드
+    useEffect(() => {
+        if (!user) return;
+        getDoc(doc(db, 'users', user.uid)).then(snap => {
+            if (snap.exists() && snap.data().listenHistory?.length) {
+                const remote = snap.data().listenHistory;
+                const local = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+                // 머지: remote 우선, local에만 있는 항목 추가
+                const merged = [...remote];
+                for (const h of local) {
+                    if (!merged.some(r => r.id === h.id)) merged.push(h);
+                }
+                const deduped = dedupeHistory(merged.sort((a, b) => b.timestamp - a.timestamp)).slice(0, 20);
+                setListenHistory(deduped);
+                localStorage.setItem('archiview_listen_history', JSON.stringify(deduped));
+            }
+        }).catch(() => {});
+    }, [user?.uid]);
 
     // 히스토리 변경 감지 (미니 플레이어 재생 시 업데이트)
     useEffect(() => {

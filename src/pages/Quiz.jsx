@@ -5,8 +5,12 @@ import BottomNavigation from '../components/BottomNavigation';
 import LoadingScreen from '../components/LoadingScreen';
 import MainHeader from '../components/MainHeader';
 import Footer from '../components/Footer';
+import { useAuth } from '../hooks/useAuth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Quiz() {
+    const { user } = useAuth();
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState({});
     const [quizQuestions, setQuizQuestions] = useState([]);
@@ -32,6 +36,7 @@ export default function Quiz() {
             // 상세 점수와 유형 모두 저장
             localStorage.setItem('quizResult', resultType);
             localStorage.setItem('quizScores', JSON.stringify(scores));
+            if (user) setDoc(doc(db, 'users', user.uid), { quizResult: resultType, quizScores: scores }, { merge: true }).catch(() => {});
             navigate('/result', { state: { resultType, scores } });
         }
     };

@@ -1,8 +1,100 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { GoogleAuth } = require('google-auth-library');
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) admin.initializeApp();
 
 const GCP_TTS_KEY = defineSecret('GCP_TTS_KEY');
+
+// ── 출퇴근 알림 스케줄러 (매 분 실행, KST 기준) ──────────────────────
+exports.sendCommuteAlerts = onSchedule(
+    { schedule: '* * * * *', timeZone: 'Asia/Seoul', region: 'asia-northeast3' },
+    async () => {
+        const db = admin.firestore();
+        const messaging = admin.messaging();
+
+        // 현재 KST 시각 HH:MM
+        const now = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC → KST
+        const hh = String(now.getUTCHours()).padStart(2, '0');
+        const mm = String(now.getUTCMinutes()).padStart(2, '0');
+        const hhmm = `${hh}:${mm}`;
+        // 현재 요일 (0=월 ~ 6=일, KST)
+        const dayIdx = (now.getUTCDay() + 6) % 7;
+
+        // commuteAlarm: true 이고 fcmToken 있는 유저만 조회
+        const snap = await db.collection('users')
+            .where('commuteAlarm', '==', true)
+            .get();
+
+        // 오늘의 추천 콘텐츠 (personalization.js와 동일한 날짜 시드 셔플)
+        const seededShuffle = (arr, seed) => {
+            const s = [...arr];
+            let h = seed;
+            for (let i = s.length - 1; i > 0; i--) {
+                h = ((h * 1664525 + 1013904223) | 0) >>> 0;
+                const j = h % (i + 1);
+                [s[i], s[j]] = [s[j], s[i]];
+            }
+            return s;
+        };
+        const todaySeed = now.getUTCFullYear() * 10000 + (now.getUTCMonth() + 1) * 100 + now.getUTCDate();
+
+        const makeBookInfo = (b) => {
+            const title = b.title || '오늘의 추천 콘텐츠';
+            const sid = b.id || (b.title || '').toLowerCase().replace(/\s+/g, '-');
+            const link = sid ? `https://archiview.store/review/${sid}?tab=podcast&autoplay=1` : 'https://archiview.store/';
+            return { title, link };
+        };
+
+        let goBook  = { title: '오늘의 추천 콘텐츠', link: 'https://archiview.store/' };
+        let backBook = { title: '오늘의 추천 콘텐츠', link: 'https://archiview.store/' };
+        try {
+            const wfSnap = await db.collection('site_config').doc('weekly_focus').get();
+            if (wfSnap.exists) {
+                const books = (wfSnap.data().books || []).filter(b => b.id || b.title);
+                if (books.length > 0) {
+                    const shuffled = seededShuffle(books, todaySeed + 2); // lowBooks 셔플 (페르소나 없음)
+                    goBook   = makeBookInfo(shuffled[0]);
+                    backBook = makeBookInfo(shuffled[1] || shuffled[0]);
+                }
+            }
+        } catch {}
+
+        const sends = [];
+        snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (!d.fcmToken) return;
+
+            const days = Array.isArray(d.commuteDays) ? d.commuteDays : [0,1,2,3,4];
+            if (!days.includes(dayIdx)) return;
+
+            let label = null;
+            let book = null;
+            if (d.commuteGo === hhmm)   { label = '출근길'; book = goBook; }
+            else if (d.commuteBack === hhmm) { label = '퇴근길'; book = backBook; }
+            if (!label) return;
+
+            sends.push(
+                messaging.send({
+                    token: d.fcmToken,
+                    notification: {
+                        title: `🎧 ${label} 콘텐츠 준비됐어요!`,
+                        body: `「${book.title}」지금 바로 들어보세요.`,
+                    },
+                    webpush: {
+                        notification: { icon: 'https://archiview.store/icon-192.png' },
+                        fcmOptions: { link: book.link },
+                    },
+                }).catch(() => {})
+            );
+        });
+
+        await Promise.all(sends);
+        console.log(`[commuteAlert] ${hhmm} | ${sends.length}명 발송`);
+    }
+);
 
 const ALLOWED_ORIGINS = [
     'https://book-site-123.web.app',

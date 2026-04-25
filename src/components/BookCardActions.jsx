@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { availableAudio } from '../data/availableAudio';
 import { useAuth } from '../hooks/useAuth';
 import { useAudio } from '../contexts/AudioContext';
+import { useSavedBooks } from '../hooks/useSavedBooks';
 import { shareCard } from '../utils/shareCard';
 import { useBookData } from '../hooks/useBookData';
 
@@ -22,6 +23,7 @@ export default function BookCardActions({ book, className = '' }) {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { playPodcastMP3, openScriptModal, podcastInfo: podInfo, podcastPlaying: podPlaying } = useAudio();
+    const { savedBooks, addBook } = useSavedBooks(user);
     const { overrides } = useBookData();
 
     const handlePremiumNav = (e, path, isPodcastAction = false) => {
@@ -97,14 +99,11 @@ export default function BookCardActions({ book, className = '' }) {
 
     const addToLibrary = (e) => {
         e.stopPropagation();
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        if (saved.some(b => b.title === book.title)) {
+        if (savedBooks.some(b => b.title === book.title)) {
             alert('이미 서재에 보관된 도서입니다.');
             return;
         }
-        const updated = [...saved, { id: safeId, title: book.title, author: book.author, cover: book.cover }];
-        localStorage.setItem('savedBooks', JSON.stringify(updated));
-        window.dispatchEvent(new Event('savedBooksUpdated'));
+        addBook({ id: safeId, title: book.title, author: book.author, cover: book.cover });
         alert('서재에 보관되었습니다. ✅');
     };
 

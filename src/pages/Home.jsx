@@ -12,6 +12,7 @@ import BookCardActions from '../components/BookCardActions';
 import { db } from '../firebase';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
+import { useSavedBooks } from '../hooks/useSavedBooks';
 
 // abstract/ 폴더 AI 이미지 32개 — 책 카드에 순서대로 1:1 배정 (중복 없음)
 const ABSTRACT_IMGS = [
@@ -52,6 +53,7 @@ const ABSTRACT_IMGS = [
 export default function Home() {
     const { design } = useSiteDesign();
     const { user } = useAuth();
+    const { addBook: addSavedBook, savedBooks } = useSavedBooks(user);
     const [mainCategories, setMainCategories] = useState(null);
     const navigate = useNavigate();
     const { getAllBooks, loading: booksLoading } = useBookData();
@@ -284,14 +286,11 @@ export default function Home() {
     }, [weeklyMostViewedRaw, enrichedPopularArchives, allBooks]);
 
     const addToLibrary = (book) => {
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        if (saved.some(b => b.title === book.title)) {
+        if (savedBooks.some(b => b.title === book.title)) {
             alert('이미 서재에 보관된 도서입니다.');
             return;
         }
-        const updated = [...saved, { id: book.id, title: book.title, author: book.author, cover: book.cover }];
-        localStorage.setItem('savedBooks', JSON.stringify(updated));
-        window.dispatchEvent(new Event('savedBooksUpdated'));
+        addSavedBook({ id: book.id, title: book.title, author: book.author, cover: book.cover });
         alert('서재에 보관되었습니다. ✅');
     };
 
