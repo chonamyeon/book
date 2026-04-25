@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AudioProvider } from './contexts/AudioContext';
 import MiniPlayer from './components/MiniPlayer';
@@ -40,22 +40,6 @@ const lazyWithRetry = (factory) =>
       )};
     })
   );
-
-// ──────────────────────────────────────────────
-// 주요 페이지 프리로드: idle 시 미리 로드
-// ──────────────────────────────────────────────
-const prefetchRoutes = () => {
-  // 가장 많이 방문하는 페이지 순서대로 프리로드
-  import('./pages/ReviewDetail');
-  import('./pages/Editorial');
-  import('./pages/LibraryLanding');
-};
-
-if (typeof requestIdleCallback !== 'undefined') {
-  requestIdleCallback(prefetchRoutes, { timeout: 4000 });
-} else {
-  setTimeout(prefetchRoutes, 3000);
-}
 
 // ──────────────────────────────────────────────
 // 코드 스플리팅: 각 페이지 lazy 로드
@@ -107,6 +91,33 @@ const ScrollToTop = () => {
 };
 
 export default function App() {
+  const [deferGlobalUi, setDeferGlobalUi] = useState(false);
+
+  useEffect(() => {
+    const activate = () => setDeferGlobalUi(true);
+    if (typeof requestIdleCallback !== 'undefined') {
+      const id = requestIdleCallback(activate, { timeout: 1200 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(activate, 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const prefetchRoutes = () => {
+      // 모바일 최초 진입 뒤 비교적 자주 이동하는 경로만 선로드
+      import('./pages/LibraryLanding');
+      import('./pages/Editorial');
+      import('./pages/ReviewDetail');
+    };
+    if (typeof requestIdleCallback !== 'undefined') {
+      const id = requestIdleCallback(prefetchRoutes, { timeout: 3000 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(prefetchRoutes, 1800);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <ErrorBoundary>
       <AudioProvider>
@@ -128,7 +139,7 @@ export default function App() {
                   <Route path="/profile" element={<MobileLayout><Profile /></MobileLayout>} />
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
                   <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
-                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/*" element={<AdminDashboard />} />
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
                   <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
@@ -142,12 +153,16 @@ export default function App() {
                 </Routes>
               </Suspense>
             </ErrorBoundary>
-            <ErrorBoundary fallback={null}>
-              <MiniPlayer />
-            </ErrorBoundary>
-            <ErrorBoundary fallback={null}>
-              <PodcastScriptModal />
-            </ErrorBoundary>
+            {deferGlobalUi && (
+              <>
+                <ErrorBoundary fallback={null}>
+                  <MiniPlayer />
+                </ErrorBoundary>
+                <ErrorBoundary fallback={null}>
+                  <PodcastScriptModal />
+                </ErrorBoundary>
+              </>
+            )}
           </div>
         </Router>
       </AudioProvider>

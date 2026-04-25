@@ -3,12 +3,18 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const DESIGN_DEFAULTS = {
-    main_hero:      { type: 'image', src: '/images/hero_expert_v5.png' },
+    main_hero:      { type: 'video', src: '/video/main7.mp4' },
+    main_hero_poster: '',
     editorial_hero: { type: 'video', src: '/video/Figure_walking9.mp4' },
+    editorial_hero_poster: '',
     library_hero:   { type: 'video', src: '/video/Figure_walking6.mp4' },
+    library_hero_poster: '',
     notes_hero:     { type: 'video', src: '/video/Figure_walking7.mp4' },
+    notes_hero_poster: '',
     profile_hero:   { type: 'video', src: '/video/Figure_walking10.mp4' },
+    profile_hero_poster: '',
     youtube_hero:   { type: 'image', src: '/images/hero_expert_v5.png' },
+    youtube_hero_poster: '',
     category_heroes: {
         SELF_DEV:    { type: 'image', src: '/images/cat_success.png' },
         ECONOMY:     { type: 'image', src: '/images/cat_wealth_mod.png' },
@@ -41,6 +47,15 @@ export const DESIGN_DEFAULTS = {
     ],
 };
 
+const VIDEO_EXT = /\.(mp4|webm|ogg|mov)(\?|$)/i;
+
+function resolveType(obj) {
+    if (!obj || !obj.src) return obj;
+    if (obj.type === 'video') return obj;
+    if (VIDEO_EXT.test(obj.src)) return { ...obj, type: 'video' };
+    return obj;
+}
+
 function merge(saved, key, defaultVal) {
     if (!saved) return defaultVal;
     const v = saved[key];
@@ -50,31 +65,46 @@ function merge(saved, key, defaultVal) {
         const merged = { ...defaultVal, ...v };
         // src가 비어있으면 기본값으로 fallback
         if (merged.src === '' || merged.src == null) return defaultVal;
-        return merged;
+        return resolveType(merged);
     }
     return v ?? defaultVal;
 }
 
+const CACHE_KEY = 'site_design_cache';
+
+function buildDesign(d) {
+    return {
+        main_hero:        merge(d, 'main_hero',        DESIGN_DEFAULTS.main_hero),
+        editorial_hero:   merge(d, 'editorial_hero',   DESIGN_DEFAULTS.editorial_hero),
+        library_hero:     merge(d, 'library_hero',     DESIGN_DEFAULTS.library_hero),
+        notes_hero:       merge(d, 'notes_hero',       DESIGN_DEFAULTS.notes_hero),
+        profile_hero:     merge(d, 'profile_hero',     DESIGN_DEFAULTS.profile_hero),
+        youtube_hero:     merge(d, 'youtube_hero',     DESIGN_DEFAULTS.youtube_hero),
+        category_heroes:  d?.category_heroes ? { ...DESIGN_DEFAULTS.category_heroes, ...d.category_heroes } : DESIGN_DEFAULTS.category_heroes,
+        main_categories:  merge(d, 'main_categories',  DESIGN_DEFAULTS.main_categories),
+        editorial_slider: merge(d, 'editorial_slider', DESIGN_DEFAULTS.editorial_slider),
+        editorial_tabs:   merge(d, 'editorial_tabs',   DESIGN_DEFAULTS.editorial_tabs),
+        main_hero_poster:       d?.main_hero_poster       || DESIGN_DEFAULTS.main_hero_poster,
+        editorial_hero_poster:  d?.editorial_hero_poster  || DESIGN_DEFAULTS.editorial_hero_poster,
+        library_hero_poster:    d?.library_hero_poster    || DESIGN_DEFAULTS.library_hero_poster,
+        notes_hero_poster:      d?.notes_hero_poster      || DESIGN_DEFAULTS.notes_hero_poster,
+        profile_hero_poster:    d?.profile_hero_poster    || DESIGN_DEFAULTS.profile_hero_poster,
+        youtube_hero_poster:    d?.youtube_hero_poster    || DESIGN_DEFAULTS.youtube_hero_poster,
+    };
+}
+
 export function useSiteDesign() {
-    const [design, setDesign] = useState(DESIGN_DEFAULTS);
-    const [loading, setLoading] = useState(true);
+    const cached = (() => { try { const s = localStorage.getItem(CACHE_KEY); return s ? JSON.parse(s) : null; } catch { return null; } })();
+    const [design, setDesign] = useState(cached || DESIGN_DEFAULTS);
+    const [loading, setLoading] = useState(!cached);
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, 'site_design', 'main'), (snap) => {
             const d = snap.exists() ? snap.data() : null;
-            setDesign({
-                main_hero:        merge(d, 'main_hero',        DESIGN_DEFAULTS.main_hero),
-                editorial_hero:   merge(d, 'editorial_hero',   DESIGN_DEFAULTS.editorial_hero),
-                library_hero:     merge(d, 'library_hero',     DESIGN_DEFAULTS.library_hero),
-                notes_hero:       merge(d, 'notes_hero',       DESIGN_DEFAULTS.notes_hero),
-                profile_hero:     merge(d, 'profile_hero',     DESIGN_DEFAULTS.profile_hero),
-                youtube_hero:     merge(d, 'youtube_hero',     DESIGN_DEFAULTS.youtube_hero),
-                category_heroes:  d?.category_heroes ? { ...DESIGN_DEFAULTS.category_heroes, ...d.category_heroes } : DESIGN_DEFAULTS.category_heroes,
-                main_categories:  merge(d, 'main_categories',  DESIGN_DEFAULTS.main_categories),
-                editorial_slider: merge(d, 'editorial_slider', DESIGN_DEFAULTS.editorial_slider),
-                editorial_tabs:   merge(d, 'editorial_tabs',   DESIGN_DEFAULTS.editorial_tabs),
-            });
+            const next = buildDesign(d);
+            setDesign(next);
             setLoading(false);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(next)); } catch {}
         }, () => { setDesign(DESIGN_DEFAULTS); setLoading(false); });
         return () => unsub();
     }, []);

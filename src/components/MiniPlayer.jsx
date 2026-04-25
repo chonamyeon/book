@@ -14,7 +14,7 @@ export default function MiniPlayer() {
     const location = useLocation();
     const {
         podcastPlaying, podcastInfo, currentTime, duration,
-        playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3
+        playPodcastMP3, pausePodcastMP3, seekPodcastMP3, closePodcastMP3, openScriptModal
     } = useAudio();
 
     if (!podcastInfo) return null;
@@ -26,11 +26,13 @@ export default function MiniPlayer() {
         if (podcastInfo.id.startsWith('yt-')) {
             navigate(`/yt-podcast/${podcastInfo.id.replace('yt-', '')}`);
         } else {
-            navigate(`/review/${podcastInfo.id}?tab=podcast`);
+            openScriptModal(podcastInfo.id, podcastInfo.src, podcastInfo.title, podcastInfo.cover);
         }
     };
 
     const isReviewMode = location.pathname.startsWith('/review');
+    const isYtPodcast = location.pathname.startsWith('/yt-podcast');
+    if (isYtPodcast) return null;
     const bottomNavH = isReviewMode ? 0 : 56;
 
     return (
@@ -124,27 +126,6 @@ export default function MiniPlayer() {
                         {fmt(currentTime)} / {fmt(duration)}
                     </div>
                 </div>
-
-                {/* 책 대화보기 */}
-                <button
-                    onClick={goToPodcast}
-                    style={{
-                        flexShrink: 0,
-                        background: 'rgba(249,115,22,0.12)',
-                        border: '1px solid rgba(249,115,22,0.35)',
-                        borderRadius: 8,
-                        padding: '6px 10px',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        cursor: 'pointer',
-                        color: 'rgba(251,146,60,0.95)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                    }}
-                >
-                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>menu_book</span>
-                    <span>대화보기</span>
-                </button>
 
                 {/* Play / Pause — perfectly round */}
                 <button

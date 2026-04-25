@@ -49,7 +49,17 @@ export default function ReadingNotesLanding() {
                 {design.notes_hero.type === 'image' ? (
                     <img src={design.notes_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
                 ) : (
-                    <video src={design.notes_hero.src} autoPlay muted loop playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
+                    <video
+                        src={design.notes_hero.src}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        poster={design.notes_hero_poster || undefined}
+                        className="absolute inset-0 w-full h-full object-cover opacity-70"
+                        style={{ objectPosition: 'center center' }}
+                    />
                 )}
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-10">
                     <motion.div

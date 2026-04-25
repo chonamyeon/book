@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { celebrities } from '../data/celebrities';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
@@ -9,26 +8,50 @@ import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
+import MainHeader from '../components/MainHeader';
 import { db } from '../firebase';
-import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, collection } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 
 export default function Test4() {
-    const { design } = useSiteDesign();
+    const { design, loading: designLoading } = useSiteDesign();
     const { user } = useAuth();
     const navigate = useNavigate();
     const { getAllBooks, loading: booksLoading } = useBookData();
-    const { playPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [menuOpen, setMenuOpen] = useState(false);
+    const { playPodcastMP3, seekPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [showAllCelebs, setShowAllCelebs] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
     const [contentMode, setContentMode] = useState('paid'); // 'free' | 'paid'
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showIphoneModal, setShowIphoneModal] = useState(false);
-    const [showAndroidModal, setShowAndroidModal] = useState(false);
-    const [pwaInstalled, setPwaInstalled] = useState(false);
+    const [celebrities, setCelebrities] = useState([]);
+    const [enableDeferredData] = useState(true);
+
+    // 셀럽 메타데이터는 지연 로드 (초기 번들에서 474KB 제외)
+    useEffect(() => {
+        let cancelled = false;
+        const load = () => {
+            import('../data/celebrities').then(m => {
+                if (!cancelled) setCelebrities(m.celebrities || []);
+            });
+        };
+        if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(load, { timeout: 2000 });
+        } else {
+            setTimeout(load, 300);
+        }
+        return () => { cancelled = true; };
+    }, []);
+
+    const loadJsonCache = (key, fallback = []) => {
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return fallback;
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : fallback;
+        } catch {
+            return fallback;
+        }
+    };
 
     const getAudioDurationMin = (podcastFile) => {
         if (!podcastFile) return 15;
@@ -68,39 +91,6 @@ export default function Test4() {
             .replace(/[#*]/g, '')
             .replace(/---/g, '')
             .trim();
-    };
-
-    useEffect(() => {
-        let ticking = false;
-        const handleScroll = () => {
-            if (!ticking) {
-                requestAnimationFrame(() => {
-                    setIsScrolled(window.scrollY > 20);
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        };
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    useEffect(() => {
-        const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
-        window.addEventListener('beforeinstallprompt', handler);
-        window.addEventListener('appinstalled', () => setPwaInstalled(true));
-        return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
-
-    const handleAndroidInstall = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') setPwaInstalled(true);
-            setDeferredPrompt(null);
-        } else {
-            setShowAndroidModal(true);
-        }
     };
 
     // 결제 설정 로드 (회원가입 7일 이후 콘텐츠 모드)
@@ -144,14 +134,11 @@ export default function Test4() {
 
     // Memoized all books for efficiency
     const allBooks = useMemo(() => {
-        const merged = getAllBooks();
+        const merged = getAllBooks(true);
         // Remove duplicates by title
         return merged.filter((book, i, arr) => arr.findIndex(b => b.title === book.title) === i);
     }, [getAllBooks]);
-
-    const originalContents = useMemo(() => {
-        return allBooks.filter(b => b.section === 'ARCHIVIEW_ORIGINAL').slice(0, 3);
-    }, [allBooks]);
+    const publicAllBooks = useMemo(() => allBooks.filter(b => b.isPublic !== false), [allBooks]);
 
     // Mapping for Category Chips to Category Page IDs
     const chipToIdMap = {
@@ -163,10 +150,58 @@ export default function Test4() {
     };
 
     // ── Firestore 섹션 데이터 ──────────────────────────────────────────
+    const getSrcFile = (src) => {
+        if (!src) return '';
+        const clean = src.split('?')[0];
+        const parts = clean.split('/');
+        return parts[parts.length - 1].replace(/\.[^.]+$/, '').toLowerCase();
+    };
+
+    const dedupeHistory = (raw) => {
+        const seenFile = new Set();
+        const seenId = new Set();
+        return raw.filter(h => {
+            const fileKey = getSrcFile(h.src);
+            const idKey = (h.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (fileKey && seenFile.has(fileKey)) return false;
+            if (idKey && seenId.has(idKey)) return false;
+            if (fileKey) seenFile.add(fileKey);
+            if (idKey) seenId.add(idKey);
+            return true;
+        });
+    };
+
+    const [listenHistory, setListenHistory] = useState(() => {
+        try {
+            const raw = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+            const deduped = dedupeHistory(raw);
+            if (deduped.length !== raw.length) localStorage.setItem('archiview_listen_history', JSON.stringify(deduped));
+            return deduped;
+        } catch { return []; }
+    });
+
+    // 히스토리 변경 감지 (미니 플레이어 재생 시 업데이트)
+    useEffect(() => {
+        const onStorage = () => {
+            try {
+                const raw = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+                setListenHistory(dedupeHistory(raw));
+            } catch {}
+        };
+        window.addEventListener('storage', onStorage);
+        const interval = setInterval(onStorage, 3000);
+        return () => { window.removeEventListener('storage', onStorage); clearInterval(interval); };
+    }, []);
+
     const [weeklyFocusRaw, setWeeklyFocusRaw] = useState(() => {
         try { return JSON.parse(localStorage.getItem('wf_cache') || '[]'); } catch { return []; }
     });
-    const [weeklyMostViewedRaw, setWeeklyMostViewedRaw] = useState([]);
+    const [weeklyFocusVideos, setWeeklyFocusVideos] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('wfv_cache') || '[]'); } catch { return []; }
+    });
+    const [weeklyMostViewedRaw, setWeeklyMostViewedRaw] = useState(() => loadJsonCache('wmv_cache', []));
+    const [originalArchivesRaw, setOriginalArchivesRaw] = useState(() => loadJsonCache('original_cache', []));
+    const [knowledgeInsightsRaw, setKnowledgeInsightsRaw] = useState(() => loadJsonCache('insights_rank_cache', []));
     const [popularArchives, setPopularArchives] = useState([
         { id: "wealth-way", title: "부자들이 돈을 보는 방식", listens: "12.4k" },
         { id: "decision-making", title: "억만장자의 의사결정", listens: "10.1k" },
@@ -181,6 +216,7 @@ export default function Test4() {
 
     // 위클리포커스 스케줄 자동 적용 — 월요일 6시 이후 Firestore 업데이트
     useEffect(() => {
+        if (!enableDeferredData) return;
         const applySchedule = async () => {
             try {
                 const snap = await getDoc(doc(db, 'site_config', 'weekly_focus_schedule'));
@@ -200,32 +236,83 @@ export default function Test4() {
             } catch {}
         };
         applySchedule();
-    }, []);
+    }, [enableDeferredData]);
 
     useEffect(() => {
+        if (!enableDeferredData) return;
         const unsub1 = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
             if (snap.exists() && snap.data().books?.length) setPopularArchives(snap.data().books);
         });
         const unsub2 = onSnapshot(doc(db, 'site_config', 'weekly_focus'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) {
-                const books = snap.data().books;
-                setWeeklyFocusRaw(books);
-                try { localStorage.setItem('wf_cache', JSON.stringify(books)); } catch {}
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.books?.length) {
+                    setWeeklyFocusRaw(data.books);
+                    try { localStorage.setItem('wf_cache', JSON.stringify(data.books)); } catch {}
+                }
+                if (data.videos?.length) {
+                    setWeeklyFocusVideos(data.videos);
+                    try { localStorage.setItem('wfv_cache', JSON.stringify(data.videos)); } catch {}
+                }
             }
         });
         const unsub3 = onSnapshot(doc(db, 'site_config', 'weekly_most_viewed'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) setWeeklyMostViewedRaw(snap.data().books);
+            if (snap.exists()) {
+                const books = snap.data().books || [];
+                setWeeklyMostViewedRaw(books);
+                try { localStorage.setItem('wmv_cache', JSON.stringify(books)); } catch {}
+            }
         });
-        return () => { unsub1(); unsub2(); unsub3(); };
-    }, []);
+        const unsub4 = onSnapshot(doc(db, 'site_config', 'original_archives'), (snap) => {
+            if (snap.exists()) {
+                const books = snap.data().books || [];
+                setOriginalArchivesRaw(books);
+                try { localStorage.setItem('original_cache', JSON.stringify(books)); } catch {}
+            }
+        });
+        const unsub5 = onSnapshot(collection(db, 'youtube_videos'), (snap) => {
+            const videos = snap.docs
+                .map((d) => ({ id: d.id, ...d.data() }))
+                .filter((v) => !v.hidden);
+            setKnowledgeInsightsRaw(videos);
+            try { localStorage.setItem('insights_rank_cache', JSON.stringify(videos)); } catch {}
+        });
+        return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
+    }, [enableDeferredData]);
 
     const bookLookup = useMemo(() => {
         const map = new Map();
-        allBooks.forEach(b => map.set(b.id, b));
+        publicAllBooks.forEach(b => map.set(b.id, b));
+        return map;
+    }, [publicAllBooks]);
+    const allBookVisibility = useMemo(() => {
+        const map = new Map();
+        allBooks.forEach(b => map.set(b.id, b.isPublic !== false));
         return map;
     }, [allBooks]);
+    const allBookVisibilityByTitle = useMemo(() => {
+        const normalize = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+        const map = new Map();
+        allBooks.forEach(b => {
+            const key = normalize(b.title);
+            if (key) map.set(key, b.isPublic !== false);
+        });
+        return map;
+    }, [allBooks]);
+    const isVisibleItem = useCallback((item) => {
+        if (item?.isPublic === false) return false;
+        const byId = allBookVisibility.get(item?.id);
+        if (byId === false) return false;
+        if (typeof byId === 'undefined') {
+            const key = String(item?.title || '').replace(/\s+/g, '').toLowerCase();
+            if (key && allBookVisibilityByTitle.get(key) === false) return false;
+        }
+        return true;
+    }, [allBookVisibility, allBookVisibilityByTitle]);
 
-    const enrich = useCallback((list) => list.map(item => {
+    const enrich = useCallback((list) => list
+        .filter(isVisibleItem)
+        .map(item => {
         const bookData = bookLookup.get(item.id) || {};
         return { 
             ...bookData, 
@@ -234,7 +321,7 @@ export default function Test4() {
             purchaseLink: item.purchaseLink || bookData.purchaseLink || '', 
             author: item.author || bookData.author || '' 
         };
-    }), [bookLookup]);
+    }), [bookLookup, isVisibleItem]);
 
     const enrichedPopularArchives = useMemo(() => enrich(popularArchives), [popularArchives, enrich]);
 
@@ -242,7 +329,7 @@ export default function Test4() {
     const weeklyFocusBooks = useMemo(() => {
         if (weeklyFocusRaw.length > 0) {
             const enriched = enrich(weeklyFocusRaw);
-            if (allBooks.length > 0) {
+            if (publicAllBooks.length > 0) {
                 try { localStorage.setItem('wf_enriched_cache', JSON.stringify(enriched)); } catch {}
                 return enriched;
             }
@@ -252,17 +339,42 @@ export default function Test4() {
             } catch {}
             return enriched;
         }
-        return allBooks
+        return publicAllBooks
             .filter(b => b.section === 'WEEKLY_FOCUS')
             .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
             .slice(0, 5);
-    }, [weeklyFocusRaw, allBooks, enrich]);
+    }, [weeklyFocusRaw, publicAllBooks, enrich]);
 
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
         if (weeklyMostViewedRaw.length > 0) return enrich(weeklyMostViewedRaw);
         return enrichedPopularArchives;
     }, [weeklyMostViewedRaw, enrichedPopularArchives, enrich]);
+
+    const topKnowledgeInsights = useMemo(() => {
+        const getThumb = (url) => {
+            const match = String(url || '').match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+            return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
+        };
+        const safeNum = (v) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        };
+        return [...knowledgeInsightsRaw]
+            .filter((v) => !v.hidden)
+            .sort((a, b) => safeNum(b.views) - safeNum(a.views))
+            .slice(0, 5)
+            .map((v) => ({
+                ...v,
+                viewsCount: Math.max(safeNum(v.views), 0),
+                thumbnail: getThumb(v.url),
+            }));
+    }, [knowledgeInsightsRaw]);
+
+    const originalContents = useMemo(() => {
+        if (originalArchivesRaw.length > 0) return enrich(originalArchivesRaw);
+        return publicAllBooks.filter(b => b.section === 'ARCHIVIEW_ORIGINAL').slice(0, 20);
+    }, [originalArchivesRaw, publicAllBooks, enrich]);
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -288,7 +400,7 @@ export default function Test4() {
     };
 
     return (
-        <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative overflow-x-hidden selection:bg-orange-500/30">
+        <div className="bg-black text-white font-sans antialiased min-h-screen w-full max-w-full flex flex-col relative overflow-x-hidden selection:bg-orange-500/30">
             {/* Styles Injection for Glassmorphism */}
             <style>{`
                 .glass-card {
@@ -304,209 +416,47 @@ export default function Test4() {
             `}</style>
 
             <div className="max-w-md mx-auto w-full flex-grow relative flex flex-col">
-                {/* 🏠 Header Navigation */}
-                <main className="flex-grow pb-32">
-                    {/* Independent Header Area - Positioned above the image */}
-                    <div className="bg-[#101218] px-3 pb-3" style={{ paddingTop: 'calc(5px + env(safe-area-inset-top, 0px))' }}>
-                        <header className="flex items-center justify-between mt-2">
-                            <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-start">
-                                <div className="flex items-center gap-[7px]">
-                                    {/* 🔊 Gray Waveform Graphic Logo */}
-                                    <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]">
-                                        <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                        <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                        <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                        <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                        <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                    </div>
-                                    <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
-                                </div>
-                            </Link>
-                            <div className="flex items-center gap-3">
-                                {/* Android | iPhone 버튼 */}
-                                <button
-                                    onClick={handleAndroidInstall}
-                                    disabled={pwaInstalled}
-                                    className="flex items-center gap-1 py-[5px] text-[10px] font-bold text-white/75 hover:text-white active:scale-95 transition-all whitespace-nowrap"
-                                >
-                                    <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>android</span>
-                                    {pwaInstalled ? '✓ Android' : 'Android'}
-                                </button>
-                                <span className="text-white/20 text-[11px] select-none">|</span>
-                                <button
-                                    onClick={() => setShowIphoneModal(true)}
-                                    className="flex items-center gap-1 py-[5px] text-[10px] font-bold text-white/75 hover:text-white active:scale-95 transition-all whitespace-nowrap"
-                                >
-                                    <svg width="11" height="13" viewBox="0 0 814 1000" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 192.8-49 31.2 0 134.2 2.9 209.4 100.5zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/>
-                                    </svg>
-                                    iPhone
-                                </button>
-                                {/* 햄버거 메뉴 */}
-                                <button onClick={() => setMenuOpen(true)} className="flex flex-col justify-center gap-[5px] w-5 h-5 flex-shrink-0">
-                                    <span className="block w-full h-[2px] bg-white rounded-full"></span>
-                                    <span className="block w-3 h-[2px] bg-white rounded-full"></span>
-                                    <span className="block w-full h-[2px] bg-white rounded-full"></span>
-                                </button>
-                            </div>
-                        </header>
-                    </div>
+                <main className="flex-grow pb-16 w-full max-w-full overflow-x-hidden">
+                    <MainHeader />
 
-                    {/* 🍔 Side Drawer */}
-                    {menuOpen && (
-                        <div className="fixed inset-0 z-[200] flex">
-                            {/* Backdrop */}
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
-                            {/* Drawer */}
-                            <div className="relative ml-auto w-[280px] h-full bg-[#0d0f15] flex flex-col overflow-y-auto" style={{ maxWidth: '80vw' }}>
-                                {/* Header */}
-                                <div className="flex items-center justify-between px-5 pt-8 pb-6 border-b border-white/10">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-end h-[16px] gap-[2px]">
-                                            <div className="w-[3px] h-[8px] bg-orange-400 rounded-none" />
-                                            <div className="w-[3px] h-[14px] bg-orange-400 rounded-none" />
-                                            <div className="w-[3px] h-[16px] bg-orange-400 rounded-none" />
-                                            <div className="w-[3px] h-[10px] bg-orange-400 rounded-none" />
-                                            <div className="w-[3px] h-[13px] bg-orange-400 rounded-none" />
-                                        </div>
-                                        <span className="text-[17px] font-black tracking-tight uppercase" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
-                                    </div>
-                                    <button onClick={() => setMenuOpen(false)} className="text-white/50 hover:text-white">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
-                                </div>
-
-                                {/* 카테고리 섹션 */}
-                                <div className="px-5 pt-5 pb-3">
-                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">카테고리</p>
-                                    <div className="flex flex-col gap-1">
-                                        {[
-                                            { label: '자기계발', path: '/category/SELF_DEV', icon: 'trending_up' },
-                                            { label: '경제',     path: '/category/ECONOMY',    icon: 'bar_chart' },
-                                            { label: '경영',     path: '/category/MANAGEMENT', icon: 'business' },
-                                            { label: '인문',     path: '/category/HUMANITIES', icon: 'history_edu' },
-                                            { label: '심리',     path: '/category/PSYCHOLOGY', icon: 'psychology' },
-                                        ].map(cat => (
-                                            <Link key={cat.path} to={cat.path} onClick={() => setMenuOpen(false)}
-                                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors">
-                                                <span className="material-symbols-outlined text-orange-400 text-[18px]">{cat.icon}</span>
-                                                <span className="text-[14px] font-bold text-white">{cat.label}</span>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="mx-5 h-px bg-white/10 my-2" />
-
-                                {/* 섹션 바로가기 */}
-                                <div className="px-5 pt-3 pb-3">
-                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">섹션</p>
-                                    <div className="flex flex-col gap-1">
-                                        {[
-                                            { label: '위클리 포커스',        icon: 'calendar_today', anchor: '#weekly-focus' },
-                                            { label: '직장인 인사이트',      icon: 'headphones',     anchor: '#insight' },
-                                            { label: '최다 조회 아카이뷰',   icon: 'leaderboard',    anchor: '#most-viewed' },
-                                            { label: '아카이뷰 오리지널',    icon: 'auto_awesome',   anchor: '#original' },
-                                            { label: '셀럽 아카이뷰',        icon: 'star',           anchor: '#celeb' },
-                                        ].map(sec => (
-                                            <button key={sec.anchor}
-                                                onClick={() => {
-                                                    setMenuOpen(false);
-                                                    setTimeout(() => {
-                                                        const el = document.querySelector(sec.anchor);
-                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                                    }, 150);
-                                                }}
-                                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors text-left w-full">
-                                                <span className="material-symbols-outlined text-white/40 text-[18px]">{sec.icon}</span>
-                                                <span className="text-[14px] font-bold text-white/70">{sec.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="mx-5 h-px bg-white/10 my-2" />
-
-                                {/* 하단 링크 */}
-                                <div className="px-5 pt-3 pb-8 flex flex-col gap-1">
-                                    {[
-                                        { label: '서비스 소개', path: '/about' },
-                                        { label: '멤버십',      path: '/membership' },
-                                        { label: '문의하기',    path: '/contact' },
-                                    ].map(item => (
-                                        <Link key={item.path} to={item.path} onClick={() => setMenuOpen(false)}
-                                            className="px-3 py-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
-                                            {item.label}
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 📌 Category Tab Navigation */}
-                    <div className="bg-[#101218] border-b border-white/10">
-                        <div className="flex items-center w-full">
-                            <div className="flex-1 flex items-center justify-center py-2.5 border-b-2 border-orange-500">
-                                <span className="text-[14px] font-black text-white tracking-tight">NOW</span>
-                            </div>
-                            {[
-                                { label: '자기계발', path: '/category/SELF_DEV' },
-                                { label: '경제',     path: '/category/ECONOMY' },
-                                { label: '경영',     path: '/category/MANAGEMENT' },
-                                { label: '인문',     path: '/category/HUMANITIES' },
-                                { label: '심리',     path: '/category/PSYCHOLOGY' },
-                            ].map((cat) => (
-                                <Link
-                                    key={cat.path}
-                                    to={cat.path}
-                                    className="flex-1 flex items-center justify-center py-2.5 text-[14px] font-bold text-white hover:text-white transition-colors border-b-2 border-transparent hover:border-white/30"
-                                >
-                                    {cat.label}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-
-                    <section className="relative pt-0 pb-0 overflow-hidden" style={{ minHeight: '376px' }}>
+                    <section className="relative pt-0 pb-0 overflow-hidden" style={{ aspectRatio: '1/1', width: '100%' }}>
                         {/* Full background image - face focused */}
                         <div className="absolute inset-0 z-0 overflow-hidden">
-                            <img
-                                src="/images/hero_expert_v5.png"
-                                alt="Expert Listening"
-                                width={450}
-                                height={376}
-                                fetchpriority="high"
-                                loading="eager"
-                                decoding="sync"
-                                className="object-cover"
-                                style={{
-                                    width: '450px',
-                                    height: '376px',
-                                    objectPosition: 'right top'
-                                }}
-                            />
+                            {design.main_hero?.type === 'video' && design.main_hero?.src && (
+                                <video
+                                    src={design.main_hero.src}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    preload="auto"
+                                    poster={design.main_hero_poster || undefined}
+                                    className="w-full h-full object-cover"
+                                />
+                            )}
+                            {design.main_hero?.type !== 'video' && design.main_hero?.src && (
+                                <img src={design.main_hero.src} alt="" className="w-full h-full object-cover" />
+                            )}
                             {/* Left solid → transparent: 텍스트 왼쪽, 얼굴 오른쪽 */}
                             <div className="absolute inset-0" style={{
-                                background: 'linear-gradient(to right, #101218 35%, rgba(16,18,24,0.6) 60%, transparent 100%)'
+                                background: 'linear-gradient(to right, rgba(16,18,24,0.85) 35%, rgba(16,18,24,0.5) 60%, transparent 100%)'
                             }}></div>
                             {/* Bottom fade */}
                             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent"></div>
                         </div>
 
                         {/* Hero Text Only */}
-                        <div className="relative z-10 px-6 pt-5">
+                        <div className="relative z-10 px-6" style={{ paddingTop: 'clamp(50px, 10vw, 60px)' }}>
 
                             <motion.div
                                 initial="hidden"
                                 animate="visible"
                                 variants={sectionVariants}
-                                className="mt-10 mb-6"
-                                style={{ maxWidth: '60%' }}
+                                style={{ maxWidth: '60%', marginTop: 'clamp(24px, 9vw, 40px)', marginBottom: '1.5rem' }}
                             >
                                 <h1 className="font-black leading-[1.3] mb-5 tracking-tight">
-                                    <span className="text-[29px]">출퇴근 15분,</span><br />
-                                    <span className="text-[23px]">
+                                    <span style={{ fontSize: 'clamp(24px, 6.5vw, 31px)' }}>출퇴근 15분,</span><br />
+                                    <span style={{ fontSize: 'clamp(18px, 5.2vw, 23px)', fontWeight: 300 }}>
                                         성공한 사람들의<br />
                                         <span className="flex items-center gap-[6px]">
                                             인사이트를 듣다
@@ -519,23 +469,23 @@ export default function Test4() {
                                         </span>
                                     </span>
                                 </h1>
-                                <p className="text-gray-300 text-[11px] font-medium leading-relaxed mb-6">
-                                    책 한 권 읽을 시간 없는 직장인을 위한<br />오디오 인사이트 플랫폼
+                                <p className="text-gray-300 font-medium leading-relaxed mb-6" style={{ fontSize: 'clamp(11px, 2.5vw, 12px)' }}>
+                                    책 한 권 읽을 시간 없는<br />직장인들을 위한<br />오디오 인사이트 플랫폼
                                 </p>
                             </motion.div>
 
                         </div>
 
                         {/* ⭐ Social Proof Section */}
-                        <div className="relative z-10 px-6 pb-6 pt-0">
-                            <div className="glass-card bg-zinc-900/40 border border-white/5 rounded-none p-4 text-center">
-                                <div className="flex items-center justify-center gap-1 mb-2">
+                        <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-3">
+                            <div className="glass-card bg-zinc-900/60 border border-white/5 rounded-none px-4 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1 mb-1">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                        <span key={star} className="material-symbols-outlined text-orange-500 text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                        <span key={star} className="material-symbols-outlined text-orange-500 text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                     ))}
                                 </div>
-                                <h3 className="text-[12px] font-black tracking-tight text-white mb-2.5">이미 <span className="text-orange-500">15,400명</span>의 직장인들이 매일 아침 성장하고 있습니다.</h3>
-                                <div className="relative h-[36px] overflow-hidden">
+                                <h3 className="text-[12px] font-black tracking-tight text-white mb-1">이미 <span className="text-orange-500">15,400명</span>의 직장인들이 매일 아침 성장하고 있습니다.</h3>
+                                <div className="relative h-[28px] overflow-hidden">
                                     {userReviews.map((review, idx) => (
                                         <motion.div
                                             key={idx}
@@ -545,8 +495,8 @@ export default function Test4() {
                                             className="absolute inset-0 flex items-center justify-center px-2"
                                             style={{ pointerEvents: idx === reviewIndex ? 'auto' : 'none' }}
                                         >
-                                            <p className="text-white text-[12px] font-bold leading-snug break-keep text-center">
-                                                "{review.text}" <span className="text-orange-500/70 text-[11px] font-black whitespace-nowrap shrink-0 ml-1">- {review.name}</span>
+                                            <p className="text-white text-[11px] font-bold leading-snug break-keep text-center">
+                                                "{review.text}" <span className="text-orange-500/70 text-[10px] font-black whitespace-nowrap shrink-0 ml-1">- {review.name}</span>
                                             </p>
                                         </motion.div>
                                     ))}
@@ -554,16 +504,95 @@ export default function Test4() {
                             </div>
                         </div>
 
+                    </section>
 
+                        {/* 이어 듣기 섹션 */}
+                        {(() => {
+                            const deduped = dedupeHistory(listenHistory);
+                            const items = deduped.slice(0, 2);
+                            if (!items.length) return null;
+                            const fmt = (s) => { if (!s || isNaN(s)) return '0:00'; const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; };
+                            const userName = user?.displayName?.split(' ')[0] || '';
+                            return (
+                                <section className="px-6 pt-7 pb-7">
+                                    <div className="mb-5">
+                                        <h2 className="text-[20px] font-black tracking-tight leading-none mb-1.5 text-white">
+                                            {userName ? <><span className="text-orange-400">{userName}님</span>의 이어 듣기</> : '이어 듣기'}
+                                        </h2>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-[2px] bg-orange-500" />
+                                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">멈췄던 콘텐츠를 이어서 들어보세요</p>
+                                        </div>
+                                    </div>
+                                    <div className={`grid gap-3 ${items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} style={{alignItems:'stretch'}}>
+                                        {items.map((item) => {
+                                            const pct = item.duration > 0 ? Math.min(100, Math.round((item.currentTime / item.duration) * 100)) : 0;
+                                            const remaining = item.duration > 0 ? item.duration - item.currentTime : 0;
+                                            const isYt = item.id?.startsWith('yt-');
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => {
+                                                        if (!user) { navigate('/login'); return; }
+                                                        if (isYt) {
+                                                            navigate(`/yt-podcast/${item.id.replace('yt-', '')}`);
+                                                        } else {
+                                                            playPodcastMP3(item.src, item.title, item.cover, item.id, false, item.currentTime || 0);
+                                                        }
+                                                    }}
+                                                    className="relative flex flex-col overflow-hidden bg-[#111318] border border-zinc-700/50 hover:border-zinc-500/70 transition-all duration-300 active:scale-[0.98] text-left shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                                                >
+                                                    {/* 커버 이미지 */}
+                                                    <div className="relative w-full overflow-hidden bg-zinc-900" style={{aspectRatio:'3/2'}}>
+                                                        <img
+                                                            src={item.cover || '/images/covers/default_custom.jpg'}
+                                                            alt={item.title}
+                                                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                                                            onError={e => { e.target.src = '/images/covers/default_custom.jpg'; }}
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                                                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/10 px-2 py-1 rounded-full">
+                                                            <span className="flex items-end gap-[1px]" style={{height:10}}>
+                                                                {[{h:4,d:'0s'},{h:8,d:'0.2s'},{h:10,d:'0.07s'},{h:6,d:'0.28s'},{h:3,d:'0.14s'}].map((b,i)=>(
+                                                                    <span key={i} style={{display:'inline-block',width:1.2,height:b.h,borderRadius:2,background:'#f97316',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                                                                ))}
+                                                            </span>
+                                                            <span className="text-[10px] font-black text-orange-400">{pct}%</span>
+                                                        </div>
+                                                    </div>
+                                                    {/* 얇은 진행바 */}
+                                                    <div className="w-full h-[2px] bg-zinc-800">
+                                                        <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all" style={{width:`${pct}%`}} />
+                                                    </div>
+                                                    {/* 정보 - flex-1로 늘려서 버튼을 항상 하단에 */}
+                                                    <div className="p-3 flex flex-col flex-1">
+                                                        <p className="text-[12px] font-black text-white leading-snug line-clamp-2 mb-2">{item.title}</p>
+                                                        <p className="text-[10px] text-zinc-500 font-medium mb-3">
+                                                            {remaining > 5 ? `남은 시간 ${fmt(remaining)}` : '거의 완료'}
+                                                        </p>
+                                                        <div className="mt-auto flex items-center justify-center gap-1.5 py-2 bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 transition-colors">
+                                                            <span className="material-symbols-outlined text-orange-400" style={{fontSize:13,fontVariationSettings:"'FILL' 1"}}>play_circle</span>
+                                                            <span className="text-[10px] font-black text-orange-400 tracking-wide">이어 재생</span>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </section>
+                            );
+                        })()}
 
                          {/* 2️⃣ Weekly Focus */}
                         <div id="weekly-focus" className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Weekly Focus</h2>
+                                    <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">
+                                        {user?.displayName?.split(' ')[0] ? <><span className="text-orange-400">{user.displayName.split(' ')[0]}님</span>의 Today Contents</> : 'Today Contents'}
+                                    </h2>
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
-                                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">매주 무료로 청취하는 위클리 포커스</p>
+                                        <p className="text-[11px] font-bold text-gray-500 tracking-wide whitespace-nowrap">월요일부터 금요일까지 나에게 맞는 콘텐츠를 추천합니다.</p>
                                     </div>
                                 </div>
                             </div>
@@ -589,28 +618,80 @@ export default function Test4() {
                                 const isThisPlaying = podcastPlaying && podcastInfo?.id === book.id;
                                 return (
                                     <div key={idx} className="relative group">
-                                        <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
-                                            <div className="w-[70px] h-[98px] mt-[30px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
+                                        <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-center hover:bg-white/5 transition-all w-full border border-white/5">
+                                            <div className="w-[70px] h-[98px] rounded-none overflow-hidden flex-shrink-0 shadow-xl">
                                                 <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} loading="lazy" decoding="async" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                             </div>
                                             <div className="flex-grow min-w-0">
                                                 <h3 className="font-black text-[16px] mb-1.5 leading-snug truncate text-white">{book.title}</h3>
                                                 <p className="text-[11px] text-gray-400 mb-2 line-clamp-1 italic font-medium">{cleanText(book.desc) || '성공적인 인생을 위한 핵심 근력을 키워주는 방법론...'}</p>
-
-
-
                                                 <BookCardActions book={book} />
                                             </div>
                                         </div>
                                     </div>
                                 );
                             })}
+
+                            {/* 유튜브 영상 2개 */}
+                            {weeklyFocusVideos.slice(0, 2).map((v, idx) => {
+                                const ytUrl = v.youtubeUrl || `https://www.youtube.com/watch?v=${v.id}`;
+                                const likesNum = v.likes ? (v.likes >= 1000 ? (v.likes / 1000).toFixed(1) + 'k' : v.likes) : null;
+                                return (
+                                    <div key={v.id || idx} className="relative group">
+                                        <div className="glass-card rounded-none p-4 flex gap-5 items-center border border-white/5 hover:bg-white/5 transition-all w-full">
+                                            {/* 썸네일 */}
+                                            <div className="relative w-[70px] h-[98px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl bg-black">
+                                                {v.thumbnail
+                                                    ? <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                                                    : <div className="w-full h-full flex items-center justify-center bg-zinc-900" />}
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-white text-[15px] ml-[1px]">play_arrow</span>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-1 pb-1">
+                                                    <span className="text-[8px] font-black text-red-400 uppercase tracking-widest">YouTube</span>
+                                                </div>
+                                            </div>
+                                            {/* 텍스트 + 버튼 */}
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-start gap-2 mb-1.5">
+                                                    <h3 className="font-black text-[15px] leading-snug line-clamp-2 text-white flex-1">{v.title}</h3>
+                                                    {likesNum && (
+                                                        <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                                                            <span className="material-symbols-outlined text-red-400 text-[13px]">favorite</span>
+                                                            <span className="text-[10px] font-black text-red-400">{likesNum}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] text-gray-400 mb-3 line-clamp-1 italic font-medium">{v.desc || v.channel}</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+                                                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap">
+                                                        <span className="material-symbols-outlined text-[14px]">smart_display</span>
+                                                        유튜브보기
+                                                    </a>
+                                                    <button
+                                                        onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/yt-podcast/${v.id}`); }}
+                                                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-[#c02a2a] via-[#a01f1f] to-[#751515] border border-[#c0392b]/60 shadow-[0_2px_8px_rgba(160,31,31,0.5),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-2px_0_rgba(0,0,0,0.3)] text-[10px] font-black text-white transition-all whitespace-nowrap active:scale-95">
+                                                        <span className="flex items-end gap-[1.5px]" style={{height:13}}>
+                                                            {[{h:5,d:'0s'},{h:11,d:'0.2s'},{h:13,d:'0.07s'},{h:8,d:'0.28s'},{h:4,d:'0.14s'}].map((b,i)=>(
+                                                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                                                            ))}
+                                                        </span>
+                                                        팟캐스트
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    </section>
 
 
                     {/* 3️⃣ 직장인이 많이 듣는 컨텐츠 */}
-                    <motion.section id="insight" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-0">
+                    <motion.section id="insight" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5">직장인이 가장 많이 듣는 인사이트</h2>
@@ -652,7 +733,22 @@ export default function Test4() {
                                             {/* Category Pill (Glassmorphism) */}
                                             <div className="mb-3">
                                                 <span className="inline-flex items-center px-2.5 py-1 rounded-none bg-white/10 backdrop-blur-xl border border-white/10 text-[12.5px] font-black text-white uppercase tracking-widest drop-shadow-md">
-                                                    <span className="text-orange-500 mr-1.5">🎧</span>
+                                                    <span className="mr-1.5 flex items-center gap-[2px]" style={{height:14}}>
+                                                        {[1,2,3,4].map(i => (
+                                                            <span key={i} style={{
+                                                                display:'inline-block',
+                                                                width:2.5,
+                                                                borderRadius:2,
+                                                                background:'#f97316',
+                                                                animationName:'waveBar',
+                                                                animationDuration:'0.9s',
+                                                                animationTimingFunction:'ease-in-out',
+                                                                animationIterationCount:'infinite',
+                                                                animationDelay:`${(i-1)*0.15}s`,
+                                                                height: i===1||i===4 ? 7 : i===2 ? 13 : 10,
+                                                            }} />
+                                                        ))}
+                                                    </span>
                                                     {cat.subLabel.replace(/[()]/g, '')}
                                                 </span>
                                             </div>
@@ -689,7 +785,7 @@ export default function Test4() {
                     </div>
 
                     {/* 4️⃣ 인기 아카이뷰 */}
-                    <motion.section id="most-viewed" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-5 pb-7">
+                    <motion.section id="most-viewed" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 아카이뷰</h2>
@@ -701,7 +797,7 @@ export default function Test4() {
                         </div>
                         <div className="space-y-5">
                             {enrichedWeeklyMostViewed.map((item, i) => (
-                                <div key={i} className={`flex items-start gap-3 pb-5 ${i !== enrichedPopularArchives.length - 1 ? 'border-b border-white/5' : ''}`}>
+                                <div key={i} className={`flex items-start gap-3 ${i !== enrichedWeeklyMostViewed.length - 1 ? 'pb-5 border-b border-white/5' : 'pb-0'}`}>
                                     <span className="text-3xl font-black text-white/50 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
                                     <Link to={`/review/${item.id || item.title.toLowerCase().replace(/\s+/g, '-')}`} className="flex-shrink-0">
                                         <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
@@ -727,13 +823,74 @@ export default function Test4() {
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
+                    {/* 4.5️⃣ 지식 인사이트 TOP 5 */}
+                    {topKnowledgeInsights.length > 0 && (
+                        <motion.section id="insights-rank" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
+                            <div className="mb-8 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">지식 인사이트</h2>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
+                                        <p className="text-[11px] font-bold text-gray-500 tracking-wide whitespace-nowrap">유튜브에서 배우는 성공한 사람들의 인사이트</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-5">
+                                {topKnowledgeInsights.map((item, i) => (
+                                    <div key={item.id || i} className={`flex items-start gap-3 ${i !== topKnowledgeInsights.length - 1 ? 'pb-5 border-b border-white/5' : 'pb-0'}`}>
+                                        <span className="text-3xl font-black text-white/50 italic w-5 text-left flex-shrink-0 pt-1 -ml-[3px]">{i + 1}</span>
+                                        <Link to={`/yt-podcast/${item.id}`} className="flex-shrink-0">
+                                            <div className="w-[60px] h-[82px] rounded-none overflow-hidden shadow-lg border border-white/10 bg-zinc-800">
+                                                {item.thumbnail
+                                                    ? <img src={item.thumbnail} alt={item.title || 'insight'} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                                    : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-xl">play_circle</span></div>
+                                                }
+                                            </div>
+                                        </Link>
+                                        <div className="flex-1 min-w-0">
+                                            <Link to={`/yt-podcast/${item.id}`}>
+                                                <h4 className="text-white font-black text-[14px] tracking-tight truncate">{item.title || '지식 인사이트'}</h4>
+                                            </Link>
+                                            {item.channel && <p className="text-gray-500 text-[12px] font-medium mt-0.5 truncate">{item.channel}</p>}
+                                            <p className="text-gray-600 text-[11px] font-black mt-0.5 uppercase tracking-[0.1em]">{item.viewsCount.toLocaleString()} VIEWS</p>
+                                            <div className="mt-3 grid w-full grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/yt-podcast/${item.id}`); }}
+                                                    className="group relative inline-flex h-[38px] w-full items-center justify-center gap-1.5 overflow-hidden border border-[#8d0a1e] bg-gradient-to-b from-[#d70e32] to-[#a30522] px-2 text-[11px] font-black tracking-[-0.01em] text-white shadow-[0_8px_20px_rgba(123,6,32,0.35)] transition-all duration-200 hover:from-[#e21239] hover:to-[#b80726]"
+                                                >
+                                                    <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-80"></span>
+                                                    <span className="material-symbols-outlined text-[15px] text-white group-hover:scale-110 transition-transform">equalizer</span>
+                                                    <span>팟캐스트</span>
+                                                </button>
+                                                {item.url && (
+                                                    <a
+                                                        href={item.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="group relative inline-flex h-[38px] w-full items-center justify-center gap-1.5 overflow-hidden border border-white/15 bg-gradient-to-b from-[#141820] to-[#0b0d12] px-2 text-[11px] font-black tracking-[-0.01em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.3)] transition-all duration-200 hover:border-white/30 hover:from-[#1a1f28] hover:to-[#10141c]"
+                                                    >
+                                                        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-70"></span>
+                                                        <span className="material-symbols-outlined text-[15px] text-[#ffd36a] group-hover:scale-110 transition-transform">play_circle</span>
+                                                        <span>유튜브보기</span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.section>
+                    )}
+
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+
                     {/* 📖 나의 도서습관 알아보기 Section */}
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true }}
                         variants={sectionVariants}
-                        className="px-4 pt-8 pb-6"
+                        className="px-4 pt-7 pb-7"
                     >
                         {/* Section Header */}
                         <div className="mb-6 px-1">
@@ -911,52 +1068,37 @@ export default function Test4() {
                         whileInView="visible"
                         viewport={{ once: true }}
                         variants={sectionVariants}
-                        className="px-6 pt-7 pb-7"
+                        className="px-4 sm:px-6 pt-7 pb-7 w-full max-w-full"
                     >
                         <div className="mb-6 flex items-center justify-between">
                             <div>
-                                <h2 className="text-[20px] font-black tracking-tight leading-none mb-1.5 text-white">성장을 위한 다음 단계</h2>
+                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">성장을 위한 다음 단계</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-[2px] bg-purple-500 rounded-none"></div>
+                                    <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Creator Insights</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="relative group overflow-hidden glass-card bg-[#13151a] border border-white/5 rounded-none p-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-                            {/* Decorative background glow */}
                             <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 blur-[60px] rounded-full pointer-events-none group-hover:bg-purple-600/20 transition-all duration-700"></div>
-                            
+
                             <div className="relative z-10">
-                                <div className="flex gap-4 items-start mb-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-tighter shadow-lg">New Creator Course</span>
-                                            <span className="text-zinc-500 text-[11px] font-medium tracking-tight italic">아카이뷰 추천</span>
-                                        </div>
-                                        <h3 className="text-white text-[18px] font-black leading-tight break-keep">"듣기만 하던 인사이트를 영상으로" 1인 미디어 제작 실무 프로젝트</h3>
-                                    </div>
-                                    {/* 📸 Mockup Image Section */}
-                                    <div className="w-[85px] h-[110px] shrink-0 rounded-none overflow-hidden border border-white/10 shadow-2xl rotate-2 group-hover:rotate-0 transition-transform duration-500">
-                                        <img 
-                                            src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=300&auto=format&fit=crop" 
-                                            alt="Video Production" 
-                                            loading="eager"
-                                            fetchpriority="high"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-tighter shadow-lg">FREE COURSE</span>
+                                    <span className="text-zinc-500 text-[11px] font-medium tracking-tight italic">아카이뷰 추천</span>
                                 </div>
-                                
-                                <p className="text-zinc-400 text-[12px] font-medium leading-relaxed mb-6 break-keep">
-                                    성공한 사람들의 지식을 귀로 듣는 것에서 멈추지 마세요. 내 것으로 만든 인사이트를 유튜브와 고퀄리티 영상 콘텐츠로 세상에 알리고 싶은 분들을 위해 방송정보국제교육원의 전문 과정을 제안합니다. 누구나 국비 지원으로 시작 가능합니다.
+                                <h3 className="text-white text-[18px] font-black leading-tight break-keep mb-4">온라인 강의 100%<br />무료 수강 이벤트!</h3>
+
+                                <p className="text-zinc-400 text-[12px] font-medium leading-relaxed mb-5 break-keep">
+                                    사회공헌활동의 일환으로 조건 없이 3과정까지 무료 수강 기회를 제공합니다. 온라인에서 언제 어디서나 수강 가능하며, 시험 합격 시 자격증 신청도 가능합니다.
                                 </p>
-                                
-                                <div className="space-y-2.5 mb-7 bg-white/[0.02] p-4 border-l border-white/10">
+
+                                <div className="space-y-2.5 mb-7 bg-white/[0.02] p-4 border-l border-purple-500/40">
                                     {[
-                                        "기초 기획부터 시네마틱 영상 편집 마스터",
-                                        "유튜브 채널 성장 및 콘텐츠 브랜딩 전략",
-                                        "실무 프로젝트를 통한 즉각적인 포트폴리오 완성"
+                                        "개설 과정 중 3과정 전액 무료 수강",
+                                        "종강 후에도 완료 과정 무료 복습 가능",
+                                        "교재 및 시험예상문답 무료 다운로드"
                                     ].map((item, idx) => (
                                         <div key={idx} className="flex items-start gap-3">
                                             <span className="material-symbols-outlined text-purple-500 text-[16px] mt-0.5">check_circle</span>
@@ -964,17 +1106,17 @@ export default function Test4() {
                                         </div>
                                     ))}
                                 </div>
-                                
-                                <a 
-                                    href="http://dbdbdeep.com/ma/link.php?lncd=S00281009EC05972375E" 
-                                    target="_blank" 
+
+                                <a
+                                    href="http://dbdbdeep.com/ma/link.php?lncd=S00278634FC05984642W"
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full h-14 bg-white text-black font-black text-[15px] flex items-center justify-center gap-2 hover:bg-purple-600 hover:text-white transition-all active:scale-95 shadow-[0_15px_35px_rgba(147,51,234,0.2)]"
                                 >
-                                    교육 과정 및 장학 혜택 알아보기
+                                    무료 수강 신청하기
                                     <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                                 </a>
-                                
+
                                 <p className="mt-5 text-[9px] text-zinc-600 font-medium text-center opacity-80">
                                     * 위 링크를 통해 신청 시 아카이뷰는 제휴 마케팅 활동의 일환으로 일정액의 수수료를 제공받을 수 있습니다.
                                 </p>
@@ -982,9 +1124,9 @@ export default function Test4() {
                         </div>
                     </motion.section>
 
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
-
-                    {/* 5️⃣ 멤버십 안내 */}
+                    
+                    {/* 5️⃣ 멤버십 안내 (구버전 숨김) */}
+                    {false && (
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -1003,12 +1145,136 @@ export default function Test4() {
                         </div>
 
                         {/* Recommendation Highlight Box */}
-                        <div className="mb-6 bg-zinc-900/50 border border-white/5 p-5 rounded-none relative overflow-hidden">
+                        <div className="mb-2 bg-zinc-900/50 border border-white/5 p-5 rounded-none relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-2xl rounded-full -mr-10 -mt-10"></div>
-                            <h3 className="text-[13px] font-black text-orange-500 mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[16px]">stars</span>
-                                아카이뷰는 이런 분께 추천합니다
-                            </h3>
+                            
+                            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
+                                <div className="flex items-end gap-[2px] h-4">
+                                    {[1,2,3,4,5].map(i => (
+                                        <motion.div key={i} className="w-[3px] bg-orange-500"
+                                            animate={{ height: ['30%','100%','30%'] }}
+                                            transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                    ))}
+                                </div>
+                                <span className="text-orange-500 text-[11px] font-bold tracking-[0.25em] uppercase">CREATOR INSIGHTS v2</span>
+                            </motion.div>
+                            
+                            <motion.h3 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+                                className="text-[20px] font-black tracking-tight leading-none mb-4 text-white">
+                                아카이뷰는<br />
+                                <span className="text-orange-500">이런 분께 추천합니다</span>
+                            </motion.h3>
+                            <div className="space-y-3">
+                                {[
+                                    "직장을 다니지만 지적 채워짐이 필요하신 분",
+                                    "친구에게 책을 선물하고 싶은데 선택이 어려우신 분",
+                                    "성장하고 싶은데 항상 제자리라 느껴지시는 분",
+                                    "성공한 사람들의 인사이트가 절실하신 분",
+                                    "서점 가기 전, 무슨 도서를 살지 고민되시는 분"
+                                ].map((item, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.1 }}
+                                        className="flex items-start gap-3 bg-white/[0.02] border border-white/5 rounded-lg p-3"
+                                    >
+                                        <span className="material-symbols-outlined text-orange-500 text-[18px] mt-0.5">check_circle</span>
+                                        <p className="text-white/80 text-[12px] leading-relaxed flex-1">{item}</p>
+                                    </motion.div>
+                                ))}
+                            </div>
+                            <p className="mt-4 text-[12px] font-medium text-gray-500 bg-white/5 p-2 border-l-2 border-orange-500/30">
+                                아카이뷰를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
+                            </p>
+                        </div>
+
+                        <div className="glass-card rounded-none p-4 sm:p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group w-full max-w-full">
+                            {/* Subtle background glow */}
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-none pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
+
+                            <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-2 sm:gap-4 w-full">
+                                {/* Free Column */}
+                                <div className="bg-black/40 border border-white/5 rounded-none p-3 sm:p-4 relative z-10 min-w-0">
+                                    <h3 className="text-[12px] font-black text-white/50 text-center mb-4 uppercase tracking-widest border-b border-white/5 pb-2">일반 회원</h3>
+                                    <ul className="space-y-3">
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-white/30 text-[14px]">check</span>
+                                            <span className="text-[11px] font-bold text-white/30 leading-tight break-words whitespace-normal">주간 무료 콘텐츠</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-words whitespace-normal">모든 에피소드 감상</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-words whitespace-normal">핵심 요약 PDF 제공</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-words whitespace-normal">핵심 실천 가이드 제공</span>
+                                        </li>
+                                        <li className="flex items-center gap-2 pt-2">
+                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-words whitespace-normal">기록노트 연동 성취 트래커</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                {/* Premium Column */}
+                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-none p-3 sm:p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)] min-w-0 overflow-hidden">
+                                    <div className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
+                                    <h3 className="text-[12px] font-black text-orange-500 text-center mb-4 uppercase tracking-widest border-b border-orange-500/20 pb-2">프리미엄</h3>
+                                    <ul className="space-y-3">
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-words whitespace-normal">모든 팟캐스트 무제한</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-words whitespace-normal">매주 2권 카톡 발송 <span className="text-white/40 font-normal">(6월 서비스 예정)</span></span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-words whitespace-normal">유튜브 지식 인사이트 무제한</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-words whitespace-normal">핵심 실천 가이드 제공</span>
+                                        </li>
+                                        <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-none border border-orange-500/20 mt-3 shadow-inner">
+                                            <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>
+                                            <div className="flex-1 mt-0.5">
+                                                <span className="text-[11px] font-black text-orange-400 block mb-0.5 tracking-tight">기록노트 연동 성취 트래커</span>
+                                                <span className="text-[11px] font-bold text-white/60 leading-tight block break-keep">제공된 가이드를 실천하고, 기록노트에서 달성률을 체크하며 성장하세요.</span>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.section>
+                    )}
+
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+
+                    {/* 5.5️⃣ 멤버십 추천 안내 (요청 복원) */}
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-4 sm:px-6 pt-7 pb-3 w-full max-w-full"
+                    >
+                        <div className="mb-6">
+                            <h3 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">아카이뷰는 이런 분께 추천합니다</h3>
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
+                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Membership Recommendation</p>
+                            </div>
+                        </div>
+                        <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-none relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-2xl rounded-full -mr-10 -mt-10"></div>
                             <div className="grid grid-cols-1 gap-y-2.5">
                                 {[
                                     "직장을 다니지만 지적 채워짐이 필요하신 분",
@@ -1027,76 +1293,11 @@ export default function Test4() {
                                 아카이뷰를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
                             </p>
                         </div>
-
-                        <div className="glass-card rounded-none p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">
-                            {/* Subtle background glow */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-none pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Free Column */}
-                                <div className="bg-black/40 border border-white/5 rounded-none p-4 relative z-10">
-                                    <h3 className="text-[12px] font-black text-white/50 text-center mb-4 uppercase tracking-widest border-b border-white/5 pb-2">일반 회원</h3>
-                                    <ul className="space-y-3">
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-white/30 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/30">주간 무료 콘텐츠</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">모든 에피소드 감상</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">핵심 요약 PDF 제공</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">핵심 실천 가이드 제공</span>
-                                        </li>
-                                        <li className="flex items-center gap-2 pt-2">
-                                            <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">기록노트 연동 성취 트래커</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                {/* Premium Column */}
-                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-none p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)]">
-                                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
-                                    <h3 className="text-[12px] font-black text-orange-500 text-center mb-4 uppercase tracking-widest border-b border-orange-500/20 pb-2">프리미엄</h3>
-                                    <ul className="space-y-3">
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">모든 팟캐스트 무제한</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">매주 2권 카톡 발송</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">전용 가이드북 다운로드</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">핵심 실천 가이드 제공</span>
-                                        </li>
-                                        <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-none border border-orange-500/20 mt-3 shadow-inner">
-                                            <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>
-                                            <div className="flex-1 mt-0.5">
-                                                <span className="text-[11px] font-black text-orange-400 block mb-0.5 tracking-tight">기록노트 연동 성취 트래커</span>
-                                                <span className="text-[11px] font-bold text-white/60 leading-tight block break-keep">제공된 가이드를 실천하고, 기록노트에서 달성률을 체크하며 성장하세요.</span>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
                     </motion.section>
 
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
-
                     {/* 7️⃣ 어떻게 이용하나요? (How it Works) */}
+                    {false && (
+                    <>
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -1149,6 +1350,8 @@ export default function Test4() {
                     </motion.section>
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
+                    </>
+                    )}
 
                     {/* 8️⃣ CTA */}
                     <motion.section
@@ -1156,16 +1359,47 @@ export default function Test4() {
                         whileInView="visible"
                         viewport={{ once: true }}
                         variants={sectionVariants}
-                        className="px-6 pb-16"
+                        className="px-6 pt-3 pb-3"
                     >
                         <div className="relative group">
                             <div className="absolute inset-0 bg-orange-600/5 blur-[50px] rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-                            <div className="relative glass-card bg-zinc-900/40 rounded-none p-10 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+                            <div className="relative glass-card bg-zinc-900/40 rounded-none p-6 border border-white/5 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
                                 {contentMode === 'free' ? (
                                     <>
-                                        <h2 className="text-[26px] font-black mb-1.5 tracking-tight text-white">무료 이용 중</h2>
-                                        <p className="text-[14px] font-bold text-white/40 mb-10 tracking-widest uppercase">지금 바로 시작하세요</p>
+                                        {/* 선착순 배지 */}
+                                        <div className="inline-flex items-center gap-1.5 bg-orange-500/15 border border-orange-500/30 px-3 py-1 rounded-full mb-4">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                                            <span className="text-[11px] font-bold text-orange-400 tracking-widest uppercase">Limited Free Access</span>
+                                        </div>
+                                        <h2 className="text-[22px] font-black mb-1 tracking-tight text-white leading-snug">지금 가입하면<br /><span className="text-orange-400">선착순 1,000명</span> 무료!</h2>
+                                        <p className="text-[12px] text-white/40 mb-4 mt-1">1,000명 가입 완료시 이벤트 종료 예정!</p>
+                                        {/* 프로그레스바 + 남은 자리 */}
+                                        {(() => {
+                                            const start = new Date('2026-04-20T00:00:00+09:00').getTime();
+                                            const end = new Date('2026-05-31T23:59:59+09:00').getTime();
+                                            const now = Date.now();
+                                            const total = end - start;
+                                            const elapsed = Math.min(Math.max(now - start, 0), total);
+                                            const remaining = Math.round(1000 - (elapsed / total) * 1000);
+                                            const pct = Math.round((elapsed / total) * 100);
+                                            return (
+                                                <div className="mb-6">
+                                                    <div className="flex justify-between items-center mb-1.5">
+                                                        <span className="text-[11px] text-white/50">마감까지</span>
+                                                        <span className="text-[13px] font-black text-orange-400">{remaining.toLocaleString()}명 남음</span>
+                                                    </div>
+                                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all"
+                                                            style={{ width: `${pct}%` }} />
+                                                    </div>
+                                                    <div className="flex justify-between mt-1">
+                                                        <span className="text-[10px] text-white/30">0명</span>
+                                                        <span className="text-[10px] text-white/30">1,000명 마감</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="flex flex-col gap-3">
                                             <button
                                                 onClick={() => navigate('/login')}
@@ -1203,6 +1437,45 @@ export default function Test4() {
                             </div>
                         </div>
                     </motion.section>
+
+                    {/* 8.5️⃣ 프리미엄 배너 (CTA 아래 이동) */}
+                    <motion.section
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={sectionVariants}
+                        className="px-6 pt-3 pb-7"
+                    >
+                        <div className="glass-card rounded-none p-5 sm:p-6 bg-white/[0.02] border border-orange-500/30 relative overflow-hidden w-full max-w-full shadow-[0_0_20px_rgba(234,88,12,0.1)]">
+                            <div className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
+                            <h3 className="text-[14px] font-black text-orange-500 text-center mb-4 uppercase tracking-widest border-b border-orange-500/20 pb-2">프리미엄</h3>
+                            <ul className="space-y-3">
+                                <li className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                    <span className="text-[12px] font-bold text-white/90 leading-tight break-words whitespace-normal">모든 팟캐스트 무제한</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                    <span className="text-[12px] font-bold text-white/90 leading-tight break-words whitespace-normal">매주 2권 카톡 발송 <span className="text-white/40 font-normal">(6월 서비스 예정)</span></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                    <span className="text-[12px] font-bold text-white/90 leading-tight break-words whitespace-normal">유튜브 지식 인사이트 무제한</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
+                                    <span className="text-[12px] font-bold text-white/90 leading-tight break-words whitespace-normal">핵심 실천 가이드 제공</span>
+                                </li>
+                                <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-none border border-orange-500/20 mt-3 shadow-inner">
+                                    <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>
+                                    <div className="flex-1 mt-0.5">
+                                        <span className="text-[12px] font-black text-orange-400 block mb-0.5 tracking-tight">기록노트 연동 성취 트래커</span>
+                                        <span className="text-[11px] font-bold text-white/60 leading-tight block break-keep">제공된 가이드를 실천하고, 기록노트에서 달성률을 체크하며 성장하세요.</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </motion.section>
                     {/* 8️⃣ Footer */}
                     <Footer />
                 </main >
@@ -1211,175 +1484,6 @@ export default function Test4() {
                 <BottomNavigation />
             </div >
 
-            {/* 🤖 안드로이드 홈화면 추가 레이어 팝업 */}
-            {showAndroidModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} onClick={() => setShowAndroidModal(false)}>
-                    <div className="w-full max-w-[320px] rounded-2xl overflow-hidden" style={{ background: '#1a1a2a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
-
-                        {/* 헤더 */}
-                        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-xl overflow-hidden flex-shrink-0">
-                                    <img src="/app-icon2.png" alt="Archiview" className="w-full h-full object-cover" />
-                                </div>
-                                <span className="text-white/60 text-[11px] font-bold">아카이뷰 앱 설치</span>
-                            </div>
-                            <button onClick={() => setShowAndroidModal(false)} className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                                <span className="material-symbols-outlined text-white/50 text-[13px]">close</span>
-                            </button>
-                        </div>
-
-                        {/* 안내 문구 */}
-                        <div className="px-4 py-3 text-center">
-                            <p className="text-white font-bold text-[13px] leading-relaxed">
-                                아카이뷰 서비스를 쉽고 편하게<br />
-                                이용하시려면 <span style={{ color: '#3ddc84' }}>"홈화면에 추가"</span>를<br />
-                                하신 후 이용하시기 바랍니다.
-                            </p>
-                        </div>
-
-                        {/* Step 1 */}
-                        <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#1db954' }}>1</div>
-                                <p className="text-white text-[11px] font-bold">크롬으로 접속 후 우측 상단 ⋮ 탭</p>
-                            </div>
-                            <div className="px-3 py-2">
-                                <div className="rounded-lg overflow-hidden" style={{ background: '#111' }}>
-                                    <div className="px-3 py-1.5 border-b flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                        <div className="flex-1 rounded px-2 py-1 text-[9px] text-white/30 font-mono" style={{ background: 'rgba(255,255,255,0.06)' }}>archiview.store</div>
-                                        <div className="flex flex-col gap-[3px] px-1">
-                                            {[0,1,2].map(i => <div key={i} className="w-[3px] h-[3px] rounded-full" style={{ background: '#3ddc84', boxShadow: i===2?'0 0 6px rgba(61,220,132,0.8)':undefined }} />)}
-                                        </div>
-                                    </div>
-                                    <div className="px-3 py-2">
-                                        <div className="rounded px-3 py-1.5 text-[10px] font-bold" style={{ background: 'rgba(61,220,132,0.15)', border: '1px solid rgba(61,220,132,0.3)', color: '#3ddc84' }}>
-                                            앱 설치 / 홈 화면에 추가 👆
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Step 2 */}
-                        <div className="mx-3 mb-3 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#1db954' }}>2</div>
-                                <p className="text-white text-[11px] font-bold">"설치" 탭 → 홈화면에 아이콘 추가</p>
-                            </div>
-                            <div className="px-3 py-2.5 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 shadow-lg">
-                                    <img src="/app-icon2.png" alt="icon" className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <p className="text-white text-[11px] font-bold">Archiview</p>
-                                    <p className="text-white/40 text-[10px] mt-0.5">홈화면에 추가되면 앱처럼 실행됩니다</p>
-                                </div>
-                                <div className="ml-auto w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1db954,#0a8a3a)' }}>
-                                    <span className="material-symbols-outlined text-white text-[14px]">add</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 확인 버튼 */}
-                        <div className="px-3 pb-4">
-                            <button onClick={() => setShowAndroidModal(false)} className="w-full py-3 rounded-xl text-[13px] font-black text-white" style={{ background: 'linear-gradient(135deg,#1db954,#0a8a3a)' }}>
-                                확인했습니다
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 📱 아이폰 홈화면 추가 레이어 팝업 */}
-            {showIphoneModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} onClick={() => setShowIphoneModal(false)}>
-                    <div className="w-full max-w-[320px] rounded-2xl overflow-hidden" style={{ background: '#1a1a2a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
-
-                        {/* 헤더 */}
-                        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-xl overflow-hidden flex-shrink-0">
-                                    <img src="/app-icon2.png" alt="Archiview" className="w-full h-full object-cover" />
-                                </div>
-                                <span className="text-white/60 text-[11px] font-bold">아카이뷰 앱 설치</span>
-                            </div>
-                            <button onClick={() => setShowIphoneModal(false)} className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                                <span className="material-symbols-outlined text-white/50 text-[13px]">close</span>
-                            </button>
-                        </div>
-
-                        {/* 안내 문구 */}
-                        <div className="px-4 py-3 text-center">
-                            <p className="text-white font-bold text-[13px] leading-relaxed">
-                                아카이뷰 서비스를 쉽고 편하게<br />
-                                이용하시려면 <span style={{ color: '#4fc3f7' }}>"홈화면에 추가"</span>를<br />
-                                하신 후 이용하시기 바랍니다.
-                            </p>
-                        </div>
-
-                        {/* Step 1 */}
-                        <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#0288d1' }}>1</div>
-                                <p className="text-white text-[11px] font-bold">사파리로 접속 후 하단 공유 버튼 탭</p>
-                            </div>
-                            <div className="px-3 py-2">
-                                <div className="rounded-lg overflow-hidden" style={{ background: '#111' }}>
-                                    <div className="px-3 py-1.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                        <div className="rounded px-2 py-1 text-[9px] text-white/30 font-mono" style={{ background: 'rgba(255,255,255,0.06)' }}>archiview.store</div>
-                                    </div>
-                                    <div className="flex items-center justify-around px-2 py-1.5">
-                                        {['arrow_back_ios','arrow_forward_ios','','bookmark','tab'].map((icon, i) => (
-                                            i === 2 ? (
-                                                <div key={i} className="flex flex-col items-center gap-0.5">
-                                                    <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)', boxShadow: '0 0 10px rgba(79,195,247,0.5)' }}>
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l-4 4h3v8h2V6h3l-4-4zm-7 14v4h14v-4h-2v2H7v-2H5z"/></svg>
-                                                    </div>
-                                                    <span className="text-[7px] font-bold" style={{ color: '#4fc3f7' }}>공유</span>
-                                                </div>
-                                            ) : (
-                                                <span key={i} className="material-symbols-outlined text-white/25 text-[15px]">{icon}</span>
-                                            )
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Step 2 */}
-                        <div className="mx-3 mb-3 rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 text-white" style={{ background: '#0288d1' }}>2</div>
-                                <p className="text-white text-[11px] font-bold">"홈 화면에 추가" 선택 → "추가" 탭</p>
-                            </div>
-                            <div className="px-3 py-2">
-                                <div className="rounded-lg overflow-hidden" style={{ background: '#1e1e22' }}>
-                                    {['AirDrop으로 공유', '메시지', '메일'].map((item, i) => (
-                                        <div key={i} className="px-3 py-1.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                            <span className="text-white/25 text-[10px]">{item}</span>
-                                        </div>
-                                    ))}
-                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(79,195,247,0.1)' }}>
-                                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)' }}>
-                                            <span className="material-symbols-outlined text-white text-[12px]">add_box</span>
-                                        </div>
-                                        <span className="text-[12px] font-black" style={{ color: '#4fc3f7' }}>홈 화면에 추가</span>
-                                        <span className="ml-auto text-[14px]">👆</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 확인 버튼 */}
-                        <div className="px-3 pb-4">
-                            <button onClick={() => setShowIphoneModal(false)} className="w-full py-3 rounded-xl text-[13px] font-black text-white" style={{ background: 'linear-gradient(135deg,#4fc3f7,#0288d1)' }}>
-                                확인했습니다
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div >
     );
 }

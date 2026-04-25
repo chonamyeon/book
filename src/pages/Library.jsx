@@ -6,10 +6,12 @@ import Footer from '../components/Footer';
 import { resultData, generateResultData } from '../data/resultData';
 import { recommendations, generateRecommendations } from '../data/recommendations';
 import { useAuth } from '../hooks/useAuth';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 import BookCardActions from '../components/BookCardActions';
 import { useBookData } from '../hooks/useBookData';
 import PersonaAvatar from '../components/PersonaAvatar';
 import { useAudio } from '../contexts/AudioContext';
+import { motion } from 'framer-motion';
 
 const formatInsightTime = (sec) => {
     if (!sec || isNaN(sec)) return '00:00';
@@ -27,6 +29,7 @@ const TYPE_META_LIB = {
 
 export default function Library() {
     const { user } = useAuth();
+    const { design } = useSiteDesign();
     const { getAllBooks } = useBookData();
     const { dailyListenTime, dailyTarget, streak } = useAudio();
     const [unlocked, setUnlocked] = useState(false);
@@ -118,15 +121,45 @@ export default function Library() {
             <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
                 <MainHeader showBack />
 
-                <main className="px-6 pt-6 pb-24 animate-fade-in flex-grow space-y-6">
-                    {/* Personal Collection Header */}
-                    <div className="text-center space-y-2 mt-2">
-                        <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em]">Personal Archive</span>
-                        <h2 className="text-2xl text-white font-black tracking-tight">내 서재</h2>
-                        <p className="text-white/40 text-[12px] font-bold uppercase tracking-widest">
-                            {savedBooks.length} items collected
-                        </p>
+                {/* ── Hero Section ── */}
+                <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#101218]/50 to-[#101218] z-10" />
+                    {design.library_hero.type === 'image' ? (
+                        <img src={design.library_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
+                    ) : (
+                        <video
+                            src={design.library_hero.src}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="auto"
+                            poster={design.library_hero_poster || undefined}
+                            className="absolute inset-0 w-full h-full object-cover opacity-70"
+                            style={{ objectPosition: 'center center' }}
+                        />
+                    )}
+                    <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
+                            <div className="flex items-end gap-[2px] h-4">
+                                {[1,2,3,4,5].map(i => (
+                                    <motion.div key={i} className="w-[3px] bg-orange-500"
+                                        animate={{ height: ['30%','100%','30%'] }}
+                                        transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                ))}
+                            </div>
+                            <span className="text-orange-400 text-[11px] font-bold tracking-[0.25em] uppercase">My Library</span>
+                        </motion.div>
+                        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="text-[35px] font-light leading-tight tracking-tighter mb-4">
+                            나만의<br /><span className="font-bold">지식 서재</span>
+                        </motion.h1>
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.16 }} className="text-white/55 text-sm leading-relaxed max-w-xs">
+                            읽고 싶은 책, 분석된 성향, 큐레이션 결과까지<br />모든 독서 데이터를 한 곳에서 관리하세요
+                        </motion.p>
                     </div>
+                </section>
+
+                <main className="px-6 pt-4 pb-24 animate-fade-in flex-grow space-y-6">
 
                     {/* ── 나의 페르소나 ── */}
                     <div>
@@ -149,7 +182,7 @@ export default function Library() {
                                             <PersonaAvatar type={resType} />
                                         </div>
                                         <div className="flex-1 min-w-0 relative z-10">
-                                            <span className={`text-[8px] font-black uppercase tracking-widest ${typeMeta.accentColor} block mb-1`}>My Persona</span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block mb-1">My Persona</span>
                                             <h3 className="text-white text-base font-black leading-tight mb-0.5 truncate">{teaserResult.subtitle}</h3>
                                             <p className="text-white/40 text-[10px] font-bold truncate">{teaserResult.persona} · {typeMeta.label}</p>
                                         </div>

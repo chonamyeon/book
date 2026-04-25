@@ -106,7 +106,9 @@ export const useBookData = () => {
         const allLocalBooks = celebrities.flatMap(celeb =>
             (celeb.books || []).map(book => ({
                 ...book,
-                celebName: celeb.name
+                celebName: celeb.name,
+                celebId: celeb.id,
+                celebritySlug: celeb.id
             }))
         );
 
@@ -165,7 +167,7 @@ export const useBookData = () => {
                     isPodcast: data.isPodcast || false,
                     description: data.description || '',
                     purchaseLink: data.purchaseLink || '',
-                    celebName: data.celebritySlug || '',
+                    celebName: data.celebritySlug || data.celebrity || data.celebId || '',
                     audioUrl: data.audioUrl || '',
                     voiceAudioUrl: data.voiceAudioUrl || '',
                     ...data,

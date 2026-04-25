@@ -5,7 +5,7 @@ import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 
 const sectionVariants = {
@@ -47,7 +47,17 @@ export default function Test5() {
             <section className="relative h-[360px] w-full overflow-hidden flex-shrink-0">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0c12]/50 to-[#0a0c12] z-10" />
                 {(design?.youtube_hero || design?.main_hero)?.type === 'video' ? (
-                    <video src={(design?.youtube_hero || design?.main_hero)?.src} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center top' }} />
+                    <video
+                        src={(design?.youtube_hero || design?.main_hero)?.src}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        poster={design?.youtube_hero_poster || undefined}
+                        className="absolute inset-0 w-full h-full object-cover opacity-70"
+                        style={{ objectPosition: 'center top' }}
+                    />
                 ) : (
                     <img src={(design?.youtube_hero || design?.main_hero)?.src || '/images/hero_expert_v5.png'} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center top' }} />
                 )}
@@ -116,9 +126,36 @@ export default function Test5() {
 // ── 유튜브 카드 ─────────────────────────────────────────────────
 function YoutubeCard({ video, thumb, embedUrl, idx }) {
     const [youtubeOpen, setYoutubeOpen] = useState(false);
+    const [likeCount, setLikeCount] = useState(video.likes ?? 1024);
+    const [viewCount, setViewCount] = useState(video.views ?? 2130);
     const navigate = useNavigate();
 
-    const btnBase = "flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all active:scale-95 whitespace-nowrap";
+    useEffect(() => {
+        setLikeCount(video.likes ?? 1024);
+        setViewCount(video.views ?? 2130);
+    }, [video.likes, video.views, video.id]);
+
+    const btnBase = "flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-red-600 to-red-700 border border-red-500/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_2px_6px_rgba(0,0,0,0.35)] text-[10px] font-black text-white hover:from-red-500 hover:to-red-600 transition-all active:scale-95 whitespace-nowrap";
+    const statBtn = "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none bg-[#ff0000]/90 border border-red-300/30 text-[10px] font-black text-white hover:bg-[#ff0000] transition-all active:scale-95";
+
+    const handleLike = async () => {
+        setLikeCount(prev => prev + 1);
+        try {
+            await updateDoc(doc(db, 'youtube_videos', video.id), { likes: increment(1) });
+        } catch {
+            await setDoc(doc(db, 'youtube_videos', video.id), { likes: (video.likes ?? 1024) + 1 }, { merge: true });
+        }
+    };
+
+    const handlePodcastClick = async () => {
+        setViewCount(prev => prev + 1);
+        try {
+            await updateDoc(doc(db, 'youtube_videos', video.id), { views: increment(1) });
+        } catch {
+            await setDoc(doc(db, 'youtube_videos', video.id), { views: (video.views ?? 2130) + 1 }, { merge: true });
+        }
+        navigate(`/yt-podcast/${video.id}`);
+    };
 
     return (
         <motion.div
@@ -161,8 +198,18 @@ function YoutubeCard({ video, thumb, embedUrl, idx }) {
                         {video.channel}
                     </p>
                 )}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    <button onClick={handleLike} className={statBtn}>
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>thumb_up</span>
+                        좋아요 {likeCount.toLocaleString()}
+                    </button>
+                    <div className={statBtn}>
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>visibility</span>
+                        조회수 {viewCount.toLocaleString()}
+                    </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => navigate(`/yt-podcast/${video.id}`)} className={btnBase}>
+                    <button onClick={handlePodcastClick} className={btnBase}>
                         <span className="material-symbols-outlined text-[14px]">graphic_eq</span>
                         팟캐스트
                     </button>

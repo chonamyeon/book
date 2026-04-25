@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { motion } from 'framer-motion';
 import { useBookData } from '../hooks/useBookData';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import MainHeader from '../components/MainHeader';
 import { useAudio } from '../contexts/AudioContext';
 import BookCardActions from '../components/BookCardActions';
@@ -30,11 +32,102 @@ export default function CategoryBooks() {
     const { openScriptModal } = useAudio();
     const { design } = useSiteDesign();
 
-    const allBooks = getAllBooks();
+    const allBooks = getAllBooks(true);
+    const publicBooks = useMemo(() => allBooks.filter(b => b.isPublic !== false), [allBooks]);
     const categoryInfo = categoriesInfo.find(c => c.id === id) || categoriesInfo[0];
+    const [managedCategoryRaw, setManagedCategoryRaw] = useState([]);
+    const [managedCategoryLoaded, setManagedCategoryLoaded] = useState(false);
+
+    const docKeyByCategoryId = {
+        SELF_DEV: 'category_growth',
+        ECONOMY: 'category_economy',
+        MANAGEMENT: 'category_business',
+        HUMANITIES: 'category_humanities',
+        PSYCHOLOGY: 'category_psychology',
+        BURNOUT: 'popular_burnout',
+        WEALTH: 'popular_wealth',
+        HEALING: 'popular_healing',
+        PHILOSOPHY: 'popular_philosophy',
+    };
+
+    useEffect(() => {
+        const docKey = docKeyByCategoryId[categoryInfo.id];
+        if (!docKey) {
+            setManagedCategoryRaw([]);
+            setManagedCategoryLoaded(true);
+            return;
+        }
+        const cacheKey = `category_rank_cache_${docKey}`;
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+            if (Array.isArray(cached) && cached.length > 0) {
+                setManagedCategoryRaw(cached);
+                setManagedCategoryLoaded(true);
+            } else {
+                setManagedCategoryLoaded(false);
+            }
+        } catch {
+            setManagedCategoryLoaded(false);
+        }
+        const unsub = onSnapshot(doc(db, 'site_config', docKey), (snap) => {
+            const books = snap.exists() ? (snap.data().books || []) : [];
+            setManagedCategoryRaw(books);
+            try { localStorage.setItem(cacheKey, JSON.stringify(books)); } catch {}
+            setManagedCategoryLoaded(true);
+        });
+        return () => unsub();
+    }, [categoryInfo.id]);
+
+    const bookLookup = useMemo(() => {
+        const map = new Map();
+        publicBooks.forEach(b => map.set(b.id, b));
+        return map;
+    }, [publicBooks]);
+    const allBookVisibility = useMemo(() => {
+        const map = new Map();
+        allBooks.forEach(b => map.set(b.id, b.isPublic !== false));
+        return map;
+    }, [allBooks]);
+    const allBookVisibilityByTitle = useMemo(() => {
+        const normalize = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+        const map = new Map();
+        allBooks.forEach(b => {
+            const key = normalize(b.title);
+            if (key) map.set(key, b.isPublic !== false);
+        });
+        return map;
+    }, [allBooks]);
+    const isVisibleItem = (item) => {
+        if (item?.isPublic === false) return false;
+        const byId = allBookVisibility.get(item?.id);
+        if (byId === false) return false;
+        if (typeof byId === 'undefined') {
+            const key = String(item?.title || '').replace(/\s+/g, '').toLowerCase();
+            if (key && allBookVisibilityByTitle.get(key) === false) return false;
+        }
+        return true;
+    };
+
+    const enrichManagedList = (list) => list
+        .filter(isVisibleItem)
+        .map(item => {
+        const bookData = bookLookup.get(item.id) || {};
+        return {
+            ...bookData,
+            ...item,
+            cover: item.cover || bookData.cover || '',
+            author: item.author || bookData.author || '',
+            purchaseLink: item.purchaseLink || bookData.purchaseLink || '',
+        };
+    });
 
     const categoryBooks = useMemo(() => {
-        return allBooks
+        // 인기아카이뷰 기반 카테고리는 랭킹 문서 수신 전 fallback 목록을 노출하지 않는다.
+        const hasManagedRanking = !!docKeyByCategoryId[categoryInfo.id];
+        if (hasManagedRanking && !managedCategoryLoaded) return [];
+        if (managedCategoryRaw.length > 0) return enrichManagedList(managedCategoryRaw);
+
+        return publicBooks
             .filter(book => {
                 const sec = (book.section || '').toUpperCase();
                 const cat = (book.category || '').toLowerCase();
@@ -56,7 +149,7 @@ export default function CategoryBooks() {
                 return false;
             })
             .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
-    }, [allBooks, categoryInfo]);
+    }, [publicBooks, categoryInfo, managedCategoryRaw, managedCategoryLoaded, bookLookup, allBookVisibility, allBookVisibilityByTitle]);
 
     const otherCategories = categoriesInfo.filter(c => c.id !== categoryInfo.id);
 
@@ -148,7 +241,9 @@ export default function CategoryBooks() {
                             {categoryBooks.length === 0 ? (
                                 <div className="text-center py-20 bg-zinc-900/40 rounded-2xl border border-white/5">
                                     <span className="material-symbols-outlined text-4xl text-zinc-700 mb-4">inventory_2</span>
-                                    <p className="text-zinc-500 text-sm font-bold">아직 등록된 도서가 없습니다.</p>
+                                    <p className="text-zinc-500 text-sm font-bold">
+                                        {managedCategoryLoaded ? '아직 등록된 도서가 없습니다.' : '순위 데이터를 불러오는 중입니다...'}
+                                    </p>
                                 </div>
                             ) : (
                                 categoryBooks.map((book) => (

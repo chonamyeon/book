@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainHeader from '../components/MainHeader';
+import LoadingScreen from '../components/LoadingScreen';
 import BottomNavigation from '../components/BottomNavigation';
 import { logout, auth, db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import Footer from '../components/Footer';
+import KakaoAdFit from '../components/KakaoAdFit';
 import { deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -104,18 +106,7 @@ export default function Profile() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
-                <div className="relative mb-10">
-                    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-none scale-150 animate-pulse"></div>
-                    <div className="size-20 rounded-none border-t-2 border-gold animate-spin"></div>
-                </div>
-                <h2 className="text-white text-xl font-bold mb-2">인증 확인 중</h2>
-                <p className="text-slate-500 text-sm">잠시만 기다려주세요...</p>
-            </div>
-        );
-    }
+    if (loading) return <LoadingScreen />;
 
     if (!user) return null;
 
@@ -216,6 +207,9 @@ export default function Profile() {
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Account</h4>
 
                         <div className="bg-white/5 rounded-none overflow-hidden border border-white/5 divide-y divide-white/5">
+                            <div className="flex justify-center px-4 py-3">
+                                <KakaoAdFit unit="DAN-aXfyL1HtK8zp0vui" width="320" height="100" />
+                            </div>
                             <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 hover:bg-red-500/10 transition-colors group text-red-400">
                                 <div className="flex items-center gap-4">
                                     <span className="material-symbols-outlined">logout</span>
@@ -231,10 +225,6 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    <p className="text-center text-[10px] text-slate-600 font-mono pt-8">
-                        The Archiview ID: {user.uid.slice(0, 8).toUpperCase()}<br />
-                        Version 1.4.0 (Build 2024.05)
-                    </p>
                     <Footer />
 
                     {/* 탈퇴 확인 모달 */}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, setDoc } from 'firebase/firestore';
 import { useAudio } from '../contexts/AudioContext';
 import './ReviewDetail.css';
 
@@ -10,6 +10,13 @@ function Avatar({ role }) {
     const src = role === 'A' ? '/images/james101.jpg' : '/images/stella101.jpg';
     if (err) return <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#666' }}>person</span>;
     return <img src={src} alt={role === 'A' ? '제임스' : '스텔라'} onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+}
+
+// TTS 품질용 지시문은 데이터에 유지하고, 사용자 화면에서는 숨김 처리
+function getViewerText(text = '') {
+    const raw = String(text);
+    const cleaned = raw.replace(/^\s*(?:\([^()\n]{1,40}\)\s*)+/, '').trim();
+    return cleaned || raw.trim();
 }
 
 export default function YtPodcast() {
@@ -47,6 +54,21 @@ export default function YtPodcast() {
                 console.error(e);
             } finally {
                 setLoading(false);
+            }
+        })();
+    }, [id]);
+
+    // 팟캐스트 페이지를 실제로 열었을 때 조회수 1 증가
+    useEffect(() => {
+        if (!id) return;
+        (async () => {
+            const fallbackBase = 2130;
+            try {
+                const snap = await getDoc(doc(db, 'youtube_videos', id));
+                const current = snap.exists() ? Number(snap.data()?.views) || 0 : 0;
+                await setDoc(doc(db, 'youtube_videos', id), { views: Math.max(current, fallbackBase) + 1 }, { merge: true });
+            } catch {
+                await setDoc(doc(db, 'youtube_videos', id), { views: fallbackBase + 1 }, { merge: true });
             }
         })();
     }, [id]);
@@ -94,6 +116,8 @@ export default function YtPodcast() {
     const fmt = (s) => { if (!s || isNaN(s)) return '0:00'; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec < 10 ? '0' : ''}${sec}`; };
     const pct = isMyPodcast && duration ? (currentTime / duration * 100) : 0;
 
+    const MINI_H = 68;
+
     return (
         <div className="rv-root podcast-view" style={{ background: '#0d0b08' }}>
             {/* 탑바 */}
@@ -112,7 +136,7 @@ export default function YtPodcast() {
             </div>
 
             {/* 팟캐스트 스테이지 */}
-            <div className="rv-podcast-stage">
+            <div className="rv-podcast-stage" style={vidData?.audioUrl ? { paddingBottom: MINI_H } : undefined}>
                 {/* 채팅 */}
                 <div
                     ref={containerRef}
@@ -155,7 +179,7 @@ export default function YtPodcast() {
                                 <div className="rv-chat-bubble-wrap">
                                     <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
                                     <div className={`rv-chat-bubble ${role === 'A' ? 'james' : 'stella'}${isActive ? ' active' : ''}`}>
-                                        {line.text}
+                                        {getViewerText(line.text)}
                                     </div>
                                 </div>
                             </div>
@@ -164,6 +188,83 @@ export default function YtPodcast() {
                     <div ref={chatEndRef} />
                 </div>
             </div>
+            {/* 하단 고정 미니 플레이어 */}
+            {vidData?.audioUrl && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translate3d(-50%, 0, 0)',
+                    width: '100%',
+                    maxWidth: 430,
+                    background: 'rgba(10,10,20,0.96)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+                    paddingTop: 0,
+                    zIndex: 60,
+                    boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
+                }}>
+                    {/* 진행바 */}
+                    <div
+                        style={{ position: 'relative', height: 3, background: 'rgba(255,255,255,0.07)', cursor: 'pointer' }}
+                        onClick={e => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            seekPodcastMP3((e.clientX - rect.left) / rect.width * duration);
+                        }}
+                    >
+                        <div style={{
+                            width: `${pct}%`, height: '100%',
+                            background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                            transition: 'width 0.3s linear',
+                            borderRadius: '0 2px 2px 0'
+                        }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px 0' }}>
+                        {/* 썸네일 */}
+                        <div style={{ flexShrink: 0, position: 'relative' }}>
+                            <img
+                                src={vidData.thumb || '/images/covers/default_custom.jpg'}
+                                alt=""
+                                style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', boxShadow: '0 2px 12px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
+                            />
+                            {isThisPlaying && (
+                                <div style={{ position: 'absolute', bottom: 2, right: 2, width: 8, height: 8, borderRadius: '50%', background: '#f97316', boxShadow: '0 0 6px #f97316', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                            )}
+                        </div>
+                        {/* 제목/시간 */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ color: '#f1f5f9', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {vidData.title || 'Podcast'}
+                            </div>
+                            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                                {fmt(currentTime)} / {fmt(duration)}
+                            </div>
+                        </div>
+                        {/* 재생/일시정지 */}
+                        <button
+                            onClick={() => isThisPlaying
+                                ? pausePodcastMP3()
+                                : playPodcastMP3(vidData.audioUrl, vidData.title, vidData.thumb, podcastId)
+                            }
+                            style={{
+                                flexShrink: 0, width: 38, height: 38, minWidth: 38, minHeight: 38,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #f97316, #fb923c)',
+                                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: '#fff',
+                                boxShadow: '0 4px 16px rgba(249,115,22,0.45)', padding: 0,
+                            }}
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                                {isThisPlaying ? 'pause' : 'play_arrow'}
+                            </span>
+                        </button>
+                    </div>
+                    <style>{`@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }`}</style>
+                </div>
+            )}
         </div>
     );
 }

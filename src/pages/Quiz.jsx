@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { questions } from '../data/questions';
 import BottomNavigation from '../components/BottomNavigation';
+import LoadingScreen from '../components/LoadingScreen';
 import MainHeader from '../components/MainHeader';
 import Footer from '../components/Footer';
 
@@ -69,16 +70,7 @@ export default function Quiz() {
         return { scores, resultType: typeMap[maxKey] };
     };
 
-    if (quizQuestions.length === 0) return (
-        <div className="bg-background-dark min-h-screen flex flex-col items-center justify-center p-8 text-center">
-            <div className="relative mb-10">
-                <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
-                <div className="size-20 rounded-full border-t-2 border-gold animate-spin"></div>
-            </div>
-            <h2 className="text-white text-xl font-bold mb-2">질문 준비 중...</h2>
-            <p className="text-slate-500 text-sm">잠시만 기다려주세요.</p>
-        </div>
-    );
+    if (quizQuestions.length === 0) return <LoadingScreen />;
 
     const currentQuestion = quizQuestions[currentQuestionIndex];
     const totalQuestions = quizQuestions.length;

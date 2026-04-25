@@ -222,6 +222,39 @@ const SCRIPT_SITUATIONS = [
     { scene: '프로야구 경기 7회 스트레칭 타임에 자리에서', close: '다시 경기 시작한다, 앉자' },
 ];
 
+const YT_SITUATIONS = [
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 방송 정말 유익했어요! 여러분도 오늘 배운 거 꼭 실천해보세요~', james: '오늘 영상이 도움이 되셨다면 구독과 좋아요 꼭 눌러주세요! 다음 주에 또 만나요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 오늘 진짜 많이 배웠어요! 댓글로 여러분 생각도 꼭 남겨주세요~', james: '좋은 콘텐츠로 매주 찾아올게요. 구독·좋아요·알림 설정 부탁드립니다! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 이야기 주변 분들이랑 꼭 나눠보세요! 저도 바로 써먹어볼 거예요~', james: '오늘 강연, 직접 찾아보시면 더 많은 걸 얻으실 거예요. 구독하고 다음 주 기대해주세요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 솔직히 오늘 제 얘기 같아서 많이 찔렸어요, 하하! 여러분도 공감하셨으면 좋겠어요~', james: '생각보다 훨씬 깊은 내용이었죠? 구독·좋아요·알림 설정 부탁드려요! 다음 주 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 지침 중에 저 내일 당장 실천해볼 거 있어요! 여러분도 함께 도전해봐요~', james: '오늘 영상 보고 느낀 점 댓글로 알려주세요. 다음 주에 더 흥미로운 내용으로 돌아올게요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '어떤 영상 다뤄줬으면 하는지 댓글로 신청해주시면 저희가 열심히 찾아올게요!', james: '여러분의 댓글이 저희 다음 영상의 원동력이에요. 꼭 남겨주세요! 다음 주 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 완전 뇌 자극받았어요! 구독하시면 매주 이런 시간 함께할 수 있어요~', james: '이런 강연 앞으로도 계속 소개해드릴게요. 구독 누르시고 다음 주 기대해주세요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 내용 소화하는 데 며칠 걸릴 것 같아요, 하하! 진짜 알차다~', james: '좋은 지식은 나눌수록 커져요. 주변에 공유해주시고~ 다음 주에 또 봐요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 오늘 완전 반성했어요, 하하! 여러분도 함께 성장해요~', james: '이렇게 귀한 시간 함께해주셔서 감사합니다. 구독·좋아요 부탁드리고 다음 주에 봐요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 강연 원본도 꼭 찾아보세요! 훨씬 더 많은 내용이 있거든요~', james: '좋은 영상 발견하면 바로 가져올게요. 알림 설정하시고 다음 주 기대해주세요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 하나만 기억하고 실천해봐요! 작은 변화가 큰 차이를 만드니까요~', james: '오늘 내용 바탕으로 내일 작은 변화 하나 시도해보세요. 다음 주에 또 만나요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '매주 이런 좋은 영상 가져와주셔서 정말 감사해요! 저도 항상 설레요~', james: '이런 인사이트가 계속 필요하시다면 구독 꼭 눌러주세요. 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 대화 너무 재밌었어요! 여러분도 즐거우셨으면 좋겠어요~', james: '좋은 지식을 나누는 게 저희의 즐거움이에요. 구독하시고 함께해요! 다음 주 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 이야기 친구한테도 꼭 공유해주세요~ 같이 성장하면 더 좋잖아요!', james: '함께해주셔서 감사해요! 다음 주에도 알찬 내용으로 찾아오겠습니다. 구독 부탁드려요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 배운 거 내일 바로 써먹어볼 거예요! 결과 나오면 댓글로 알려드릴게요, 하하~', james: '매주 좋은 강연과 지식 들고 올게요. 구독 눌러주시고 다음 주 기대해주세요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 오늘 이거 보고 진짜 직장에서 바로 써볼 거예요! 기대되는데요~', james: '오늘 배운 거 꼭 써먹어보시고~ 결과 댓글로 알려주세요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '이런 방송 매주 할 수 있게 구독과 좋아요로 응원해주세요! 저도 더 열심히 할게요~', james: '지식인사이트와 함께라면 매주 성장할 수 있어요. 구독하시고 다음 주에 봐요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 하루도 조금 더 현명해진 것 같지 않으세요? 저는 확실히 그래요~', james: '다음 주엔 또 어떤 인사이트 들고 올지 기대해주세요. 구독 부탁드려요! 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 방송 즐거우셨나요? 솔직한 댓글 남겨주시면 저희도 더 신나게 할게요~', james: '좋은 영상 계속 가져올게요. 구독과 좋아요로 응원해주세요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 이야기, 여러분 삶에 조금이라도 도움이 됐으면 진짜 좋겠어요!', james: '시청해주셔서 진심으로 감사합니다. 다음 주에도 좋은 내용으로 찾아오겠습니다!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 이 채널 진짜 자랑스러워요! 주변에 많이 알려주세요~ 부탁드려요~', james: '오늘 나눈 이야기가 여러분께 작은 변화의 시작이 되길 바랍니다. 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '매주 이 시간이 저도 너무 기다려져요! 여러분도 구독하시고 함께해요~', james: '매주 이 시간 기다려주시는 분들 덕분에 저희가 더 열심히 해요. 다음 주 봐요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 내용 너무 좋아서 저 메모 잔뜩 했어요, 하하! 여러분도 메모해두세요~', james: '이 강연이 마음에 드셨다면 구독·좋아요·알림 설정 세 개 다 눌러주세요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘도 알차게 함께해주셔서 감사해요! 다음 주에 뭐 들고 올지 벌써 기대돼요~', james: '좋은 콘텐츠로 계속 찾아올게요. 구독·좋아요·공유 세 개 다 부탁드려요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '제가 오늘 느낀 거 한 마디로 하면요, 저 더 열심히 살아야겠다는 거요! 하하~', james: '여러분의 성장을 응원합니다! 구독과 좋아요로 저희도 응원해주세요~ 다음 주에 봐요!' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 완전 제 이야기 같았어요! 공감 엄청 됐거든요~ 여러분도 그러셨죠?', james: '오늘도 함께해주셔서 진심으로 감사드려요! 댓글로 소감 꼭 남겨주시고~ 다음 주 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '저 오늘 이거 때문에 퇴근하고 바로 실천해볼 거예요! 여러분도 같이 해봐요~', james: '매주 더 좋은 영상으로 돌아올게요. 알림 설정하시고 놓치지 마세요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 깨달은 것 하나만 실천해도 충분해요! 저도 오늘부터 시작할게요~', james: '이런 방송 계속 만들 수 있도록 구독과 좋아요로 힘 실어주세요! 다음 주에 봐요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '다음 주에 또 어떤 영상 들고 오실지 저도 진짜 궁금해요! 기대할게요~', james: '스텔라랑 저, 다음 주도 열심히 준비해올게요! 구독 눌러주시고 기대해주세요~' },
+    { scene: '지식인사이트 스튜디오 방송', stella: '오늘 이 강연 친구들한테 꼭 공유할 거예요! 이런 건 혼자만 알면 안 되잖아요~', james: '지식인사이트는 여러분과 함께 성장하는 채널이에요. 구독하시고 함께 커나가요! 다음 주 봐요~' },
+];
+
 const getNext4Mondays = () => {
     const today = new Date();
     const dow = today.getDay(); // 0=Sun,1=Mon...
@@ -232,6 +265,41 @@ const getNext4Mondays = () => {
         d.setHours(6, 0, 0, 0);
         return d;
     });
+};
+
+const ADMIN_TAB_PATHS = {
+    dashboard: 'dashboard',
+    members: 'members',
+    books: 'books',
+    popular: 'popular',
+    script: 'script',
+    'gemini-script': 'gemini-script',
+    automation: 'automation',
+    ebook: 'ebook',
+    podcast: 'podcast',
+    voice: 'voice',
+    'tts-verify': 'tts-verify',
+    sales: 'sales',
+    payment: 'payment',
+    design: 'design',
+    'cf-prompt': 'cf-prompt'
+};
+
+const resolveAdminTabFromPath = (pathname) => {
+    const normalized = (pathname || '').replace(/\/+$/, '');
+    if (normalized === '/admin' || normalized === '') return 'dashboard';
+
+    const match = normalized.match(/^\/admin\/([^/]+)/);
+    if (!match?.[1]) return 'dashboard';
+
+    const slug = match[1].toLowerCase();
+    const matchedEntry = Object.entries(ADMIN_TAB_PATHS).find(([, path]) => path === slug);
+    return matchedEntry ? matchedEntry[0] : 'dashboard';
+};
+
+const buildAdminPathForTab = (tab) => {
+    const slug = ADMIN_TAB_PATHS[tab] || ADMIN_TAB_PATHS.dashboard;
+    return slug === 'dashboard' ? '/admin' : `/admin/${slug}`;
 };
 
 /* ── CF 프롬프트 생성기 컴포넌트 ──────────────────────────────────── */
@@ -594,7 +662,7 @@ export default function AdminDashboard() {
         return false;
     });
     const [password, setPassword] = useState('');
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState(() => resolveAdminTabFromPath(window.location.pathname));
 
     // ── 디자인 관리 상태 ──────────────────────────────────────────
     const [designSettings, setDesignSettings] = useState({
@@ -673,6 +741,22 @@ export default function AdminDashboard() {
         }
     };
 
+    useEffect(() => {
+        const handlePopState = () => {
+            setActiveTab(resolveAdminTabFromPath(window.location.pathname));
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    useEffect(() => {
+        const nextPath = buildAdminPathForTab(activeTab);
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (currentPath !== nextPath) {
+            window.history.replaceState(window.history.state, '', nextPath);
+        }
+    }, [activeTab]);
+
     // Real-time Data States (기존 로직 유지)
     const [realUsers, setRealUsers] = useState([]);
     const [memberSearch, setMemberSearch] = useState('');
@@ -692,14 +776,131 @@ export default function AdminDashboard() {
     const [popularList, setPopularList] = useState([]);
     const [popularSearch, setPopularSearch] = useState('');
     const [popularSaving, setPopularSaving] = useState(false);
-    const [popularSubTab, setPopularSubTab] = useState('popular');
-    const [sectionData, setSectionData] = useState({ weekly_focus: [], weekly_viewed: [], growth: [], economy: [], business: [], humanities: [], psychology: [] });
-    const [sectionSearch, setSectionSearch] = useState({ weekly_focus: '', weekly_viewed: '', growth: '', economy: '', business: '', humanities: '', psychology: '' });
-    const [sectionSaving, setSectionSaving] = useState({ weekly_focus: false, weekly_viewed: false, growth: false, economy: false, business: false, humanities: false, psychology: false });
+    const [popularSubTab, setPopularSubTab] = useState('burnout');
+    const [sectionData, setSectionData] = useState({
+        burnout: [],
+        wealth: [],
+        healing: [],
+        philosophy: [],
+        weekly_focus: [],
+        weekly_viewed: [],
+        original: [],
+        growth: [],
+        economy: [],
+        business: [],
+        humanities: [],
+        psychology: []
+    });
+    const [sectionSearch, setSectionSearch] = useState({
+        burnout: '',
+        wealth: '',
+        healing: '',
+        philosophy: '',
+        weekly_focus: '',
+        weekly_viewed: '',
+        original: '',
+        growth: '',
+        economy: '',
+        business: '',
+        humanities: '',
+        psychology: ''
+    });
+    const [sectionSaving, setSectionSaving] = useState({
+        burnout: false,
+        wealth: false,
+        healing: false,
+        philosophy: false,
+        weekly_focus: false,
+        weekly_viewed: false,
+        original: false,
+        growth: false,
+        economy: false,
+        business: false,
+        humanities: false,
+        psychology: false
+    });
     const [weeklySchedule, setWeeklySchedule] = useState([{books:[]},{books:[]},{books:[]},{books:[]}]);
     const [scheduleSearches, setScheduleSearches] = useState(['','','','']);
     const [scheduleSaving, setScheduleSaving] = useState(false);
+    const [weeklyFocusVideos, setWeeklyFocusVideos] = useState([]);
+    const [wfVideoSearch, setWfVideoSearch] = useState('');
     const [aiRecommending, setAiRecommending] = useState(false);
+
+    const toPopularBookItem = (b) => ({
+        id: b.id,
+        title: b.title,
+        cover: b.cover || '',
+        author: b.author || '',
+        purchaseLink: b.purchaseLink || '',
+        listens: b.listens || ''
+    });
+
+    const sortByUpdated = (a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0);
+    const getBooksByCategory = (keyword) => realBooks
+        .filter(b => (b.category || '').toLowerCase().includes(keyword))
+        .sort(sortByUpdated)
+        .map(toPopularBookItem);
+    const getBooksBySection = (sectionId) => realBooks
+        .filter(b => (b.section || '').toUpperCase() === sectionId)
+        .sort(sortByUpdated)
+        .map(toPopularBookItem);
+
+    // 인기 아카이뷰: Firestore 문서가 비어 있어도 현재 사이트 기준 목록을 자동 표시
+    useEffect(() => {
+        if (activeTab !== 'popular') return;
+
+        const current = sectionData[popularSubTab] || [];
+        if (current.length > 0) return;
+
+        let defaults = [];
+        switch (popularSubTab) {
+            case 'burnout':
+                defaults = getBooksBySection('BURNOUT');
+                break;
+            case 'wealth':
+                defaults = getBooksBySection('WEALTH');
+                break;
+            case 'healing':
+                defaults = getBooksBySection('HEALING');
+                break;
+            case 'philosophy':
+                defaults = getBooksBySection('PHILOSOPHY');
+                break;
+            case 'weekly_focus':
+                defaults = getBooksBySection('WEEKLY_FOCUS').slice(0, 5);
+                break;
+            case 'weekly_viewed':
+                defaults = (popularList || []).slice(0, 5).map(toPopularBookItem);
+                break;
+            case 'original':
+                defaults = realBooks
+                    .filter(b => (b.section || '').toUpperCase() === 'ARCHIVIEW_ORIGINAL' || b.id?.includes('original') || b.id?.includes('framework'))
+                    .sort(sortByUpdated)
+                    .map(toPopularBookItem);
+                break;
+            case 'growth':
+                defaults = getBooksByCategory('자기계발');
+                break;
+            case 'economy':
+                defaults = getBooksByCategory('경제');
+                break;
+            case 'business':
+                defaults = getBooksByCategory('경영');
+                break;
+            case 'humanities':
+                defaults = getBooksByCategory('인문');
+                break;
+            case 'psychology':
+                defaults = getBooksByCategory('심리');
+                break;
+            default:
+                defaults = [];
+        }
+
+        if (defaults.length > 0) {
+            setSectionData(prev => ({ ...prev, [popularSubTab]: defaults }));
+        }
+    }, [activeTab, popularSubTab, sectionData, realBooks, popularList]);
 
 
     // 1. Listen for Users
@@ -752,10 +953,28 @@ export default function AdminDashboard() {
 
     // 5. Listen for Section Rankings
     useEffect(() => {
-        const SECTION_DB_MAP = { weekly_focus: 'weekly_focus', weekly_viewed: 'weekly_most_viewed', growth: 'category_growth', economy: 'category_economy', business: 'category_business', humanities: 'category_humanities', psychology: 'category_psychology' };
+        const SECTION_DB_MAP = {
+            burnout: 'popular_burnout',
+            wealth: 'popular_wealth',
+            healing: 'popular_healing',
+            philosophy: 'popular_philosophy',
+            weekly_focus: 'weekly_focus',
+            weekly_viewed: 'weekly_most_viewed',
+            original: 'original_archives',
+            growth: 'category_growth',
+            economy: 'category_economy',
+            business: 'category_business',
+            humanities: 'category_humanities',
+            psychology: 'category_psychology'
+        };
         const unsubs = Object.entries(SECTION_DB_MAP).map(([key, dbKey]) =>
             onSnapshot(doc(db, 'site_config', dbKey), (snap) => {
-                if (snap.exists() && snap.data().books?.length) setSectionData(prev => ({ ...prev, [key]: snap.data().books }));
+                if (snap.exists()) {
+                    setSectionData(prev => ({ ...prev, [key]: snap.data().books || [] }));
+                    if (key === 'weekly_focus' && snap.data().videos) {
+                        setWeeklyFocusVideos(snap.data().videos);
+                    }
+                }
             })
         );
         return () => unsubs.forEach(u => u());
@@ -912,17 +1131,38 @@ export default function AdminDashboard() {
     };
 
     // ── AssemblyAI words → 턴별 타임스탬프 생성 (텍스트 매칭) ───────────────
+    const stripStageDirections = (text = '') =>
+        String(text).replace(/^\s*(?:\([^()\n]{1,40}\)\s*)+/, '').trim();
+
+    // Gemini TTS 입력용: 소괄호 "( ... )" 구간은 모델이 자주 그대로 읽어버리므로 요청 직전에 제거한다.
+    // (Firestore/원본 대본은 그대로 두고, API로 나가는 텍스트만 정리)
+    const stripParenContentForTts = (text = '') => {
+        let s = String(text);
+        let prev;
+        do {
+            prev = s;
+            s = s.replace(/\([^()]*\)/g, '');
+        } while (s !== prev);
+        return s.replace(/\s{2,}/g, ' ').trim();
+    };
+
     const generateTurnSegments = (scriptLines, aaiWords) => {
+        const INIT_OFFSET = 5.0;
         if (!aaiWords?.length || !scriptLines?.length) return null;
         const norm = (t) => t.replace(/[^\uAC00-\uD7A3a-zA-Z0-9]/g, '').toLowerCase();
         const normAai = aaiWords.map(w => norm(w.text));
-        const audioDuration = aaiWords[aaiWords.length - 1].end / 1000; // ms → s
+        const firstWordStartSec = (aaiWords[0]?.start || 0) / 1000;
+        // AssemblyAI 결과가 이미 5초 인트로를 포함하면 오프셋을 다시 더하지 않는다.
+        const effectiveOffset = firstWordStartSec >= 4 ? 0 : INIT_OFFSET;
+        const scriptStartSec = parseFloat((firstWordStartSec + effectiveOffset).toFixed(3));
+        const audioDuration = aaiWords[aaiWords.length - 1].end / 1000 + effectiveOffset; // ms → s
 
         const segments = [];
         let searchStart = 0;
 
         for (let i = 0; i < scriptLines.length; i++) {
-            const turnWords = scriptLines[i].text.split(/\s+/).map(norm).filter(w => w.length > 0);
+            const cleanTurnText = stripStageDirections(scriptLines[i].text);
+            const turnWords = cleanTurnText.split(/\s+/).map(norm).filter(w => w.length > 0);
             const matchLen = Math.min(3, turnWords.length);
             let bestIdx = -1;
 
@@ -937,7 +1177,7 @@ export default function AdminDashboard() {
                 }
             }
 
-            const prevEnd = segments.length > 0 ? segments[segments.length - 1].end : 0;
+            const prevEnd = segments.length > 0 ? segments[segments.length - 1].end : scriptStartSec;
 
             if (bestIdx !== -1) {
                 // 매칭 성공: 실제 단어 타임스탬프 사용
@@ -945,8 +1185,8 @@ export default function AdminDashboard() {
                 const wordStart = aaiWords[bestIdx];
                 const wordEnd = aaiWords[endIdx];
                 segments.push({
-                    start: parseFloat((wordStart.start / 1000).toFixed(3)),
-                    end: parseFloat((wordEnd.end / 1000).toFixed(3))
+                    start: parseFloat((wordStart.start / 1000 + effectiveOffset).toFixed(3)),
+                    end: parseFloat((wordEnd.end / 1000 + effectiveOffset).toFixed(3))
                 });
                 searchStart = Math.max(bestIdx + 1, endIdx - 2);
             } else {
@@ -1129,17 +1369,9 @@ export default function AdminDashboard() {
                 // 점수 계산
                 const result = scoreTranscript(lines, transcribed);
 
-                // 턴별 타임스탬프 → Firestore 저장
+                // 턴별 타임스탬프 → Firestore 저장 (generateTurnSegments 내부에서 5초 OFFSET 적용됨)
                 const segments = generateTurnSegments(lines, transcribed.words);
                 if (segments && segments.length === lines.length) {
-                    // 5초 인트로 보정
-                    if (segments[0].start < 5) {
-                        const offset = parseFloat((5 - segments[0].start).toFixed(3));
-                        for (const seg of segments) {
-                            seg.start = parseFloat((seg.start + offset).toFixed(3));
-                            seg.end = parseFloat((seg.end + offset).toFixed(3));
-                        }
-                    }
                     await setDoc(doc(db, 'timestamps', bookId), {
                         segments,
                         generatedAt: new Date().toISOString(),
@@ -1226,14 +1458,7 @@ export default function AdminDashboard() {
                     continue;
                 }
 
-                // 5초 인트로 보정: 첫 턴이 5초 미만이면 전체를 5초 기준으로 시프트
-                if (segments[0].start < 5) {
-                    const offset = parseFloat((5 - segments[0].start).toFixed(3));
-                    for (const seg of segments) {
-                        seg.start = parseFloat((seg.start + offset).toFixed(3));
-                        seg.end = parseFloat((seg.end + offset).toFixed(3));
-                    }
-                }
+                // generateTurnSegments 내부에서 5초 OFFSET 적용됨 — 추가 보정 불필요
 
                 // 5. Firestore + localStorage 저장
                 await setDoc(doc(db, 'timestamps', bookId), {
@@ -1393,17 +1618,21 @@ export default function AdminDashboard() {
 
     const handleUpdateBookField = async (bookId, field, value) => {
         try {
-            await setDoc(doc(db, "book_overrides", bookId), {
-                [field]: value,
+            const normalizedValue = typeof value === 'string' ? value.trim() : value;
+            const payload = {
+                [field]: normalizedValue,
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            };
+            // 셀럽 저장은 celebritySlug 기준으로도 함께 맞춰서 사용자 페이지 반영 누락 방지
+            if (field === 'celebrity') {
+                payload.celebritySlug = normalizedValue;
+            }
+
+            await setDoc(doc(db, "book_overrides", bookId), payload, { merge: true });
             // top70- 같은 prefix가 있으면 제거한 ID에도 동시 저장 (celebrities.js 매칭용)
             const strippedId = bookId.replace(/^[a-z]+\d+-/, '');
             if (strippedId !== bookId) {
-                await setDoc(doc(db, "book_overrides", strippedId), {
-                    [field]: value,
-                    updatedAt: serverTimestamp()
-                }, { merge: true });
+                await setDoc(doc(db, "book_overrides", strippedId), payload, { merge: true });
             }
             alert(`${field} 정보가 저장되었습니다.`);
         } catch (error) {
@@ -1505,6 +1734,11 @@ export default function AdminDashboard() {
     // TTS 검증
     const [verifyBookId, setVerifyBookId] = useState('');
     const [verifyWavUrl, setVerifyWavUrl] = useState('');
+    // gemini-script 탭 MP3 업로드
+    const [gsMp3Files, setGsMp3Files] = useState({}); // { [bookId]: File }
+    const [gsMp3Uploading, setGsMp3Uploading] = useState({}); // { [bookId]: bool }
+    const [gsMp3Logs, setGsMp3Logs] = useState({}); // { [bookId]: string }
+    const [gsMp3Urls, setGsMp3Urls] = useState({}); // { [bookId]: audioUrl } 업로드 완료 후
     const [verifyLoading, setVerifyLoading] = useState(false);
     const [verifyResult, setVerifyResult] = useState('');
     const [verifyLogs, setVerifyLogs] = useState([]);
@@ -1517,6 +1751,9 @@ export default function AdminDashboard() {
     const [batchVerifyRunning, setBatchVerifyRunning] = useState(false);
     const [batchVerifyCurrent, setBatchVerifyCurrent] = useState('');
     const [batchExpandedId, setBatchExpandedId] = useState(null);
+    const [verifyMp3File, setVerifyMp3File] = useState(null);
+    const [verifyMp3Uploading, setVerifyMp3Uploading] = useState(false);
+    const [verifyMp3UploadLog, setVerifyMp3UploadLog] = useState('');
     // 수동 타임스탬프 편집
     const [tsScript, setTsScript] = useState([]); // Firestore scripts/{id} 대본
     const [tsTimestamps, setTsTimestamps] = useState([]); // [seconds, ...]
@@ -1835,6 +2072,12 @@ export default function AdminDashboard() {
             main_categories:  liveDesign.main_categories,
             editorial_slider: liveDesign.editorial_slider,
             editorial_tabs:   liveDesign.editorial_tabs,
+            main_hero_poster:      liveDesign.main_hero_poster,
+            editorial_hero_poster: liveDesign.editorial_hero_poster,
+            library_hero_poster:   liveDesign.library_hero_poster,
+            notes_hero_poster:     liveDesign.notes_hero_poster,
+            profile_hero_poster:   liveDesign.profile_hero_poster,
+            youtube_hero_poster:   liveDesign.youtube_hero_poster,
         });
     }, [activeTab, liveDesignLoading]);
 
@@ -1961,6 +2204,65 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleVerifyMp3Upload = async () => {
+        if (!verifyBookId) return alert('도서를 먼저 선택하세요.');
+        if (!verifyMp3File) return alert('업로드할 MP3 파일을 선택하세요.');
+        setVerifyMp3Uploading(true);
+        setVerifyMp3UploadLog('⏳ Firebase Storage 업로드 중...');
+        try {
+            const storageRef = ref(storage, `audio/${verifyBookId}.mp3`);
+            await uploadBytes(storageRef, verifyMp3File, { contentType: verifyMp3File.type || 'audio/mpeg' });
+            const audioUrl = await getDownloadURL(storageRef);
+
+            // 사용자 화면에서 즉시 재생 가능하도록 주요 참조 경로를 함께 업데이트
+            await Promise.all([
+                setDoc(doc(db, 'book_overrides', verifyBookId), {
+                    audioUrl,
+                    isPodcast: true,
+                    updatedAt: serverTimestamp(),
+                }, { merge: true }),
+                setDoc(doc(db, 'scripts', verifyBookId), {
+                    audioUrl,
+                    updatedAt: serverTimestamp(),
+                }, { merge: true }),
+                setDoc(doc(db, 'timestamps', verifyBookId), {
+                    audioUrl,
+                    updatedAt: serverTimestamp(),
+                }, { merge: true }),
+            ]);
+
+            setVerifyMp3UploadLog(`✅ MP3 등록 완료: ${verifyBookId}.mp3`);
+        } catch (e) {
+            setVerifyMp3UploadLog(`❌ 업로드 실패: ${e.message}`);
+        } finally {
+            setVerifyMp3Uploading(false);
+        }
+    };
+
+    const handleGsMp3Upload = async (bookId) => {
+        const file = gsMp3Files[bookId];
+        if (!file) return alert('MP3 파일을 선택하세요.');
+        setGsMp3Uploading(prev => ({ ...prev, [bookId]: true }));
+        setGsMp3Logs(prev => ({ ...prev, [bookId]: '⏳ Firebase Storage 업로드 중...' }));
+        try {
+            const storageRef = ref(storage, `audio/${bookId}.mp3`);
+            await uploadBytes(storageRef, file, { contentType: file.type || 'audio/mpeg' });
+            const audioUrl = await getDownloadURL(storageRef);
+            await Promise.all([
+                setDoc(doc(db, 'book_overrides', bookId), { audioUrl, isPodcast: true, updatedAt: serverTimestamp() }, { merge: true }),
+                setDoc(doc(db, 'scripts', bookId), { audioUrl, updatedAt: serverTimestamp() }, { merge: true }),
+                setDoc(doc(db, 'timestamps', bookId), { audioUrl, updatedAt: serverTimestamp() }, { merge: true }),
+            ]);
+            setGsMp3Urls(prev => ({ ...prev, [bookId]: audioUrl }));
+            setGsMp3Logs(prev => ({ ...prev, [bookId]: `✅ 등록 완료 — 바로 재생 가능` }));
+            setGsMp3Files(prev => ({ ...prev, [bookId]: null }));
+        } catch (e) {
+            setGsMp3Logs(prev => ({ ...prev, [bookId]: `❌ 실패: ${e.message}` }));
+        } finally {
+            setGsMp3Uploading(prev => ({ ...prev, [bookId]: false }));
+        }
+    };
+
     const handlePreviewVoice = async (speakerSlot, voiceName) => {
         const key = import.meta.env.VITE_GEMINI_API_KEY;
         if (!key) return alert('Gemini API 키가 없습니다.');
@@ -2083,7 +2385,27 @@ export default function AdminDashboard() {
             ? `⑥ ⚠️ 말투 규칙 (최우선): 이 대본은 친근한 존댓말 팟캐스트입니다.
    - 반말로 바꾸지 마. ~해요, ~거든요, ~잖아요, ~죠, ~네요 등 존댓말 유지.
    - 딱딱한 격식체도 친근한 존댓말로 교체: "~십시오"→"~세요" / "~하겠습니다"→"~할게요" / "감사합니다"→"감사해요" / "~습니다"→"~어요"
-   - 자연스럽고 따뜻한 방송 진행자 말투로 통일.`
+   - 자연스럽고 따뜻한 방송 진행자 말투로 통일.
+
+⑦ ⚠️ 유튜브 팟캐스트 분위기 규칙 (필수):
+   - 제임스는 김창욱쇼처럼 스텔라와 주고받으며 유쾌하고 즐겁게 이야기를 풀어가야 함.
+   - 딱딱하거나 강의식으로 혼자 설명하는 구간이 3턴 이상 이어지면 스텔라와 소통하는 방향으로 조정.
+   - 내용이 아무리 진지해도 전달 방식은 밝고 에너지 있게. 무겁고 건조한 문장은 생동감 있게 교체.
+   - 제임스가 스텔라 말을 자연스럽게 받아치는 리액션("맞아요, 그 부분이요!", "스텔라가 딱 핵심을 짚었네요!")이 없으면 적절히 추가.
+
+⑧ ⚠️ 연기 지시문 강화 (유튜브 전용):
+   [제임스 — 김창욱쇼 스타일 연기톤]
+   - 흥미로운 내용 꺼낼 때: (눈빛 반짝이며) / (신난 듯) / (무릎 치듯)
+   - 스텔라와 호흡 맞출 때: (웃으며) / (장난스럽게) / (격하게 공감하며)
+   - 핵심 포인트 강조할 때: (목소리 높이며) / (힘주어) / (손짓하듯)
+   - 공감하며 이어받을 때: (맞장구치며) / (반가워하며)
+   - 유쾌하게 비유 들 때: (재미있다는 듯) / (씩씩하게)
+
+   [스텔라 — 밝고 생동감 있는 연기톤]
+   - 놀랄 때: (눈 동그래지며) / (깜짝 놀라며) / (헉, 하듯)
+   - 공감할 때: (손뼉 치듯) / (격하게 고개 끄덕이며)
+   - 재미있을 때: (깔깔 웃으며) / (참다가 웃으며) / (흐뭇하게)
+   - 반박할 때: (장난스럽게 딴지 걸며) / (약 올리듯)`
             : `⑥ ⚠️ 존댓말 어미 완전 제거 (최우선): ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요, ~하죠, ~죠 → 전부 반말로 교체
    예) "맞아요" → "맞아" / "그렇죠" → "그렇지" / "재밌거든요" → "재밌거든" / "힘들잖아요" → "힘들잖아"`;
         const prompt = `너는 한국어 팟캐스트 대본을 TTS 음성 합성에 최적화하는 전문가야.
@@ -2093,8 +2415,35 @@ export default function AdminDashboard() {
 ① speaker 필드 절대 변경 금지
 ② 턴 수 절대 변경 금지 (추가·삭제·병합 불가)
 ③ 내용·유머·핵심 메시지 100% 유지
-④ 괄호 지시문 추가 절대 금지 — (웃음), (한숨), (행동묘사) 등 일절 넣지 마
-⑤ 원본에 없는 새 내용 추가 금지
+④ 원본에 없는 새 내용 추가 금지
+
+━━━ 🎭 연기 지시문 삽입 규칙 (핵심!) ━━━
+TTS 모델이 감정을 연기할 수 있도록 각 대사 앞에 괄호 지시문을 반드시 삽입해.
+괄호 지시문은 TTS가 읽지 않고 감정으로만 표현하므로 자유롭게 활용할 것.
+
+[제임스 — 열정적인 강사 스타일 (김창욱 강의 톤)]
+제임스는 책을 읽고 직접 강의하는 열정적이고 자신감 있는 사람이야.
+- 핵심 개념 설명할 때: (열정적으로) / (확신에 차서) / (강조하며)
+- 비유나 예시 들 때: (재미있다는 듯) / (눈빛 반짝이며)
+- 스텔라 말에 맞장구칠 때: (맞다고 무릎 치며) / (공감하며) / (웃으며)
+- 진지한 통찰 전달할 때: (목소리 낮추며) / (진지하게)
+- 자기 경험 말할 때: (솔직하게) / (자폭하듯)
+- 절대 건조하게 읽지 않도록. 강의하듯 억양에 파고가 있어야 함.
+
+[스텔라 — 밝고 유쾌하며 자기 생각이 명확한 사람]
+스텔라는 책을 읽지 않았지만 자기 경험과 생각을 주도적으로 표현해.
+- 새로운 개념 들을 때: (눈 커지며) / (놀라며) / (흥미롭다는 듯)
+- 자기 생각·경험 말할 때: (확신 있게) / (씩씩하게) / (자랑스럽게)
+- 공감할 때: (크게 끄덕이며) / (맞다며 손뼉 치듯) / (격하게 공감하며)
+- 반박하거나 딴지 걸 때: (장난스럽게) / (약 올리듯)
+- 웃길 때: (터지듯 웃으며) / (참다가 웃으며)
+- 절대 기계처럼 단답하지 않도록. 자기 의견·감정·경험을 덧붙이는 톤.
+
+[맞장구·리액션 규칙]
+- 상대방 말 끝난 후 바로 본론으로 가지 말고, 짧은 리액션을 대사 앞에 추가해:
+  제임스 앞: "아, 맞아.", "그거지.", "어, 그렇지.", "완전."
+  스텔라 앞: "오, 진짜?", "헐.", "맞아, 맞아.", "아 그거!", "완전 공감."
+- 단, 모든 턴에 넣지 말고 흐름상 자연스러운 곳에만 삽입
 ${speechStyleRule}
 
 ━━━ text 수정 규칙 ━━━
@@ -2186,7 +2535,10 @@ ${JSON.stringify(script)}`;
     };
 
     const handleRunTts = async (isYoutubePodcast = false, fileId = null, ytTitle = null) => {
-        if (!generatedScript.length) return alert('먼저 대본을 생성하세요.');
+        // YouTube 팟캐스트는 ytScript 우선 사용 (generatedScript 로드 타이밍 문제 방지)
+        const scriptSource = (isYoutubePodcast && ytScript.length > 0) ? ytScript : generatedScript;
+        if (!scriptSource.length) return alert('먼저 대본을 생성하세요.');
+        if (scriptSource !== generatedScript) setGeneratedScript(scriptSource);
 
         const geminiKeys = [
             import.meta.env.VITE_GEMINI_API_KEY,
@@ -2200,7 +2552,7 @@ ${JSON.stringify(script)}`;
         ].filter(Boolean);
 
         const BATCH = 100;
-        const totalTurns = generatedScript.length;
+        const totalTurns = scriptSource.length;
 
         const speakerA = scriptForm.speakerA || '제임스';
         const speakerB = scriptForm.speakerB || '스텔라';
@@ -2225,7 +2577,7 @@ ${JSON.stringify(script)}`;
         setIsTtsRunning(true);
         setTtsLogs([`✏️ TTS 최적화 중 (Gemini Flash)${isYoutubePodcast ? ' — 존댓말 유지 모드' : ''}...`]);
         const ttsReadyScript = await optimizeScriptForTts(
-            generatedScript,
+            scriptSource,
             (msg) => setTtsLogs(prev => [...prev, msg]),
             isYoutubePodcast
         );
@@ -2287,12 +2639,12 @@ ${JSON.stringify(script)}`;
 - "${speakerA}"의 대사를 "${speakerB}" 목소리로, 또는 그 반대로 읽는 것은 치명적 오류입니다.
 
 ⚠️ 속도 & 발음 절대 규칙 (최우선):
-- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
-- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
-- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
-- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
+- 전체 발화 속도를 평소보다 20~25% 느리게 유지할 것. 절대 빠르게 읽지 말 것.
+- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것.
+- 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
 - 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
 - 청취자가 이해할 수 있도록 여유 있는 페이스를 끝까지 유지할 것.
+- 남성(MALE) 화자 "${speakerA}"는 대화가 길어져도 말하기 속도가 후반으로 갈수록 빨라지면 안 됨. 초반과 같은 전체 템포로 끝까지 일정하게 연기할 것.
 
 ⚠️ 이것은 낭독이 아닌 연기입니다!
 ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대화입니다. 책 읽는 것처럼 들리면 실패입니다.
@@ -2313,7 +2665,6 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 [발음 규칙]
 - 단어 끝까지 또렷하게. 받침 연음 자연스럽게(있어→이써).
 - 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 충분히 쉬어 읽을 것.
-- 숫자: 3가지→세 가지, CEO→씨이오, SNS→에스엔에스.
 
 [${speakerA} — 남성 MALE 전용]
 - 낮고 위트 있는 목소리. 여유롭지만 에너지가 있고 재미있는 사람.
@@ -2329,7 +2680,13 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 
 [대본]
 `;
-            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+            const multiText = `${ttsInstruction}
+⚠️ 괄호 지시문 처리 규칙 (절대 위반 금지):
+- 대사에 포함된 소괄호 "( ... )" 내부 텍스트는 절대 발음하지 말 것.
+- 소괄호 내용은 감정/톤/연기 지시로만 반영할 것.
+- 실제로 읽는 음성에는 소괄호 안 문구가 한 글자도 들리면 안 됨.
+
+${batch.map(line => `${line.speaker}: ${stripParenContentForTts(line.text)}`).join('\n')}`;
 
             const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000; // Pro: 900s, Flash: 600s (for BATCH 100)
             const expectedSec = fetchTimeout / 1000;
@@ -2577,45 +2934,16 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
                 return [...filtered, `⏳ 배치 [${b + 1}/${batches.length}] — ${batch.length}턴 처리 중...`];
             });
 
-            const situationContext = situationScene ? `지금 두 사람은 실제로 "${situationScene}" 상황에 있습니다. ` : '';
-            const ttsInstruction = `\
-⚠️⚠️ CRITICAL — 목소리 배정 절대 규칙 (위반 불가):
-- 화자 "${speakerA}" → 반드시 남성(MALE) 목소리만 사용. 여성 목소리 절대 사용 금지.
-- 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용. 남성 목소리 절대 사용 금지.
-- 대사마다 화자 이름을 확인 후 목소리를 즉시 전환할 것.
+            const multiText = `⚠️ 속도 일관성 (남성 MALE — 필수):
+- 남성 화자("${speakerA}")는 에피소드가 길어져도 말하기 속도가 후반으로 갈수록 빨라지면 안 됨.
+- 처음과 같은 여유 있는 템포·속도를 끝까지 유지하고, 일정한 속도로 연기할 것.
 
-⚠️ 속도 & 발음 절대 규칙 (최우선):
-- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
-- 모든 단어를 또렷하고 정확하게 발음할 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
-- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
-- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
+⚠️ 괄호 지시문 처리 규칙 (절대 위반 금지):
+- 대사에 포함된 소괄호 "( ... )" 내부 텍스트는 절대 발음하지 말 것.
+- 소괄호 내용은 감정/톤/연기 지시로만 반영할 것.
+- 실제로 읽는 음성에는 소괄호 안 문구가 한 글자도 들리면 안 됨.
 
-⚠️ 이것은 낭독이 아닌 연기입니다!
-${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대화입니다.
-
-[전체 분위기]
-- 전반적으로 즐겁고 유쾌하고 발랄한 분위기. 에너지가 느껴져야 함.
-- 유머 대사는 실제로 웃기게. 억양과 타이밍으로 웃음 포인트를 살릴 것.
-
-[연기 핵심 규칙]
-- 유머·자폭·뼈 때리는 대사: 타이밍 살려서 생동감 있게.
-- 공감 폭발 대사("맞아!", "진짜?", "대박"): 올려서 에너지 넘치게.
-- 괄호 안 지시문은 발음하지 말고 감정으로만 표현할 것.
-
-[발음 규칙]
-- 단어 끝까지 또렷하게. 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 충분히 쉬어 읽을 것.
-
-[${speakerA} — 남성 MALE 전용]
-- 낮고 위트 있는 목소리. 여유롭지만 에너지가 있고 재미있는 사람.
-- ※ 이 화자는 절대 여성 목소리 사용 금지.
-
-[${speakerB} — 여성 FEMALE 전용]
-- 발랄하고 톡톡 튀는 친구. 리액션 크게, 질문은 끝 올려서 호기심 넘치게.
-- ※ 이 화자는 절대 남성 목소리 사용 금지.
-
-[대본]
-`;
-            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+${batch.map(line => `${line.speaker}: ${stripParenContentForTts(line.text)}`).join('\n')}`;
 
             const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000;
             const expectedSec = fetchTimeout / 1000;
@@ -2801,39 +3129,21 @@ ${situationContext}두 친구가 실제 현장에서 나누는 살아있는 대�
 
         for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
-            const ttsInstruction = `⚠️ CRITICAL — 목소리 배정 절대 규칙:
-- 화자 "${speakerA}" → 반드시 남성(MALE) 목소리만 사용.
-- 화자 "${speakerB}" → 반드시 여성(FEMALE) 목소리만 사용.
+            const ttsInstruction = `Perform this Korean podcast script like a real actor. ${speakerA} is male, ${speakerB} is female. Both are lively podcast hosts who genuinely react to each other — laugh out loud, sound surprised, get excited, express doubt, show emotion naturally. Do NOT read flatly. React with energy: gasp when surprised, chuckle when amused, speak faster when excited, slower when making a point. Make it feel like a real conversation, not a reading.
 
-⚠️ 속도 & 발음 절대 규칙:
-- 전체 발화 속도를 평소보다 30~35% 느리게 유지할 것. 절대 빠르게 읽지 말 것. 조금이라도 빠르다 싶으면 더 늦출 것.
-- 모든 단어를 또렷하고 정확하게 발음할 것. 받침과 연음을 흐리지 말 것. 발음이 꼬이거나 뭉개지면 절대 안 됨.
-- 쉼표(,)에서 0.7초, 마침표(.)에서 1.2초 이상 반드시 쉬어 읽을 것.
-- 한 단어 한 단어 또박또박 끊어서 읽을 것. 단어를 이어서 빠르게 읽는 것 절대 금지.
-- 한 문장이 끝나면 다음 문장 전에 충분히 숨을 고를 것.
+⚠️ PACING — male voice (${speakerA}): keep a steady baseline speaking rate from start to finish across the whole episode. Do NOT gradually speed up in later lines or later batches. Match the overall tempo of the opening lines throughout; only very brief local changes for a reaction are OK, not cumulative acceleration.
 
-⚠️ 이것은 낭독이 아닌 연기입니다!
-두 친구가 실제 현장에서 나누는 살아있는 대화입니다. 책 읽는 것처럼 들리면 실패입니다.
+⚠️ CRITICAL — SCRIPT IS GROUND TRUTH: The script already reflects the correct situation (e.g. if the script says "회사 다 왔어", the character is on their way to work — read it exactly as written). Read every single word exactly as it appears in the script. The script has already been written to match the situation, so trust it completely and perform it word-for-word.
 
-[전체 분위기 — 가장 중요]
-- 전반적으로 즐겁고 유쾌하고 발랄한 분위기. 에너지가 느껴져야 함.
-- 유머 대사는 타이밍과 억양으로 웃음 포인트를 살릴 것. 밋밋하게 읽으면 실패.
-- 공감·리액션 대사: 올려서 에너지 넘치게. 무뚝뚝하거나 단조롭게 읽지 말 것.
-- 두 사람이 진짜 즐겁게 수다 떠는 느낌이어야 함.
-
-[${speakerA} — 남성 MALE 전용]
-- 낮고 위트 있는 목소리. 여유롭지만 에너지 있고 재미있는 사람.
-- 유머 칠 때는 웃음기 넣고, 인사이트 전달할 때는 확신 있게.
-- 단조롭거나 무기력하게 읽지 말 것.
-
-[${speakerB} — 여성 FEMALE 전용]
-- 발랄하고 톡톡 튀는 친구. 리액션 크게, 질문은 끝 올려서 호기심 넘치게.
-- 뼈 때리는 멘트는 쿨하고 재치 있게. 감정 표현 풍부하게.
-- 무뚝뚝하거나 밋밋하게 읽으면 절대 안 됨.
-
-[대본]
+Script:
 `;
-            const multiText = ttsInstruction + batch.map(line => `${line.speaker}: ${line.text}`).join('\n');
+            const multiText = `${ttsInstruction}
+⚠️ Parenthesis rule (MUST FOLLOW):
+- Never pronounce any text inside parentheses "( ... )".
+- Use parenthesized text only as acting direction (emotion/tone/pacing).
+- If parenthesis text is spoken aloud, it is an output failure.
+
+${batch.map(line => `${line.speaker}: ${stripParenContentForTts(line.text)}`).join('\n')}`;
             const fetchTimeout = ttsModel === 'pro' ? 900000 : 600000;
             // 일괄 자동화 전용 목소리: 제임스=Charon, 스텔라=Kore (고정)
             const batchVoiceA = 'Charon';
@@ -4409,7 +4719,6 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
             }
         }
     };
-
     const handleClearTtsCache = async () => {
         if (!scriptForm.bookId) return;
         if (!window.confirm('기존에 생성된 TTS 오디오 캐시를 모두 삭제하시겠습니까? 대본을 수정했다면 캐시를 삭제해야 수정된 내용으로 다시 생성됩니다.')) return;
@@ -4552,6 +4861,17 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
     const [youtubeContent, setYoutubeContent] = useState('');
     const [youtubeSaving, setYoutubeSaving] = useState(false);
     const [youtubeVideos, setYoutubeVideos] = useState([]);
+    const [bulkSelectedIds, setBulkSelectedIds] = useState([]);
+    const [bulkAnalyzing, setBulkAnalyzing] = useState(false);
+    const [bulkLog, setBulkLog] = useState([]);
+    const [bulkScriptIds, setBulkScriptIds] = useState([]);
+    const [bulkScriptRunning, setBulkScriptRunning] = useState(false);
+    const [bulkScriptLog, setBulkScriptLog] = useState([]);
+    const [ytScriptStatuses, setYtScriptStatuses] = useState({}); // { [videoId]: true|false }
+    const [ytAudioStatuses, setYtAudioStatuses] = useState({}); // { [videoId]: audioUrl|null }
+    const [bulkTtsIds, setBulkTtsIds] = useState([]);
+    const [bulkTtsRunning, setBulkTtsRunning] = useState(false);
+    const [bulkTtsLog, setBulkTtsLog] = useState([]);
     const [selectedYoutubeId, setSelectedYoutubeId] = useState('');
     const [podcastSourceType, setPodcastSourceType] = useState('book'); // 'book' | 'youtube'
     const [youtubeLogs, setYoutubeLogs] = useState([]);
@@ -4563,6 +4883,26 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
     const [ytMp3File, setYtMp3File] = useState(null);
     const [ytMp3Uploading, setYtMp3Uploading] = useState(false);
     const [ytMp3Url, setYtMp3Url] = useState('');
+
+    // YouTube 팟캐스트 탭: 대본 · 오디오 존재 여부 일괄 조회
+    useEffect(() => {
+        if (activeTab !== 'podcast' || youtubeVideos.length === 0) return;
+        const checkYtStatuses = async () => {
+            const scriptResults = {};
+            const audioResults = {};
+            await Promise.all(youtubeVideos.map(async v => {
+                try {
+                    const snap = await getDoc(doc(db, 'scripts', `yt-${v.id}`));
+                    const data = snap.exists() ? snap.data() : null;
+                    scriptResults[v.id] = !!(data && Array.isArray(data.script) && data.script.length > 0);
+                    audioResults[v.id] = data?.audioUrl || null;
+                } catch { scriptResults[v.id] = false; audioResults[v.id] = null; }
+            }));
+            setYtScriptStatuses(scriptResults);
+            setYtAudioStatuses(audioResults);
+        };
+        checkYtStatuses();
+    }, [activeTab, youtubeVideos.length]);
 
     // 선택 도서의 대본 (bookScripts 또는 Firestore)
     const [firestoreScript, setFirestoreScript] = useState([]);
@@ -5047,7 +5387,7 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
 [인상적인 발언 & 명언]
 영상에서 가장 인상적인 발언이나 명언 3~5개 (원문 + 한국어)`;
 
-            const ytModels = ['gemini-2.5-flash-preview-04-17', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            const ytModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
             let res, lastErr;
             outer: for (const key of geminiKeys) {
                 for (const model of ytModels) {
@@ -5098,6 +5438,132 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
         } finally {
             setYoutubeAnalyzing(false);
         }
+    };
+
+    const handleBulkImportYoutube = async () => {
+        const BULK_VIDEOS = [
+            { url: 'https://www.youtube.com/watch?v=8KkKuTCFvzI', title: 'What Makes a Good Life? Lessons from the Longest Study on Happiness', titleKo: '무엇이 행복한 삶을 만드는가?', channel: 'Robert Waldinger | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=iCvmsMzlF7o', title: 'The Power of Vulnerability', titleKo: '취약함의 힘', channel: 'Brené Brown | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=arj7oStGLkU', title: 'Inside the Mind of a Master Procrastinator', titleKo: '할 일을 미루는 사람의 심리', channel: 'Tim Urban | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=Ks-_Mh1QhMc', title: 'Your Body Language May Shape Who You Are', titleKo: '당신의 신체 자세가 당신을 만든다', channel: 'Amy Cuddy | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=RcGyVTAoXEU', title: 'How to Make Stress Your Friend', titleKo: '스트레스를 친구로 만드는 법', channel: 'Kelly McGonigal | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=Lp7E973zozc', title: 'Stop Lying to Yourself (The 5 Second Rule)', titleKo: '자신을 속이지 않는 법', channel: 'Mel Robbins | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=J66S6-fV2sc', title: 'Try Something New for 30 Days', titleKo: '30일 동안 새로운 것 도전하기', channel: 'Matt Cutts | TED', category: '자기계발' },
+            { url: 'https://www.youtube.com/watch?v=qp0HIF3SfI4', title: 'How Great Leaders Inspire Action (Start with Why)', titleKo: '위대한 리더들이 영감을 주는 법', channel: 'Simon Sinek | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=rrkrvAUbU9Y', title: 'The Puzzle of Motivation', titleKo: '동기 부여의 놀라운 과학', channel: 'Dan Pink | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=aPUP0P4-Ppw', title: 'What It Takes to Be a Great Leader', titleKo: '위대한 리더가 되기 위해 필요한 것', channel: 'Roselinde Torres | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=Lq1B2H-r-5k', title: 'Building a Psychologically Safe Workplace', titleKo: '심리적 안정감을 구축하는 방법', channel: 'Amy Edmondson | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=N41L94N-OAw', title: 'Forget the Pecking Order at Work', titleKo: '직장 내 서열 문화를 잊어라', channel: 'Margaret Heffernan | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=eJt1G3c6z30', title: '5 Ways to Lead in an Era of Constant Change', titleKo: '끊임없는 변화의 시대에서 리드하는 5가지 방법', channel: 'Jim Hemerling | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=bNpx7gpSqbY', title: 'The Single Biggest Reason Why Start-ups Succeed', titleKo: '스타트업이 성공하는 가장 큰 이유', channel: 'Bill Gross | TED', category: '경영' },
+            { url: 'https://www.youtube.com/watch?v=XgRlrBl-7Yg', title: 'The Riddle of Experience vs. Memory', titleKo: '경험과 기억의 수수께끼', channel: 'Daniel Kahneman | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=GZ9n3Z_6D04', title: 'Economic Reality Check', titleKo: '경제적 현실 점검', channel: 'Tim Jackson | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=4Q2aznfmcYU', title: 'Is China the New Idol for Emerging Economies?', titleKo: '중국이 신흥 경제국의 새로운 우상인가?', channel: 'Dambisa Moyo | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=RNu0pG8fByI', title: 'Could Your Language Affect Your Ability to Save Money?', titleKo: '언어가 저축 능력에 영향을 미칠까?', channel: 'Keith Chen | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=hP7mAn_6V_I', title: 'The Currency of the New Economy Is Trust', titleKo: '새로운 경제의 화폐는 신뢰다', channel: 'Rachel Botsman | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=JKsHhXwqDqM', title: 'New Thoughts on Capital in the 21st Century', titleKo: '21세기 자본에 대한 새로운 생각', channel: 'Thomas Piketty | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=0zvrGiPkVcs', title: 'Social Experiments to Fight Poverty', titleKo: '빈곤 퇴치를 위한 실험들', channel: 'Abhijit Banerjee & Esther Duflo | TED', category: '경제' },
+            { url: 'https://www.youtube.com/watch?v=yqc9zX04DXU', title: 'The History of Our World in 18 Minutes', titleKo: '18분 만에 듣는 우리 세계의 역사', channel: 'David Christian | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=nzj7Wg4DAbs', title: 'What Explains the Rise of Humans?', titleKo: '인간이 지구를 지배하게 된 이유', channel: 'Yuval Noah Harari | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=D9Ihs241zeg', title: 'The Danger of a Single Story', titleKo: '단일한 이야기의 위험성', channel: 'Chimamanda Ngozi Adichie | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=fS_5OOnq-7M', title: 'The Politics of Fiction', titleKo: '소설의 정치학', channel: 'Elif Shafak | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=MqbmpM69O_I', title: 'A Kinder, Gentler Philosophy of Success', titleKo: '성공에 대한 더 친절하고 부드러운 철학', channel: 'Alain de Botton | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=SJMm4RAwVLo', title: 'Charter for Compassion', titleKo: '자비의 헌장', channel: 'Karen Armstrong | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=86x-u-tz0MA', title: 'Your Elusive Creative Genius', titleKo: '당신의 일상적인 창조적 재능', channel: 'Elizabeth Gilbert | TED', category: '인문' },
+            { url: 'https://www.youtube.com/watch?v=9FBxfd7dLAs', title: 'The New Era of Positive Psychology', titleKo: '긍정 심리학의 새로운 시대', channel: 'Martin Seligman | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=OsFEV35tWsg', title: 'The Psychology of Evil', titleKo: '악의 심리학 (루시퍼 효과)', channel: 'Philip Zimbardo | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=c0KYU2j0TM4', title: 'The Power of Introverts', titleKo: '내성적인 사람들의 힘', channel: 'Susan Cain | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=4q1dgn_C0AU', title: 'The Surprising Science of Happiness', titleKo: '우리가 행복을 예상하지 못하는 이유', channel: 'Dan Gilbert | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=H14bBuluwB8', title: 'Grit: The Power of Passion and Perseverance', titleKo: '그릿: 성공의 비결인 열정과 끈기', channel: 'Angela Lee Duckworth | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=VO6XEQIsCoM', title: 'The Paradox of Choice', titleKo: '선택의 역설', channel: 'Barry Schwartz | TED', category: '심리' },
+            { url: 'https://www.youtube.com/watch?v=_X0mgOOSpLU', title: 'The Power of Believing That You Can Improve', titleKo: '발전할 수 있다고 믿는 힘 (성장 마인드셋)', channel: 'Carol Dweck | TED', category: '심리' },
+        ];
+
+        const existingIds = new Set(youtubeVideos.map(v => v.id));
+        const toImport = BULK_VIDEOS.filter(v => {
+            const m = v.url.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+            return m && !existingIds.has(m[1]);
+        });
+
+        if (toImport.length === 0) return alert('모두 이미 등록된 영상입니다.');
+        if (!confirm(`${toImport.length}개 영상을 등록합니다. (${BULK_VIDEOS.length - toImport.length}개 중복 제외)`)) return;
+
+        let count = 0;
+        for (const v of toImport) {
+            const m = v.url.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+            const videoId = m[1];
+            await setDoc(doc(db, 'youtube_videos', videoId), {
+                url: v.url,
+                title: v.title,
+                titleKo: v.titleKo,
+                channel: v.channel,
+                category: v.category,
+                content: '',
+                createdAt: new Date(),
+            });
+            count++;
+        }
+        alert(`✅ ${count}개 영상 등록 완료!`);
+    };
+
+    const handleBulkAnalyze = async () => {
+        if (!bulkSelectedIds.length) return alert('분석할 영상을 선택하세요.');
+        setBulkAnalyzing(true);
+        setBulkLog([`🚀 ${bulkSelectedIds.length}개 영상 순차 분석 시작...`]);
+
+        const geminiKeys = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+        ].filter(Boolean);
+
+        const analysisPrompt = `이 유튜브 영상을 분석해서 다음 형식으로 한국어로 상세하게 정리해주세요:\n\n[제목]\n영상 제목 (한국어 번역 포함)\n\n[발표자/채널]\n발표자 이름, 채널명, 배경 정보\n\n[핵심 주제]\n3~5개의 핵심 주제를 bullet point로\n\n[주요 메시지]\n영상의 가장 중요한 메시지와 인사이트 (구체적 발언 포함)\n\n[내용 상세 요약]\n영상 전체 내용을 섹션별로 자세히 요약 (전체 내용의 80% 이상 커버)\n\n[실용적 교훈]\n직장인들이 바로 활용할 수 있는 실용적 교훈 3~5개\n\n[인상적인 발언 & 명언]\n영상에서 가장 인상적인 발언이나 명언 3~5개 (원문 + 한국어)`;
+
+        let done = 0;
+        for (const videoId of bulkSelectedIds) {
+            const video = youtubeVideos.find(v => v.id === videoId);
+            if (!video) continue;
+            setBulkLog(prev => [...prev, `\n⏳ [${done + 1}/${bulkSelectedIds.length}] ${video.title} 분석 중...`]);
+            try {
+                const ytModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+                let res, lastErr;
+                outer: for (const key of geminiKeys) {
+                    for (const model of ytModels) {
+                        res = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    contents: [{ parts: [
+                                        { text: analysisPrompt },
+                                        { fileData: { mimeType: 'video/*', fileUri: video.url } }
+                                    ]}],
+                                    generationConfig: { temperature: 1, maxOutputTokens: 16000, thinkingConfig: { thinkingBudget: 8000 } }
+                                })
+                            }
+                        );
+                        if (res.ok) break outer;
+                        const errData = await res.json();
+                        lastErr = errData.error?.message || `오류 (${res.status})`;
+                    }
+                }
+                if (!res.ok) throw new Error(lastErr);
+                const data = await res.json();
+                const parts = data.candidates?.[0]?.content?.parts || [];
+                const content = parts.find(p => !p.thought && p.text)?.text || parts[0]?.text;
+                if (!content) throw new Error('응답 비어있음');
+                await setDoc(doc(db, 'youtube_videos', videoId), { content }, { merge: true });
+                done++;
+                setBulkLog(prev => [...prev, `✅ 완료 (${content.length}자)`]);
+            } catch (e) {
+                setBulkLog(prev => [...prev, `❌ 실패: ${e.message}`]);
+            }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        setBulkLog(prev => [...prev, `\n🎉 분석 완료 — ${done}/${bulkSelectedIds.length}개 성공`]);
+        setBulkSelectedIds([]);
+        setBulkAnalyzing(false);
     };
 
     const handleSaveYoutubeVideo = async () => {
@@ -5152,74 +5618,68 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
             const { Anthropic } = await import('@anthropic-ai/sdk');
             const anthropic = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 
-            const _ytActiveSituation = selectedSituation || SCRIPT_SITUATIONS[Math.floor(Math.random() * SCRIPT_SITUATIONS.length)];
-            const situation = `선택된 상황: ${_ytActiveSituation.scene}\n클로징 복귀 멘트(턴 58 마지막 대사로 반드시 그대로 사용): "${_ytActiveSituation.close}"`;
+            const _ytActiveSituation = YT_SITUATIONS[Math.floor(Math.random() * YT_SITUATIONS.length)];
+            const situation = `선택된 상황: ${_ytActiveSituation.scene}\n클로징 복귀 멘트(마지막 아웃트로 대사로 반드시 그대로 사용): "${_ytActiveSituation.close}"`;
 
             const speakerA = '제임스';
             const speakerB = '스텔라';
 
             setLogs(prev => [...prev, '[CLAUDE] 1단계: 대본 생성 중...']);
 
-            const systemPrompt = `[시스템 페르소나 및 핵심 제약사항]
-당신은 대한민국 직장인들이 퇴근길에 가장 사랑하는 팟캐스트 대본 작가입니다.
-두 명의 친한 친구(${speakerA}, ${speakerB})가 수다 떨듯이 쓰되, 절대 강의처럼 들리지 않게 하세요.
+            const systemPrompt = `당신은 유튜브 채널 "지식인사이트" 방송 대본 작가입니다.
 
-[절대 출력 형식]
-오직 아래 JSON 배열 형태만 최종 출력하세요. 그 외 어떤 글자도 쓰지 마세요.
-[
-  {"speaker": "${speakerA}", "text": "..."},
-  {"speaker": "${speakerB}", "text": "..."}
-]
-총 턴 수는 50~65턴 내외 (7분~8분 분량 목표). 정해진 토큰 한도 안에서 이야기를 자연스럽게 펼치되, 아래 클로징 구조로 마무리할 것.
+제임스(호스트)와 스텔라(공동호스트)가 스튜디오에 함께 앉아 시청자에게 영상 내용을 소개하는 방송입니다.
 
-[턴 구조 - 반드시 이 흐름으로만 작성]
-턴 1~6 : 주어진 상황만 수다. 영상/강연/유튜브 언급 절대 금지. 현실적인 직장인 수다만.
-          단, 턴 4~6에서 나중에 영상 주제와 연결될 수 있는 소재를 자연스럽게 흘려둘 것.
-턴 7~8 : 영상으로 자연스럽게 전환. 앞 대화 소재를 받아서 ${speakerA}가 심플하게 한 번에 꺼낼 것.
-          [7턴] ${speakerA} 대사 패턴 (이 중 하나):
-            - "그러게, 요즘 본 영상이 있는데 딱 그 얘기더라고."
-            - "야 근데 그거 나 최근에 본 강연이랑 완전 같은 얘기인데."
-            - "아 그러니까 생각났는데, 요즘 본 유튜브 있거든. 딱 그 얘기야."
-          → ${speakerB}가 "무슨 영상인데?" 반응
-          [8턴] ${speakerA}가 영상/강연 제목 말하고 한 줄 소개 → ${speakerB}가 처음 듣는 반응
-          ⚠️ ${speakerB}가 영상/콘텐츠를 먼저 꺼내는 것 절대 금지.
-턴 10~52 : ${speakerA}가 영상 내용 설명, ${speakerB}가 듣고 질문·공감·반박하는 구조.
-  - ${speakerA}: 영상 내용 설명 + 직장 사례 연결 (대사 충분히 길게, 2~4문장)
-  - ${speakerB}: 처음 듣는 사람처럼 반응 (영상 내용 설명 절대 금지)
-  - 턴 36~45: 직장 사례 최소 2개
-  - 턴 46~52: 행동 인사이트 정확히 2개
-마지막 6턴 : 텐션 낮추며 여운. ${speakerB}가 "나도 한번 봐야겠다" 식으로 처음으로 보고 싶다는 의사 표현 (추천 유도 1회)
+=== 말투: 전 구간 존댓말 ===
+두 사람 모두 처음부터 끝까지 시청자를 향한 존댓말로 진행합니다.
+~요, ~습니다, ~네요, ~거든요 등 자연스러운 존댓말 사용.
+서로 대화할 때도 존댓말 유지.
 
-[말투 철칙]
-- 전 구간 100% 반말. 단 1턴도 예외 없음.
-- 존댓말 어미 절대 금지: ~요, ~습니다, ~세요, ~군요, ~네요, ~거든요, ~잖아요 등 전부 반말로
-- ⚠️ 이름 호칭: 턴 1~6(오프닝 상황극 구간)에서만 이름 부르는 것 허용. 턴 7 이후부터는 이름 호칭 절대 금지.
-- ⚠️ "진짜" 사용 제한: 대본 전체에서 "진짜"라는 단어가 2회를 초과하면 안 됨. 대체 표현: "정말", "완전", "너무", "대박", "어이없어", "말도 안 돼" 등 다양하게 활용.
-- ⚠️ 직장 용어 정확히 쓸 것: "야근"은 평일 밤에 늦게까지 일하는 것. 주말에 출근하는 건 "주말 근무" 또는 "주말 출근"이라고 해야 함. "주말 야근"이라는 표현 절대 금지.
-- ⚠️ 대화 논리 일관성: 각 대사는 직전 대사와 반드시 논리적으로 연결되어야 함. 직전에 언급한 소재를 갑자기 모순되게 쓰는 것 절대 금지. 화제 전환 시 자연스러운 브릿지 사용.
-- 모든 대사는 최소 2문장 이상 (한 문장짜리 단답 금지)
-- 매 턴 text 길이 최대 80자 (초과 시 나누기)
-- 매 턴 마침표/물음표/느낌표로 끝
-- 숫자는 한글로 (1+1 → 원 플러스 원)
+=== 대본 구조 ===
+턴 1: 제임스 — "안녕하세요, 지식인사이트 제임스입니다! 오늘도 스텔라와 함께 인사드립니다."
+턴 2: 스텔라 — "안녕하세요~ 스텔라입니다! 오늘 내용 저도 너무 궁금했어요."
+턴 3~6: 제임스가 오늘 다룰 영상 소개 + 스텔라가 왜 중요한지 공감 코멘트
+턴 7~끝-3: 영상 핵심 내용을 깊이 있게 설명. 제임스가 개념 설명 → 스텔라가 질문하거나 실생활 적용 사례 제시. 영상 내용이 전체의 70% 이상.
+끝에서 2턴: 오늘 배운 핵심 정리 + 시청자에게 실천 권유
+마지막 턴: 제임스 — 주어진 클로징 멘트 그대로 사용
 
-[화자 역할 구분 — 반드시 준수]
-- ${speakerA}(제임스): 콘텐츠를 먼저 보고 설명하는 입장 → "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 같은 표현 자연스럽게 허용
-- ${speakerB}(스텔라): 듣고 반응하는 입장 → 스텔라 본인이 "이건 설명해도 안 와닿을 것 같아" 식으로 설명 포기하는 대사 절대 금지
-  이유: 스텔라는 콘텐츠를 직접 본 사람이 아니므로 "내가 설명을 못 하겠다"는 발언이 앞뒤 안 맞음
-  대신: "그 느낌이 이제 알 것 같아", "제임스 말 듣고 나니까 나도 보고 싶어졌어" 식으로 반응`;
+=== 규칙 ===
+- 영상 내용을 겉핥기 하지 말고 핵심 개념을 충분히 깊게 설명할 것
+- 스텔라는 단순히 "맞아요", "그렇군요"만 반복하지 말고 질문하거나 사례를 들 것
+- 각 대사는 2~4문장, 너무 짧지 않게
+- JSON 배열만 출력: [{"speaker":"제임스","text":"..."},{"speaker":"스텔라","text":"..."},...]
 
-            const prompt = `유튜브 영상/강연 정보:
+=== 앞뒤 맥락 일관성 규칙 (필수) ===
+⚠️ 대본 전체를 쓰기 전에 영상 내용을 완전히 파악하고, 개념의 흐름 순서를 먼저 설계한 뒤 작성할 것.
+
+1. 각 대사는 반드시 직전 대사 내용과 논리적으로 연결되어야 함.
+   - 직전 대사에서 A 개념을 이야기하다가 갑자기 전혀 다른 B 개념으로 점프하는 것 금지.
+   - 화제 전환이 필요하면 "그런데 이것과 연결된 또 다른 이야기가 있어요" 같은 브릿지 대사를 반드시 삽입.
+
+2. 같은 개념을 앞에서 이미 설명했으면 뒤에서 다시 처음 설명하듯 꺼내는 것 금지.
+   - 앞에서 나온 개념을 뒤에서 다시 언급할 때는 "아까 말씀드린 것처럼" / "앞서 나온 그 부분이요" 식으로 연결할 것.
+
+3. 스텔라의 반응은 반드시 제임스가 직전에 한 말에 대한 반응이어야 함.
+   - 제임스가 A를 말했는데 스텔라가 B에 대한 이야기를 꺼내는 것 금지.
+   - 스텔라가 새 주제를 꺼낼 때는 "그 말씀 듣고 생각난 건데요" 식으로 연결할 것.
+
+4. 영상 내용의 개념 순서를 임의로 뒤섞지 말 것.
+   - 영상에서 A → B → C 순서로 나온다면 대본도 그 흐름을 따를 것.
+
+5. 대본을 다 쓴 뒤 처음부터 끝까지 한 번 읽어보고, 앞뒤가 어색하거나 갑자기 튀는 대사가 있으면 반드시 수정 후 출력할 것.`;
+
+            const prompt = `=== 오늘 영상 정보 ===
 제목: ${video.title}
 채널: ${video.channel || ''}
-URL: ${video.url}
 
 영상 내용 요약:
 ${video.content}
 
-상황극: ${situation}
+=== 클로징 멘트 (마지막 턴에 반드시 이 문장 그대로 사용) ===
+"${_ytActiveSituation.close}"
 
-위 유튜브 영상 내용을 바탕으로 직장인들이 공감할 수 있는 팟캐스트 대본을 작성해주세요. (50~65턴 내외, 토큰 한도 안에서 자유롭게)
-영상의 핵심 인사이트를 자연스럽게 녹여내되, 마치 두 친구가 이 강연/영상을 보고 나서 수다를 떠는 느낌으로 작성하세요.`;
+위 영상으로 지식인사이트 스튜디오 방송 대본을 작성하세요. (40~55턴)
+두 사람이 스튜디오에서 시청자에게 존댓말로 영상 내용을 설명하는 방송입니다.`;
 
             const res1 = await anthropic.messages.create({
                 model: 'claude-sonnet-4-5',
@@ -5242,7 +5702,7 @@ ${video.content}
             const corrected = res2.content[0].text;
 
             setLogs(prev => [...prev, '[CLAUDE] 3단계: TTS 최적화 검토 중...']);
-            const sys3 = `아래 JSON 배열 대본을 검토하세요. 존댓말 어미 제거, 30자 초과 턴 분리, 문장 끝 마침표 확인. 추가로: 스텔라(Stella) 화자의 대사 중 "설명해도 안 와닿아", "이건 말로 표현이 안 돼" 처럼 스텔라 본인이 설명을 포기하는 표현은 "제임스 말 듣고 나니 나도 보고 싶어졌어" 식으로 교체. 단, 제임스(James) 화자의 "말로는 다 못 전달해", "직접 봐야 느낌이 달라" 는 그대로 유지. ⚠️ 대사 중 상대방 이름 직접 호칭 제거: "야 스텔라", "스텔라야", "야 제임스", "제임스야" 등 이름을 부르는 표현이 있으면 이름 없이 자연스럽게 수정. ⚠️ 대화 논리 일관성: 직전 대사와 모순되는 내용이 있으면 즉시 수정. 오직 완성된 JSON 배열만 출력하세요.`;
+            const sys3 = `아래 JSON 배열 대본을 검토하세요. 문장 끝 마침표 확인, 대화 논리 일관성 확인(직전 대사와 모순되는 내용 수정). ⚠️ 말투 절대 변경 금지: 존댓말(~요, ~습니다)은 그대로 유지. ⚠️ 대사 중 상대방 이름 직접 호칭 제거: "야 스텔라", "스텔라야", "야 제임스", "제임스야" 등 이름을 부르는 표현이 있으면 이름 없이 자연스럽게 수정. 오직 완성된 JSON 배열만 출력하세요.`;
             const res3 = await anthropic.messages.create({
                 model: 'claude-sonnet-4-5',
                 max_tokens: 8192,
@@ -5279,7 +5739,7 @@ ${video.content}
         }
     };
 
-    // ── Gemini로 유튜브 팟캐스트 대본 생성 (상황극 없는 진짜 스튜디오 팟캐스트) ──
+    // ── Gemini로 유튜브 팟캐스트 대본 생성 (스튜디오 반말 팟캐스트) ──
     const handleGenerateYoutubeScriptGemini = async () => {
         if (!selectedYoutubeId) return alert('YouTube 영상을 선택해주세요.');
         const video = youtubeVideos.find(v => v.id === selectedYoutubeId);
@@ -5293,28 +5753,21 @@ ${video.content}
         if (!geminiKey) return alert('Gemini API 키가 없습니다.');
 
         setYoutubeScriptGenerating(true);
-        setLogs(['[YOUTUBE-GEMINI] 유튜브 팟캐스트 대본 생성 시작 (Gemini 2.5 Flash Thinking)...']);
+        setLogs(['[YOUTUBE-GEMINI] 유튜브 팟캐스트 대본 생성 시작...']);
 
         const callGemini = async (prompt, temperature = 1, thinkingBudget = 8000) => {
             const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            temperature,
-                            maxOutputTokens: 16000,
-                            thinkingConfig: { thinkingBudget }
-                        }
+                        generationConfig: { temperature, maxOutputTokens: 16000, thinkingConfig: { thinkingBudget } }
                     })
                 }
             );
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`);
-            }
+            if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`); }
             const data = await res.json();
             const parts = data.candidates?.[0]?.content?.parts || [];
             const text = parts.find(p => !p.thought && p.text)?.text || parts[0]?.text;
@@ -5323,83 +5776,95 @@ ${video.content}
         };
 
         try {
-            // 1단계: 진짜 스튜디오 팟캐스트 대본 생성
-            setLogs(prev => [...prev, '[GEMINI] 1단계: 스튜디오 팟캐스트 대본 생성 중...']);
-            const systemAndPrompt = `당신은 대한민국 최고의 오디오 팟캐스트 대본 작가입니다.
-두 진행자 제임스(남성)와 스텔라(여성)가 실제 녹음 스튜디오에서 진행하는 전문 팟캐스트입니다.
+            const _ytSit = YT_SITUATIONS[Math.floor(Math.random() * YT_SITUATIONS.length)];
+            const closingStellaText = _ytSit.stella;
+            const closingJamesText = _ytSit.james;
 
-[핵심 방향]
-- 상황극 없음. 처음부터 팟캐스트 스튜디오 오프닝으로 시작
-- 전문 방송 진행자 수준의 존댓말 사용 (시청자와 함께하는 공개 팟캐스트)
-- 딱딱하지 않고 따뜻하고 친근한 존댓말 톤 유지 (~해요, ~거든요, ~잖아요, ~죠 자연스럽게 허용)
-- 책 기반 팟캐스트와 달리, 유튜브/강연의 특성을 살려 "영상에서 본 것"을 논하는 형식
-- 두 진행자가 각자의 관점과 경험을 더해 대화 깊이를 만들어낼 것
-- 청취자에게 직접 말 걸기 허용 전 구간 ("여러분~", "청취자 분들~" 등)
+            setLogs(prev => [...prev, '[GEMINI] 1단계: 대본 생성 중...']);
+            const systemAndPrompt = `당신은 유튜브 채널 "지식인사이트" 방송 대본 작가입니다.
 
-[절대 출력 형식]
-오직 아래 JSON 배열만 출력. 마크다운/코드블록 없이 순수 JSON만.
-[
-  {"speaker": "제임스", "text": "..."},
-  {"speaker": "스텔라", "text": "..."}
-]
+제임스(호스트)와 스텔라(공동호스트)가 스튜디오에 나란히 앉아 함께 진행하는 팟캐스트 대본을 작성하세요.
 
-[대본 구조 - 반드시 준수]
-턴 1~4 (오프닝):
-  - 제임스가 첫 턴에서 반드시 "지식 인사이트 스튜디오"라는 팟캐스트 이름을 언급하며 오프닝 시작
-  - 예: "안녕하세요, 지식 인사이트 스튜디오입니다. 저는 제임스예요." 형식으로
-  - 두 진행자가 주제에 대한 첫인상과 기대감 나누기
-  - 팟캐스트 이름은 반드시 "지식 인사이트 스튜디오"로만 고정 (다른 이름 절대 사용 금지)
+━━━ 🎭 연기 지시문 삽입 규칙 (핵심!) ━━━
+완성된 대본으로 TTS 모델이 감정을 연기해야 합니다. 따라서 각 대사 앞에 괄호 지시문을 반드시 삽입하세요.
+예: (열정적으로), (맞다고 무릎 치며), (눈 커지며), (터지듯 웃으며) 등
 
-턴 5~52 (본론):
-  - 제임스: 영상 내용과 핵심 인사이트를 단계적으로 설명 (2~4문장씩, 존댓말)
-  - 스텔라: 공감, 질문, 반박, 자신의 경험 연결 (처음 듣는 사람처럼 자연스럽게)
-  - 전문 용어는 쉽게 풀어서
-  - 실생활/직장 적용 사례 최소 3개 포함
-  - 핵심 인사이트는 청취자가 바로 적용 가능한 형태로 정리
-  - 간간이 청취자에게 말 걸기 ("여러분도 이런 경험 있으시죠?", "한번 생각해보세요." 등)
+[두 MC 캐릭터]
+- 제임스 (김창욱 강의 톤): 영상 내용을 깊이 설명하되, 김창욱 강사처럼 아주 열정적이고 유쾌하며 자신감 있게 풀어냅니다. 
+  - 특징: 딱딱한 설명 절대 금지. 비유나 예시를 들 때 (재미있다는 듯) 말하고, 솔직한 자기 경험(자폭하듯)도 꺼냅니다.
+  - 리액션: 스텔라가 말하면 (격하게 공감하며) "아 맞아, 내 말이 그겁니다!" 식으로 자연스럽게 이어받습니다.
+- 스텔라 (밝고 유쾌하며 주관이 뚜렷함): 제임스 이야기에 기계처럼 호응만 하지 않습니다. 자기 생각·경험·반박을 주도적으로 솔직하게 얘기합니다.
+  - 특징: 새로운 내용을 들을 때 (놀라며), 자기 의견을 말할 때 (자랑스럽게/씩씩하게).
+  - 리액션: "오 진짜요?", "어머 헐!", "잠깐만요, 전 다르게 생각하는데요?" 식으로 살아있는 반응을 보입니다.
 
-턴 53~60 (클로징):
-  - 오늘 대화의 핵심 요약
-  - 청취자에게 한 가지 실천 과제 제안
-  - 따뜻한 마무리 인사 (다음 에피소드 예고 또는 구독 권유 자연스럽게)
+[맞장구·리액션 규칙]
+- 상대방 말이 끝난 후 바로 본론으로 가지 말고, 짧은 추임새나 리액션을 대사 제일 앞에 추가하세요:
+  제임스 앞: "아, 맞아.", "그거지.", "어, 그렇지.", "완전."
+  스텔라 앞: "오, 진짜?", "헐.", "맞아, 맞아.", "아 그거!", "대박."
 
-[말투 철칙]
-- 전 구간 친근한 존댓말 (~해요, ~거든요, ~잖아요, ~죠, ~네요 위주)
-- ⚠️ 딱딱한 격식체 절대 금지: ~십시오, ~하겠습니다, ~드립니다, ~바랍니다, ~하시기 바랍니다
-  예) "보내십시오" → "보내세요" / "감사합니다" → "감사해요" / "들으실 수 있습니다" → "들을 수 있어요"
-- 두 진행자끼리도 친근한 존댓말로 대화 (딱딱하지 않게, 방송 진행자지만 친구같은 톤)
-- 각 대사 2문장 이상, 최대 120자 이내
-- 이름 호칭은 자연스러운 범위에서 허용
+[말투: 구어체 및 전 구간 존댓말 유지]
+두 사람 모두 ~요, ~습니다, ~네요, ~거든요 등 아주 자연스러운 구어체 존댓말을 씁니다.
 
-[화자 역할]
-- 제임스: 영상을 먼저 본 입장. 인사이트를 체계적으로 전달하는 역할
-- 스텔라: 처음 접하는 입장. 청취자를 대변하며 날카로운 질문과 공감 반응
+[대본 구조]
+턴 1: 제임스 오프닝 인사 — "안녕하세요, 지식인사이트 제임스입니다! 오늘도 스텔라와 함께 인사드립니다."
+턴 2: 스텔라 인사 — (밝게 웃으며) 오늘 주제에 대한 짧은 기대 한마디
+턴 3~6: 영상 소개. 제임스가 왜 이 영상을 골랐는지 + 스텔라가 제목/소재에 대한 첫 반응
+턴 7~끝-5: 영상 핵심 내용 깊이 있게 전달 (전체의 70% 이상)
+  - 제임스 혼자 3턴 이상 연속 설명 금지
+  - 제임스가 개념 설명 → 스텔라가 자기 생각이나 경험 이야기 → 제임스가 추가 사례나 에피소드로 보강
+  - 스텔라는 매 3~4턴에 한 번씩 반드시 자기 의견이나 경험을 꺼낼 것
+끝에서 4~5턴: 직장인을 위한 실천 지침 3가지 (이 영상에서 뽑아낸 내일 바로 적용 가능한 구체적 행동. 추상적인 조언 금지)
+마지막 2턴: 앞 대화 흐름 그대로 이어서 자연스럽게 마무리.
 
----
-아래 유튜브 영상 정보를 바탕으로 50~60턴 분량의 팟캐스트 대본을 작성하세요.
+[스텔라 대사 예시]
+❌ 금지: "그렇군요.", "맞습니다.", "정말 중요한 말씀이에요.", "잘 알겠습니다."
+✅ 권장: "(터지듯 웃으며) 어머, 그거 저 완전 찔리는데요?", "(장난스럽게) 잠깐만요, 그건 억울한데요?", "(진지하게) 솔직히 처음엔 거짓말인 줄 알았거든요."
+
+[제임스 대사 예시]
+❌ 금지: 스텔라 말 무시하고 바로 다음 설명으로 넘어가기.
+✅ 권장: "(무릎을 치며) 하하, 스텔라 그거 완전 현실이죠!", "(눈빛 반짝이며) 스텔라가 딱 핵심을 짚었네요."
+
+[JSON 배열 출력 규칙]
+- 각 대사 2~4문장 분량 유지
+- JSON 배열만 출력: [{"speaker":"제임스","text":"(밝게) ..."},{"speaker":"스텔라","text":"(놀라며) ..."},...]
+
+[앞뒤 맥락 일관성 규칙 — 필수]
+⚠️ 대본 전체를 쓰기 전에 영상 내용을 완전히 파악하고, 개념의 흐름 순서를 먼저 설계한 뒤 작성할 것.
+
+1. 각 대사는 반드시 직전 대사 내용과 논리적으로 연결되어야 함.
+   - 직전 대사에서 A 개념을 이야기하다가 갑자기 전혀 다른 B 개념으로 점프하는 것 금지.
+   - 화제 전환이 필요하면 "그런데 이것과 연결된 또 다른 이야기가 있어요" 같은 브릿지 대사를 반드시 삽입.
+
+2. 같은 개념을 앞에서 이미 설명했으면 뒤에서 다시 처음 설명하듯 꺼내는 것 금지.
+   - 앞에서 나온 개념을 뒤에서 다시 언급할 때는 "아까 말씀드린 것처럼" / "앞서 나온 그 부분이요" 식으로 연결할 것.
+
+3. 스텔라의 반응은 반드시 제임스가 직전에 한 말에 대한 반응이어야 함.
+   - 제임스가 A를 말했는데 스텔라가 B에 대한 이야기를 꺼내는 것 금지.
+   - 스텔라가 새 주제를 꺼낼 때는 "그 말씀 듣고 생각난 건데요" 식으로 연결할 것.
+
+4. 영상 내용의 개념 순서를 임의로 뒤섞지 말 것.
+   - 영상에서 A → B → C 순서로 나온다면 대본도 그 흐름을 따를 것.
+
+5. 대본을 다 쓴 뒤 처음부터 끝까지 한 번 읽어보고, 앞뒤가 어색하거나 갑자기 튀는 대사가 있으면 반드시 수정 후 출력할 것.
 
 [영상 정보]
 제목: ${video.title}
 채널: ${video.channel || ''}
-URL: ${video.url}
 
-[영상 내용 분석]
+[영상 내용]
 ${video.content}
 
-위 내용을 바탕으로 팟캐스트 대본을 JSON 배열로만 출력하세요.`;
+위 영상으로 지식인사이트 스튜디오 방송 대본을 45~60턴 JSON 배열로 출력하세요.`
 
             const raw = await callGemini(systemAndPrompt, 1, 10000);
 
-            // 2단계: 맞춤법·품질 교정
-            setLogs(prev => [...prev, '[GEMINI] 2단계: 맞춤법 및 품질 교정 중...']);
-            const correctionPrompt = `아래 팟캐스트 대본 JSON 배열에서 다음 항목만 수정하세요:
-1. 반말 어미(~해, ~야, ~거든, ~잖아, ~지 등 비격식 종결어미) → 친근한 존댓말로 교체 (~해요, ~거든요, ~잖아요, ~죠, ~네요)
-2. 딱딱한 격식체 → 친근한 존댓말로 교체:
-   "~십시오" → "~세요" / "~하겠습니다" → "~할게요" / "~드립니다" → "~드려요" / "~바랍니다" → "~바라요" / "감사합니다" → "감사해요" / "~습니다" → "~어요/아요"
-3. 맞춤법·띄어쓰기 오류 수정
-4. "야 제임스", "스텔라야" 같은 반말 호칭 → 이름만 또는 자연스러운 호칭으로 교체
-5. 내용, 구조, 분량은 절대 변경하지 말 것
-6. 오직 유효한 JSON 배열만 출력 (마크다운 없이)
+            // 2단계: 맞춤법 교정 (반말 유지)
+            setLogs(prev => [...prev, '[GEMINI] 2단계: 맞춤법 교정 중...']);
+            const correctionPrompt = `아래 방송 대본 JSON 배열에서 다음 항목만 수정하세요:
+1. 맞춤법·띄어쓰기 오류 수정
+2. 말투(존댓말) 절대 변경하지 말 것
+3. 내용, 구조, 분량은 절대 변경하지 말 것
+4. 오직 유효한 JSON 배열만 출력 (마크다운 없이)
 
 ${raw}`;
             const corrected = await callGemini(correctionPrompt, 0.2, 1024);
@@ -5410,8 +5875,23 @@ ${raw}`;
             const endIdx = cleanJson.lastIndexOf(']');
             if (startIdx !== -1 && endIdx !== -1) cleanJson = cleanJson.slice(startIdx, endIdx + 1);
 
-            const finalScript = tryLooseParseJSON(cleanJson);
-            if (!Array.isArray(finalScript) || finalScript.length === 0) throw new Error('대본 파싱 실패: ' + cleanJson.slice(0, 200));
+            const parsedScript = tryLooseParseJSON(cleanJson);
+            if (!Array.isArray(parsedScript) || parsedScript.length === 0) throw new Error('대본 파싱 실패: ' + cleanJson.slice(0, 200));
+
+            // 연속 같은 화자 합치기 (제임스→제임스 또는 스텔라→스텔라 방지)
+            const merged = parsedScript.reduce((acc, cur) => {
+                if (acc.length > 0 && acc[acc.length - 1].speaker === cur.speaker) {
+                    const prev = acc[acc.length - 1];
+                    const sep = prev.text.match(/[.!?]$/) ? ' ' : '. ';
+                    acc[acc.length - 1] = { ...prev, text: prev.text + sep + cur.text };
+                } else {
+                    acc.push(cur);
+                }
+                return acc;
+            }, []);
+
+            const finalScript = merged;
+            setLogs(prev => [...prev, `[FIX] 화자 교차 정규화: ${parsedScript.length}턴 → ${finalScript.length}턴`]);
 
             // Firestore 저장
             const scriptId = `yt-${selectedYoutubeId}`;
@@ -5429,14 +5909,268 @@ ${raw}`;
             setYtTimestamps([]);
             setManualContent(JSON.stringify(finalScript, null, 2));
             setInputMode('text');
-            setLogs(prev => [...prev, `[DONE] ✅ Gemini 대본 ${finalScript.length}턴 생성 완료! Firestore(scripts/${scriptId}) 저장됨`]);
-            alert(`Gemini 대본 생성 완료! ${finalScript.length}턴\n이제 AI 팟캐스트 탭 → EXECUTE PRODUCTION으로 TTS를 생성하세요.`);
+            setLogs(prev => [...prev, `[DONE] ✅ 대본 ${finalScript.length}턴 생성 완료! Firestore(scripts/${scriptId}) 저장됨`]);
+            alert(`대본 생성 완료! ${finalScript.length}턴\n이제 AI 팟캐스트 탭 → EXECUTE PRODUCTION으로 TTS를 생성하세요.`);
         } catch (e) {
             setLogs(prev => [...prev, `[ERROR] ${e.message}`]);
             alert('대본 생성 실패: ' + e.message);
         } finally {
             setYoutubeScriptGenerating(false);
         }
+    };
+
+    const handleBulkGenerateYoutubeScripts = async () => {
+        if (bulkScriptIds.length === 0) return alert('영상을 선택해주세요.');
+        setBulkScriptRunning(true);
+        setBulkScriptLog([`🚀 일괄 대본 생성 시작: ${bulkScriptIds.length}개`]);
+
+        const geminiKey = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+        ].filter(Boolean)[0];
+        if (!geminiKey) { alert('Gemini API 키가 없습니다.'); setBulkScriptRunning(false); return; }
+
+        const callGemini = async (prompt, temperature = 1, thinkingBudget = 8000) => {
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiKey}`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature, maxOutputTokens: 16000, thinkingConfig: { thinkingBudget } } }) }
+            );
+            if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || `Gemini API 오류 (${res.status})`); }
+            const data = await res.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const text = parts.find(p => !p.thought && p.text)?.text || parts[0]?.text;
+            if (!text) throw new Error('Gemini 응답이 비어있습니다.');
+            return text;
+        };
+
+        let successCount = 0;
+        for (let i = 0; i < bulkScriptIds.length; i++) {
+            const vid = youtubeVideos.find(v => v.id === bulkScriptIds[i]);
+            if (!vid) { setBulkScriptLog(p => [...p, `[${i+1}/${bulkScriptIds.length}] ⚠️ ${bulkScriptIds[i]} 영상 없음 — 스킵`]); continue; }
+            if (!vid.content) { setBulkScriptLog(p => [...p, `[${i+1}/${bulkScriptIds.length}] ⚠️ "${vid.title}" 분석 내용 없음 — 스킵`]); continue; }
+
+            setBulkScriptLog(p => [...p, `[${i+1}/${bulkScriptIds.length}] 🔄 "${vid.title}" 대본 생성 중...`]);
+            try {
+                const _ytSit = YT_SITUATIONS[Math.floor(Math.random() * YT_SITUATIONS.length)];
+                const systemAndPrompt = `당신은 유튜브 채널 "지식인사이트" 방송 대본 작가입니다.
+
+제임스(호스트)와 스텔라(공동호스트)가 스튜디오에 나란히 앉아 함께 진행하는 방송 대본을 작성하세요.
+
+[두 MC 캐릭터]
+- 제임스: 영상 내용을 깊이 설명하되, 김창욱 강사처럼 유쾌하고 위트 있게 풀어내는 역할. 딱딱한 설명 절대 금지. 스텔라가 웃기거나 공감하는 말을 하면 제임스도 함께 웃고 받아치면서 티키탁카.
+- 스텔라: 제임스 이야기에 단순히 호응만 하지 않음. 자기 생각·경험·반박을 솔직하게 얘기하고, 웃음도 있고 감정 표현도 풍부함.
+
+[말투: 전 구간 존댓말]
+두 사람 모두 ~요, ~습니다, ~네요, ~거든요 등 자연스러운 존댓말.
+
+[대본 구조]
+턴 1: 제임스 오프닝 인사
+턴 2: 스텔라 인사
+턴 3~6: 영상 소개
+턴 7~끝-5: 영상 핵심 내용 깊이 있게 전달
+끝에서 4~5턴: 직장인을 위한 실천 지침 3가지
+마지막 2턴: 자연스럽게 마무리
+
+[규칙]
+- 제임스 혼자 3턴 이상 연속 설명 금지
+- 각 대사 2~4문장
+- JSON 배열만 출력: [{"speaker":"제임스","text":"..."},{"speaker":"스텔라","text":"..."},...]
+
+[영상 정보]
+제목: ${vid.title}
+채널: ${vid.channel || ''}
+
+[영상 내용]
+${vid.content}
+
+위 영상으로 지식인사이트 스튜디오 방송 대본을 45~60턴 JSON 배열로 출력하세요.`;
+
+                const raw = await callGemini(systemAndPrompt, 1, 10000);
+
+                const correctionPrompt = `아래 방송 대본 JSON 배열에서 다음 항목만 수정하세요:
+1. 맞춤법·띄어쓰기 오류 수정
+2. 말투(존댓말) 절대 변경하지 말 것
+3. 내용, 구조, 분량은 절대 변경하지 말 것
+4. 오직 유효한 JSON 배열만 출력 (마크다운 없이)
+
+${raw}`;
+                const corrected = await callGemini(correctionPrompt, 0.2, 1024);
+
+                let cleanJson = corrected.replace(/```(json)?/gi, '').trim();
+                const si = cleanJson.indexOf('['); const ei = cleanJson.lastIndexOf(']');
+                if (si !== -1 && ei !== -1) cleanJson = cleanJson.slice(si, ei + 1);
+                const parsedScript = tryLooseParseJSON(cleanJson);
+                if (!Array.isArray(parsedScript) || parsedScript.length === 0) throw new Error('파싱 실패');
+
+                const merged = parsedScript.reduce((acc, cur) => {
+                    if (acc.length > 0 && acc[acc.length - 1].speaker === cur.speaker) {
+                        const prev = acc[acc.length - 1];
+                        acc[acc.length - 1] = { ...prev, text: prev.text + ' ' + cur.text };
+                    } else { acc.push(cur); }
+                    return acc;
+                }, []);
+
+                const scriptId = `yt-${vid.id}`;
+                await setDoc(doc(db, 'scripts', scriptId), {
+                    script: merged, sourceType: 'youtube', youtubeId: vid.id,
+                    youtubeTitle: vid.title, generatedBy: 'gemini', updatedAt: new Date().toISOString()
+                });
+
+                successCount++;
+                setYtScriptStatuses(prev => ({ ...prev, [vid.id]: true }));
+                setBulkScriptLog(p => [...p, `[${i+1}/${bulkScriptIds.length}] ✅ "${vid.title}" ${merged.length}턴 완료`]);
+            } catch (e) {
+                setBulkScriptLog(p => [...p, `[${i+1}/${bulkScriptIds.length}] ❌ "${vid.title}" 실패: ${e.message}`]);
+            }
+        }
+
+        setBulkScriptLog(p => [...p, `🏁 완료! ${successCount}/${bulkScriptIds.length}개 성공`]);
+        setBulkScriptRunning(false);
+        setBulkScriptIds([]);
+    };
+
+    // ── YouTube 일괄 TTS 생성 → 로컬 WAV 다운로드 ──────────────────────────
+    const handleBulkYoutubeTts = async () => {
+        if (bulkTtsIds.length === 0) return alert('영상을 선택해주세요.');
+        setBulkTtsRunning(true);
+        setBulkTtsLog([`🚀 일괄 TTS 시작: ${bulkTtsIds.length}개`]);
+
+        const geminiKeys = [
+            import.meta.env.VITE_GEMINI_API_KEY,
+            import.meta.env.VITE_GEMINI_API_KEY2,
+            import.meta.env.VITE_GEMINI_API_KEY3,
+            import.meta.env.VITE_GEMINI_API_KEY4,
+            import.meta.env.VITE_GEMINI_API_KEY5,
+            import.meta.env.VITE_GEMINI_API_KEY6,
+            import.meta.env.VITE_GEMINI_API_KEY7,
+            import.meta.env.VITE_GEMINI_API_KEY8,
+        ].filter(Boolean);
+        if (!geminiKeys.length) { alert('Gemini API 키가 없습니다.'); setBulkTtsRunning(false); return; }
+
+        const modelId = ttsModel === 'pro' ? 'gemini-2.5-pro-preview-tts' : 'gemini-2.5-flash-preview-tts';
+        const modelLabel = ttsModel === 'pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
+        const BATCH = 100;
+        let successCount = 0;
+
+        for (let vi = 0; vi < bulkTtsIds.length; vi++) {
+            const videoId = bulkTtsIds[vi];
+            const video = youtubeVideos.find(v => v.id === videoId);
+            const prefix = `[${vi + 1}/${bulkTtsIds.length}]`;
+            if (!video) { setBulkTtsLog(p => [...p, `${prefix} ⚠️ 영상 없음 — 스킵`]); continue; }
+
+            setBulkTtsLog(p => [...p, `${prefix} 🔄 "${video.title}" TTS 시작...`]);
+            try {
+                // Firestore에서 대본 로드
+                const scriptSnap = await getDoc(doc(db, 'scripts', `yt-${videoId}`));
+                if (!scriptSnap.exists()) throw new Error('대본 없음 — 먼저 대본을 생성하세요');
+                const scriptData = scriptSnap.data().script || scriptSnap.data().lines || [];
+                if (!scriptData.length) throw new Error('대본이 비어있음');
+
+                // TTS 최적화 (존댓말 모드)
+                setBulkTtsLog(p => [...p, `${prefix} ✏️ TTS 최적화 중...`]);
+                const optimized = await optimizeScriptForTts(scriptData,
+                    msg => setBulkTtsLog(p => [...p, `${prefix} ${msg}`]), true);
+
+                // 배치 분할
+                const batches = [];
+                for (let i = 0; i < optimized.length; i += BATCH) batches.push(optimized.slice(i, i + BATCH));
+                setBulkTtsLog(p => [...p, `${prefix} 🎙️ ${optimized.length}턴 · ${batches.length}배치 · ${modelLabel}`]);
+
+                const pcmBuffers = new Array(batches.length).fill(null);
+
+                for (let b = 0; b < batches.length; b++) {
+                    const batch = batches[b];
+                    const ttsInstruction = `⚠️ 목소리 배정: 제임스→남성(MALE), 스텔라→여성(FEMALE). 대사마다 화자 이름 확인 후 목소리 전환.
+전체 발화 속도 평소보다 20% 느리게. 또렷하고 자연스럽게. 즐겁고 유쾌한 방송 분위기.
+제임스(남성)는 대화가 길어져도 말하기 속도가 후반으로 갈수록 빨라지면 안 됨. 처음과 같은 여유 있는 템포를 끝까지 일정하게 유지할 것.
+
+[제임스 — 남성 MALE]: 위트 있고 유쾌하게. 스텔라 말에 리액션하며 자연스럽게 이어받음.
+[스텔라 — 여성 FEMALE]: 발랄하고 감정 표현 풍부하게. 공감·반박·경험을 솔직하게.
+
+[대본]
+`;
+                    const multiText = ttsInstruction + batch.map(l => `${l.speaker}: ${stripParenContentForTts(l.text)}`).join('\n');
+                    let success = false;
+                    let attempts = 0;
+                    while (!success && attempts < geminiKeys.length) {
+                        const key = geminiKeys[(b + attempts) % geminiKeys.length];
+                        try {
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), ttsModel === 'pro' ? 900000 : 600000);
+                            let elapsed = 0;
+                            const timer = setInterval(() => {
+                                elapsed++;
+                                setBulkTtsLog(p => {
+                                    const filtered = p.filter(l => !l.includes(`${prefix} ⏳`));
+                                    return [...filtered, `${prefix} ⏳ 배치 ${b+1}/${batches.length} 생성 중... ${elapsed}초`];
+                                });
+                            }, 1000);
+                            const res = await fetch(
+                                `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+                                { method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
+                                  body: JSON.stringify({ contents: [{ parts: [{ text: multiText }] }],
+                                    generationConfig: { responseModalities: ['audio'], speechConfig: { multiSpeakerVoiceConfig: {
+                                        speakerVoiceConfigs: [
+                                            { speaker: '제임스', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } },
+                                            { speaker: '스텔라', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+                                        ]
+                                    } } } }) }
+                            );
+                            clearTimeout(timeoutId);
+                            clearInterval(timer);
+                            if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+                            const data = await res.json();
+                            const part = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                            if (!part) throw new Error('오디오 데이터 없음');
+                            pcmBuffers[b] = Uint8Array.from(atob(part), c => c.charCodeAt(0)).buffer;
+                            success = true;
+                            setBulkTtsLog(p => p.filter(l => !l.includes(`${prefix} ⏳`)));
+                            setBulkTtsLog(p => [...p, `${prefix} ✅ 배치 ${b+1}/${batches.length} 완료`]);
+                        } catch (e) {
+                            attempts++;
+                            const is429 = e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED');
+                            if (attempts < geminiKeys.length) {
+                                setBulkTtsLog(p => [...p, `${prefix} ⚠️ 배치 ${b+1} 재시도 (${attempts}) — ${e.message.slice(0,60)}`]);
+                                if (!is429) await new Promise(r => setTimeout(r, 15000));
+                            } else {
+                                throw new Error(`배치 ${b+1} 실패: ${e.message.slice(0,80)}`);
+                            }
+                        }
+                    }
+                    if (b < batches.length - 1) {
+                        const delay = ttsModel === 'pro' ? 35000 : 30000;
+                        setBulkTtsLog(p => [...p, `${prefix} ⏱ 다음 배치까지 ${delay/1000}초 대기...`]);
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+                }
+
+                // WAV 생성 → 로컬 다운로드
+                setBulkTtsLog(p => [...p, `${prefix} 📦 WAV 생성 중...`]);
+                const wavBuffer = createWavFromPcm(pcmBuffers.filter(Boolean));
+                const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const safeName = video.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+                const fileName = `youtube_${videoId}_${safeName}.wav`;
+                const dlUrl = URL.createObjectURL(wavBlob);
+                const a = document.createElement('a');
+                a.href = dlUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(dlUrl);
+
+                successCount++;
+                setBulkTtsLog(p => [...p, `${prefix} ✅ "${video.title}" — ${fileName} 다운로드됨`]);
+            } catch (e) {
+                setBulkTtsLog(p => [...p, `${prefix} ❌ "${video.title}" 실패: ${e.message}`]);
+            }
+        }
+
+        setBulkTtsLog(p => [...p, `🏁 일괄 TTS 완료! ${successCount}/${bulkTtsIds.length}개 성공`]);
+        setBulkTtsRunning(false);
+        setBulkTtsIds([]);
     };
 
     const tabNames = {
@@ -6178,7 +6912,8 @@ ${raw}`;
                                                                         const sRef = ref(storage, `book_covers/${bookKey}_${Date.now()}.${ext}`);
                                                                         await uploadBytes(sRef, file);
                                                                         const url = await getDownloadURL(sRef);
-                                                                        document.getElementById(`cover-${bookKey}`).value = url;
+                                                                        const textInput = e.target.closest('div.flex, div[class*="flex"]')?.querySelector('input[type="text"]');
+                                                                        if (textInput) textInput.value = url;
                                                                         await handleUpdateCoverPath(bookKey, url);
                                                                     } catch (err) { alert('업로드 실패: ' + err.message); }
                                                                 }} />
@@ -6289,7 +7024,7 @@ ${raw}`;
                                                             <input
                                                                 id={`celeb-${bookKey}`}
                                                                 type="text"
-                                                                defaultValue={book.celebName || book.celebrity || ''}
+                                                                defaultValue={book.celebritySlug || book.celebrity || book.celebId || book.celebName || ''}
                                                                 placeholder="직접 입력"
                                                                 className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-slate-300 focus:border-gold outline-none shadow-inner min-w-0"
                                                             />
@@ -7574,6 +8309,101 @@ ${raw}`;
                                 </div>
                             </div>
 
+                            {/* MP3 직접 업로드 패널 */}
+                            <div className="bg-white/3 border border-emerald-500/20 p-8 rounded-[36px] space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-12 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-emerald-400 text-2xl">upload_file</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white font-black text-2xl italic tracking-tighter">MP3 직접 업로드</h3>
+                                        <p className="text-slate-500 text-sm">도서별 MP3를 Firebase Storage에 올리면 사용자 화면에서 즉시 재생 가능합니다.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {(() => {
+                                        // availableAudio 키에서 bookId 추출 + realBooks에 있는 도서도 포함
+                                        const audioIds = Object.keys(availableAudio).map(k => k.replace(/\.mp3$/, ''));
+                                        const realBookIds = new Set(realBooks.map(b => b.id));
+                                        const allIds = Array.from(new Set([...audioIds, ...realBooks.map(b => b.id)])).sort();
+                                        const bookMap = new Map(realBooks.map(b => [b.id, b]));
+                                        return allIds.map(bookId => {
+                                        const book = bookMap.get(bookId);
+                                        const uploading = gsMp3Uploading[bookId];
+                                        const log = gsMp3Logs[bookId];
+                                        const file = gsMp3Files[bookId];
+                                        const existingUrl = gsMp3Urls[bookId] || book?.audioUrl;
+                                        const hasLocalMp3 = audioIds.includes(bookId);
+                                        const hasStorageMp3 = !!existingUrl;
+                                        const hasMp3 = hasLocalMp3 || hasStorageMp3;
+                                        return (
+                                            <div key={bookId} className="flex items-center gap-3 p-3 rounded-2xl bg-white/3 border border-white/5 hover:border-white/10 transition-all">
+                                                {/* 상태 인디케이터 */}
+                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${hasMp3 ? 'bg-emerald-400' : 'bg-white/10'}`} />
+
+                                                {/* 도서명 */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white truncate">{book?.title || bookId}</p>
+                                                    <p className="text-[10px] text-slate-600 font-mono">{bookId}</p>
+                                                </div>
+
+                                                {/* 오디오 재생 — Storage URL 우선, 없으면 로컬 /audio/ 경로 */}
+                                                {hasMp3 && !uploading && !file && (
+                                                    <audio
+                                                        src={existingUrl || `/audio/${bookId}.mp3`}
+                                                        controls
+                                                        className="h-7 w-36 flex-shrink-0"
+                                                        style={{ filter: 'invert(1) hue-rotate(90deg) saturate(0.4)', opacity: 0.7 }}
+                                                    />
+                                                )}
+
+                                                {/* 로그 */}
+                                                {log && (
+                                                    <span className={`text-[10px] font-mono flex-shrink-0 max-w-[140px] truncate ${log.startsWith('✅') ? 'text-emerald-400' : log.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}>{log}</span>
+                                                )}
+
+                                                {/* 파일 선택 */}
+                                                <label className="flex-shrink-0 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        accept="audio/mpeg,audio/mp3,.mp3"
+                                                        className="hidden"
+                                                        disabled={uploading}
+                                                        onChange={e => {
+                                                            const f = e.target.files?.[0];
+                                                            if (f) {
+                                                                setGsMp3Files(prev => ({ ...prev, [bookId]: f }));
+                                                                setGsMp3Logs(prev => ({ ...prev, [bookId]: `📁 ${f.name}` }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <span className={`px-3 py-1.5 rounded-xl text-[11px] font-black border transition-all ${file ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
+                                                        {file ? '✓ 파일선택됨' : (hasMp3 ? '교체' : 'MP3 선택')}
+                                                    </span>
+                                                </label>
+
+                                                {/* 업로드 버튼 */}
+                                                {file && (
+                                                    <button
+                                                        onClick={() => handleGsMp3Upload(bookId)}
+                                                        disabled={uploading}
+                                                        className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${uploading ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20'}`}
+                                                    >
+                                                        {uploading ? (
+                                                            <><span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>업로드 중</>
+                                                        ) : (
+                                                            <><span className="material-symbols-outlined text-sm">cloud_upload</span>업로드</>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                    })()}
+                                </div>
+                            </div>
+
                             {/* TTS 패널 — 사용 안함 (주석처리) */}
                             {false && <div className="bg-white/5 border border-white/10 p-10 rounded-[48px] space-y-8 shadow-3xl backdrop-blur-3xl">
                                 <div className="flex items-center gap-5">
@@ -7905,7 +8735,10 @@ ${raw}`;
                                                 const id = e.target.value;
                                                 setSelectedYoutubeId(id);
                                                 setYtScript([]);
+                                                setGeneratedScript([]);
+                                                setYoutubeLogs([]);
                                                 if (!id) return;
+                                                setYoutubeLogs(['🔍 대본 불러오는 중...']);
                                                 try {
                                                     const snap = await getDoc(doc(db, 'scripts', `yt-${id}`));
                                                     if (snap.exists()) {
@@ -7914,9 +8747,16 @@ ${raw}`;
                                                             setYtScript(lines);
                                                             setGeneratedScript(lines);
                                                             setYoutubeLogs([`✅ 기존 대본 불러옴 (${lines.length}턴)`]);
+                                                        } else {
+                                                            setYoutubeLogs(['⚠️ 대본 문서는 있지만 내용이 비어있음']);
                                                         }
+                                                    } else {
+                                                        setYoutubeLogs(['⚠️ 저장된 대본 없음 — 대본을 먼저 생성하세요']);
                                                     }
-                                                } catch(e) { console.error(e); }
+                                                } catch(e) {
+                                                    setYoutubeLogs([`❌ 오류: ${e.message}`]);
+                                                    console.error(e);
+                                                }
                                             }} className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-base text-white focus:border-red-400/60 outline-none transition-all font-bold appearance-none cursor-pointer">
                                             <option value="">영상을 선택하세요</option>
                                             {youtubeVideos.map(v => (<option key={v.id} value={v.id}>{v.title}</option>))}
@@ -7931,6 +8771,11 @@ ${raw}`;
                                             </div>
                                         ) : null;
                                     })()}
+                                    {youtubeLogs.length > 0 && (
+                                        <div className={`px-4 py-2 rounded-xl text-xs font-mono ${youtubeLogs[0]?.startsWith('✅') ? 'bg-emerald-500/10 text-emerald-400' : youtubeLogs[0]?.startsWith('❌') ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-slate-400'}`}>
+                                            {youtubeLogs[youtubeLogs.length - 1]}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* STEP 2: 대본 생성 버튼 */}
@@ -7942,6 +8787,156 @@ ${raw}`;
                                     {youtubeScriptGenerating ? (<><span className="material-symbols-outlined animate-spin text-3xl">sync</span>Gemini 대본 생성 중...</>) : (<><span className="material-symbols-outlined text-3xl">radio</span>Gemini 스튜디오 대본 생성</>)}
                                 </button>
 
+                                {/* ── 일괄 대본 생성 섹션 ── */}
+                                <div className="bg-white/5 rounded-[32px] border border-white/10 p-8 space-y-5">
+                                    <h4 className="text-white font-black text-lg flex items-center gap-3">
+                                        <span className="size-7 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-xs font-black text-orange-400">★</span>
+                                        일괄 대본 생성
+                                    </h4>
+                                    <p className="text-slate-500 text-xs">모든 영상을 표시합니다. 체크 후 일괄 생성 (기존 대본도 덮어쓰기 가능)</p>
+                                    {/* 통계 */}
+                                    {youtubeVideos.length > 0 && (
+                                        <div className="flex gap-2 text-[10px] font-black">
+                                            <span className="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-400">
+                                                대본있음 {youtubeVideos.filter(v => ytScriptStatuses[v.id] === true).length}
+                                            </span>
+                                            <span className="px-2 py-1 rounded-md bg-red-500/15 text-red-400">
+                                                대본없음 {youtubeVideos.filter(v => ytScriptStatuses[v.id] !== true).length}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                                        {youtubeVideos.map(v => {
+                                            const hasScript = ytScriptStatuses[v.id] === true;
+                                            const hasContent = !!v.content;
+                                            return (
+                                                <label key={v.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={bulkScriptIds.includes(v.id)}
+                                                        onChange={e => setBulkScriptIds(prev => e.target.checked ? [...prev, v.id] : prev.filter(x => x !== v.id))}
+                                                        className="accent-orange-500 shrink-0"
+                                                    />
+                                                    <span className="flex-1 text-white/80 text-xs font-bold truncate">{v.title}</span>
+                                                    {hasScript
+                                                        ? <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400">대본✓</span>
+                                                        : <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-red-500/20 text-red-400">대본없음</span>
+                                                    }
+                                                    {!hasContent && <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-yellow-500/20 text-yellow-400">미분석</span>}
+                                                </label>
+                                            );
+                                        })}
+                                        {youtubeVideos.length === 0 && (
+                                            <p className="text-slate-600 text-xs text-center py-4">등록된 영상이 없습니다.</p>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <button onClick={() => setBulkScriptIds(youtubeVideos.map(v => v.id))}
+                                            className="flex-1 py-2 rounded-xl bg-white/10 text-white/70 text-xs font-black hover:bg-white/15 transition-all">
+                                            전체선택
+                                        </button>
+                                        <button onClick={() => setBulkScriptIds(youtubeVideos.filter(v => ytScriptStatuses[v.id] !== true).map(v => v.id))}
+                                            className="flex-1 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-black hover:bg-red-500/20 transition-all">
+                                            대본없음만
+                                        </button>
+                                        <button onClick={() => setBulkScriptIds([])}
+                                            className="flex-1 py-2 rounded-xl bg-white/10 text-white/70 text-xs font-black hover:bg-white/15 transition-all">
+                                            전체해제
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={handleBulkGenerateYoutubeScripts}
+                                        disabled={bulkScriptRunning || bulkScriptIds.length === 0}
+                                        className={`w-full py-5 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${bulkScriptRunning || bulkScriptIds.length === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-orange-600 to-red-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_30px_rgba(234,88,12,0.3)]'}`}
+                                    >
+                                        {bulkScriptRunning ? (<><span className="material-symbols-outlined animate-spin text-2xl">sync</span>일괄 생성 중...</>) : (<><span className="material-symbols-outlined text-2xl">auto_stories</span>일괄 대본 생성 ({bulkScriptIds.length}개)</>)}
+                                    </button>
+                                    {bulkScriptLog.length > 0 && (
+                                        <div className="bg-black/50 rounded-2xl p-4 max-h-40 overflow-y-auto space-y-1">
+                                            {bulkScriptLog.map((l, i) => (
+                                                <p key={i} className="text-xs font-mono text-slate-400">{l}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── 일괄 TTS 생성 섹션 ── */}
+                                <div className="bg-white/5 rounded-[32px] border border-white/10 p-8 space-y-5">
+                                    <h4 className="text-white font-black text-lg flex items-center gap-3">
+                                        <span className="size-7 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xs font-black text-violet-400">♪</span>
+                                        일괄 TTS 생성
+                                    </h4>
+                                    <p className="text-slate-500 text-xs">대본이 있는 영상을 선택해 TTS WAV 파일을 로컬에 일괄 다운로드합니다. MP3 병합 후 수동 업로드하세요.</p>
+                                    {/* 통계 */}
+                                    {youtubeVideos.length > 0 && (
+                                        <div className="flex gap-2 text-[10px] font-black flex-wrap">
+                                            <span className="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-400">
+                                                오디오있음 {youtubeVideos.filter(v => ytAudioStatuses[v.id]).length}
+                                            </span>
+                                            <span className="px-2 py-1 rounded-md bg-violet-500/15 text-violet-400">
+                                                TTS미완 {youtubeVideos.filter(v => ytScriptStatuses[v.id] && !ytAudioStatuses[v.id]).length}
+                                            </span>
+                                            <span className="px-2 py-1 rounded-md bg-slate-500/15 text-slate-400">
+                                                대본없음 {youtubeVideos.filter(v => !ytScriptStatuses[v.id]).length}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                                        {youtubeVideos.map(v => {
+                                            const hasScript = ytScriptStatuses[v.id] === true;
+                                            const hasAudio = !!ytAudioStatuses[v.id];
+                                            return (
+                                                <label key={v.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all ${hasScript ? 'hover:bg-white/5' : 'opacity-40 cursor-not-allowed'}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        disabled={!hasScript}
+                                                        checked={bulkTtsIds.includes(v.id)}
+                                                        onChange={e => setBulkTtsIds(prev => e.target.checked ? [...prev, v.id] : prev.filter(x => x !== v.id))}
+                                                        className="accent-violet-500 shrink-0"
+                                                    />
+                                                    <span className="flex-1 text-white/80 text-xs font-bold truncate">{v.title}</span>
+                                                    {hasAudio
+                                                        ? <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400">오디오✓</span>
+                                                        : hasScript
+                                                            ? <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-violet-500/20 text-violet-400">TTS필요</span>
+                                                            : <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-500/20 text-slate-500">대본없음</span>
+                                                    }
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <button onClick={() => setBulkTtsIds(youtubeVideos.filter(v => ytScriptStatuses[v.id] && !ytAudioStatuses[v.id]).map(v => v.id))}
+                                            className="flex-1 py-2 rounded-xl bg-violet-500/10 text-violet-400 text-xs font-black hover:bg-violet-500/20 transition-all">
+                                            TTS미완만 선택
+                                        </button>
+                                        <button onClick={() => setBulkTtsIds(youtubeVideos.filter(v => ytScriptStatuses[v.id]).map(v => v.id))}
+                                            className="flex-1 py-2 rounded-xl bg-white/10 text-white/70 text-xs font-black hover:bg-white/15 transition-all">
+                                            전체선택
+                                        </button>
+                                        <button onClick={() => setBulkTtsIds([])}
+                                            className="flex-1 py-2 rounded-xl bg-white/10 text-white/70 text-xs font-black hover:bg-white/15 transition-all">
+                                            해제
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={handleBulkYoutubeTts}
+                                        disabled={bulkTtsRunning || bulkTtsIds.length === 0}
+                                        className={`w-full py-5 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${bulkTtsRunning || bulkTtsIds.length === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_30px_rgba(139,92,246,0.3)]'}`}
+                                    >
+                                        {bulkTtsRunning
+                                            ? <><span className="material-symbols-outlined animate-spin text-2xl">sync</span>TTS 생성 중...</>
+                                            : <><span className="material-symbols-outlined text-2xl">graphic_eq</span>일괄 TTS 생성 + 로컬 다운로드 ({bulkTtsIds.length}개)</>}
+                                    </button>
+                                    {bulkTtsLog.length > 0 && (
+                                        <div className="bg-black/50 rounded-2xl p-4 max-h-52 overflow-y-auto space-y-1">
+                                            {bulkTtsLog.map((l, i) => (
+                                                <p key={i} className={`text-xs font-mono ${l.includes('❌') ? 'text-red-400' : l.includes('🎉') || l.includes('✅') ? 'text-emerald-400' : l.includes('⏳') ? 'text-slate-500' : 'text-slate-300'}`}>{l}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* ── 카카오톡 스타일 대본 뷰어 + AssemblyAI 타임스탬프 ── */}
                                 {ytScript.length > 0 && (() => {
                                     const fmtTime = (sec) => {
@@ -7950,6 +8945,13 @@ ${raw}`;
                                         const s = Math.floor(sec % 60);
                                         const ms = Math.round((sec % 1) * 10);
                                         return `${m}:${String(s).padStart(2,'0')}.${ms}`;
+                                    };
+                                    // TTS용 감정 지시문은 유지하되, 관리자 미리보기에서는 노출하지 않음
+                                    const getViewerText = (text = '') => {
+                                        const cleaned = String(text)
+                                            .replace(/^\s*(?:\([^()\n]{1,40}\)\s*)+/, '')
+                                            .trim();
+                                        return cleaned || String(text).trim();
                                     };
                                     const handleYtAai = async () => {
                                         if (!ytAaiKey.trim()) return alert('AssemblyAI API 키를 입력하세요.');
@@ -8007,6 +9009,7 @@ ${raw}`;
                                             {ytScript.map((line, i) => {
                                                 const isJames = line.speaker === '제임스';
                                                 const ts = ytTimestamps[i];
+                                                const viewerText = getViewerText(line.text);
                                                 return (
                                                 <div key={i} className={`flex gap-2.5 items-end ${isJames ? '' : 'flex-row-reverse'}`}>
                                                     {/* 아바타 */}
@@ -8022,7 +9025,7 @@ ${raw}`;
                                                         </div>
                                                         {/* 말풍선 */}
                                                         <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed text-slate-200 shadow-lg ${isJames ? 'bg-[#1e2433] border border-blue-500/10 rounded-tl-none' : 'bg-[#231e33] border border-purple-500/10 rounded-tr-none'}`}>
-                                                            {line.text}
+                                                            {viewerText}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -8102,7 +9105,7 @@ ${raw}`;
                                                         <div key={i} className="grid items-center bg-black/30 rounded-lg px-2 py-1.5 gap-1" style={{gridTemplateColumns:'2rem 2rem 1fr 5.5rem'}}>
                                                             <span className="text-[9px] text-slate-600 font-mono tabular-nums">{i+1}</span>
                                                             <span className={`text-[9px] font-black px-1 py-0.5 rounded text-center ${line.speaker === '제임스' ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'}`}>{line.speaker === '제임스' ? 'J' : 'S'}</span>
-                                                            <span className="text-[10px] text-slate-400 truncate">{line.text?.slice(0,35)}{line.text?.length > 35 ? '...' : ''}</span>
+                                                            <span className="text-[10px] text-slate-400 truncate">{getViewerText(line.text)?.slice(0,35)}{getViewerText(line.text)?.length > 35 ? '...' : ''}</span>
                                                             <span className="text-[9px] text-violet-400 font-mono">{fmtTime(ytTimestamps[i]?.start)}</span>
                                                         </div>
                                                     ))}
@@ -8211,10 +9214,15 @@ ${raw}`;
                                 </div>
 
                                 <div className="bg-white/5 rounded-[40px] border border-white/10 p-8 space-y-6">
-                                    <h4 className="text-white font-black text-xl flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-red-400">add_link</span>
-                                        새 영상 등록
-                                    </h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-red-400">add_link</span>
+                                            새 영상 등록
+                                        </h4>
+                                        <button onClick={handleBulkImportYoutube} className="px-3 py-1.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-black hover:bg-yellow-500/20 transition-all">
+                                            📦 TED 일괄 등록
+                                        </button>
+                                    </div>
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 block mb-2">YouTube URL *</label>
@@ -8272,6 +9280,32 @@ ${raw}`;
                                         </h4>
                                         <span className="text-red-400 font-black text-2xl">{youtubeVideos.length}</span>
                                     </div>
+
+                                    {/* 일괄 분석 패널 */}
+                                    <div className="bg-black/40 rounded-2xl border border-blue-500/20 p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-blue-400 text-xs font-black">📊 일괄 분석 — 미분석 영상 선택 후 실행</p>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setBulkSelectedIds(youtubeVideos.filter(v => !v.content).map(v => v.id))}
+                                                    className="px-2 py-1 rounded-lg bg-slate-700 text-slate-300 text-[10px] font-black hover:bg-slate-600 transition-all">
+                                                    미분석 전체선택
+                                                </button>
+                                                <button onClick={() => setBulkSelectedIds([])}
+                                                    className="px-2 py-1 rounded-lg bg-slate-700 text-slate-300 text-[10px] font-black hover:bg-slate-600 transition-all">
+                                                    선택해제
+                                                </button>
+                                                <button onClick={handleBulkAnalyze} disabled={bulkAnalyzing || !bulkSelectedIds.length}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${bulkAnalyzing || !bulkSelectedIds.length ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-blue-500/20 border border-blue-500/40 text-blue-300 hover:bg-blue-500/30'}`}>
+                                                    {bulkAnalyzing ? '분석 중...' : `▶ ${bulkSelectedIds.length}개 분석 시작`}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {bulkLog.length > 0 && (
+                                            <div className="bg-black/60 rounded-xl p-3 max-h-28 overflow-y-auto space-y-0.5">
+                                                {bulkLog.map((l, i) => <p key={i} className={`text-[10px] font-mono ${l.startsWith('✅') ? 'text-emerald-400' : l.startsWith('❌') ? 'text-red-400' : l.startsWith('🎉') ? 'text-yellow-400' : 'text-slate-400'}`}>{l}</p>)}
+                                            </div>
+                                        )}
+                                    </div>
                                     {youtubeVideos.length === 0 ? (
                                         <div className="text-center py-16 space-y-4">
                                             <span className="material-symbols-outlined text-6xl text-slate-800 animate-pulse">smart_display</span>
@@ -8286,17 +9320,24 @@ ${raw}`;
                                                 const catColors = { '자기계발': 'blue', '경제': 'emerald', '경영': 'amber', '인문': 'purple', '심리': 'pink' };
                                                 const col = catColors[v.category] || 'slate';
                                                 return (
-                                                <div key={v.id} className="group bg-black/40 rounded-2xl border border-white/5 overflow-hidden hover:border-red-500/20 transition-all flex flex-col">
+                                                <div key={v.id} className={`group bg-black/40 rounded-2xl border overflow-hidden transition-all flex flex-col cursor-pointer ${bulkSelectedIds.includes(v.id) ? 'border-blue-500/60 bg-blue-500/5' : 'border-white/5 hover:border-red-500/20'}`}
+                                                    onClick={() => setBulkSelectedIds(prev => prev.includes(v.id) ? prev.filter(id => id !== v.id) : [...prev, v.id])}>
                                                     {/* 썸네일 */}
                                                     <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                                                         {thumbUrl
-                                                            ? <img src={thumbUrl} alt={v.title} className="absolute inset-0 w-full h-full object-cover" />
+                                                            ? <img src={thumbUrl} alt={v.title} className="absolute inset-0 w-full h-full object-cover"
+                                                                onError={e => {
+                                                                    if (e.target.src.includes('mqdefault')) e.target.src = e.target.src.replace('mqdefault', 'hqdefault');
+                                                                    else if (e.target.src.includes('hqdefault')) e.target.src = e.target.src.replace('hqdefault', '0');
+                                                                    else e.target.style.display = 'none';
+                                                                }} />
                                                             : <div className="absolute inset-0 bg-slate-900 flex items-center justify-center"><span className="material-symbols-outlined text-slate-700 text-3xl">smart_display</span></div>
                                                         }
                                                         {/* 공개/비공개 배지 */}
                                                         <div className="absolute top-1.5 left-1.5">
                                                             <button
-                                                                onClick={async () => {
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
                                                                     const { updateDoc, doc: ud } = await import('firebase/firestore');
                                                                     await updateDoc(ud(db, 'youtube_videos', v.id), { hidden: !v.hidden });
                                                                 }}
@@ -8305,20 +9346,26 @@ ${raw}`;
                                                                 {v.hidden ? '비공개' : '공개'}
                                                             </button>
                                                         </div>
+                                                        {/* 체크 / 미분석 뱃지 */}
+                                                        {bulkSelectedIds.includes(v.id) && <div className="absolute bottom-1.5 left-1.5 size-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="material-symbols-outlined text-white text-xs">check</span></div>}
+                                                        {!v.content && <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-orange-500/80 text-white text-[8px] font-black">미분석</div>}
                                                         {/* 삭제 */}
-                                                        <button onClick={() => handleDeleteYoutubeVideo(v.id)} className="absolute top-1.5 right-1.5 size-6 rounded-lg bg-black/70 text-slate-400 hover:text-red-400 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                        <button onClick={e => { e.stopPropagation(); handleDeleteYoutubeVideo(v.id); }} className="absolute top-1.5 right-1.5 size-6 rounded-lg bg-black/70 text-slate-400 hover:text-red-400 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                                                             <span className="material-symbols-outlined text-sm">delete</span>
                                                         </button>
                                                     </div>
                                                     <div className="p-2.5 flex flex-col gap-2 flex-1">
                                                         <p className="text-white font-black text-[11px] leading-tight line-clamp-2">{v.title}</p>
+                                                        {v.titleKo && <p className="text-slate-400 text-[9px] leading-tight line-clamp-1">{v.titleKo}</p>}
                                                         {v.channel && <p className="text-red-400/70 text-[9px] font-bold">{v.channel}</p>}
                                                         {/* 카테고리 선택 */}
                                                         <select
-                                                            value={v.category || ''}
+                                                            defaultValue={v.category || ''}
+                                                            key={v.id + (v.category || '')}
                                                             onChange={async (e) => {
+                                                                const newCat = e.target.value;
                                                                 const { updateDoc, doc: ud } = await import('firebase/firestore');
-                                                                await updateDoc(ud(db, 'youtube_videos', v.id), { category: e.target.value });
+                                                                await updateDoc(ud(db, 'youtube_videos', v.id), { category: newCat });
                                                             }}
                                                             className="w-full bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none"
                                                         >
@@ -8427,46 +9474,78 @@ ${raw}`;
                     {/* 인기 아카이뷰 관리 */}
                     {activeTab === 'popular' && (() => {
                         const SECTIONS = [
-                            { id: 'popular',       label: '인기아카이뷰',  dbKey: 'popular_archives',      max: 5 },
-                            { id: 'weekly_focus',  label: '위클리포커스',  dbKey: 'weekly_focus',          max: 5 },
-                            { id: 'weekly_viewed', label: '주간 최다조회', dbKey: 'weekly_most_viewed',     max: 8 },
-                            { id: 'growth',        label: '자기계발',      dbKey: 'category_growth',       max: 8 },
-                            { id: 'economy',       label: '경제',          dbKey: 'category_economy',      max: 8 },
-                            { id: 'business',      label: '경영',          dbKey: 'category_business',     max: 8 },
-                            { id: 'humanities',    label: '인문',          dbKey: 'category_humanities',   max: 8 },
-                            { id: 'psychology',    label: '심리',          dbKey: 'category_psychology',   max: 8 },
+                            { id: 'burnout', label: '번아웃', dbKey: 'popular_burnout', max: 20 },
+                            { id: 'wealth', label: '연봉협상', dbKey: 'popular_wealth', max: 20 },
+                            { id: 'healing', label: '우울/고독/치유', dbKey: 'popular_healing', max: 20 },
+                            { id: 'philosophy', label: '자아성찰', dbKey: 'popular_philosophy', max: 20 },
+                            { id: 'weekly_focus', label: '위클리 포커스', dbKey: 'weekly_focus', max: 5 },
+                            { id: 'weekly_viewed', label: '최다 조회', dbKey: 'weekly_most_viewed', max: 5 },
+                            { id: 'original', label: '아카이뷰 오리지널', dbKey: 'original_archives', max: 20 },
+                            { id: 'growth', label: '카테고리-자기계발', dbKey: 'category_growth', max: null },
+                            { id: 'economy', label: '카테고리-경제', dbKey: 'category_economy', max: null },
+                            { id: 'business', label: '카테고리-경영', dbKey: 'category_business', max: null },
+                            { id: 'humanities', label: '카테고리-인문', dbKey: 'category_humanities', max: null },
+                            { id: 'psychology', label: '카테고리-심리', dbKey: 'category_psychology', max: null },
                         ];
-                        const curSection = SECTIONS.find(s => s.id === popularSubTab);
-                        const curList    = popularSubTab === 'popular' ? popularList : (sectionData[popularSubTab] || []);
-                        const setCurList = popularSubTab === 'popular'
-                            ? setPopularList
-                            : (fn) => setSectionData(prev => ({ ...prev, [popularSubTab]: typeof fn === 'function' ? fn(prev[popularSubTab] || []) : fn }));
-                        const curSearch    = popularSubTab === 'popular' ? popularSearch : (sectionSearch[popularSubTab] || '');
-                        const setCurSearch = popularSubTab === 'popular'
-                            ? setPopularSearch
-                            : (val) => setSectionSearch(prev => ({ ...prev, [popularSubTab]: val }));
-                        const curSaving = popularSubTab === 'popular' ? popularSaving : (sectionSaving[popularSubTab] || false);
+                        const curSection = SECTIONS.find(s => s.id === popularSubTab) || SECTIONS[0];
+                        const realBookMap = new Map(realBooks.map(b => [b.id, b]));
+                        const isBookPublic = (bookId) => (realBookMap.get(bookId)?.isPublic !== false);
+                        const curList = sectionData[popularSubTab] || [];
+                        const setCurList = (fn) => setSectionData(prev => ({ ...prev, [popularSubTab]: typeof fn === 'function' ? fn(prev[popularSubTab] || []) : fn }));
+                        const curSearch = sectionSearch[popularSubTab] || '';
+                        const setCurSearch = (val) => setSectionSearch(prev => ({ ...prev, [popularSubTab]: val }));
+                        const curSaving = sectionSaving[popularSubTab] || false;
+                        const isWeeklyFocusTab = popularSubTab === 'weekly_focus';
                         const filteredBooks = curSearch.trim()
                             ? realBooks.filter(b => b.title?.includes(curSearch) || b.author?.includes(curSearch))
                             : [];
+                        const normalizePopularItem = (item) => {
+                            const book = realBookMap.get(item.id);
+                            return {
+                                ...item,
+                                isPublic: book ? (book.isPublic !== false) : (item.isPublic !== false)
+                            };
+                        };
                         const saveSection = async () => {
-                            if (curList.length === 0) { alert('등록된 도서가 없습니다.'); return; }
-                            if (popularSubTab === 'popular') {
-                                setPopularSaving(true);
-                                try { await setDoc(doc(db, 'site_config', 'popular_archives'), { books: curList.slice(0, curSection.max) }); alert('저장 완료! ✅'); }
-                                catch (e) { alert('저장 실패: ' + e.message); }
-                                setPopularSaving(false);
-                            } else {
-                                setSectionSaving(prev => ({ ...prev, [popularSubTab]: true }));
-                                try { await setDoc(doc(db, 'site_config', curSection.dbKey), { books: curList.slice(0, curSection.max) }); alert('저장 완료! ✅'); }
-                                catch (e) { alert('저장 실패: ' + e.message); }
-                                setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));
+                            if (!curSection) return;
+                            setSectionSaving(prev => ({ ...prev, [popularSubTab]: true }));
+                            try {
+                                const booksToSaveRaw = typeof curSection.max === 'number' ? curList.slice(0, curSection.max) : curList;
+                                const booksToSave = booksToSaveRaw
+                                    .map(normalizePopularItem)
+                                    .filter(item => item.isPublic !== false);
+                                const payload = { books: booksToSave };
+                                if (popularSubTab === 'weekly_focus') {
+                                    payload.videos = weeklyFocusVideos.slice(0, 2).map(v => ({
+                                        id: v.id,
+                                        title: v.title,
+                                        channel: v.channel || '',
+                                        desc: v.titleKo || '',
+                                        likes: v.likes || 0,
+                                        thumbnail: `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`,
+                                        youtubeUrl: v.url || v.youtubeUrl || `https://www.youtube.com/watch?v=${v.id}`
+                                    }));
+                                }
+                                await setDoc(doc(db, 'site_config', curSection.dbKey), payload);
+                                if (booksToSave.length !== booksToSaveRaw.length) {
+                                    alert('비공개 도서는 자동 제외되어 저장되었습니다.');
+                                }
+                                alert('저장 완료! ✅');
                             }
+                            catch (e) { alert('저장 실패: ' + e.message); }
+                            setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));
                         };
                         const addToList     = (book) => {
-                            if (curList.length >= curSection.max) { alert(`최대 ${curSection.max}개까지 등록 가능합니다.`); return; }
+                            if (book?.isPublic === false) {
+                                alert('비공개 도서는 인기아카이뷰에 추가할 수 없습니다.');
+                                return;
+                            }
+                            if (typeof curSection.max === 'number' && curList.length >= curSection.max) {
+                                alert(`최대 ${curSection.max}개까지 등록 가능합니다.`);
+                                return;
+                            }
                             if (curList.some(b => b.id === book.id)) { alert('이미 등록된 도서입니다.'); return; }
-                            setCurList(prev => [...prev, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '' }]);
+                            setCurList(prev => [...prev, { id: book.id, title: book.title, cover: book.cover || '', author: book.author || '', purchaseLink: book.purchaseLink || '', listens: book.listens || '', isPublic: book.isPublic !== false }]);
                             setCurSearch('');
                         };
                         const removeFromList = (id) => setCurList(prev => prev.filter(b => b.id !== id));
@@ -8482,16 +9561,20 @@ ${raw}`;
 
                             // 섹션별 검색 쿼리
                             const queryMap = {
-                                popular:      `예스24 종합 베스트셀러 현재 TOP ${curSection.max} 도서 제목 목록`,
+                                burnout:      `번아웃 극복/커리어 회복 분야 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                wealth:       `연봉협상/경제적 자유 분야 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                healing:      `우울 고독 치유 심리 분야 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                philosophy:   `자아성찰 인생철학 분야 베스트셀러 TOP ${curSection.max} 도서 제목`,
                                 weekly_focus: `예스24 이번주 베스트셀러 주목 신간 TOP ${curSection.max} 도서 제목`,
                                 weekly_viewed:`교보문고 이번주 베스트셀러 TOP ${curSection.max} 도서 제목`,
+                                original:     `오리지널 인사이트/프레임워크형 도서 제목 TOP ${curSection.max}`,
                                 growth:       `예스24 자기계발 베스트셀러 TOP ${curSection.max} 도서 제목`,
                                 economy:      `예스24 경제 투자 재테크 베스트셀러 TOP ${curSection.max} 도서 제목`,
                                 business:     `교보문고 경영 비즈니스 베스트셀러 TOP ${curSection.max} 도서 제목`,
                                 humanities:   `예스24 인문 역사 철학 베스트셀러 TOP ${curSection.max} 도서 제목`,
                                 psychology:   `예스24 심리 자기계발 힐링 베스트셀러 TOP ${curSection.max} 도서 제목`,
                             };
-                            const query = queryMap[popularSubTab] || queryMap.popular;
+                            const query = queryMap[popularSubTab] || queryMap.weekly_viewed;
 
                             const prompt = `${query} 결과를 아래 형식으로만 답해줘. 다른 설명 없이 번호 목록만:
 1. 도서제목
@@ -8546,6 +9629,11 @@ ${raw}`;
 
                                 // 부족하면 section 기반 fallback으로 채움
                                 const sectionFallback = {
+                                    burnout:    ['BURNOUT'],
+                                    wealth:     ['WEALTH'],
+                                    healing:    ['HEALING'],
+                                    philosophy: ['PHILOSOPHY'],
+                                    original:   ['ARCHIVIEW_ORIGINAL'],
                                     growth:     ['MINDSET','HABIT','SUCCESS','GENERAL'],
                                     economy:    ['ECONOMY','WEALTH'],
                                     business:   ['BUSINESS','SUCCESS','WEALTH'],
@@ -8646,11 +9734,6 @@ ${raw}`;
                                         <p className="text-slate-500 text-xl font-medium italic">메인 화면 각 섹션의 도서 순위를 관리합니다.</p>
                                     </div>
                                     <div className="flex gap-3 items-center">
-                                        <button onClick={handleAiRecommend} disabled={aiRecommending}
-                                            className="px-6 py-4 rounded-2xl bg-purple-500/20 text-purple-300 font-black text-sm flex items-center gap-2 border border-purple-500/30 hover:bg-purple-500/40 transition-all disabled:opacity-50">
-                                            <span className="material-symbols-outlined text-lg">{aiRecommending ? 'sync' : 'auto_awesome'}</span>
-                                            {aiRecommending ? '분석 중...' : 'AI 추천'}
-                                        </button>
                                         <button onClick={saveSection} disabled={curSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
                                             <span className="material-symbols-outlined text-2xl">{curSaving ? 'sync' : 'save'}</span>
                                             {curSaving ? '저장 중...' : '메인에 저장'}
@@ -8664,7 +9747,9 @@ ${raw}`;
                                         <button key={s.id} onClick={() => setPopularSubTab(s.id)}
                                             className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all whitespace-nowrap ${popularSubTab === s.id ? 'bg-gold text-primary shadow-lg' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white'}`}>
                                             {s.label.toUpperCase()}
-                                            <span className="ml-2 opacity-50 text-[10px]">{(popularSubTab === s.id ? curList : (s.id === 'popular' ? popularList : (sectionData[s.id] || []))).length}/{s.max}</span>
+                                            <span className="ml-2 opacity-50 text-[10px]">
+                                                {(sectionData[s.id] || []).length}/{typeof s.max === 'number' ? s.max : 'ALL'}
+                                            </span>
                                         </button>
                                     ))}
                                 </div>
@@ -8673,7 +9758,7 @@ ${raw}`;
                                 <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
                                     <h4 className="text-white font-black text-xl flex items-center gap-3">
                                         <span className="material-symbols-outlined text-gold">format_list_numbered</span>
-                                        {curSection.label} 등록 목록 ({curList.length}/{curSection.max})
+                                        {curSection.label} 등록 목록 ({curList.length}/{typeof curSection.max === 'number' ? curSection.max : 'ALL'})
                                     </h4>
                                     {curList.length === 0 && (
                                         <p className="text-slate-500 text-sm text-center py-8">아직 등록된 도서가 없습니다. 아래에서 도서를 검색해 추가하세요.</p>
@@ -8689,6 +9774,11 @@ ${raw}`;
                                                     <p className="text-white font-black text-sm truncate">{book.title}</p>
                                                     <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
                                                     <span className="text-slate-700 text-[10px] font-mono">{book.id}</span>
+                                                    {!isBookPublic(book.id) && (
+                                                        <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-black">
+                                                            비공개(사용자 미노출)
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button onClick={() => moveUp(i)} disabled={i === 0} className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-20">
@@ -8707,7 +9797,7 @@ ${raw}`;
                                 </div>
 
                                 {/* 4주 스케줄 예약 — 위클리포커스 전용 */}
-                                {popularSubTab === 'weekly_focus' && (
+                                {isWeeklyFocusTab && (
                                     <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-5">
                                         <div className="flex items-center justify-between flex-wrap gap-3">
                                             <h4 className="text-white font-black text-xl flex items-center gap-3">
@@ -8783,6 +9873,84 @@ ${raw}`;
                                     </div>
                                 )}
 
+                                {/* 위클리포커스 — 유튜브 영상 2개 추가 */}
+                                {isWeeklyFocusTab && (
+                                    <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-5">
+                                        <h4 className="text-white font-black text-xl flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-red-400">play_circle</span>
+                                            유튜브 영상 추가 (최대 2개)
+                                            <span className="text-slate-500 text-sm font-normal">· 메인 상단 도서 2개 아래 노출</span>
+                                        </h4>
+                                        {/* 등록된 영상 목록 */}
+                                        <div className="space-y-3">
+                                            {weeklyFocusVideos.map((v, i) => (
+                                                <div key={v.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5">
+                                                    <span className="text-2xl font-black text-red-400/50 w-8 text-center">{i + 1}</span>
+                                                    <div className="w-[72px] h-[40px] rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
+                                                        {v.thumbnail
+                                                            ? <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover" />
+                                                            : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-sm">play_circle</span></div>}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white font-black text-sm truncate">{v.title}</p>
+                                                        <p className="text-slate-500 text-[11px] font-bold mt-0.5">{v.channel}</p>
+                                                    </div>
+                                                    <button onClick={() => setWeeklyFocusVideos(prev => prev.filter(x => x.id !== v.id))}
+                                                        className="size-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition-all">
+                                                        <span className="material-symbols-outlined text-sm text-red-400">delete</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {weeklyFocusVideos.length === 0 && (
+                                                <p className="text-slate-500 text-sm text-center py-4">아래에서 유튜브 영상을 검색해 추가하세요.</p>
+                                            )}
+                                        </div>
+                                        {/* 유튜브 영상 검색 */}
+                                        {weeklyFocusVideos.length < 2 && (
+                                            <div className="space-y-3">
+                                                <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-red-400 transition-colors flex items-center px-4">
+                                                    <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
+                                                    <input type="text" placeholder="유튜브 영상 제목 검색..."
+                                                        value={wfVideoSearch} onChange={e => setWfVideoSearch(e.target.value)}
+                                                        className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
+                                                </div>
+                                                {wfVideoSearch.trim() && (() => {
+                                                    const results = youtubeVideos.filter(v =>
+                                                        v.title?.includes(wfVideoSearch) || v.channel?.includes(wfVideoSearch)
+                                                    ).slice(0, 10);
+                                                    return results.length === 0
+                                                        ? <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>
+                                                        : <div className="space-y-2 max-h-72 overflow-y-auto">
+                                                            {results.map(v => (
+                                                                <div key={v.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
+                                                                    <div className="w-[72px] h-[40px] rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
+                                                                        {v.thumbnail
+                                                                            ? <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover" />
+                                                                            : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20 text-sm">play_circle</span></div>}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-white font-black text-sm truncate">{v.title}</p>
+                                                                        <p className="text-slate-500 text-[11px] font-bold">{v.channel}</p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (weeklyFocusVideos.some(x => x.id === v.id)) { alert('이미 추가된 영상입니다.'); return; }
+                                                                            setWeeklyFocusVideos(prev => [...prev, v]);
+                                                                            setWfVideoSearch('');
+                                                                        }}
+                                                                        disabled={weeklyFocusVideos.some(x => x.id === v.id)}
+                                                                        className="px-5 py-2.5 rounded-xl bg-red-500/20 text-red-400 text-[11px] font-black border border-red-500/30 hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
+                                                                        {weeklyFocusVideos.some(x => x.id === v.id) ? '추가됨' : '+ 추가'}
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>;
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* 도서 검색 & 추가 */}
                                 <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-6">
                                     <h4 className="text-white font-black text-xl flex items-center gap-3">
@@ -8806,9 +9974,14 @@ ${raw}`;
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-white font-black text-sm truncate">{book.title}</p>
                                                         <p className="text-slate-500 text-[11px] font-bold mt-0.5">{book.author}</p>
+                                                        {book.isPublic === false && (
+                                                            <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-black">
+                                                                비공개
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <button onClick={() => addToList(book)}
-                                                        disabled={curList.some(b => b.id === book.id) || curList.length >= curSection.max}
+                                                        disabled={curList.some(b => b.id === book.id) || (typeof curSection.max === 'number' && curList.length >= curSection.max)}
                                                         className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
                                                         {curList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
                                                     </button>
@@ -8953,6 +10126,87 @@ ${raw}`;
                                         <><span className="material-symbols-outlined text-xl">hearing</span>WAV + 대본 비교 분석</>
                                     )}
                                 </button>
+                            </div>
+
+                            {/* 선택 도서 대본 + MP3 등록 (기존 기능 유지, 추가 기능) */}
+                            <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-5">
+                                <div className="flex items-center justify-between flex-wrap gap-3">
+                                    <div>
+                                        <h4 className="text-white font-black text-lg">📚 선택 도서 대본 미리보기</h4>
+                                        <p className="text-slate-500 text-xs mt-0.5">상단 도서 선택 시 Firestore `scripts/{'{bookId}'}` 대본이 로드됩니다.</p>
+                                    </div>
+                                    {verifyBookId && (
+                                        <span className="px-3 py-1 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 text-xs font-black">
+                                            {verifyBookId}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {!verifyBookId && (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                        ⬆️ 먼저 도서를 선택하면 해당 도서 대본이 표시됩니다.
+                                    </div>
+                                )}
+
+                                {verifyBookId && tsScript.length === 0 && (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-400 text-xs font-black">
+                                        ⚠️ 선택한 도서의 대본이 없습니다. (scripts/{verifyBookId})
+                                    </div>
+                                )}
+
+                                {verifyBookId && tsScript.length > 0 && (
+                                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                        {tsScript.map((turn, idx) => (
+                                            <div key={idx} className="grid grid-cols-[2.5rem_2.5rem_1fr] gap-2 bg-black/30 rounded-xl px-3 py-2">
+                                                <span className="text-slate-600 text-xs font-black">{idx + 1}</span>
+                                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md text-center ${turn.role === 'A' ? 'bg-blue-500/20 text-blue-300' : 'bg-yellow-500/20 text-yellow-300'}`}>
+                                                    {turn.role || '-'}
+                                                </span>
+                                                <span className="text-slate-300 text-xs leading-relaxed">{turn.text || ''}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="border-t border-white/10 pt-5 space-y-3">
+                                    <h5 className="text-white/90 font-black text-sm">🎵 선택 도서 MP3 등록</h5>
+                                    <p className="text-slate-500 text-xs">
+                                        업로드 시 Storage `audio/{'{bookId}'}.mp3` 저장 후 Firestore(`book_overrides`, `scripts`, `timestamps`)에 `audioUrl`이 반영됩니다.
+                                    </p>
+                                    <div className="flex flex-col md:flex-row gap-3">
+                                        <input
+                                            type="file"
+                                            accept=".mp3,audio/mpeg"
+                                            onChange={e => setVerifyMp3File(e.target.files?.[0] || null)}
+                                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-violet-600/30 file:text-violet-300 file:font-black"
+                                        />
+                                        <button
+                                            onClick={handleVerifyMp3Upload}
+                                            disabled={verifyMp3Uploading || !verifyBookId || !verifyMp3File}
+                                            className={`px-5 py-3 rounded-xl text-sm font-black transition-all ${
+                                                verifyMp3Uploading || !verifyBookId || !verifyMp3File
+                                                    ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
+                                                    : 'bg-orange-500 hover:bg-orange-400 text-white shadow-lg shadow-orange-500/20'
+                                            }`}
+                                        >
+                                            {verifyMp3Uploading ? '업로드 중...' : 'MP3 Firebase 등록'}
+                                        </button>
+                                    </div>
+                                    {verifyMp3File && (
+                                        <p className="text-[11px] text-slate-400">선택 파일: {verifyMp3File.name}</p>
+                                    )}
+                                    {verifyMp3UploadLog && (
+                                        <div className={`text-xs font-black px-3 py-2 rounded-lg border ${
+                                            verifyMp3UploadLog.includes('✅')
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                                : verifyMp3UploadLog.includes('❌')
+                                                    ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                                                    : 'bg-violet-500/10 border-violet-500/30 text-violet-300'
+                                        }`}>
+                                            {verifyMp3UploadLog}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* 진행 로그 */}
@@ -10747,6 +12001,8 @@ ${raw}`;
                             const hero = designSettings[fieldKey] || { type: 'video', src: '' };
                             const isVideo = hero.type !== 'image';
                             const storageKey = `hero/${fieldKey}`;
+                            const posterKey = `${fieldKey}_poster`;
+                            const posterVal = designSettings[posterKey] || '';
                             return (
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
                                     <div className="flex items-center justify-between">
@@ -10755,7 +12011,7 @@ ${raw}`;
                                             {title} 히어로
                                         </h3>
                                         <button
-                                            onClick={() => saveSection({ [fieldKey]: designSettings[fieldKey] }, title + ' 히어로')}
+                                            onClick={() => saveSection({ [fieldKey]: designSettings[fieldKey], [posterKey]: posterVal }, title + ' 히어로')}
                                             disabled={designSaving}
                                             className="px-4 py-2 bg-orange-500 text-white font-black text-xs rounded-xl hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1"
                                         >
@@ -10767,7 +12023,7 @@ ${raw}`;
                                     {/* 타입 토글 */}
                                     <div className="flex gap-2">
                                         {['video', 'image'].map(t => (
-                                            <button key={t} onClick={() => setDesignSettings(prev => { const cur = prev[fieldKey]; if (cur?.type === t) return prev; return { ...prev, [fieldKey]: { type: t, src: '' } }; })}
+                                            <button key={t} onClick={() => setDesignSettings(prev => { const cur = prev[fieldKey]; if (cur?.type === t) return prev; return { ...prev, [fieldKey]: { type: t, src: cur?.src || '' } }; })}
                                                 className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${hero.type === t ? 'bg-orange-500 text-white' : 'bg-white/10 text-slate-400 hover:bg-white/20'}`}>
                                                 {t === 'video' ? '🎬 동영상' : '🖼️ 이미지'}
                                             </button>
@@ -10779,7 +12035,7 @@ ${raw}`;
                                         {hero.src
                                             ? (isVideo
                                                 ? <video src={hero.src} autoPlay muted loop playsInline className="w-full h-full object-cover" />
-                                                : <img src={hero.src} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />)
+                                                : <img src={hero.src} alt="preview" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />)
                                             : null}
                                         {!hero.src && <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-600"><span className="material-symbols-outlined text-4xl">image</span><p className="text-xs font-bold">URL 입력 또는 파일 업로드</p></div>}
                                     </div>
@@ -10798,6 +12054,27 @@ ${raw}`;
                                     </div>
                                     {mediaHint && <p className="text-slate-600 text-[10px]">{mediaHint}</p>}
                                     {designUploading[storageKey] && <p className="text-orange-400 text-xs animate-pulse">업로드 중...</p>}
+
+                                    {/* 포스터 이미지 */}
+                                    <div className="border-t border-white/10 pt-4 space-y-2">
+                                        <p className="text-slate-400 text-xs font-black flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-sm text-orange-400">image</span>
+                                            포스터 이미지 <span className="text-slate-600 font-normal">(영상 로딩 전 먼저 표시 · JPG 권장)</span>
+                                        </p>
+                                        {posterVal && <img src={posterVal} alt="poster" className="w-24 h-24 object-cover rounded-xl border border-white/10" />}
+                                        <div className="flex gap-2 items-center">
+                                            <input type="text" value={posterVal}
+                                                onChange={e => setDesignSettings(prev => ({ ...prev, [posterKey]: e.target.value }))}
+                                                className="flex-1 bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-white text-xs font-mono"
+                                                placeholder="/images/poster.jpg" />
+                                            <label className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1 shrink-0">
+                                                <span className="material-symbols-outlined text-sm">upload</span>업로드
+                                                <input type="file" accept="image/*" className="hidden"
+                                                    onChange={e => uploadMedia(`hero/${posterKey}`, e.target.files[0], url => setDesignSettings(prev => ({ ...prev, [posterKey]: url })))} />
+                                            </label>
+                                        </div>
+                                        {designUploading[`hero/${posterKey}`] && <p className="text-orange-400 text-xs animate-pulse">업로드 중...</p>}
+                                    </div>
                                 </div>
                             );
                         };
@@ -10894,6 +12171,41 @@ ${raw}`;
                             <HeroSection title="메인" icon="home" fieldKey="main_hero"
                                 hint="메인 홈 화면 상단 히어로 영역"
                                 mediaHint="동영상: mp4 권장 (10MB 이하) · 이미지: 1080×1920px (세로형) 또는 1920×1080px (가로형)" />
+
+                            {/* ── 메인 히어로 포스터 이미지 ── */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-white font-black text-base flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-orange-500">image</span>
+                                        메인 히어로 — 포스터 이미지
+                                    </h3>
+                                    <button
+                                        onClick={() => saveSection({ main_hero_poster: designSettings.main_hero_poster }, '포스터 이미지')}
+                                        disabled={designSaving}
+                                        className="px-4 py-2 bg-orange-500 text-white font-black text-xs rounded-xl hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">save</span>저장
+                                    </button>
+                                </div>
+                                <p className="text-slate-500 text-xs">영상 로딩 중 먼저 표시되는 이미지 · 권장: 720×720px (정사각형) JPG</p>
+                                <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-800 border border-white/10 relative max-w-[200px]">
+                                    {designSettings.main_hero_poster
+                                        ? <img src={designSettings.main_hero_poster} alt="poster" className="w-full h-full object-cover" />
+                                        : <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs font-bold">URL 입력 또는 업로드</div>}
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <input type="text" value={designSettings.main_hero_poster || ''}
+                                        onChange={e => setDesignSettings(prev => ({ ...prev, main_hero_poster: e.target.value }))}
+                                        className="flex-1 bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-mono"
+                                        placeholder="/images/main7_poster.jpg" />
+                                    <label className="px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1 shrink-0">
+                                        <span className="material-symbols-outlined text-sm">upload</span>업로드
+                                        <input type="file" accept="image/*" className="hidden"
+                                            onChange={e => uploadMedia('hero/main_hero_poster', e.target.files[0], url => setDesignSettings(prev => ({ ...prev, main_hero_poster: url })))} />
+                                    </label>
+                                </div>
+                                {designUploading['hero/main_hero_poster'] && <p className="text-orange-400 text-xs animate-pulse">업로드 중...</p>}
+                            </div>
 
                             {/* ── 메인 카테고리 이미지 ── */}
                             <ImageGrid title="메인 — 직장인이 가장 많이 듣는 인사이트" icon="grid_view"

@@ -91,7 +91,37 @@ export const AudioProvider = ({ children }) => {
         podcastAudioRef.current = new Audio();
 
         const pa = podcastAudioRef.current;
-        const onTime = () => setCurrentTime(pa.currentTime);
+        // 히스토리에 currentTime 주기적 저장 (5초마다)
+        let lastSavedTime = 0;
+        const getSrcFile = (src) => {
+            if (!src) return '';
+            const clean = src.split('?')[0];
+            const parts = clean.split('/');
+            return parts[parts.length - 1].replace(/\.[^.]+$/, '').toLowerCase();
+        };
+        const saveHistory = (info, ct, dur) => {
+            if (!info?.id) return;
+            try {
+                const hist = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+                const srcFile = getSrcFile(info.src);
+                // id 또는 src 파일명이 같은 항목 모두 제거 (중복 방지)
+                const filtered = hist.filter(h => {
+                    if (h.id === info.id) return false;
+                    if (srcFile && getSrcFile(h.src) === srcFile) return false;
+                    return true;
+                });
+                const entry = { id: info.id, title: info.title, cover: info.cover, src: info.src, currentTime: ct, duration: dur || 0, timestamp: Date.now() };
+                filtered.unshift(entry);
+                localStorage.setItem('archiview_listen_history', JSON.stringify(filtered.slice(0, 20)));
+            } catch {}
+        };
+        const onTime = () => {
+            setCurrentTime(pa.currentTime);
+            if (Math.abs(pa.currentTime - lastSavedTime) >= 5) {
+                lastSavedTime = pa.currentTime;
+                setPodcastInfo(prev => { saveHistory(prev, pa.currentTime, pa.duration); return prev; });
+            }
+        };
         const onMeta = () => setDuration(pa.duration);
         const onEnded = () => { setPodcastPlaying(false); setCurrentTime(0); };
         const onError = () => { setPodcastPlaying(false); };
@@ -178,7 +208,7 @@ export const AudioProvider = ({ children }) => {
 
     const speakReview = (text, id) => playPodcast([], id);
 
-    const playPodcastMP3 = useCallback((src, title, cover, id = null, forcePlay = false) => {
+    const playPodcastMP3 = useCallback((src, title, cover, id = null, forcePlay = false, startTime = 0) => {
         const pa = podcastAudioRef.current;
         if (!pa) return;
 
@@ -218,8 +248,27 @@ export const AudioProvider = ({ children }) => {
 
             pa.pause();
             pa.src = src;
+            // startTime이 있으면 메타데이터 로드 후 seek
+            if (startTime > 0) {
+                const onMeta = () => {
+                    pa.currentTime = startTime;
+                    pa.removeEventListener('loadedmetadata', onMeta);
+                };
+                pa.addEventListener('loadedmetadata', onMeta);
+            }
             setPodcastPlaying(true);
-            setPodcastInfo({ src, title, cover, id });
+            const newInfo = { src, title, cover, id };
+            setPodcastInfo(newInfo);
+            // 히스토리 즉시 기록
+            try {
+                const hist = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+                const srcFile = getSrcFile(src);
+                const prev = hist.find(h => h.id === id || (srcFile && getSrcFile(h.src) === srcFile));
+                const entry = { id, title, cover, src, currentTime: prev?.currentTime || 0, duration: prev?.duration || 0, timestamp: Date.now() };
+                const filtered = hist.filter(h => h.id !== id && !(srcFile && getSrcFile(h.src) === srcFile));
+                filtered.unshift(entry);
+                localStorage.setItem('archiview_listen_history', JSON.stringify(filtered.slice(0, 20)));
+            } catch {}
             pa.play().catch((err) => {
                 console.error("New podcast play failed:", err);
                 setPodcastPlaying(false);

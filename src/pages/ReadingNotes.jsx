@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import LoadingScreen from '../components/LoadingScreen';
+import { useSiteDesign } from '../hooks/useSiteDesign';
 import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { celebrities } from '../data/celebrities';
+import { useBookData } from '../hooks/useBookData';
 import KakaoAdFit from '../components/KakaoAdFit';
 import { db } from '../firebase';
 import {
@@ -18,12 +21,12 @@ import html2canvas from 'html2canvas';
 
 // ─── Constants ───────────────────────────────────────────────────
 const MOODS = [
-    { emoji: '🔥', label: '감명받음', color: 'from-orange-600/30 to-red-600/20 border-orange-500/40 text-orange-300' },
+    { emoji: '🔥', label: '감명받음', color: 'from-orange-600/30 to-red-600/20 border-red-500/40 text-red-300' },
     { emoji: '💡', label: '통찰', color: 'from-yellow-600/30 to-amber-600/20 border-yellow-500/40 text-yellow-300' },
     { emoji: '🤔', label: '고민', color: 'from-blue-600/30 to-indigo-600/20 border-blue-500/40 text-blue-300' },
     { emoji: '😊', label: '행복', color: 'from-pink-600/30 to-rose-600/20 border-pink-500/40 text-pink-300' },
     { emoji: '⚡', label: '충격', color: 'from-violet-600/30 to-purple-600/20 border-violet-500/40 text-violet-300' },
-    { emoji: '📌', label: '중요', color: 'from-orange-700/30 to-amber-700/20 border-orange-600/40 text-orange-400' },
+    { emoji: '📌', label: '중요', color: 'from-orange-700/30 to-amber-700/20 border-red-600/40 text-red-400' },
     { emoji: '📚', label: '배움', color: 'from-slate-600/30 to-slate-600/20 border-slate-500/40 text-slate-300' },
     { emoji: '🌈', label: '영감', color: 'from-indigo-600/30 to-purple-600/20 border-indigo-500/40 text-indigo-300' },
     { emoji: '🌿', label: '치유', color: 'from-amber-600/30 to-orange-500/20 border-amber-500/40 text-amber-300' },
@@ -89,6 +92,8 @@ function timeAgo(date) {
 // ─── Main Component ───────────────────────────────────────────────
 export default function ReadingNotes() {
     const { user, loading } = useAuth();
+    const { design } = useSiteDesign();
+    const { getAllBooks: getBookDataBooks } = useBookData();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -341,23 +346,23 @@ export default function ReadingNotes() {
     };
 
     const [activeFilter, setActiveFilter] = useState('전체보기');
-    const FILTERS = ['전체보기', '#메모', '#액션'];
+    const FILTERS = ['전체보기', '#메모', '#액션가이드'];
 
-    // 사이트 등록 도서 목록 (celebrities.js에서 추출)
-    const allBooks = celebrities.flatMap(celeb => celeb.books.map(b => ({
+    // 사이트 등록 도서 목록 (book_overrides cover 우선 적용)
+    const allBooks = getBookDataBooks().map(b => ({
         title: b.title,
         author: b.author,
         cover: b.cover,
         actionGuide: b.actionGuide
-    })));
+    }));
     const uniqueBooks = Array.from(new Map(allBooks.map(b => [b.title, b])).values());
 
     // 기록의 나무 로직
     const getTreeLevel = (count) => {
         if (count >= 100) return { level: 5, name: '풍성한 지혜의 달인', fruits: 15, color: 'text-gold', bg: 'bg-gold/20' };
         if (count >= 50) return { level: 4, name: '사유의 집행자', fruits: 5, color: 'text-amber-500', bg: 'bg-amber-500/20' };
-        if (count >= 30) return { level: 3, name: '깊어지는 통찰러', fruits: 3, color: 'text-orange-500', bg: 'bg-orange-500/20' };
-        if (count >= 10) return { level: 2, name: '지식의 탐구자', fruits: 1, color: 'text-orange-400', bg: 'bg-orange-400/20' };
+        if (count >= 30) return { level: 3, name: '깊어지는 통찰러', fruits: 3, color: 'text-red-500', bg: 'bg-red-500/20' };
+        if (count >= 10) return { level: 2, name: '지식의 탐구자', fruits: 1, color: 'text-red-400', bg: 'bg-red-400/20' };
         return { level: 1, name: '성찰의 시작', fruits: 0, color: 'text-slate-400', bg: 'bg-slate-500/10' };
     };
 
@@ -375,11 +380,7 @@ export default function ReadingNotes() {
     );
 
 
-    if (loading) return (
-        <div className="bg-background-dark min-h-screen flex items-center justify-center">
-             <div className="relative"><div className="absolute inset-0 bg-gold/20 blur-3xl rounded-none animate-pulse" /><div className="size-12 rounded-none border-t-2 border-gold animate-spin relative" /></div>
-        </div>
-    );
+    if (loading) return <LoadingScreen />;
     if (!user) return null;
 
     const StarRating = ({ value, onChange, interactive = false }) => (
@@ -400,10 +401,10 @@ export default function ReadingNotes() {
     );
 
     return (
-        <div className="bg-[#101218] font-sans text-white antialiased min-h-screen flex justify-center selection:bg-orange-500/30 relative overflow-hidden">
+        <div className="bg-[#101218] font-sans text-white antialiased min-h-screen flex justify-center selection:bg-red-500/30 relative overflow-hidden">
             {/* ── Background Ambient Lighting ── */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/5 blur-[120px] rounded-none animate-pulse" />
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-500/5 blur-[120px] rounded-none animate-pulse" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-900/10 blur-[130px] rounded-none" />
                 <div className="absolute top-[30%] right-[-5%] w-[30%] h-[30%] bg-orange-900/5 blur-[100px] rounded-none" />
             </div>
@@ -413,11 +414,49 @@ export default function ReadingNotes() {
                 {/* ── Fixed Top Navigation ── */}
                 <MainHeader showBack />
 
+                {/* ── Hero Section ── */}
+                <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#101218]/50 to-[#101218] z-10" />
+                    {design.notes_hero.type === 'image' ? (
+                        <img src={design.notes_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
+                    ) : (
+                        <video
+                            src={design.notes_hero.src}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="auto"
+                            poster={design.notes_hero_poster || undefined}
+                            className="absolute inset-0 w-full h-full object-cover opacity-70"
+                            style={{ objectPosition: 'center center' }}
+                        />
+                    )}
+                    <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
+                            <div className="flex items-end gap-[2px] h-4">
+                                {[1,2,3,4,5].map(i => (
+                                    <motion.div key={i} className="w-[3px] bg-red-500"
+                                        animate={{ height: ['30%','100%','30%'] }}
+                                        transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                ))}
+                            </div>
+                            <span className="text-red-400 text-[11px] font-bold tracking-[0.25em] uppercase">Reading Notes</span>
+                        </motion.div>
+                        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="text-[35px] font-light leading-tight tracking-tighter mb-4">
+                            읽은 것을<br /><span className="font-bold">내 것으로 만드는 법</span>
+                        </motion.h1>
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.16 }} className="text-white/55 text-sm leading-relaxed max-w-xs">
+                            감동받은 문장, 실천할 다짐, 오늘의 통찰을<br />아카이뷰와 함께 쌓아가세요
+                        </motion.p>
+                    </div>
+                </section>
+
                 {/* ── Today's Choice Section (Tree of Records) ── */}
-                <header className="px-6 pt-4 pb-8">
+                <header className="px-6 pt-4 pb-0">
                     <div className="flex items-center justify-between mb-4 invisible h-0 overflow-hidden">
                         <h2 className="text-xl font-black flex items-center gap-2 text-white italic">
-                            <span className="material-symbols-outlined text-orange-500 fill-1">potted_plant</span>
+                            <span className="material-symbols-outlined text-red-500 fill-1">potted_plant</span>
                             기록의 나무
                         </h2>
                         <div className="flex flex-col items-end gap-1">
@@ -426,7 +465,7 @@ export default function ReadingNotes() {
                             </span>
                             <button
                                 onClick={() => setShowBenefits(true)}
-                                className="text-[10px] font-bold text-orange-500/80 bg-orange-500/10 px-2 py-0.5 rounded-none border border-orange-500/20 hover:bg-orange-500/20 transition-all flex items-center gap-1"
+                                className="text-[10px] font-bold text-red-500/80 bg-red-500/10 px-2 py-0.5 rounded-none border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center gap-1"
                             >
                                 <span className="material-symbols-outlined text-xs">redeem</span>
                                 혜택보기
@@ -441,7 +480,7 @@ export default function ReadingNotes() {
                         </div>
                     </div>
 
-                    <div
+                    {null && <div
                         ref={treeContainerRef}
                         className="relative group overflow-hidden rounded-none bg-transparent max-w-sm mx-auto"
                     >
@@ -484,11 +523,11 @@ export default function ReadingNotes() {
                                                     repeat: Infinity,
                                                     ease: "easeInOut"
                                                 }}
-                                                className="relative bg-orange-600/95 text-white px-4 py-2 rounded-none text-[10px] font-black shadow-xl shadow-orange-950/30 backdrop-blur-sm border border-orange-500/50"
+                                                className="relative bg-red-600/95 text-white px-4 py-2 rounded-none text-[10px] font-black shadow-xl shadow-red-950/30 backdrop-blur-sm border border-red-500/50"
                                             >
                                                 메모를 남기면 열매가 생겨나요! 🍊
                                                 {/* Triangle pointer */}
-                                                <div className="absolute -bottom-1 left-[30%] -translate-x-1/2 w-2.5 h-2.5 bg-orange-600 rotate-45 border-r border-b border-orange-500/50" />
+                                                <div className="absolute -bottom-1 left-[30%] -translate-x-1/2 w-2.5 h-2.5 bg-red-600 rotate-45 border-r border-b border-red-500/50" />
                                             </motion.div>
                                         </div>
 
@@ -608,11 +647,11 @@ export default function ReadingNotes() {
 
                                 <div className="grid grid-cols-2 gap-3 py-4 border-y border-white/5">
                                     <div className="flex flex-col items-center p-3 rounded-none bg-white/[0.02]">
-                                        <span className="text-orange-400 font-black text-xl leading-none">{totalThoughts >= 100 ? 'MAX' : (nextMilestone - totalThoughts > 0 ? nextMilestone - totalThoughts : 0)}</span>
+                                        <span className="text-red-400 font-black text-xl leading-none">{totalThoughts >= 100 ? 'MAX' : (nextMilestone - totalThoughts > 0 ? nextMilestone - totalThoughts : 0)}</span>
                                         <span className="text-[9px] text-slate-500 font-bold uppercase mt-1">{totalThoughts >= 100 ? 'Level' : 'Next Fruit'}</span>
                                     </div>
                                     <div className="flex flex-col items-center p-3 rounded-none bg-white/[0.02]">
-                                        <span className="text-orange-500 font-black text-xl leading-none">{totalThoughts}</span>
+                                        <span className="text-red-500 font-black text-xl leading-none">{totalThoughts}</span>
                                         <span className="text-[9px] text-slate-500 font-bold uppercase mt-1">Record Fruit</span>
                                     </div>
                                 </div>
@@ -620,14 +659,14 @@ export default function ReadingNotes() {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => { resetForm(); setShowForm(true); }}
-                                        className="flex-1 px-8 py-5 bg-orange-600 text-white rounded-none font-black text-[14px] uppercase tracking-[0.2em] transition-all hover:bg-orange-500 hover:shadow-2xl hover:shadow-orange-600/30 active:scale-95 text-center flex items-center justify-center shadow-lg"
+                                        className="flex-1 px-8 py-5 bg-red-600 text-white rounded-none font-black text-[14px] uppercase tracking-[0.2em] transition-all hover:bg-red-500 hover:shadow-2xl hover:shadow-red-600/30 active:scale-95 text-center flex items-center justify-center shadow-lg"
                                     >
                                         기록 남기고 성장하기
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>}
                 </header>
 
 
@@ -637,202 +676,157 @@ export default function ReadingNotes() {
 
 
                 {/* ── Archive List ── */}
-                <section className="px-6 space-y-6 pt-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">나의 기록 피드</h2>
-                            <div className="flex items-center gap-2">
-                                <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
-                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">내가 남긴 소중한 기록들</p>
-                            </div>
+                <section className="pt-3">
+                    {/* Section Title */}
+                    <div className="px-4 pb-3">
+                        <h2 className="text-[22px] font-black tracking-tight leading-none mb-1 text-white flex items-center gap-2">
+                            <span className="material-symbols-outlined text-red-500 text-[22px]">edit_note</span>기록노트
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-[2px] bg-red-500" />
+                            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Reading Notes</p>
                         </div>
                     </div>
-
-                    {/* Filter Chips inside Feed Section */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                    {/* Filter Chips */}
+                    <div className="flex border border-white/10 overflow-hidden mx-4">
                         {FILTERS.map(f => (
                             <button
                                 key={f}
                                 onClick={() => setActiveFilter(f)}
-                                className={`px-4 py-1.5 rounded-none text-[12px] font-black transition-all whitespace-nowrap
+                                className={`flex-1 py-2.5 text-[12px] font-black transition-all
                                     ${activeFilter === f
-                                        ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
-                                        : 'bg-white/[0.02] border border-white/5 text-white/40 hover:text-white hover:bg-white/[0.05]'}`}
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-white/[0.02] text-white/40 hover:text-white hover:bg-white/[0.05]'}`}
                             >
                                 {f}
                             </button>
                         ))}
                     </div>
 
-                    <div className="space-y-4">
-                         {fetching ? (
-                             <div className="space-y-4">
-                                 {[1, 2, 3].map(i => (
-                                     <div key={i} className="h-32 bg-white/5 rounded-none animate-pulse border border-slate-800" />
-                                 ))}
-                             </div>
-                         ) : filtered.length === 0 ? (
-                             <div className="py-20 text-center opacity-30 border border-dashed border-white/10 rounded-none">
-                                 <p className="text-white text-sm">기록된 문장이 없습니다.</p>
-                             </div>
+                    <div className="mt-3 space-y-4 px-4">
+                        {fetching ? (
+                            <div className="space-y-4">
+                                {[1,2,3].map(i => (
+                                    <div key={i} className="h-24 bg-white/5 animate-pulse rounded-xl" />
+                                ))}
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div className="py-20 text-center opacity-30 border border-dashed border-white/10 rounded-xl">
+                                <p className="text-white text-sm">기록된 문장이 없습니다.</p>
+                            </div>
                         ) : (
                             filtered
-                                .filter(n => activeFilter === '전체보기' || n.type === activeFilter || (activeFilter === '#메모' && n.type === 'memo') || (activeFilter === '#액션' && (n.type === 'action' || n.type === '#액션')))
-                                .map(note => {
-                                    const isExp = expandedId === note.id;
+                                .filter(n => activeFilter === '전체보기' || (activeFilter === '#메모' && (n.type === 'memo' || n.type === '#메모')) || (activeFilter === '#액션가이드' && (n.type === 'action' || n.type === '#액션')))
+                                .map((note) => {
                                     const isDel = deleteConfirmId === note.id;
                                     const isReview = note.type === 'review' || note.type === '#서평';
                                     const isAction = note.type === 'action' || note.type === '#액션';
+                                    const moodObj = note.mood;
+                                    const checkedCount = isAction && note.checkedActions ? Object.values(note.checkedActions).filter(Boolean).length : 0;
+                                    const allDone = isAction && checkedCount === 3;
+                                    const progressPct = isAction ? Math.round((checkedCount / 3) * 100) : 100;
+                                    const title = isReview ? note.bookTitle : (note.title || (isAction ? '액션 가이드' : (moodObj?.label ? `${moodObj.emoji} ${moodObj.label}` : '오늘의 기록')));
+                                    const dateStr = note.createdAt?.toLocaleDateString('ko-KR', { year:'2-digit', month:'2-digit', day:'2-digit' }).replace(/\. /g,'.').replace(/\.$/,'');
 
                                     return (
-                                        <article key={note.id} className="relative group scroll-mt-24">
-                                            <div
-                                                onClick={() => setExpandedId(isExp ? null : note.id)}
-                                                className={`flex items-center gap-4 p-4 rounded-none border transition-all duration-300 cursor-pointer 
-                                                    ${isReview
-                                                        ? (isExp ? 'border-orange-500 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-orange-500/30')
-                                                        : isAction
-                                                            ? (isExp ? 'border-indigo-400 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-indigo-400/30')
-                                                            : (isExp ? 'border-orange-600 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-orange-500/30')
-                                                    }`}
-                                            >
-                                                {/* Left: Thumbnail & Title */}
-                                                 <div className="shrink-0 flex flex-col items-center gap-2">
-                                                     <div className={`w-20 h-28 rounded-none shadow-lg overflow-hidden flex items-center justify-center relative 
-                                                        ${isReview || (isAction && note.bookCover)
-                                                            ? 'bg-slate-800'
-                                                            : isAction
-                                                                ? 'bg-transparent border border-indigo-400/30 shadow-[0_0_15px_rgba(129,140,248,0.1)]'
-                                                                : 'bg-transparent border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
-                                                        }`}
-                                                    >
-                                                        {(isReview || (isAction && note.bookCover)) ? (
-                                                            note.bookCover ? (
-                                                                <img src={note.bookCover} alt={note.bookTitle} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="flex flex-col items-center p-2 text-center">
-                                                                    <span className="material-symbols-outlined text-slate-600 text-3xl">menu_book</span>
-                                                                </div>
-                                                            )
-                                                        ) : (
-                                                            <div className="flex flex-col items-center gap-1.5">
-                                                                <span style={{ fontSize: '36px', filter: isAction ? 'drop-shadow(0 0 10px rgba(129,140,248,0.3))' : 'drop-shadow(0 0 10px rgba(249,115,22,0.3))' }}>{note.mood?.emoji || (isAction ? '🎯' : '📝')}</span>
-                                                                <span className={`text-[9px] font-black uppercase tracking-widest opacity-80 ${isAction ? 'text-indigo-400' : 'text-orange-500'}`}>
-                                                                    {isAction ? 'Action' : 'MEMO'}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                        <article key={note.id} className="relative bg-[#1e1f25] rounded-xl overflow-hidden transition-all duration-300 hover:bg-[#282a2f] border border-white/[0.06]">
+                                            <div className="p-4 flex items-center gap-4 cursor-pointer" onClick={() => setExpandedId(expandedId === note.id ? null : note.id)}>
+                                                {/* 썸네일 */}
+                                                {(isReview || isAction) && note.bookCover ? (
+                                                    <img src={note.bookCover} alt={note.bookTitle} className="w-20 h-20 rounded-lg object-cover shrink-0 border border-white/10" />
+                                                ) : (
+                                                    <div className={`w-20 h-20 rounded-lg shrink-0 flex items-center justify-center text-3xl border border-white/10 ${isAction ? 'bg-indigo-900/30' : 'bg-white/5'}`}>
+                                                        {isAction ? '🎯' : (moodObj?.emoji || '📝')}
                                                     </div>
+                                                )}
 
-                                                    {/* Title Label */}
-                                                    {(isReview || (isAction && note.bookCover)) && (
-                                                        <span className="text-[11px] text-white/80 font-bold text-center w-20 leading-tight">
-                                                            {note.bookTitle}
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* Right: Content */}
-                                                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                                                    <div>
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <h4 className={`font-black text-[10px] uppercase tracking-wider ${isReview ? 'text-orange-500' : isAction ? 'text-indigo-400' : 'text-orange-500'}`}>
-                                                                {isReview ? 'Book Review' : isAction ? 'Action Log' : 'Short Memo'}
-                                                            </h4>
-                                                            <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap ml-2">
-                                                                {note.createdAt?.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.')}
+                                                {/* 내용 */}
+                                                <div className="flex-1 flex flex-col justify-between py-1 min-w-0">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${isAction ? 'bg-red-600 text-white' : isReview ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'border border-white/20 text-white/50'}`}>
+                                                                {isReview ? '서평' : isAction ? '액션' : '메모'}
                                                             </span>
+                                                            {isAction && allDone && (
+                                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-400">
+                                                                    <span className="material-symbols-outlined text-[12px]">verified</span>완료
+                                                                </span>
+                                                            )}
                                                         </div>
-
-                                                        <h4 className="font-bold text-sm text-white mb-1 truncate">
-                                                            {isReview ? note.bookTitle : (note.title || (isAction ? '액션 가이드' : '오늘의 기록'))}
-                                                        </h4>
-
-                                                        {isReview && note.rating > 0 && (
-                                                            <div className="flex gap-0.5 mb-2">
-                                                                {[1, 2, 3, 4, 5].map(star => (
-                                                                    <span key={star} className={`material-symbols-outlined text-[10px] ${star <= note.rating ? 'text-orange-500 fill-1' : 'text-slate-600'}`}>star</span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        <p className={`text-xs text-slate-400 leading-relaxed ${isExp ? '' : 'line-clamp-2'}`}>
-                                                            {note.body}
-                                                        </p>
-
-                                                        {/* Action Achievement Summary */}
-                                                         {isAction && note.checkedActions && (
-                                                             <div className="mt-3 py-3 px-4 bg-black/20 rounded-none border border-white/[0.05] space-y-3">
-                                                                 <div className="flex items-center justify-between">
-                                                                     <div className="flex items-center gap-2">
-                                                                         <span className="material-symbols-outlined text-indigo-400 text-[14px]">checklist</span>
-                                                                         <span className="text-[10px] font-black text-indigo-400 tracking-wider">ACTION CHECKLIST</span>
-                                                                         <span className="text-[10px] font-bold text-white/40 bg-white/5 px-1.5 rounded-none">{Object.values(note.checkedActions).filter(Boolean).length}/3</span>
-                                                                     </div>
-                                                                    {Object.values(note.checkedActions).filter(Boolean).length === 3 && (
-                                                                        <span className="text-[10px] font-black text-orange-400 px-2 py-0.5 bg-orange-500/10 rounded-none flex items-center gap-1 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
-                                                                            <span className="material-symbols-outlined text-[12px]">verified</span>
-                                                                            모든 액션 완료!
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                 <div className="space-y-2 pt-1 border-t border-white/[0.05]">
-                                                                     {[0, 1, 2].map(idx => {
-                                                                         const guideData = uniqueBooks.find(b => b.title === note.bookTitle)?.actionGuide?.[idx];
-                                                                         if (!guideData) return null;
-                                                                         const isChecked = note.checkedActions[idx];
-                                                                         return (
-                                                                             <div key={idx} className={`flex items-start gap-2.5 p-2 rounded-none transition-all ${isChecked ? 'bg-indigo-500/5' : ''}`}>
-                                                                                 <div className={`mt-0.5 shrink-0 flex items-center justify-center size-4 rounded-none border transition-colors ${isChecked ? 'bg-indigo-400 border-indigo-400 text-black' : 'border-white/20 text-transparent'}`}>
-                                                                                     <span className="material-symbols-outlined text-[10px] font-bold">check</span>
-                                                                                 </div>
-                                                                                <p className={`text-[12px] leading-tight ${isChecked ? 'text-indigo-300 font-bold' : 'text-white/50'}`}>
-                                                                                    {guideData.title}
-                                                                                </p>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
+                                                        <h4 className="text-white font-black text-[15px] leading-tight tracking-tight truncate">{title}</h4>
+                                                        {note.body && (
+                                                            <p className={`text-white/80 text-[12px] leading-relaxed ${expandedId === note.id ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>{note.body}</p>
                                                         )}
                                                     </div>
-
-                                                     {!isExp && (
-                                                         <div className="flex flex-wrap gap-1.5 mt-2">
-                                                             {note.tags?.map(t => (
-                                                                 <span key={t} className={`text-[9px] font-semibold italic ${isReview ? 'text-orange-500/60' : isAction ? 'text-indigo-400/60' : 'text-orange-500/60'}`}>#{t}</span>
-                                                             ))}
-                                                         </div>
-                                                     )}
-
-                                                    {/* Action Buttons when expanded */}
-                                                    {isExp && (
-                                                        <div className="mt-4 pt-4 border-t border-white/5 flex gap-4 justify-end">
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleEdit(note); }}
-                                                                className="text-[10px] font-bold text-white/40 hover:text-white transition-colors flex items-center gap-1"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[14px]">edit</span>
-                                                                수정
+                                                    <div className="flex items-center justify-between mt-3">
+                                                        <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide uppercase">
+                                                            {isAction ? (
+                                                                <>
+                                                                    <span className="text-red-400">Progress</span>
+                                                                    <span className="text-white font-bold">{checkedCount}/3</span>
+                                                                </>
+                                                            ) : (
+                                                                note.tags?.slice(0,2).map(t => (
+                                                                    <span key={t} className="text-white/30 text-[10px]">#{t}</span>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[11px] text-white/60 font-mono">{dateStr}</span>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleEdit(note); }} className="text-white/60 hover:text-white transition-colors">
+                                                                <span className="material-symbols-outlined text-[15px]">edit</span>
                                                             </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(note.id); }}
-                                                                className="text-[10px] font-bold text-white/40 hover:text-red-400 transition-colors flex items-center gap-1"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[14px]">delete</span>
-                                                                삭제
+                                                            <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(note.id); }} className="text-white/60 hover:text-red-400 transition-colors">
+                                                                <span className="material-symbols-outlined text-[15px]">delete</span>
                                                             </button>
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                             {isDel && (
-                                                 <div className="absolute inset-0 z-20 backdrop-blur-md bg-black/60 rounded-none flex items-center justify-center p-6 gap-4 animate-in fade-in duration-300">
-                                                     <button onClick={() => handleDelete(note.id)} className="flex-1 h-10 rounded-none bg-red-500 text-white text-[12px] font-bold">삭제 확정</button>
-                                                     <button onClick={() => setDeleteConfirmId(null)} className="h-10 px-6 rounded-none bg-white/10 text-white text-[12px] font-bold">취소</button>
-                                                 </div>
-                                             )}
+                                            {/* 액션 체크리스트 - 펼침 시 표시 */}
+                                            {isAction && note.checkedActions && expandedId === note.id && (
+                                                <div className="px-4 pb-2 pt-1.5 border-t border-white/[0.05] space-y-0">
+                                                    {[0,1,2].map(idx => {
+                                                        const guideData = uniqueBooks.find(b => b.title === note.bookTitle)?.actionGuide?.[idx];
+                                                        if (!guideData) return null;
+                                                        const isChecked = note.checkedActions[idx];
+                                                        return (
+                                                            <button
+                                                                key={idx}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    const updated = { ...note.checkedActions, [idx]: !isChecked };
+                                                                    await updateDoc(doc(db, 'thoughts', note.id), { checkedActions: updated });
+                                                                }}
+                                                                className="w-full flex items-center gap-2 text-left px-1 py-0.5 transition-colors hover:bg-white/5 rounded"
+                                                            >
+                                                                <div className={`shrink-0 flex items-center justify-center w-3.5 h-3.5 rounded-sm border transition-colors ${isChecked ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
+                                                                    {isChecked && <span className="material-symbols-outlined text-[9px] text-white font-bold">check</span>}
+                                                                </div>
+                                                                <p className={`text-[12px] leading-tight ${isChecked ? 'text-red-400 font-bold line-through opacity-70' : 'text-white/50'}`}>{guideData.title}</p>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* 하단 진행 바 - 액션만 표시 */}
+                                            {isAction && (
+                                            <div className="absolute bottom-0 left-0 h-[4px] bg-white/5 w-full">
+                                                <div
+                                                    className={`h-full transition-all ${allDone ? 'bg-red-600' : 'bg-red-600/60'}`}
+                                                    style={{ width: `${progressPct}%` }}
+                                                />
+                                            </div>
+                                            )}
+
+                                            {isDel && (
+                                                <div className="absolute inset-0 z-20 backdrop-blur-md bg-black/70 flex items-center justify-center gap-3 p-4">
+                                                    <button onClick={() => handleDelete(note.id)} className="flex-1 h-10 bg-red-500 text-white text-[12px] font-bold rounded-lg">삭제 확정</button>
+                                                    <button onClick={() => setDeleteConfirmId(null)} className="h-10 px-6 bg-white/10 text-white text-[12px] font-bold rounded-lg">취소</button>
+                                                </div>
+                                            )}
                                         </article>
                                     );
                                 })
@@ -849,18 +843,12 @@ export default function ReadingNotes() {
                                  <h3 className="text-[15px] font-black mb-1 whitespace-nowrap">나의 기록이 쌓이고 있습니다</h3>
                                  <p className="text-white/60 text-[11px] opacity-80">지금까지 {totalThoughts}개의 소중한 기록을 남겼습니다.</p>
                              </div>
-                             <div className="z-10 flex gap-3 flex-shrink-0">
+                             <div className="z-10 flex gap-3 flex-shrink-0 w-full md:w-auto">
                                  <button
                                      onClick={() => { resetForm(); setShowForm(true); }}
-                                     className="flex-1 md:flex-none px-5 py-2 bg-orange-600 text-white rounded-none font-black text-xs shadow-lg hover:bg-orange-500 transition-colors"
+                                     className="w-full py-5 px-10 bg-red-600 text-white rounded-none font-black text-base shadow-lg hover:bg-red-500 transition-colors"
                                  >
                                      기록하기
-                                 </button>
-                                 <button
-                                     onClick={() => navigate('/library')}
-                                     className="flex-1 md:flex-none px-5 py-2 bg-white/10 text-white border border-white/30 rounded-none font-bold text-xs hover:bg-white/20 transition-colors"
-                                 >
-                                     서재 가기
                                  </button>
                              </div>
                          </div>
@@ -883,7 +871,7 @@ export default function ReadingNotes() {
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7 pb-6">
                                 {/* Category Selection */}
                                 <div className="space-y-4">
-                                    <h4 className="text-[14px] font-bold text-orange-500">카테고리 선택</h4>
+                                    <h4 className="text-[14px] font-bold text-red-500">카테고리 선택</h4>
                                     <div className="flex gap-2">
                                         {['#메모', '#액션'].map(type => (
                                             <button
@@ -891,7 +879,7 @@ export default function ReadingNotes() {
                                                 onClick={() => setNoteType(type)}
                                                 className={`flex-1 h-12 rounded-none flex items-center justify-center gap-2 border text-[13px] font-black transition-all
                                                 ${noteType === type
-                                                        ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
+                                                        ? 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
                                                         : 'bg-white/[0.02] border-white/5 text-white/40 hover:text-white'}`}
                                             >
                                                 <span className="material-symbols-outlined text-lg">
@@ -907,7 +895,7 @@ export default function ReadingNotes() {
                                 {(noteType === '#액션') && (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                            <h4 className="text-[14px] font-bold text-red-500 flex items-center gap-2">
                                                 도서 선택 (선택 사항)
                                                 <span className="material-symbols-outlined text-lg">auto_stories</span>
                                             </h4>
@@ -933,15 +921,15 @@ export default function ReadingNotes() {
                                                     setActiveActionGuide([]);
                                                     setCheckedActions({});
                                                 }}
-                                                className="flex items-center justify-between px-4 py-3 bg-orange-500/10 border border-orange-500/30 rounded-none cursor-pointer hover:bg-orange-500/20 transition-all group"
+                                                className="flex items-center justify-between px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-none cursor-pointer hover:bg-red-500/20 transition-all group"
                                             >
                                                 <div className="flex items-center gap-3 truncate">
-                                                    <span className="material-symbols-outlined text-orange-500 text-lg">menu_book</span>
-                                                    <span className="text-[14px] text-orange-500 font-bold truncate">{bookTitle}</span>
+                                                    <span className="material-symbols-outlined text-red-500 text-lg">menu_book</span>
+                                                    <span className="text-[14px] text-red-500 font-bold truncate">{bookTitle}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] text-orange-500/60 font-bold opacity-0 group-hover:opacity-100 transition-opacity">변경하기</span>
-                                                    <span className="material-symbols-outlined text-orange-500/60 text-sm group-hover:text-orange-500 transition-colors">sync</span>
+                                                    <span className="text-[10px] text-red-500/60 font-bold opacity-0 group-hover:opacity-100 transition-opacity">변경하기</span>
+                                                    <span className="material-symbols-outlined text-red-500/60 text-sm group-hover:text-red-500 transition-colors">sync</span>
                                                 </div>
                                             </div>
                                         )}
@@ -956,7 +944,7 @@ export default function ReadingNotes() {
                                                     value={bookSearch}
                                                     onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); }}
                                                     onFocus={() => setShowBookDropdown(true)}
-                                                    className="w-full bg-white/[0.03] border border-white/[0.05] rounded-none pl-11 pr-10 py-4 text-[14px] text-white/80 outline-none focus:border-orange-500/30 transition-all placeholder-white/20"
+                                                    className="w-full bg-white/[0.03] border border-white/[0.05] rounded-none pl-11 pr-10 py-4 text-[14px] text-white/80 outline-none focus:border-red-500/30 transition-all placeholder-white/20"
                                                 />
                                                 {bookSearch && (
                                                     <button onClick={() => { setBookSearch(''); setShowBookDropdown(false); }} className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -999,8 +987,8 @@ export default function ReadingNotes() {
                                                     onClick={() => { setCustomBookInput(true); setShowBookDropdown(false); setBookSearch(''); }}
                                                     className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-white/5 transition-colors border-t border-white/[0.06]"
                                                 >
-                                                    <span className="material-symbols-outlined text-orange-500/50 text-base shrink-0">edit</span>
-                                                    <span className="text-[13px] text-orange-500/70 font-bold">직접 입력...</span>
+                                                    <span className="material-symbols-outlined text-red-500/50 text-base shrink-0">edit</span>
+                                                    <span className="text-[13px] text-red-500/70 font-bold">직접 입력...</span>
                                                 </button>
                                             </div>
                                         )}
@@ -1013,7 +1001,7 @@ export default function ReadingNotes() {
                                                     placeholder="책 제목을 직접 입력하세요"
                                                     value={bookTitle}
                                                     onChange={e => setBookTitle(e.target.value)}
-                                                    className="w-full bg-white/[0.03] border border-orange-500/20 rounded-none px-5 py-4 text-[14px] text-white/80 outline-none focus:border-orange-500/50 transition-all placeholder-white/20"
+                                                    className="w-full bg-white/[0.03] border border-red-500/20 rounded-none px-5 py-4 text-[14px] text-white/80 outline-none focus:border-red-500/50 transition-all placeholder-white/20"
                                                     autoFocus
                                                 />
                                                 <button
@@ -1031,7 +1019,7 @@ export default function ReadingNotes() {
                                 {/* Action Guide Checklist - Only for #액션 and when book is selected */}
                                 {noteType === '#액션' && bookTitle && activeActionGuide.length > 0 && (
                                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center justify-between">
+                                        <h4 className="text-[14px] font-bold text-red-500 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 실천 지침 체크리스트
                                                 <span className="material-symbols-outlined text-lg">fact_check</span>
@@ -1040,7 +1028,7 @@ export default function ReadingNotes() {
                                                  <motion.span
                                                      initial={{ scale: 0.8, opacity: 0 }}
                                                      animate={{ scale: 1, opacity: 1 }}
-                                                     className="px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 text-orange-300 text-[10px] rounded-none flex items-center gap-1"
+                                                     className="px-2 py-0.5 bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] rounded-none flex items-center gap-1"
                                                  >
                                                      <span className="material-symbols-outlined text-[12px]">verified</span>
                                                      모든 지침 달성 완료!
@@ -1054,18 +1042,18 @@ export default function ReadingNotes() {
                                                     onClick={() => setCheckedActions(prev => ({ ...prev, [idx]: !prev[idx] }))}
                                                     className={`flex items-start gap-3 p-2.5 rounded-none cursor-pointer transition-all border
                                                         ${checkedActions[idx]
-                                                            ? 'bg-orange-500/10 border-orange-500/30'
+                                                            ? 'bg-red-500/10 border-red-500/30'
                                                             : 'bg-white/5 border-transparent hover:border-white/10'}`}
                                                 >
                                                     <div className={`mt-0.5 size-5 rounded-none border flex items-center justify-center shrink-0 transition-all
                                                         ${checkedActions[idx]
-                                                            ? 'bg-orange-500 border-orange-500 text-white'
+                                                            ? 'bg-red-500 border-red-500 text-white'
                                                             : 'bg-white/5 border-white/20 text-transparent'}`}
                                                     >
                                                         <span className="material-symbols-outlined text-sm font-black">check</span>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-orange-500' : 'text-white'}`}>
+                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-red-500' : 'text-white'}`}>
                                                             {idx + 1}. {item.title}
                                                         </p>
                                                         <p className="text-[12px] text-white leading-relaxed">
@@ -1079,9 +1067,9 @@ export default function ReadingNotes() {
                                                 <motion.div
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-none text-center"
+                                                    className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-none text-center"
                                                 >
-                                                    <p className="text-[13px] text-orange-500 font-bold mb-1">🎯 모든 액션을 성공적으로 달성했습니다!</p>
+                                                    <p className="text-[13px] text-red-500 font-bold mb-1">🎯 모든 액션을 성공적으로 달성했습니다!</p>
                                                     <p className="text-[11px] text-white/60 leading-tight">이제 실천하며 느낀 경험과 성장을 상세히 기록해보세요.</p>
                                                 </motion.div>
                                             )}
@@ -1092,47 +1080,36 @@ export default function ReadingNotes() {
 
                                 {/* Mood Selection - #메모 시에만 표시 (액션은 🎯 고정) */}
                                 {noteType === '#메모' && (
-                                    <div className="space-y-4">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                    <div className="space-y-2">
+                                        <h4 className="text-[13px] font-bold text-red-500 flex items-center gap-2">
                                             이모지 선택 (필수)
-                                            <span className="material-symbols-outlined text-lg">mood</span>
+                                            <span className="material-symbols-outlined text-base">mood</span>
+                                            {selectedMood && <span className="text-[11px] text-red-400/80 font-medium">{selectedMood.emoji} {selectedMood.label}</span>}
                                         </h4>
-                                        <div className="grid grid-cols-6 gap-2">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {MOODS.map((m) => (
                                                 <button
                                                     key={m.label}
                                                     onClick={() => setSelectedMood(m)}
-                                                    className={`aspect-square rounded-none flex items-center justify-center text-xl transition-all border
+                                                    className={`w-9 h-9 rounded flex items-center justify-center text-lg transition-all border
                                                     ${selectedMood?.label === m.label
-                                                            ? 'bg-orange-500/20 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)] scale-110 z-10'
+                                                            ? 'bg-red-600/20 border-red-500 scale-110 z-10'
                                                             : 'bg-white/[0.02] border-white/5 hover:border-white/20'}`}
                                                 >
                                                     {m.emoji}
                                                 </button>
                                             ))}
                                         </div>
-                                        {selectedMood && (
-                                            <p className="text-[11px] text-orange-500/80 font-medium mt-2">선택됨: {selectedMood.label}</p>
-                                        )}
                                     </div>
                                 )}
 
                                 {/* Thought Input */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                        <h4 className="text-[14px] font-bold text-red-500 flex items-center gap-2">
                                             나의 생각 / 기록
                                             <span className="material-symbols-outlined text-lg rotate-12">attach_file</span>
                                         </h4>
-                                        <button
-                                            onClick={handleAiRefine}
-                                            disabled={isAiProcessing || !body.trim()}
-                                            className={`px-3 py-1.5 rounded-none flex items-center gap-1.5 transition-all
-                                            ${isAiProcessing ? 'bg-orange-500/20 text-orange-500 animate-pulse' : 'bg-white/5 text-white/40 hover:bg-orange-500/10 hover:text-orange-500 border border-white/10'}`}
-                                        >
-                                            <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">{isAiProcessing ? 'Processing' : 'AI Insight'}</span>
-                                        </button>
                                     </div>
                                     <div className="relative group">
                                         <textarea
@@ -1156,7 +1133,7 @@ export default function ReadingNotes() {
                                 <button
                                     onClick={handleSave}
                                     disabled={saving || !body.trim() || (noteType === '#메모' && !selectedMood) || ((noteType === '#서평' || noteType === '#액션') && !bookTitle.trim())}
-                                    className="w-full h-12 rounded-none bg-orange-600 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-orange-600/20"
+                                    className="w-full h-12 rounded-none bg-red-600 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-red-600/20"
                                 >
                                     {saving ? (
                                         <div className="size-5 border-2 border-primary/20 border-t-primary rounded-none animate-spin" />
@@ -1191,7 +1168,7 @@ export default function ReadingNotes() {
                                 <div className="p-8 space-y-8">
                                     <div className="flex justify-between items-center">
                                         <h3 className="text-xl font-black text-white italic flex items-center gap-2">
-                                             <span className="material-symbols-outlined text-orange-500 fill-1">redeem</span>
+                                             <span className="material-symbols-outlined text-red-500 fill-1">redeem</span>
                                              나무 성장 혜택
                                         </h3>
                                          <button
@@ -1208,16 +1185,16 @@ export default function ReadingNotes() {
                                             { lv: 3, name: '열매 맺는 나무 (50개)', benefit: '한정판 기록 템플릿 제공' },
                                             { lv: 4, name: '풍성한 지혜의 나무 (100개)', benefit: '아카이뷰 VIP 멤버십 승격' }
                                         ].map((item, idx) => (
-                                            <div key={idx} className={`p-4 rounded-none flex items-center gap-4 border transition-all ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/[0.02] border-white/5 opacity-50'}`}>
-                                                <div className={`size-10 rounded-none flex items-center justify-center font-black ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/30'}`}>
+                                            <div key={idx} className={`p-4 rounded-none flex items-center gap-4 border transition-all ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-red-500/10 border-red-500/30' : 'bg-white/[0.02] border-white/5 opacity-50'}`}>
+                                                <div className={`size-10 rounded-none flex items-center justify-center font-black ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-red-500 text-white' : 'bg-white/10 text-white/30'}`}>
                                                     Lv.{item.lv}
                                                 </div>
                                                 <div>
                                                     <p className="text-[13px] font-bold text-white">{item.name}</p>
-                                                    <p className={`text-[11px] font-medium ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'text-orange-500/70' : 'text-white/30'}`}>{item.benefit}</p>
+                                                    <p className={`text-[11px] font-medium ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'text-red-500/70' : 'text-white/30'}`}>{item.benefit}</p>
                                                 </div>
                                                 {totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) && (
-                                                    <span className="material-symbols-outlined text-orange-500 ml-auto fill-1">check_circle</span>
+                                                    <span className="material-symbols-outlined text-red-500 ml-auto fill-1">check_circle</span>
                                                 )}
                                             </div>
                                         ))}
@@ -1225,7 +1202,7 @@ export default function ReadingNotes() {
 
                                      <button
                                          onClick={() => setShowBenefits(false)}
-                                         className="w-full h-14 rounded-none bg-orange-600 text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-orange-600/20"
+                                         className="w-full h-14 rounded-none bg-red-600 text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-red-600/20"
                                      >
                                          확인했습니다
                                      </button>

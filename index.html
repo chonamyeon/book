@@ -11,17 +11,29 @@
   <!-- viewport-fit=cover: iOS 노치/홈 인디케이터 safe area 활성화 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="manifest" href="/manifest.json" />
-  <title>ARCHIVIEW - 출퇴근길 성공한 사람들의 이야기를 듣다.</title>
+  <title>아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서</title>
   <link rel="canonical" href="https://archiview.store/" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta property="og:site_name" content="ARCHIVIEW" />
   <meta property="og:url" content="https://archiview.store/" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="ARCHIVIEW - 출퇴근길 성공한 사람들의 이야기를 듣다." />
-  <meta property="og:description" content="프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:title" content="아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서" />
+  <meta property="og:description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 아카이뷰에서 빠르게 핵심을 듣고 읽어보세요." />
   <meta property="og:image" content="https://archiview.store/images/hero_expert_v5.png" />
+  <meta property="og:image:alt" content="아카이뷰 메인 소개 이미지" />
 
   <!-- SEO -->
-  <meta name="description" content="프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스">
+  <meta name="description" content="아카이뷰(ARCHIVIEW)는 독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오를 제공하는 프리미엄 디지털 독서 플랫폼입니다.">
+  <meta name="keywords" content="아카이뷰,ARCHIVIEW,책 요약,오디오북,독서,도서 추천,독서 성향 분석,북 리뷰,책 인사이트" />
+  <meta name="author" content="ARCHIVIEW" />
+  <meta name="naver-site-verification" content="e9f2050e2448f5ddccaa133a78013076757da33e" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서" />
+  <meta name="twitter:description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 아카이뷰에서 빠르게 핵심을 듣고 읽어보세요." />
+  <meta name="twitter:image" content="https://archiview.store/images/hero_expert_v5.png" />
 
   <!-- iOS & PWA Settings -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -48,7 +60,8 @@
   <!-- ============================================================ -->
   <!--  LCP 최적화: 히어로 이미지만 높은 우선순위 프리로드             -->
   <!-- ============================================================ -->
-  <link rel="preload" as="image" href="/images/hero_expert_v5.png" fetchpriority="high">
+  <link rel="preload" as="image" href="/images/main7_poster.jpg" fetchpriority="high" />
+  <link rel="preload" as="video" href="/video/main7.mp4" type="video/mp4" />
 
   <!-- ============================================================ -->
   <!--  폰트: Pretendard — display=swap 적용된 경량 서브셋            -->
@@ -130,6 +143,28 @@
     // load 이후 지연 실행 (TTI 보호)
     if(document.readyState==='complete'){setTimeout(loadDeferred,500)}
     else{window.addEventListener('load',function(){setTimeout(loadDeferred,500)})}
+  </script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "ARCHIVIEW",
+      "alternateName": "아카이뷰",
+      "url": "https://archiview.store/",
+      "logo": "https://archiview.store/icon-512.png",
+      "sameAs": []
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "ARCHIVIEW",
+      "alternateName": "아카이뷰",
+      "url": "https://archiview.store/",
+      "inLanguage": "ko-KR"
+    }
   </script>
 
 </head>

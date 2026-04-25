@@ -5,15 +5,22 @@ import { celebrities } from './celebrities';
 
 // === 1. celebrities.js에서 고유 도서 목록 자동 추출 ===
 function extractAllBooks() {
-    const seen = new Set();
+    const seen = new Map(); // title → index in books
     const books = [];
 
     for (const celeb of celebrities) {
         if (!celeb.books) continue;
         for (const book of celeb.books) {
-            // 페르소나 추천 시스템에서는 팟캐스트가 있는 도서만 허용 (요청사항 반영)
-            if (!book.title || !book.isPodcast || seen.has(book.title)) continue;
-            seen.add(book.title);
+            if (!book.title || !book.isPodcast) continue;
+            if (seen.has(book.title)) {
+                // id 있는 항목으로 업데이트
+                if (book.id && !books[seen.get(book.title)].id) {
+                    books[seen.get(book.title)].id = book.id;
+                    if (book.podcastFile) books[seen.get(book.title)].podcastFile = book.podcastFile;
+                }
+                continue;
+            }
+            seen.set(book.title, books.length);
             books.push({
                 id: book.id || '',
                 title: book.title,
@@ -252,11 +259,14 @@ export function generateRecommendations(scores) {
 
     // 최종 셔플 후 5권 선택
     const finalBooks = weightedShuffle(selectedBooks, rng).slice(0, 5).map(b => ({
+        id: b.id || '',
         title: b.title,
         author: b.author,
         cover: b.cover,
         desc: b.desc,
         link: b.link,
+        podcastFile: b.podcastFile || '',
+        isPodcast: b.isPodcast || false,
         coupangLink: b.coupangLink || '',
         amazonLink: b.amazonLink || '',
     }));

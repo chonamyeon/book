@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import LoadingScreen from '../components/LoadingScreen';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -672,24 +673,6 @@ export default function ReviewDetail() {
         clearTimeout(arrowFadeRef.current);
         arrowFadeRef.current = setTimeout(() => setShowArrows(false), 2500);
 
-        // 연속 탭 방지 (onTouchEnd + onClick 이중 발사 + 빠른 연속탭 방지)
-        const now = Date.now();
-        if (now - lastFlipRef.current < 500) return;
-
-        // 왼쪽 40% 탭 = 이전 페이지, 오른쪽 40% 탭 = 다음 페이지
-        const clientX = e.clientX ?? e.changedTouches?.[0]?.clientX ?? e.touches?.[0]?.clientX;
-        if (clientX !== undefined) {
-            const w = window.innerWidth;
-            const flipBook = hasEbookRef.current ? ebookFlipBook : reviewFlipBook;
-            if (clientX < w * 0.4) {
-                lastFlipRef.current = now;
-                flipBook.current?.pageFlip()?.flipPrev();
-            } else if (clientX > w * 0.6) {
-                lastFlipRef.current = now;
-                flipBook.current?.pageFlip()?.flipNext();
-            }
-        }
-
         try {
             if (window.innerWidth <= 600 && document.documentElement.requestFullscreen) {
                 if (!document.fullscreenElement) {
@@ -1118,9 +1101,7 @@ export default function ReviewDetail() {
     if (!book) {
         if (bookLoading) {
             return (
-                <div style={{ minHeight: '100vh', background: '#101218', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div className="w-[50px] h-[50px] border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
-                </div>
+                <LoadingScreen />
             );
         }
         return (
@@ -1426,7 +1407,7 @@ ${scriptContext}
                         <span>이북 불러오는 중...</span>
                     </div>
                 ) :
-                <div className="rv-stage" onClick={handleBookTap} onTouchEnd={handleBookTap}
+                <div className="rv-stage" onClick={handleBookTap}
                     style={podcastInfo ? { paddingBottom: `${MINI_PLAYER_H}px` } : undefined}
                 >
                     <div className="rv-book-container">
@@ -1795,7 +1776,7 @@ ${scriptContext}
                                     <div className="rv-chat-bubble-wrap">
                                         <div className="rv-chat-name">{i % 2 === 0 ? '제임스' : '스텔라'}</div>
                                         <div className={`rv-chat-bubble ${turn.role === 'A' ? 'james' : 'stella'}${isActive ? ' active' : ''}`}>
-                                            {turn.text}
+                                            {typeof turn.text === 'string' ? turn.text.replace(/[\(（][^)）]*[\)）]\s*/g, '') : turn.text}
                                         </div>
                                     </div>
                                 </div>

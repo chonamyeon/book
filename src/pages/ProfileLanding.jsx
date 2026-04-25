@@ -7,6 +7,7 @@ import Profile from './Profile';
 import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
+import KakaoAdFit from '../components/KakaoAdFit';
 
 const features = [
     {
@@ -49,7 +50,17 @@ export default function ProfileLanding() {
                 {design.profile_hero.type === 'image' ? (
                     <img src={design.profile_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
                 ) : (
-                    <video src={design.profile_hero.src} autoPlay muted loop playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
+                    <video
+                        src={design.profile_hero.src}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        poster={design.profile_hero_poster || undefined}
+                        className="absolute inset-0 w-full h-full object-cover opacity-70"
+                        style={{ objectPosition: 'center center' }}
+                    />
                 )}
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-10">
                     <motion.div
@@ -125,6 +136,11 @@ export default function ProfileLanding() {
                     </motion.div>
                 ))}
             </section>
+
+            {/* 카카오 애드핏 배너 */}
+            <div className="flex justify-center px-6 py-4">
+                <KakaoAdFit unit="DAN-aXfyL1HtK8zp0vui" width="320" height="100" />
+            </div>
 
             <Footer />
             <BottomNavigation />

@@ -1,10 +1,33 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+const TABS = [
+    { label: 'NOW',    path: '/' },
+    { label: '자기계발', path: '/category/SELF_DEV' },
+    { label: '경제',    path: '/category/ECONOMY' },
+    { label: '경영',    path: '/category/MANAGEMENT' },
+    { label: '인문',    path: '/category/HUMANITIES' },
+    { label: '심리',    path: '/category/PSYCHOLOGY' },
+];
+
 export default function MainHeader() {
+    const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [hoverIdx, setHoverIdx] = useState(null);
+    const tabRefs = useRef([]);
+    const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+    const activeIdx = TABS.findIndex(t =>
+        t.path === '/' ? location.pathname === '/' : location.pathname.startsWith(t.path)
+    );
+    const displayIdx = hoverIdx !== null ? hoverIdx : (activeIdx >= 0 ? activeIdx : 0);
+
+    useEffect(() => {
+        const el = tabRefs.current[displayIdx];
+        if (el) setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth });
+    }, [displayIdx]);
     const [pwaInstalled, setPwaInstalled] = useState(false);
     const [showIphoneModal, setShowIphoneModal] = useState(false);
     const [showAndroidModal, setShowAndroidModal] = useState(false);
@@ -67,35 +90,40 @@ export default function MainHeader() {
                             </svg>
                             iPhone
                         </button>
-                        <button onClick={() => setMenuOpen(true)} className="flex flex-col justify-center gap-[5px] w-5 h-5 flex-shrink-0">
-                            <span className="block w-full h-[2px] bg-white rounded-full"></span>
-                            <span className="block w-3 h-[2px] bg-white rounded-full"></span>
-                            <span className="block w-full h-[2px] bg-white rounded-full"></span>
+                        <button
+                            onClick={() => setMenuOpen(true)}
+                            className="w-8 h-8 flex-shrink-0 flex flex-col items-center justify-center gap-[4px] transition-opacity active:opacity-70"
+                            aria-label="메뉴 열기"
+                        >
+                            <span className="block w-4 h-[2px] bg-white rounded-none"></span>
+                            <span className="block w-4 h-[2px] bg-white rounded-none"></span>
+                            <span className="block w-4 h-[2px] bg-white rounded-none"></span>
                         </button>
                     </div>
                 </header>
 
                 {/* Category Tab Navigation */}
                 <div className="mt-1 border-b border-white/10 w-full">
-                    <div className="flex items-center w-full px-3">
-                        <Link to="/" className="flex-1 flex items-center justify-center py-2.5 border-b-[2px] border-orange-500 relative top-[1px] z-10">
-                            <span className="text-[14px] font-black text-white tracking-tight">NOW</span>
-                        </Link>
-                        {[
-                            { label: '자기계발', path: '/category/SELF_DEV' },
-                            { label: '경제',     path: '/category/ECONOMY' },
-                            { label: '경영',     path: '/category/MANAGEMENT' },
-                            { label: '인문',     path: '/category/HUMANITIES' },
-                            { label: '심리',     path: '/category/PSYCHOLOGY' },
-                        ].map((cat) => (
+                    <div className="relative flex items-center w-full px-3" onMouseLeave={() => setHoverIdx(null)}>
+                        {TABS.map((tab, i) => (
                             <Link
-                                key={cat.path}
-                                to={cat.path}
-                                className="flex-1 flex items-center justify-center py-2.5 text-[14px] font-bold text-white hover:text-white transition-colors border-b-[2px] border-transparent hover:border-white/30 relative top-[1px]"
+                                key={tab.path}
+                                to={tab.path}
+                                ref={el => tabRefs.current[i] = el}
+                                onMouseEnter={() => setHoverIdx(i)}
+                                className={`flex-1 flex items-center justify-center py-2.5 text-[14px] tracking-tight transition-colors ${
+                                    i === (activeIdx >= 0 ? activeIdx : 0) ? 'font-black text-white' : 'font-bold text-white/85 hover:text-white'
+                                }`}
                             >
-                                {cat.label}
+                                {tab.label}
                             </Link>
                         ))}
+                        {/* 슬라이딩 언더바 */}
+                        <motion.div
+                            className="absolute bottom-0 h-[2px] bg-orange-500"
+                            animate={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                        />
                     </div>
                 </div>
             </div>
@@ -144,9 +172,11 @@ export default function MainHeader() {
 
                         <div className="px-5 pt-3 pb-8 flex flex-col gap-1">
                             {[
-                                { label: '서비스 소개', path: '/about' },
-                                { label: '멤버십',      path: '/membership' },
-                                { label: '문의하기',    path: '/contact' },
+                                { label: '에디토리얼', path: '/editorial' },
+                                { label: '지식 인사이트', path: '/insights' },
+                                { label: '서재',        path: '/library' },
+                                { label: '기록노트',    path: '/reading-notes' },
+                                { label: '프로필',      path: '/profile' },
                             ].map(item => (
                                 <Link key={item.path} to={item.path} onClick={() => setMenuOpen(false)}
                                     className="px-3 py-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">

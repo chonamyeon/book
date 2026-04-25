@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { celebrities } from '../data/celebrities';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { useAuth } from '../hooks/useAuth';
@@ -59,6 +58,10 @@ export default function Home() {
     const { playPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [isScrolled, setIsScrolled] = useState(false);
     const [showAllCelebs, setShowAllCelebs] = useState(false);
+    const [celebrities, setCelebrities] = useState([]);
+    useEffect(() => {
+        import('../data/celebrities').then(m => setCelebrities(m.celebrities || []));
+    }, []);
     const [reviewIndex, setReviewIndex] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
     const [openOS, setOpenOS] = useState(null);
@@ -195,6 +198,7 @@ export default function Home() {
     const [weeklyFocusRaw, setWeeklyFocusRaw] = useState(() => {
         try { return JSON.parse(localStorage.getItem('wf_cache') || '[]'); } catch { return []; }
     });
+    const [weeklyFocusVideos, setWeeklyFocusVideos] = useState([]);
     const [weeklyMostViewedRaw, setWeeklyMostViewedRaw] = useState([]);
     const [popularArchives, setPopularArchives] = useState([
         { id: "wealth-way", title: "부자들이 돈을 보는 방식", listens: "12.4k" },
@@ -232,10 +236,13 @@ export default function Home() {
             if (snap.exists() && snap.data().books?.length) setPopularArchives(snap.data().books);
         });
         const unsub2 = onSnapshot(doc(db, 'site_config', 'weekly_focus'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) {
-                const books = snap.data().books;
-                setWeeklyFocusRaw(books);
-                try { localStorage.setItem('wf_cache', JSON.stringify(books)); } catch {}
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.books?.length) {
+                    setWeeklyFocusRaw(data.books);
+                    try { localStorage.setItem('wf_cache', JSON.stringify(data.books)); } catch {}
+                }
+                if (data.videos?.length) setWeeklyFocusVideos(data.videos);
             }
         });
         const unsub3 = onSnapshot(doc(db, 'site_config', 'weekly_most_viewed'), (snap) => {
@@ -707,55 +714,65 @@ export default function Home() {
                          </div>
 
                          {/* 2️⃣ Weekly Focus */}
-                         {false && (
-                        <div className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
-                            <div className="mb-8 flex items-center justify-between">
+                         {(weeklyFocusBooks.length > 0 || weeklyFocusVideos.length > 0) && (
+                        <div className="relative z-[20] space-y-3 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                            <div className="mb-6 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Weekly Focus</h2>
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
-                                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">매주 무료로 청취하는 위클리 포커스</p>
+                                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번 주 직장인 필독 인사이트</p>
                                     </div>
                                 </div>
                             </div>
-                            {weeklyFocusBooks.length === 0 && booksLoading ? (
-                                // 첫 방문자용 스켈레톤 (Firestore 로딩 중)
-                                [0, 1].map(i => (
-                                    <div key={i} className="glass-card rounded-none p-4 flex gap-5 items-center border border-white/5 animate-pulse">
-                                        <div className="w-[70px] h-[98px] rounded-none bg-white/10 flex-shrink-0" />
-                                        <div className="flex-grow space-y-2">
-                                            <div className="h-4 bg-white/10 rounded w-3/4" />
-                                            <div className="h-3 bg-white/5 rounded w-full" />
-                                            <div className="flex gap-1 mt-3">
-                                                {[0, 1, 2, 3].map(j => <div key={j} className="flex-1 h-6 bg-white/5 rounded-none" />)}
-                                            </div>
+
+                            {/* 도서 2개 */}
+                            {weeklyFocusBooks.slice(0, 2).map((book, idx) => (
+                                <div key={book.id || idx} className="relative group">
+                                    <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}
+                                        className="cursor-pointer glass-card rounded-none p-4 flex gap-4 items-center hover:bg-white/5 transition-all w-full border border-white/5">
+                                        <div className="w-[52px] h-[72px] rounded-none overflow-hidden flex-shrink-0 shadow-xl border border-white/10">
+                                            <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                                         </div>
+                                        <div className="flex-grow min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <span className="text-[9px] font-black text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 uppercase tracking-widest">BOOK</span>
+                                            </div>
+                                            <h3 className="font-black text-[14px] mb-0.5 leading-snug truncate text-white">{book.title}</h3>
+                                            <p className="text-[11px] text-gray-500 font-medium">{book.author}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 text-[18px] flex-shrink-0">chevron_right</span>
                                     </div>
-                                ))
-                            ) : weeklyFocusBooks.length === 0 ? (
-                                <div className="text-center py-10">
-                                    <p className="text-white/30 text-xs font-bold">도서 정보가 없습니다.</p>
                                 </div>
-                            ) : weeklyFocusBooks.map((book, idx) => {
-                                const isThisPlaying = podcastPlaying && podcastInfo?.id === book.id;
-                                return (
-                                    <div key={idx} className="relative group">
-                                        <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)} className="cursor-pointer glass-card rounded-none p-4 flex gap-5 items-start hover:bg-white/5 transition-all w-full border border-white/5">
-                                            <div className="w-[70px] h-[98px] mt-[30px] rounded-none overflow-hidden flex-shrink-0 shadow-2xl border border-white/10 ring-1 ring-white/20">
-                                                <img alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={book.cover} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
-                                            </div>
-                                            <div className="flex-grow min-w-0">
-                                                <h3 className="font-black text-[16px] mb-1.5 leading-snug truncate text-white">{book.title}</h3>
-                                                <p className="text-[11px] text-gray-400 mb-2 line-clamp-1 italic font-medium">{cleanText(book.desc) || '성공적인 인생을 위한 핵심 근력을 키워주는 방법론...'}</p>
+                            ))}
 
-
-
-                                                {/* <BookCardActions book={book} /> */}
+                            {/* 유튜브 영상 2개 */}
+                            {weeklyFocusVideos.slice(0, 2).map((v, idx) => (
+                                <div key={v.id || idx} className="relative group">
+                                    <a href={v.youtubeUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.title)}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="glass-card rounded-none p-4 flex gap-4 items-center hover:bg-white/5 transition-all w-full border border-white/5 block">
+                                        <div className="w-[80px] h-[46px] rounded-none overflow-hidden flex-shrink-0 shadow-xl border border-white/10 relative bg-black">
+                                            {v.thumbnail
+                                                ? <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                                : <div className="w-full h-full flex items-center justify-center bg-red-900/30"><span className="material-symbols-outlined text-red-400 text-[24px]">play_circle</span></div>}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="w-6 h-6 rounded-full bg-black/60 flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-white text-[14px]">play_arrow</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                        <div className="flex-grow min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <span className="text-[9px] font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 uppercase tracking-widest">YOUTUBE</span>
+                                            </div>
+                                            <h3 className="font-black text-[14px] mb-0.5 leading-snug line-clamp-2 text-white">{v.title}</h3>
+                                            <p className="text-[11px] text-gray-500 font-medium truncate">{v.channel}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 text-[18px] flex-shrink-0">open_in_new</span>
+                                    </a>
+                                </div>
+                            ))}
                         </div>
                         )}
                     </section>
@@ -1084,58 +1101,58 @@ export default function Home() {
                             </p>
                         </div>
 
-                        <div className="glass-card rounded-none p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+                        <div className="glass-card rounded-none p-4 sm:p-6 bg-white/[0.02] border border-white/5 relative overflow-hidden group">
                             {/* Subtle background glow */}
                             <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-none pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700"></div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
                                 {/* Free Column */}
-                                <div className="bg-black/40 border border-white/5 rounded-none p-4 relative z-10">
+                                <div className="bg-black/40 border border-white/5 rounded-none p-3 sm:p-4 relative z-10 min-w-0">
                                     <h3 className="text-[12px] font-black text-white/50 text-center mb-4 uppercase tracking-widest border-b border-white/5 pb-2">일반 회원</h3>
                                     <ul className="space-y-3">
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-white/30 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/30">주간 무료 콘텐츠</span>
+                                            <span className="text-[11px] font-bold text-white/30 leading-tight break-keep">주간 무료 콘텐츠</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">모든 에피소드 감상</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-keep">모든 에피소드 감상</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">핵심 요약 PDF 제공</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-keep">핵심 요약 PDF 제공</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">핵심 실천 가이드 제공</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-keep">핵심 실천 가이드 제공</span>
                                         </li>
                                         <li className="flex items-center gap-2 pt-2">
                                             <span className="material-symbols-outlined text-red-500/50 text-[14px]">close</span>
-                                            <span className="text-[11px] font-bold text-white/30 line-through">기록노트 연동 성취 트래커</span>
+                                            <span className="text-[11px] font-bold text-white/30 line-through leading-tight break-keep">기록노트 연동 성취 트래커</span>
                                         </li>
                                     </ul>
                                 </div>
 
                                 {/* Premium Column */}
-                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-none p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)]">
-                                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
+                                <div className="bg-orange-500/5 border border-orange-500/30 rounded-none p-3 sm:p-4 relative z-10 shadow-[0_0_20px_rgba(234,88,12,0.1)] min-w-0 overflow-hidden">
+                                    <div className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-none shadow-lg">PRO</div>
                                     <h3 className="text-[12px] font-black text-orange-500 text-center mb-4 uppercase tracking-widest border-b border-orange-500/20 pb-2">프리미엄</h3>
                                     <ul className="space-y-3">
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">모든 팟캐스트 무제한</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-keep">모든 팟캐스트 무제한</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">매주 2권 카톡 발송</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-keep">매주 2권 카톡 발송</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">전용 가이드북 다운로드</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-keep">전용 가이드북 다운로드</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-orange-500 text-[14px]">check</span>
-                                            <span className="text-[11px] font-bold text-white/90">핵심 실천 가이드 제공</span>
+                                            <span className="text-[11px] font-bold text-white/90 leading-tight break-keep">핵심 실천 가이드 제공</span>
                                         </li>
                                         <li className="flex items-start gap-2 bg-orange-500/10 p-2.5 rounded-none border border-orange-500/20 mt-3 shadow-inner">
                                             <span className="material-symbols-outlined text-orange-500 text-[16px]">fact_check</span>

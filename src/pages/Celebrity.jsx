@@ -7,39 +7,169 @@ import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
 import { useBookData } from '../hooks/useBookData';
 import BookCardActions from '../components/BookCardActions';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Celebrity() {
     const { id } = useParams();
     const { isSpeaking, activeAudioId, playPodcast, speakReview, stopAll, openScriptModal } = useAudio();
     const celeb = celebrities.find(c => c.id === id) || celebrities[0]; // Default to first if not found
-    const { getAllBooks, loading: booksLoading } = useBookData();
+    const { getAllBooks, loading: booksLoading, overrides } = useBookData();
+    const [staticOverrides, setStaticOverrides] = useState({});
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadStaticOverrides = async () => {
+            try {
+                const ids = (celeb.books || [])
+                    .map((book) => book.id || book.title?.toLowerCase().replace(/\s+/g, '-'))
+                    .filter(Boolean);
+                const uniqueIds = Array.from(new Set(ids));
+                const entries = await Promise.all(uniqueIds.map(async (bookId) => {
+                    try {
+                        const snap = await getDoc(doc(db, 'book_overrides', bookId));
+                        return [bookId, snap.exists() ? snap.data() : null];
+                    } catch {
+                        return [bookId, null];
+                    }
+                }));
+                if (!cancelled) {
+                    const next = {};
+                    entries.forEach(([bookId, value]) => {
+                        if (value) next[bookId] = value;
+                    });
+                    setStaticOverrides(next);
+                }
+            } catch {
+                if (!cancelled) setStaticOverrides({});
+            }
+        };
+        loadStaticOverrides();
+        return () => { cancelled = true; };
+    }, [id, celeb.books]);
 
     const allCelebBooks = useMemo(() => {
         if (booksLoading) return celeb.books || [];
-        const all = getAllBooks();
+        const allRaw = getAllBooks(true);
+        const allPublic = allRaw.filter((b) => b.isPublic !== false);
+        const norm = (v) => String(v || '').normalize('NFC');
+        const normLoose = (v) => norm(v).toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9가-힣]/g, '');
+        const bookMetaKey = (book) => `${normLoose(book?.title)}::${normLoose(book?.author)}`;
+        const bookTitleKey = (book) => normLoose(book?.title);
+        const isSameBookId = (left, right) => {
+            const a = norm(left);
+            const b = norm(right);
+            if (!a || !b) return false;
+            return a === b || a.endsWith(`-${b}`) || b.endsWith(`-${a}`);
+        };
+        const isSameBookMeta = (left, right) => {
+            const lKey = bookMetaKey(left);
+            const rKey = bookMetaKey(right);
+            if (!lKey || !rKey || lKey === '::' || rKey === '::') return false;
+            return lKey === rKey;
+        };
+        const isSameBookTitle = (left, right) => {
+            const lTitle = bookTitleKey(left);
+            const rTitle = bookTitleKey(right);
+            if (!lTitle || !rTitle) return false;
+            return lTitle === rTitle;
+        };
+        const findOverrideForStaticBook = (staticBook) => {
+            const staticId = staticBook.id || staticBook.title.toLowerCase().replace(/\s+/g, '-');
+            const entries = Object.entries(overrides || {});
+            const matched = entries.find(([ovKey, ovValue]) =>
+                isSameBookId(ovKey, staticId) ||
+                isSameBookMeta(ovValue || {}, staticBook) ||
+                isSameBookTitle(ovValue || {}, staticBook)
+            );
+            return matched ? matched[1] : null;
+        };
 
         // 1. 기존 celebrities.js 에 있던 도서들에 Firestore 덮어쓰기 적용
-        const staticBooksWithOverrides = (celeb.books || []).map(staticBook => {
-            const staticId = staticBook.id || staticBook.title.toLowerCase().replace(/\s+/g, '-');
-            const overrideBook = all.find(b => b.id === staticId);
-            return overrideBook || { ...staticBook, id: staticId };
-        });
+        const staticBooksWithOverrides = (celeb.books || [])
+            .map(staticBook => {
+                const staticId = staticBook.id || staticBook.title.toLowerCase().replace(/\s+/g, '-');
+                const matchedOverride = staticOverrides[staticId] || findOverrideForStaticBook(staticBook);
+                const overrideBook = allRaw.find(b =>
+                    isSameBookId(b.id, staticId) ||
+                    isSameBookMeta(b, staticBook) ||
+                    isSameBookTitle(b, staticBook)
+                );
+                const explicitCelebBook = allRaw.find((b) => {
+                    const sameBook =
+                        isSameBookId(b.id, staticId) ||
+                        isSameBookMeta(b, staticBook) ||
+                        isSameBookTitle(b, staticBook);
+                    if (!sameBook) return false;
+                    return (
+                        Object.prototype.hasOwnProperty.call(b, 'celebritySlug') ||
+                        Object.prototype.hasOwnProperty.call(b, 'celebrity') ||
+                        Object.prototype.hasOwnProperty.call(b, 'celebId')
+                    );
+                });
+                const explicitLinkedCeleb = explicitCelebBook
+                    ? (explicitCelebBook.celebritySlug || explicitCelebBook.celebrity || explicitCelebBook.celebId || '')
+                    : '';
+                const merged = overrideBook || { ...staticBook, id: staticId };
+                return {
+                    ...merged,
+                    __matchedOverride: matchedOverride,
+                    __explicitLinkedCeleb: explicitLinkedCeleb,
+                    __hasExplicitCelebOverride: !!explicitCelebBook,
+                };
+            })
+            .filter((book) => {
+                const matchedOverride = book.__matchedOverride || null;
+                if (book.isPublic === false || matchedOverride?.isPublic === false) return false;
+                const overrideCeleb = matchedOverride
+                    ? (matchedOverride.celebritySlug || matchedOverride.celebrity || matchedOverride.celebId || '')
+                    : '';
+                const hasCelebOverride = matchedOverride
+                    ? (Object.prototype.hasOwnProperty.call(matchedOverride, 'celebritySlug')
+                        || Object.prototype.hasOwnProperty.call(matchedOverride, 'celebrity')
+                        || Object.prototype.hasOwnProperty.call(matchedOverride, 'celebId'))
+                    : false;
+                // Firestore override가 있으면 override 값을 우선, 없으면 allRaw merged 값 사용
+                const linkedCeleb = hasCelebOverride
+                    ? overrideCeleb
+                    : (book.__explicitLinkedCeleb ||
+                       book.celebritySlug ||
+                       book.celebrity ||
+                       book.celebId ||
+                       '');
+                // 관리자에서 셀럽 필드를 명시적으로 변경한 도서는 해당 slug에서만 노출
+                if (hasCelebOverride) return linkedCeleb === id;
+                // 기본 정적 도서는 기존 동작 유지
+                if (!linkedCeleb) return true;
+                return linkedCeleb === id;
+            });
 
         // 2. 이 셀럽을 위해 새로 추가된 완전 신규 도서
         const staticIds = new Set(staticBooksWithOverrides.map(b => b.id));
-        const firestoreBooks = all.filter(b =>
-            (b.celebName === id || b.celebritySlug === id || b.celebId === id) &&
+        const staticMetaKeys = new Set(staticBooksWithOverrides.map(bookMetaKey));
+        const firestoreBooks = allPublic.filter(b =>
+            (b.celebName === id || b.celebritySlug === id || b.celebId === id || b.celebrity === id) &&
             b.isPublic === true &&
-            !staticIds.has(b.id)
+            !staticIds.has(b.id) &&
+            !staticMetaKeys.has(bookMetaKey(b))
         );
 
-        return [...staticBooksWithOverrides, ...firestoreBooks];
-    }, [getAllBooks, booksLoading, id, celeb.books]);
-
-    const [expandedReviews, setExpandedReviews] = useState({});
-    const toggleReview = (index) => {
-        setExpandedReviews(prev => ({ ...prev, [index]: !prev[index] }));
-    };
+        // 최종 안전망: overrides에서 다른 셀럽으로 재설정된 도서 제거
+        const finalList = [...staticBooksWithOverrides, ...firestoreBooks].filter(book => {
+            const bookId = book.id;
+            if (!bookId) return true;
+            // overrides에서 직접 확인
+            const ov = overrides[bookId] || Object.entries(overrides).find(([k]) =>
+                isSameBookId(k, bookId)
+            )?.[1];
+            if (!ov) return true;
+            const ovCeleb = ov.celebritySlug || ov.celebrity || ov.celebId || '';
+            if (!ovCeleb) return true;
+            // override에 셀럽이 명시되어 있으면 그 셀럽에서만 노출
+            return ovCeleb === id;
+        });
+        return finalList.map(({ __matchedOverride, __explicitLinkedCeleb, __hasExplicitCelebOverride, ...rest }) => rest);
+    }, [getAllBooks, booksLoading, id, celeb.books, overrides, staticOverrides]);
 
     const cleanText = useCallback((t) => {
         if (!t) return "";
@@ -50,21 +180,16 @@ export default function Celebrity() {
             .replace(/([.?!,])([^\s\n0-9"'])/g, '$1 $2').trim();
     }, []);
 
-    // 각 도서의 desc/review 정제 텍스트를 미리 계산
+    // 각 도서의 설명 텍스트를 미리 계산
     const cleanedBooks = useMemo(() =>
         allCelebBooks.map(book => ({
             ...book,
             _cleanDesc: cleanText(book.desc),
-            // review > description(Firestore) > desc 순서로 가장 긴 내용 사용
-            _cleanReview: [book.review, book.description, book.desc]
-                .map(t => cleanText(t))
-                .sort((a, b) => b.length - a.length)[0] || '',
         })),
     [allCelebBooks, cleanText]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        setExpandedReviews({});
     }, [id]);
 
     return (
@@ -120,34 +245,6 @@ export default function Celebrity() {
                         </div>
                     </section>
 
-                    {/* Discover Your Taste Banner */}
-                    <section className="px-4 py-8">
-                        <Link to="/quiz" className="block group">
-                            <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img
-                                    src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop"
-                                    alt="Library Background"
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                />
-                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
-                                    <div className="size-12 rounded-none bg-gold/20 flex items-center justify-center border border-gold/40 mb-4">
-                                        <span className="material-symbols-outlined text-gold">psychology</span>
-                                    </div>
-                                    <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
-                                    <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
-                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이뷰를 완성하세요.
-                                    </p>
-                                    <div className="px-8 py-3 bg-gold text-primary font-black rounded-none text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
-                                        <span>테스트 시작하기</span>
-                                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-                    </section>
-
                     {/* Curated Categories */}
 
                     <section className="px-4 py-12 space-y-16">
@@ -197,30 +294,6 @@ export default function Celebrity() {
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Detailed Review Section for AdSense */}
-                                        {book._cleanReview && (
-                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 relative overflow-hidden transition-all duration-500">
-                                                <div className="absolute top-0 left-0 w-1 h-full bg-gold/50"></div>
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <h6 className="text-gold text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                                                        <span className="material-symbols-outlined text-sm">edit_note</span>
-                                                        Insight & Review
-                                                    </h6>
-                                                    {book._cleanReview.length > 150 && (
-                                                        <button
-                                                            onClick={() => toggleReview(index)}
-                                                            className="px-4 py-2 rounded-none bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
-                                                        >
-                                                            {expandedReviews[index] ? '접기' : '열기'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-3'}`}>
-                                                    {book._cleanReview}
-                                                </p>
-                                            </div>
-                                        )}
 
                                         <BookCardActions book={book} />
                                     </div>

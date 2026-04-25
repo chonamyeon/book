@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAudio } from '../contexts/AudioContext';
-import { bookScripts } from '../data/bookScripts';
 
 const Avatar = ({ role }) => {
     const [error, setError] = useState(false);
@@ -31,7 +30,12 @@ export default function PodcastScriptModal() {
         podcastPlaying, podcastInfo, currentTime, duration,
     } = useAudio();
 
+    const [bookScripts, setBookScripts] = useState({});
     const [timestamps, setTimestamps] = useState(null);
+
+    useEffect(() => {
+        import('../data/bookScripts').then(m => setBookScripts(m.bookScripts || {}));
+    }, []);
 
     useEffect(() => {
         if (!scriptModalBookId) { setTimestamps(null); return; }

@@ -24,16 +24,15 @@ function BottomNavigation() {
 
     return (
         <nav
-            className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-gold/20 bg-[#090b10]/95 backdrop-blur-2xl transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] gpu-accelerated"
+            className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[#0a0d12] transition-all duration-300 gpu-accelerated"
             style={{
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                 transform: 'translate3d(-50%, 0, 0)',
                 willChange: 'transform',
             }}
         >
-            <div className="flex justify-around items-center px-4 pt-3 pb-3 relative">
-                {/* Subtle gold line on top */}
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-gold/10 to-transparent"></div>
+            <div className="flex justify-around items-center px-3 pt-2.5 pb-2.5 relative">
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
                 {navItems.map((item) => {
                     const isActive = currentPath === item.path;
@@ -41,22 +40,22 @@ function BottomNavigation() {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex flex-col items-center justify-center gap-1.5 transition-colors duration-200 active:scale-95 ${isActive
-                                ? 'text-gold'
-                                : 'text-white/40 hover:text-white/70'
-                                }`}
+                            className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 px-2 py-1.5 rounded-none ${
+                                isActive
+                                    ? 'bg-[#3a3f47] text-gold'
+                                    : 'text-white/85 hover:bg-white/5'
+                            }`}
                         >
-                            <div className="relative group/nav">
-                                {isActive && (
-                                    <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-none scale-150"></div>
-                                )}
-                                <div className="flex items-center justify-center relative z-10 mb-1">
-                                    <span className={`material-symbols-outlined text-[26px] transition-colors duration-200 ${isActive ? 'fill-1 scale-110 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)] text-gold' : 'scale-90 opacity-80 text-white/50 group-hover/nav:text-white/80'}`}>
-                                        {item.icon}
-                                    </span>
-                                </div>
+                            <div className="flex items-center justify-center mb-0.5">
+                                <span className={`material-symbols-outlined text-[23px] transition-colors duration-200 ${
+                                    isActive ? 'text-gold' : 'text-white/85'
+                                }`}>
+                                    {item.icon}
+                                </span>
                             </div>
-                            <p className={`text-[11px] font-black uppercase tracking-[0.1em] -translate-y-0.5 ${isActive ? 'opacity-100 scale-105' : 'opacity-60 group-hover/nav:opacity-100'}`}>
+                            <p className={`text-[11px] font-black tracking-[0.02em] -translate-y-0.5 ${
+                                isActive ? 'opacity-100 text-gold' : 'opacity-90'
+                            }`}>
                                 {item.label}
                             </p>
                         </Link>

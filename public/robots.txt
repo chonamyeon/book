@@ -1,4 +1,7 @@
+User-agent: Yeti
+Allow: /
+
 User-agent: *
 Allow: /
 
-Sitemap: https://archiview.shop/sitemap.xml
+Sitemap: https://archiview.store/sitemap.xml

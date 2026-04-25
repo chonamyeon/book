@@ -6,10 +6,13 @@ import MainHeader from '../components/MainHeader';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { useBookData } from '../hooks/useBookData';
+import LoadingScreen from '../components/LoadingScreen';
 import { useAudio } from '../contexts/AudioContext';
 import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
 import { availableAudio } from '../data/availableAudio';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const categoriesInfo = [
     {
@@ -79,15 +82,59 @@ export default function Editorial() {
         return getAllBooks();
     }, [getAllBooks]);
 
+    // 관리자 popular 탭 순서 로드
+    const [categoryOrders, setCategoryOrders] = useState({});
+    useEffect(() => {
+        const MAP = {
+            SELF_DEV:    'category_growth',
+            ECONOMY:     'category_economy',
+            MANAGEMENT:  'category_business',
+            HUMANITIES:  'category_humanities',
+            PSYCHOLOGY:  'category_psychology',
+        };
+        const unsubs = Object.entries(MAP).map(([catId, dbKey]) =>
+            onSnapshot(doc(db, 'site_config', dbKey), snap => {
+                if (snap.exists()) {
+                    setCategoryOrders(prev => ({ ...prev, [catId]: snap.data().books || [] }));
+                }
+            })
+        );
+        return () => unsubs.forEach(u => u());
+    }, []);
+
     // design 설정에서 슬라이더/탭 이미지 가져오기 (없으면 파일 상단 상수 사용)
     const sliderItemsResolved = design.editorial_slider.length ? design.editorial_slider : sliderItems;
+    const loopedSliderItems = useMemo(
+        () => [...sliderItemsResolved, ...sliderItemsResolved],
+        [sliderItemsResolved]
+    );
     const categoriesInfoResolved = categoriesInfo.map(cat => {
         const tabDesign = design.editorial_tabs.find(t => t.id === cat.id);
         return tabDesign ? { ...cat, img: tabDesign.img } : cat;
     });
 
-    // 카테고리 필터링 메모이제이션: 탭 변경 / showAll 변경 시에만 재계산
+    // 카테고리 필터링 + 관리자 등록 순서 적용
     const filteredBooks = useMemo(() => {
+        const order = categoryOrders[selectedCategoryId] || [];
+        if (order.length > 0) {
+            // 관리자 순서 기준으로 allBooks에서 매칭해서 정렬
+            const bookMap = new Map(allBooks.map(b => [b.id, b]));
+            const ordered = order.map(item => bookMap.get(item.id)).filter(Boolean);
+            // 관리자 목록에 없는 책은 카테고리 필터로 뒤에 추가
+            const orderedIds = new Set(ordered.map(b => b.id));
+            const rest = allBooks.filter(book => {
+                if (orderedIds.has(book.id)) return false;
+                const bCat = (book.category || '').toLowerCase();
+                if (selectedCategoryId === 'SELF_DEV') return bCat.includes('자기계발');
+                if (selectedCategoryId === 'ECONOMY') return bCat.includes('경제');
+                if (selectedCategoryId === 'MANAGEMENT') return bCat.includes('경영');
+                if (selectedCategoryId === 'HUMANITIES') return bCat.includes('인문') || bCat.includes('역사');
+                if (selectedCategoryId === 'PSYCHOLOGY') return bCat.includes('심리');
+                return false;
+            });
+            return [...ordered, ...rest];
+        }
+        // Firestore 미설정 시 카테고리 필터만 적용
         return allBooks.filter(book => {
             const bCat = (book.category || '').toLowerCase();
             if (selectedCategoryId === 'SELF_DEV') return bCat.includes('자기계발');
@@ -97,7 +144,7 @@ export default function Editorial() {
             if (selectedCategoryId === 'PSYCHOLOGY') return bCat.includes('심리');
             return false;
         });
-    }, [allBooks, selectedCategoryId]);
+    }, [allBooks, selectedCategoryId, categoryOrders]);
 
     const visibleBooks = useMemo(
         () => showAllBooks ? filteredBooks : filteredBooks.slice(0, 10),
@@ -108,19 +155,27 @@ export default function Editorial() {
         setShowAllBooks(false);
     }, [selectedCategoryId]);
 
+    const normalizeLoopScroll = () => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        const half = el.scrollWidth / 2;
+        if (!half) return;
+        if (el.scrollLeft >= half) {
+            el.scrollLeft -= half;
+        } else if (el.scrollLeft < 0) {
+            el.scrollLeft += half;
+        }
+    };
+
     useEffect(() => {
         const interval = setInterval(() => {
-            if (scrollContainerRef.current) {
-                const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-                if (scrollLeft + clientWidth >= scrollWidth - 10) {
-                    scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-                } else {
-                    scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' });
-                }
-            }
+            const el = scrollContainerRef.current;
+            if (!el) return;
+            normalizeLoopScroll();
+            el.scrollBy({ left: 220, behavior: 'smooth' });
         }, 3500);
         return () => clearInterval(interval);
-    }, []);
+    }, [loopedSliderItems.length]);
 
     const addToLibrary = (book) => {
         const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
@@ -133,14 +188,7 @@ export default function Editorial() {
     };
 
     if (booksLoading) {
-        return (
-            <div className="bg-[#0e1015] min-h-screen flex items-center justify-center font-display">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-2 border-orange-500/20 border-t-orange-500 rounded-none animate-spin" />
-                    <span className="text-orange-500 text-[10px] font-bold tracking-widest uppercase">Archiview</span>
-                </div>
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
     return (
@@ -155,7 +203,17 @@ export default function Editorial() {
                         {design.editorial_hero.type === 'image' ? (
                             <img src={design.editorial_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
                         ) : (
-                            <video src={design.editorial_hero.src} autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
+                            <video
+                                src={design.editorial_hero.src}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                preload="auto"
+                                poster={design.editorial_hero_poster || undefined}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                style={{ transform: 'scale(1.1) translateX(30px)' }}
+                            />
                         )}
                         <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                             <div className="flex items-center gap-3 mb-4">
@@ -206,15 +264,20 @@ export default function Editorial() {
 
                     {/* 🚀 2. Trending Now Horizontal Scroll */}
                     <section className="relative">
-                        <div className="px-6 mb-6 flex justify-between items-end">
-                            <h3 className="text-xl font-bold tracking-tighter">직장인이 가장 많이 듣는 아카이뷰</h3>
-                            <button className="text-orange-500 text-xs font-bold tracking-widest uppercase mt-2 block text-right" style={{ width: "auto" }}>VIEW ALL</button>
+                        <div className="px-6 mb-8">
+                            <h3 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">직장인이 가장 많이 듣는 인사이트</h3>
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
+                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">지금 직장인의 고민으로 가장 많이 듣는 인사이트</p>
+                            </div>
                         </div>
                         <div className="relative group/slider">
                             {/* Left Scroll Button */}
                             <button
                                 onClick={() => {
-                                    if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' })
+                                    if (!scrollContainerRef.current) return;
+                                    normalizeLoopScroll();
+                                    scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' });
                                 }}
                                 className="absolute left-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-none text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
                             >
@@ -224,24 +287,26 @@ export default function Editorial() {
                             {/* Right Scroll Button */}
                             <button
                                 onClick={() => {
-                                    if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' })
+                                    if (!scrollContainerRef.current) return;
+                                    normalizeLoopScroll();
+                                    scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' });
                                 }}
                                 className="absolute right-4 top-[133px] -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center bg-zinc-800/80 rounded-none text-zinc-300 opacity-0 group-hover/slider:opacity-100 hover:bg-zinc-700 hover:scale-110 hover:text-white transition-all active:scale-90"
                             >
                                 <span className="material-symbols-outlined text-[32px] font-light">chevron_right</span>
                             </button>
 
-                            <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pb-2">
-                                {sliderItemsResolved.map((item, idx) => (
+                            <div ref={scrollContainerRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pr-10 pb-6 snap-x snap-mandatory">
+                                {loopedSliderItems.map((item, idx) => (
                                     <motion.div
-                                        key={idx}
+                                        key={`${item.id}-${idx}`}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => navigate(`/category/${item.id}`)}
-                                        className="flex-none w-[200px] group cursor-pointer"
+                                        className="flex-none w-[200px] group cursor-pointer snap-start"
                                     >
                                         <div className="relative aspect-[3/4] rounded-none overflow-hidden mb-3 border border-white/5 shadow-2xl">
                                             <div className="absolute top-3 left-3 z-10 bg-orange-600 text-white w-8 h-8 rounded-none flex items-center justify-center font-black text-xs">
-                                                0{idx + 1}
+                                                0{(idx % sliderItemsResolved.length) + 1}
                                             </div>
                                             <img src={item.img} alt={item.label} loading="lazy" decoding="async" className="w-full h-full object-cover object-right grayscale-[0.2] transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -250,6 +315,7 @@ export default function Editorial() {
                                         <p className="text-white/40 text-[11px] font-medium tracking-tight mt-0.5">{item.sub}</p>
                                     </motion.div>
                                 ))}
+                                <div className="flex-none w-1" aria-hidden="true" />
                             </div>
                         </div>
                     </section>
@@ -343,6 +409,33 @@ export default function Editorial() {
                                                         </div>
                                                     </div>
                                                     {idx < books.length - 1 && <div className="h-[1px] w-full bg-white/5 mt-2"></div>}
+
+                                                    {/* ── 광고 (4번째 책 다음) ── */}
+                                                    {idx === 3 && (
+                                                        <div className="relative overflow-hidden bg-[#0f1117] border border-white/5 p-5 my-4">
+                                                            <div className="absolute -top-8 -right-8 w-32 h-32 bg-blue-600/10 blur-[50px] rounded-full pointer-events-none" />
+                                                            <div className="relative z-10">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <span className="bg-blue-600/90 text-white text-[9px] font-black px-1.5 py-0.5 uppercase tracking-tighter">SPECIAL OFFER</span>
+                                                                    <span className="text-zinc-500 text-[11px] italic">아카이뷰 추천</span>
+                                                                </div>
+                                                                <h3 className="text-white text-[16px] font-black leading-tight break-keep mb-2">저렴한 유지비로 신차 타자! 🚗</h3>
+                                                                <p className="text-zinc-400 text-[11px] leading-relaxed mb-4 break-keep">
+                                                                    초기비용↓ · 세금절감 · 신용등급 변동無 · 보험할증無 · 재산세/건보료 상승NO
+                                                                </p>
+                                                                <a
+                                                                    href="http://dbdbdeep.com/ma/link.php?lncd=S00274859QC05984655S"
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="w-full h-12 bg-white text-black font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                                                                >
+                                                                    카슐랭 장기렌트 알아보기
+                                                                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                                                </a>
+                                                                <p className="mt-3 text-[9px] text-zinc-600 text-center">* 제휴 마케팅 활동의 일환으로 수수료를 제공받을 수 있습니다.</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </motion.div>
                                             );
                                         })}

@@ -9,6 +9,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import MainHeader from '../components/MainHeader';
 import BookCardActions from '../components/BookCardActions';
+import KakaoAdFit from '../components/KakaoAdFit';
 import PersonaAvatar from '../components/PersonaAvatar';
 
 const TYPE_META = {
@@ -497,6 +498,11 @@ export default function Result() {
                                     <h4 className="text-xs font-bold text-gold">AI 큐레이터의 종합 제언</h4>
                                 </div>
                                 <p className="text-xs text-slate-300 leading-relaxed">{data.bigData.comment}</p>
+                            </div>
+
+                            {/* 광고 */}
+                            <div className="flex justify-center py-3">
+                                <KakaoAdFit unit="DAN-aXfyL1HtK8zp0vui" width="320" height="100" />
                             </div>
 
                             {/* 6-4. 추천 도서 Top 5 */}

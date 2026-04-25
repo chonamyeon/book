@@ -20,6 +20,7 @@ export default function BookCardActions({ book, className = '' }) {
     const [cardModal, setCardModal] = useState(null); // { dataUrl, title }
     const [cardLoading, setCardLoading] = useState(false);
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { playPodcastMP3, openScriptModal, podcastInfo: podInfo, podcastPlaying: podPlaying } = useAudio();
     const { overrides } = useBookData();
 
@@ -29,10 +30,11 @@ export default function BookCardActions({ book, className = '' }) {
         navigate(path);
     };
 
-    // 팟캐스트: 오디오 즉시 재생(사용자 제스처 유지) + ReviewDetail 팟캐스트 탭으로 이동
+    // 팟캐스트: 오디오 즉시 재생 + ReviewDetail 팟캐스트 탭으로 이동
     const handlePodcastPlay = (e) => {
         e.stopPropagation();
         e.preventDefault();
+        if (!user) { navigate('/login'); return; }
         const sid = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
         const src = book.podcastFile || `/audio/${sid}.mp3`;
         try { playPodcastMP3(src, book.title, book.cover || book.coverUrl, sid, true); } catch {}
@@ -44,20 +46,22 @@ export default function BookCardActions({ book, className = '' }) {
     const bookKey = book.id || titleId;
     const normStr = s => s.normalize('NFC');
     const findInOverrides = (field) => {
+        // 1. 영문 id 직접 매칭
         if (overrides?.[bookKey]?.[field]) return overrides[bookKey][field];
+        // 2. 한글 제목 슬러그 직접 매칭
+        if (overrides?.[titleId]?.[field]) return overrides[titleId][field];
+        // 3. 퍼지 매칭
         const found = Object.entries(overrides || {}).find(([k]) => {
-            const nk = normStr(k); const ni = normStr(titleId);
-            return nk === ni || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
+            const nk = normStr(k); const ni = normStr(titleId); const nb = normStr(bookKey);
+            return nk === ni || nk === nb || nk.endsWith('-' + ni) || nk.replace(/^[a-z]+\d+-/, '') === ni;
         });
         return found?.[1]?.[field] || '';
     };
     const coupangUrl = useMemo(() => {
         if (!book) return '';
-        // 1. Firestore 오버라이드 확인
+        // 1. Firestore 오버라이드 확인 (등록된 링크 무조건 우선)
         const overrideLink = findInOverrides('coupangLink') || findInOverrides('purchaseLink');
-        if (overrideLink && (overrideLink.includes('coupang.com') || overrideLink.includes('link.coupang.com'))) {
-            return overrideLink;
-        }
+        if (overrideLink) return overrideLink;
 
         // 2. 도서 데이터 내 쿠팡 링크
         if (book.coupangLink) return book.coupangLink;
@@ -321,16 +325,13 @@ export default function BookCardActions({ book, className = '' }) {
 
                     <button
                         onClick={handlePodcastPlay}
-                        className="group flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2)] text-[10px] font-black text-white/90 hover:text-white transition-all whitespace-nowrap"
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-[#c02a2a] via-[#a01f1f] to-[#751515] border border-[#c0392b]/60 shadow-[0_2px_8px_rgba(160,31,31,0.5),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-2px_0_rgba(0,0,0,0.3)] text-[10px] font-black text-white transition-all whitespace-nowrap active:scale-95"
                     >
-                        <span className="material-symbols-outlined text-[14px] group-hover:hidden group-active:hidden">graphic_eq</span>
-                        <div className="hidden group-hover:flex group-active:flex items-center justify-center gap-[1.5px] h-[14px] w-[14px]">
-                            <div className="w-[1.5px] bg-current rounded-sm h-[6px] animate-wave-bar wave-delay-1" />
-                            <div className="w-[1.5px] bg-current rounded-sm h-[10px] animate-wave-bar wave-delay-2" />
-                            <div className="w-[1.5px] bg-current rounded-sm h-[14px] animate-wave-bar wave-delay-3" />
-                            <div className="w-[1.5px] bg-current rounded-sm h-[8px] animate-wave-bar wave-delay-4" />
-                            <div className="w-[1.5px] bg-current rounded-sm h-[4px] animate-wave-bar wave-delay-5" />
-                        </div>
+                        <span className="flex items-end gap-[1.5px]" style={{height:13}}>
+                            {[{h:5,d:'0s'},{h:11,d:'0.2s'},{h:13,d:'0.07s'},{h:8,d:'0.28s'},{h:4,d:'0.14s'}].map((b,i)=>(
+                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                            ))}
+                        </span>
                         <span>팟캐스트</span>
                     </button>
                 </div>
