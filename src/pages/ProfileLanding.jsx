@@ -52,14 +52,10 @@ export default function ProfileLanding() {
                 ) : (
                     <video
                         src={design.profile_hero.src}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
                         poster={design.profile_hero_poster || undefined}
                         className="absolute inset-0 w-full h-full object-cover opacity-70"
                         style={{ objectPosition: 'center center' }}
+                        autoPlay muted loop playsInline
                     />
                 )}
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-10">

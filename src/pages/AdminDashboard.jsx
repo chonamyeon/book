@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import { loadTossPayments } from '@tosspayments/payment-sdk';
-import { db, storage } from '../firebase';
+import { db, getStorageLazy } from '../firebase';
 import {
     collection,
     onSnapshot,
@@ -643,6 +643,13 @@ ${cfForm.target ? `타겟 고객: ${cfForm.target}` : ''}
     );
 }
 
+let _adminStorage = null;
+const getStorage = async () => {
+    if (_adminStorage) return _adminStorage;
+    _adminStorage = await getStorageLazy();
+    return _adminStorage;
+};
+
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
         const storedAuth = localStorage.getItem('adminAuthData');
@@ -826,7 +833,12 @@ export default function AdminDashboard() {
     const [wfVideoSearch, setWfVideoSearch] = useState('');
     const [wfVideoFocused, setWfVideoFocused] = useState(false);
     const [wfBookFocused, setWfBookFocused] = useState(false);
+    /** 위클리 포커스 — 검색 목록에서 체크 후 일괄 등록(도서 id / 유튜브 id) */
+    const [wfBookBulk, setWfBookBulk] = useState(() => new Set());
+    const [wfVideoBulk, setWfVideoBulk] = useState(() => new Set());
     const [aiRecommending, setAiRecommending] = useState(false);
+    const wfBookSearchPanelRef = useRef(null);
+    const wfVideoSearchPanelRef = useRef(null);
 
     const toPopularBookItem = (b) => ({
         id: b.id,
@@ -904,6 +916,34 @@ export default function AdminDashboard() {
         }
     }, [activeTab, popularSubTab, sectionData, realBooks, popularList]);
 
+    useEffect(() => {
+        if (popularSubTab !== 'weekly_focus') {
+            setWfBookBulk(new Set());
+            setWfVideoBulk(new Set());
+        }
+    }, [popularSubTab]);
+
+    useEffect(() => {
+        if (!wfBookFocused) return;
+        const onDown = (e) => {
+            if (wfBookSearchPanelRef.current && !wfBookSearchPanelRef.current.contains(e.target)) {
+                setWfBookFocused(false);
+            }
+        };
+        document.addEventListener('mousedown', onDown, true);
+        return () => document.removeEventListener('mousedown', onDown, true);
+    }, [wfBookFocused]);
+
+    useEffect(() => {
+        if (!wfVideoFocused) return;
+        const onDown = (e) => {
+            if (wfVideoSearchPanelRef.current && !wfVideoSearchPanelRef.current.contains(e.target)) {
+                setWfVideoFocused(false);
+            }
+        };
+        document.addEventListener('mousedown', onDown, true);
+        return () => document.removeEventListener('mousedown', onDown, true);
+    }, [wfVideoFocused]);
 
     // 1. Listen for Users
     useEffect(() => {
@@ -2212,7 +2252,7 @@ export default function AdminDashboard() {
         setVerifyMp3Uploading(true);
         setVerifyMp3UploadLog('⏳ Firebase Storage 업로드 중...');
         try {
-            const storageRef = ref(storage, `audio/${verifyBookId}.mp3`);
+            const storageRef = ref(await getStorage(), `audio/${verifyBookId}.mp3`);
             await uploadBytes(storageRef, verifyMp3File, { contentType: verifyMp3File.type || 'audio/mpeg' });
             const audioUrl = await getDownloadURL(storageRef);
 
@@ -2247,7 +2287,7 @@ export default function AdminDashboard() {
         setGsMp3Uploading(prev => ({ ...prev, [bookId]: true }));
         setGsMp3Logs(prev => ({ ...prev, [bookId]: '⏳ Firebase Storage 업로드 중...' }));
         try {
-            const storageRef = ref(storage, `audio/${bookId}.mp3`);
+            const storageRef = ref(await getStorage(), `audio/${bookId}.mp3`);
             await uploadBytes(storageRef, file, { contentType: file.type || 'audio/mpeg' });
             const audioUrl = await getDownloadURL(storageRef);
             await Promise.all([
@@ -4959,7 +4999,7 @@ speaker 필드와 턴 수(배열 길이)는 변경 금지.`;
         setMp3Uploading(true);
         setMp3UploadLog('⬆️ Firebase Storage 업로드 중...');
         try {
-            const storageRef = ref(storage, `audio/${voiceBook}_voice.mp3`);
+            const storageRef = ref(await getStorage(), `audio/${voiceBook}_voice.mp3`);
             await uploadBytes(storageRef, mp3UploadFile);
             const voiceAudioUrl = await getDownloadURL(storageRef);
             setMp3UploadLog('💾 Firestore 저장 중...');
@@ -6911,7 +6951,7 @@ ${raw}`;
                                                                     if (!file) return;
                                                                     try {
                                                                         const ext = file.name.split('.').pop();
-                                                                        const sRef = ref(storage, `book_covers/${bookKey}_${Date.now()}.${ext}`);
+                                                                        const sRef = ref(await getStorage(), `book_covers/${bookKey}_${Date.now()}.${ext}`);
                                                                         await uploadBytes(sRef, file);
                                                                         const url = await getDownloadURL(sRef);
                                                                         const textInput = e.target.closest('div.flex, div[class*="flex"]')?.querySelector('input[type="text"]');
@@ -9052,7 +9092,7 @@ ${raw}`;
                                                         setLogs(prev => [...prev, `[MP3] 업로드 시작: ${ytMp3File.name}`]);
                                                         try {
                                                             const fileName = `youtube_${selectedYoutubeId}.mp3`;
-                                                            const sRef = ref(storage, `audio/${fileName}`);
+                                                            const sRef = ref(await getStorage(), `audio/${fileName}`);
                                                             await uploadBytes(sRef, ytMp3File, { contentType: 'audio/mpeg' });
                                                             const url = await getDownloadURL(sRef);
                                                             setYtMp3Url(url);
@@ -9518,7 +9558,7 @@ ${raw}`;
                                     .filter(item => item.isPublic !== false);
                                 const payload = { books: booksToSave };
                                 if (popularSubTab === 'weekly_focus') {
-                                    payload.videos = weeklyFocusVideos.slice(0, 2).map(v => ({
+                                    payload.videos = weeklyFocusVideos.slice(0, 10).map(v => ({
                                         id: v.id,
                                         title: v.title,
                                         channel: v.channel || '',
@@ -9553,6 +9593,95 @@ ${raw}`;
                         const removeFromList = (id) => setCurList(prev => prev.filter(b => b.id !== id));
                         const moveUp         = (i) => { if (i === 0) return; setCurList(prev => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; }); };
                         const moveDown       = (i) => { if (i === curList.length - 1) return; setCurList(prev => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; }); };
+
+                        const toggleWfBookBulkId = (id) => {
+                            setWfBookBulk((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(id)) n.delete(id); else n.add(id);
+                                return n;
+                            });
+                        };
+                        const toggleWfVideoBulkId = (id) => {
+                            setWfVideoBulk((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(id)) n.delete(id); else n.add(id);
+                                return n;
+                            });
+                        };
+                        const addBulkWeeklyBooks = () => {
+                            if (!isWeeklyFocusTab || wfBookBulk.size === 0) { alert('도서를 체크하세요.'); return; }
+                            setCurList((prev) => {
+                                const existing = new Set(prev.map((b) => b.id));
+                                const next = [...prev];
+                                for (const id of wfBookBulk) {
+                                    if (typeof curSection.max === 'number' && next.length >= curSection.max) break;
+                                    if (existing.has(id)) continue;
+                                    const book = realBookMap.get(id);
+                                    if (!book || book.isPublic === false) continue;
+                                    next.push({
+                                        id: book.id,
+                                        title: book.title,
+                                        cover: book.cover || '',
+                                        author: book.author || '',
+                                        purchaseLink: book.purchaseLink || '',
+                                        listens: book.listens || '',
+                                        isPublic: book.isPublic !== false,
+                                    });
+                                    existing.add(id);
+                                }
+                                return next;
+                            });
+                            setWfBookBulk(new Set());
+                            setCurSearch('');
+                        };
+                        const addBulkWeeklyVideos = () => {
+                            if (wfVideoBulk.size === 0) { alert('영상을 체크하세요.'); return; }
+                            setWeeklyFocusVideos((prev) => {
+                                const have = new Set(prev.map((v) => v.id));
+                                const out = [...prev];
+                                for (const id of wfVideoBulk) {
+                                    if (out.length >= 10) break;
+                                    if (have.has(id)) continue;
+                                    const v = youtubeVideos.find((x) => x.id === id);
+                                    if (v) {
+                                        out.push(v);
+                                        have.add(v.id);
+                                    }
+                                }
+                                return out;
+                            });
+                            setWfVideoBulk(new Set());
+                            setWfVideoSearch('');
+                        };
+                        const selectAllVisibleWeeklyBooks = () => {
+                            if (!isWeeklyFocusTab) return;
+                            const q = curSearch.trim().toLowerCase();
+                            const shown = (q ? filteredBooks : realBooks).slice(0, 200);
+                            setWfBookBulk((prev) => {
+                                const n = new Set(prev);
+                                for (const b of shown) {
+                                    if (curList.some((c) => c.id === b.id)) continue;
+                                    if (b.isPublic === false) continue;
+                                    n.add(b.id);
+                                }
+                                return n;
+                            });
+                        };
+                        const selectAllVisibleWeeklyVideos = () => {
+                            const q = wfVideoSearch.trim().toLowerCase();
+                            const results = (q
+                                ? youtubeVideos.filter((v) => v.title?.toLowerCase().includes(q) || v.channel?.toLowerCase().includes(q))
+                                : youtubeVideos
+                            ).slice(0, 30);
+                            setWfVideoBulk((prev) => {
+                                const n = new Set(prev);
+                                for (const v of results) {
+                                    if (weeklyFocusVideos.some((x) => x.id === v.id)) continue;
+                                    n.add(v.id);
+                                }
+                                return n;
+                            });
+                        };
 
                         // AI 추천 — 예스24·교보문고 실시간 베스트셀러 기반
                         const handleAiRecommend = async () => {
@@ -9805,7 +9934,7 @@ ${raw}`;
                                         <h4 className="text-white font-black text-xl flex items-center gap-3">
                                             <span className="material-symbols-outlined text-red-400">play_circle</span>
                                             유튜브 영상 추가 (최대 10개)
-                                            <span className="text-slate-500 text-sm font-normal">· 메인 상단 도서 2개 아래 노출</span>
+                                            <span className="text-slate-500 text-sm font-normal">· 체크 후 일괄 추가 가능</span>
                                         </h4>
                                         {/* 등록된 영상 목록 */}
                                         <div className="space-y-3">
@@ -9833,14 +9962,13 @@ ${raw}`;
                                         </div>
                                         {/* 유튜브 영상 검색 */}
                                         {weeklyFocusVideos.length < 10 && (
-                                            <div className="space-y-3 relative">
+                                            <div ref={wfVideoSearchPanelRef} className="space-y-3 relative">
                                                 <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-red-400 transition-colors flex items-center px-4">
                                                     <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
                                                     <input type="text" placeholder="클릭하면 전체 목록 표시 / 제목·채널 검색..."
                                                         value={wfVideoSearch}
                                                         onChange={e => setWfVideoSearch(e.target.value)}
                                                         onFocus={() => setWfVideoFocused(true)}
-                                                        onBlur={() => setTimeout(() => setWfVideoFocused(false), 200)}
                                                         className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
                                                     {wfVideoSearch && <button onClick={() => setWfVideoSearch('')} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined text-sm">close</span></button>}
                                                 </div>
@@ -9852,9 +9980,27 @@ ${raw}`;
                                                     ).slice(0, 30);
                                                     return results.length === 0
                                                         ? <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>
-                                                        : <div className="space-y-2 max-h-80 overflow-y-auto border border-white/10 rounded-2xl bg-[#0e1015] p-2">
-                                                            {results.map(v => (
-                                                                <div key={v.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-3 border border-white/5 hover:border-white/15 transition-all">
+                                                        : (
+                                                            <div className="border border-white/10 rounded-2xl bg-[#0e1015] overflow-hidden">
+                                                                <div className="flex flex-wrap gap-2 items-center px-3 py-2.5 bg-black/50 border-b border-white/10">
+                                                                    <span className="text-red-300 text-xs font-black">선택 {wfVideoBulk.size}개</span>
+                                                                    <button type="button" onClick={addBulkWeeklyVideos} className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[11px] font-black hover:bg-red-400">선택 영상 일괄 추가</button>
+                                                                    <button type="button" onClick={selectAllVisibleWeeklyVideos} className="px-3 py-1.5 rounded-lg bg-white/10 text-slate-200 text-[11px] font-bold border border-white/15">목록 전체 선택</button>
+                                                                    <button type="button" onClick={() => setWfVideoBulk(new Set())} className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-[11px] font-bold">선택 해제</button>
+                                                                </div>
+                                                                <div className="space-y-2 max-h-80 overflow-y-auto p-2">
+                                                                    {results.map(v => {
+                                                                        const added = weeklyFocusVideos.some(x => x.id === v.id);
+                                                                        return (
+                                                                <div key={v.id} className="flex items-center gap-3 bg-black/40 rounded-2xl p-3 border border-white/5 hover:border-white/15 transition-all">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="size-4 accent-red-500 shrink-0 cursor-pointer"
+                                                                        checked={wfVideoBulk.has(v.id)}
+                                                                        onChange={() => toggleWfVideoBulkId(v.id)}
+                                                                        disabled={added}
+                                                                        title={added ? '이미 등록됨' : '일괄 추가에 포함'}
+                                                                    />
                                                                     <div className="w-[72px] h-[40px] rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
                                                                         <img src={v.thumbnail || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`} alt={v.title} className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
                                                                     </div>
@@ -9864,17 +10010,20 @@ ${raw}`;
                                                                     </div>
                                                                     <button
                                                                         onClick={() => {
-                                                                            if (weeklyFocusVideos.some(x => x.id === v.id)) return;
+                                                                            if (added) return;
                                                                             setWeeklyFocusVideos(prev => [...prev, v]);
                                                                             setWfVideoSearch('');
                                                                         }}
-                                                                        disabled={weeklyFocusVideos.some(x => x.id === v.id)}
+                                                                        disabled={added}
                                                                         className="px-5 py-2.5 rounded-xl bg-red-500/20 text-red-400 text-[11px] font-black border border-red-500/30 hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
-                                                                        {weeklyFocusVideos.some(x => x.id === v.id) ? '추가됨' : '+ 추가'}
+                                                                        {added ? '추가됨' : '+ 추가'}
                                                                     </button>
                                                                 </div>
-                                                            ))}
-                                                        </div>;
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
                                                 })()}
                                             </div>
                                         )}
@@ -9887,25 +10036,48 @@ ${raw}`;
                                         <span className="material-symbols-outlined text-blue-400">search</span>
                                         도서 검색 & 추가
                                     </h4>
+                                    <div ref={wfBookSearchPanelRef} className="space-y-3">
                                     <div className="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl overflow-hidden focus-within:border-gold transition-colors flex items-center px-4">
                                         <span className="material-symbols-outlined text-slate-500 mr-2">search</span>
                                         <input type="text" placeholder="클릭하면 전체 목록 표시 / 제목·저자 검색..."
                                             value={curSearch}
                                             onChange={(e) => setCurSearch(e.target.value)}
                                             onFocus={() => setWfBookFocused(true)}
-                                            onBlur={() => setTimeout(() => setWfBookFocused(false), 200)}
                                             className="flex-1 bg-transparent text-white text-base py-4 outline-none font-bold" />
                                         {curSearch && <button onClick={() => setCurSearch('')} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined text-sm">close</span></button>}
                                     </div>
                                     {wfBookFocused && (
-                                        <div className="space-y-2 max-h-96 overflow-y-auto border border-white/10 rounded-2xl bg-[#0e1015] p-2">
+                                        <div className="border border-white/10 rounded-2xl bg-[#0e1015] overflow-hidden">
                                             {(() => {
                                                 const q = curSearch.trim().toLowerCase();
-                                                const shown = q ? filteredBooks : realBooks;
+                                                const shown = (q ? filteredBooks : realBooks).slice(0, 200);
                                                 return shown.length === 0
-                                                    ? <p className="text-slate-500 text-sm text-center py-4">검색 결과가 없습니다.</p>
-                                                    : shown.slice(0, 200).map((book) => (
-                                                <div key={book.id} className="flex items-center gap-4 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
+                                                    ? <p className="text-slate-500 text-sm text-center py-8 p-4">검색 결과가 없습니다.</p>
+                                                    : (
+                                                        <>
+                                                            {isWeeklyFocusTab && (
+                                                                <div className="flex flex-wrap gap-2 items-center px-3 py-2.5 bg-black/50 border-b border-white/10">
+                                                                    <span className="text-gold text-xs font-black">선택 {wfBookBulk.size}권</span>
+                                                                    <button type="button" onClick={addBulkWeeklyBooks} className="px-3 py-1.5 rounded-lg bg-gold text-primary text-[11px] font-black hover:bg-white">선택 도서 일괄 등록</button>
+                                                                    <button type="button" onClick={selectAllVisibleWeeklyBooks} className="px-3 py-1.5 rounded-lg bg-white/10 text-slate-200 text-[11px] font-bold border border-white/15">목록 전체 선택</button>
+                                                                    <button type="button" onClick={() => setWfBookBulk(new Set())} className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-[11px] font-bold">선택 해제</button>
+                                                                </div>
+                                                            )}
+                                                            <div className="space-y-2 max-h-96 overflow-y-auto p-2">
+                                                                {shown.map((book) => {
+                                                                    const registered = curList.some((b) => b.id === book.id);
+                                                                    return (
+                                                <div key={book.id} className="flex items-center gap-3 bg-black/40 rounded-2xl p-4 border border-white/5 hover:border-white/15 transition-all">
+                                                    {isWeeklyFocusTab && (
+                                                        <input
+                                                            type="checkbox"
+                                                            className="size-4 accent-amber-400 shrink-0 cursor-pointer"
+                                                            checked={wfBookBulk.has(book.id)}
+                                                            onChange={() => toggleWfBookBulkId(book.id)}
+                                                            disabled={registered || book.isPublic === false}
+                                                            title={registered ? '이미 등록됨' : book.isPublic === false ? '비공개' : '일괄 등록에 포함'}
+                                                        />
+                                                    )}
                                                     <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
                                                         {book.cover ? <img src={book.cover} alt={book.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-white/20">menu_book</span></div>}
                                                     </div>
@@ -9919,15 +10091,20 @@ ${raw}`;
                                                         )}
                                                     </div>
                                                     <button onClick={() => addToList(book)}
-                                                        disabled={curList.some(b => b.id === book.id) || (typeof curSection.max === 'number' && curList.length >= curSection.max)}
+                                                        disabled={registered || (typeof curSection.max === 'number' && curList.length >= curSection.max)}
                                                         className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
-                                                        {curList.some(b => b.id === book.id) ? '등록됨' : '+ 추가'}
+                                                        {registered ? '등록됨' : '+ 추가'}
                                                     </button>
                                                 </div>
-                                            ));
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </>
+                                                    );
                                             })()}
                                         </div>
                                     )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -11917,7 +12094,7 @@ ${raw}`;
                             try {
                                 const ext = file.name.split('.').pop();
                                 const ts = Date.now();
-                                const sRef = ref(storage, `site_design/${storageKey}_${ts}.${ext}`);
+                                const sRef = ref(await getStorage(), `site_design/${storageKey}_${ts}.${ext}`);
                                 await uploadBytes(sRef, file);
                                 const url = await getDownloadURL(sRef);
                                 onDone(url);

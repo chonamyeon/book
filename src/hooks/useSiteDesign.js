@@ -3,18 +3,18 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const DESIGN_DEFAULTS = {
-    main_hero:      { type: 'video', src: '/video/main7.mp4' },
-    main_hero_poster: '',
-    editorial_hero: { type: 'video', src: '/video/Figure_walking9.mp4' },
-    editorial_hero_poster: '',
-    library_hero:   { type: 'video', src: '/video/Figure_walking6.mp4' },
-    library_hero_poster: '',
-    notes_hero:     { type: 'video', src: '/video/Figure_walking7.mp4' },
-    notes_hero_poster: '',
-    profile_hero:   { type: 'video', src: '/video/Figure_walking10.mp4' },
-    profile_hero_poster: '',
-    youtube_hero:   { type: 'image', src: '/images/hero_expert_v5.png' },
-    youtube_hero_poster: '',
+    main_hero:      { type: 'video', src: '/video/main7_v3.mp4' },
+    main_hero_poster: '/images/main7_poster.jpg',
+    editorial_hero: { type: 'video', src: '/video/Figure_walking9_v3.mp4' },
+    editorial_hero_poster: '/images/posters/editorial_hero_poster.jpg',
+    library_hero:   { type: 'video', src: '/video/Figure_walking6_v3.mp4' },
+    library_hero_poster: '/images/posters/library_hero_poster.jpg',
+    notes_hero:     { type: 'video', src: '/video/Figure_walking7_v3.mp4' },
+    notes_hero_poster: '/images/posters/notes_hero_poster.jpg',
+    profile_hero:   { type: 'video', src: '/video/Figure_walking10_v2.mp4' },
+    profile_hero_poster: '/images/posters/profile_hero_poster.jpg',
+    youtube_hero:   { type: 'image', src: '/images/hero_expert_v6.jpg' },
+    youtube_hero_poster: '/images/posters/youtube_hero_poster.jpg',
     category_heroes: {
         SELF_DEV:    { type: 'image', src: '/images/cat_success.png' },
         ECONOMY:     { type: 'image', src: '/images/cat_wealth_mod.png' },
@@ -49,6 +49,26 @@ export const DESIGN_DEFAULTS = {
 
 const VIDEO_EXT = /\.(mp4|webm|ogg|mov)(\?|$)/i;
 
+// Firestore에 저장된 대용량 Firebase Storage 히어로 URL을
+// 배포된 경량 로컬 파일로 치환해 첫 렌더 지연을 줄인다.
+function normalizeHeroSource(key, obj) {
+    if (!obj?.src || typeof obj.src !== 'string') return obj;
+    const src = obj.src;
+    if (key === 'youtube_hero' && src.includes('firebasestorage.googleapis.com')) {
+        return { ...obj, type: 'video', src: '/video/youtube_hero_opt.mp4' };
+    }
+    if (key === 'main_hero' && src.includes('firebasestorage.googleapis.com')) {
+        return { ...obj, type: 'video', src: '/video/main_hero_opt.mp4' };
+    }
+    if (key === 'library_hero' && /\/video\/Figure_walking6(_v2)?\.mp4(\?|$)/i.test(src)) {
+        return { ...obj, type: 'video', src: '/video/Figure_walking6_v3.mp4' };
+    }
+    if (key === 'notes_hero' && /\/video\/Figure_walking7(_v2)?\.mp4(\?|$)/i.test(src)) {
+        return { ...obj, type: 'video', src: '/video/Figure_walking7_v3.mp4' };
+    }
+    return obj;
+}
+
 function resolveType(obj) {
     if (!obj || !obj.src) return obj;
     if (obj.type === 'video') return obj;
@@ -62,7 +82,7 @@ function merge(saved, key, defaultVal) {
     if (Array.isArray(defaultVal)) return (Array.isArray(v) && v.length) ? v : defaultVal;
     if (typeof defaultVal === 'object') {
         if (!v) return defaultVal;
-        const merged = { ...defaultVal, ...v };
+        const merged = normalizeHeroSource(key, { ...defaultVal, ...v });
         // src가 비어있으면 기본값으로 fallback
         if (merged.src === '' || merged.src == null) return defaultVal;
         return resolveType(merged);
@@ -70,7 +90,7 @@ function merge(saved, key, defaultVal) {
     return v ?? defaultVal;
 }
 
-const CACHE_KEY = 'site_design_cache';
+const CACHE_KEY = 'site_design_cache_v3';
 
 function buildDesign(d) {
     return {

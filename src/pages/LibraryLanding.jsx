@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +36,15 @@ export default function LibraryLanding() {
     if (user) return <Library />;
 
     return (
+        <>
+        <Helmet>
+            <title>나의 서재 | 아카이뷰 ARCHIVIEW</title>
+            <meta name="description" content="내가 담은 도서, 독서 성향 분석 결과, 맞춤 큐레이션까지. 아카이뷰 서재에서 나만의 지식 공간을 만들어보세요." />
+            <meta property="og:title" content="나의 서재 | 아카이뷰 ARCHIVIEW" />
+            <meta property="og:description" content="내가 담은 도서, 독서 성향 분석 결과, 맞춤 큐레이션까지. 아카이뷰 서재에서 나만의 지식 공간을 만들어보세요." />
+            <meta property="og:url" content="https://archiview.store/library" />
+            <link rel="canonical" href="https://archiview.store/library" />
+        </Helmet>
         <div className="bg-[#0a0a0f] min-h-screen flex flex-col text-white font-sans">
             <MainHeader showBack />
 
@@ -46,14 +56,10 @@ export default function LibraryLanding() {
                 ) : (
                     <video
                         src={design.library_hero.src}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
                         poster={design.library_hero_poster || undefined}
                         className="absolute inset-0 w-full h-full object-cover opacity-70"
                         style={{ objectPosition: 'center center' }}
+                        autoPlay muted loop playsInline
                     />
                 )}
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-10">
@@ -133,5 +139,6 @@ export default function LibraryLanding() {
             <Footer />
             <BottomNavigation />
         </div>
+        </>
     );
 }

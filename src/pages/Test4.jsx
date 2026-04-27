@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../hooks/useAuth';
+import { useSavedBooks } from '../hooks/useSavedBooks';
 import { motion } from 'framer-motion';
 import { useBookData } from '../hooks/useBookData';
 import { useAudio } from '../contexts/AudioContext';
@@ -14,11 +16,21 @@ import { doc, onSnapshot, getDoc, setDoc, collection } from 'firebase/firestore'
 import { availableAudio } from '../data/availableAudio';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { getTodayContents } from '../data/personalization';
+import { useSeoulCalendarDayKey } from '../hooks/useCalendarDay';
+import { resolvePodcastPlaySrc } from '../utils/resolvePodcastPlaySrc';
 
 export default function Test4() {
     const { design, loading: designLoading } = useSiteDesign();
     const { user } = useAuth();
+    const { savedBooks, addBook: addSavedBook } = useSavedBooks(user);
+    const [persona, setPersona] = useState(() => localStorage.getItem('quizResult') || localStorage.getItem('myResultType') || null);
+    const [quizScoresState, setQuizScoresState] = useState(() => { try { return JSON.parse(localStorage.getItem('quizScores') || 'null'); } catch { return null; } });
+    const seoulYmd = useSeoulCalendarDayKey();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // autoplay intent: searchParams 감지 → state로 보존 (SW navigate & 초기 로드 모두 처리)
+    const [autoplayIntent, setAutoplayIntent] = useState(null);
+    const [autoplayOverlay, setAutoplayOverlay] = useState(null); // { intent, book }
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { playPodcastMP3, seekPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [showAllCelebs, setShowAllCelebs] = useState(false);
@@ -117,7 +129,7 @@ export default function Test4() {
     useEffect(() => {
         const interval = setInterval(() => {
             setReviewIndex((prev) => (prev + 1) % userReviews.length);
-        }, 3000);
+        }, 6000);
         return () => clearInterval(interval);
     }, [userReviews.length]);
 
@@ -153,21 +165,41 @@ export default function Test4() {
     // ── Firestore 섹션 데이터 ──────────────────────────────────────────
     const getSrcFile = (src) => {
         if (!src) return '';
+        try { src = decodeURIComponent(src); } catch {}
         const clean = src.split('?')[0];
         const parts = clean.split('/');
         return parts[parts.length - 1].replace(/\.[^.]+$/, '').toLowerCase();
     };
 
     const dedupeHistory = (raw) => {
+        // 1단계: id도 없고 재생 데이터도 없는 완전한 불량 항목 제거
+        const cleaned = raw.filter(h => h.id || (h.duration > 0) || (h.currentTime > 0));
+
+        // 2단계: 완전한 데이터(id+duration)를 가진 항목이 dedup에서 먼저 살아남도록 정렬
+        const sorted = [...cleaned].sort((a, b) => {
+            const sA = (a.id ? 2 : 0) + (a.duration > 0 ? 1 : 0);
+            const sB = (b.id ? 2 : 0) + (b.duration > 0 ? 1 : 0);
+            if (sB !== sA) return sB - sA;
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+
+        // 3단계: 파일명·id·타이틀 + 교차 비교(한글 제목 ↔ 영문 id)로 중복 제거
         const seenFile = new Set();
         const seenId = new Set();
-        return raw.filter(h => {
+        const seenTitle = new Set();
+        return sorted.filter(h => {
             const fileKey = getSrcFile(h.src);
             const idKey = (h.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const titleKey = (h.title || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9가-힣]/g, '');
             if (fileKey && seenFile.has(fileKey)) return false;
             if (idKey && seenId.has(idKey)) return false;
+            if (titleKey && seenTitle.has(titleKey)) return false;
+            // 교차 비교: title="stoner" ↔ id="stoner" 매칭 (한글/영문 같은 책)
+            if (titleKey && seenId.has(titleKey)) return false;
+            if (idKey && seenTitle.has(idKey)) return false;
             if (fileKey) seenFile.add(fileKey);
             if (idKey) seenId.add(idKey);
+            if (titleKey) seenTitle.add(titleKey);
             return true;
         });
     };
@@ -179,21 +211,40 @@ export default function Test4() {
         } catch { return []; }
     });
 
-    // 로그인 시 Firestore에서 히스토리 로드
+    // 로그인 시 Firestore에서 히스토리 + 페르소나 로드
     useEffect(() => {
         if (!user) return;
         getDoc(doc(db, 'users', user.uid)).then(snap => {
-            if (snap.exists() && snap.data().listenHistory?.length) {
-                const remote = snap.data().listenHistory;
+            if (!snap.exists()) return;
+            const data = snap.data();
+            // 이어듣기 히스토리
+            if (data.listenHistory?.length) {
+                const remote = data.listenHistory;
                 const local = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
-                // 머지: remote 우선, local에만 있는 항목 추가
                 const merged = [...remote];
                 for (const h of local) {
-                    if (!merged.some(r => r.id === h.id)) merged.push(h);
+                    const localTitle = (h.title || '').toLowerCase();
+                    const isDup = merged.some(r =>
+                        (r.id && h.id && r.id === h.id) ||
+                        (r.title && h.title && r.title.toLowerCase() === localTitle)
+                    );
+                    if (!isDup) merged.push(h);
                 }
                 const deduped = dedupeHistory(merged.sort((a, b) => b.timestamp - a.timestamp)).slice(0, 20);
                 setListenHistory(deduped);
                 localStorage.setItem('archiview_listen_history', JSON.stringify(deduped));
+                // Firestore의 불량 데이터도 정제된 버전으로 영구 덮어쓰기
+                setDoc(doc(db, 'users', user.uid), { listenHistory: deduped }, { merge: true }).catch(() => {});
+            }
+            // 페르소나
+            const remotePersona = data.quizResult || data.myResultType;
+            if (remotePersona) {
+                setPersona(remotePersona);
+                localStorage.setItem('quizResult', remotePersona);
+            }
+            if (data.quizScores) {
+                setQuizScoresState(data.quizScores);
+                try { localStorage.setItem('quizScores', JSON.stringify(data.quizScores)); } catch {}
             }
         }).catch(() => {});
     }, [user?.uid]);
@@ -207,8 +258,7 @@ export default function Test4() {
             } catch {}
         };
         window.addEventListener('storage', onStorage);
-        const interval = setInterval(onStorage, 3000);
-        return () => { window.removeEventListener('storage', onStorage); clearInterval(interval); };
+        return () => window.removeEventListener('storage', onStorage);
     }, []);
 
     const [weeklyFocusRaw, setWeeklyFocusRaw] = useState(() => {
@@ -232,70 +282,60 @@ export default function Test4() {
         document.title = "The Archiview | 출퇴근 15분, 성공한 사람들의 인사이트";
     }, []);
 
-    // 위클리포커스 스케줄 자동 적용 — 월요일 6시 이후 Firestore 업데이트
-    useEffect(() => {
-        if (!enableDeferredData) return;
-        const applySchedule = async () => {
-            try {
-                const snap = await getDoc(doc(db, 'site_config', 'weekly_focus_schedule'));
-                if (!snap.exists()) return;
-                const weeks = snap.data().weeks || [];
-                const now = new Date();
-                const activeWeek = [...weeks]
-                    .filter(w => w.weekStart && new Date(w.weekStart) <= now && w.books?.length > 0)
-                    .sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))[0];
-                if (!activeWeek) return;
-                const cur = await getDoc(doc(db, 'site_config', 'weekly_focus'));
-                const curIds = (cur.data()?.books || []).map(b => b.id).join(',');
-                const newIds = activeWeek.books.map(b => b.id).join(',');
-                if (curIds !== newIds) {
-                    await setDoc(doc(db, 'site_config', 'weekly_focus'), { books: activeWeek.books });
-                }
-            } catch {}
-        };
-        applySchedule();
-    }, [enableDeferredData]);
+    // weekly_focus_schedule(주마다 2권)으로 weekly_focus(60권) 자동 덮어쓰기 제거 — 60권이 2권으로 사라지던 원인
 
+    // 사이트 콘텐츠는 거의 변경되지 않으므로 onSnapshot(실시간) → getDoc(1회 fetch)로 변경
+    // 발열·배터리 절약: 5개 WebSocket 상시 연결 제거
     useEffect(() => {
         if (!enableDeferredData) return;
-        const unsub1 = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) setPopularArchives(snap.data().books);
-        });
-        const unsub2 = onSnapshot(doc(db, 'site_config', 'weekly_focus'), (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                if (data.books?.length) {
-                    setWeeklyFocusRaw(data.books);
-                    try { localStorage.setItem('wf_cache', JSON.stringify(data.books)); } catch {}
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const [s1, s2, s3, s4] = await Promise.all([
+                    getDoc(doc(db, 'site_config', 'popular_archives')),
+                    getDoc(doc(db, 'site_config', 'weekly_focus')),
+                    getDoc(doc(db, 'site_config', 'weekly_most_viewed')),
+                    getDoc(doc(db, 'site_config', 'original_archives')),
+                ]);
+                if (cancelled) return;
+
+                if (s1.exists() && s1.data().books?.length) setPopularArchives(s1.data().books);
+                if (s2.exists()) {
+                    const data = s2.data();
+                    if (data.books?.length) {
+                        setWeeklyFocusRaw(data.books);
+                        try { localStorage.setItem('wf_cache', JSON.stringify(data.books)); } catch {}
+                    }
+                    if (data.videos?.length) {
+                        setWeeklyFocusVideos(data.videos);
+                        try { localStorage.setItem('wfv_cache', JSON.stringify(data.videos)); } catch {}
+                    }
                 }
-                if (data.videos?.length) {
-                    setWeeklyFocusVideos(data.videos);
-                    try { localStorage.setItem('wfv_cache', JSON.stringify(data.videos)); } catch {}
+                if (s3.exists()) {
+                    const books = s3.data().books || [];
+                    setWeeklyMostViewedRaw(books);
+                    try { localStorage.setItem('wmv_cache', JSON.stringify(books)); } catch {}
                 }
-            }
-        });
-        const unsub3 = onSnapshot(doc(db, 'site_config', 'weekly_most_viewed'), (snap) => {
-            if (snap.exists()) {
-                const books = snap.data().books || [];
-                setWeeklyMostViewedRaw(books);
-                try { localStorage.setItem('wmv_cache', JSON.stringify(books)); } catch {}
-            }
-        });
-        const unsub4 = onSnapshot(doc(db, 'site_config', 'original_archives'), (snap) => {
-            if (snap.exists()) {
-                const books = snap.data().books || [];
-                setOriginalArchivesRaw(books);
-                try { localStorage.setItem('original_cache', JSON.stringify(books)); } catch {}
-            }
-        });
-        const unsub5 = onSnapshot(collection(db, 'youtube_videos'), (snap) => {
-            const videos = snap.docs
-                .map((d) => ({ id: d.id, ...d.data() }))
-                .filter((v) => !v.hidden);
-            setKnowledgeInsightsRaw(videos);
-            try { localStorage.setItem('insights_rank_cache', JSON.stringify(videos)); } catch {}
-        });
-        return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
+                if (s4.exists()) {
+                    const books = s4.data().books || [];
+                    setOriginalArchivesRaw(books);
+                    try { localStorage.setItem('original_cache', JSON.stringify(books)); } catch {}
+                }
+
+                // youtube_videos: collection getDocs 한 번만
+                const { getDocs } = await import('firebase/firestore');
+                const ytSnap = await getDocs(collection(db, 'youtube_videos'));
+                if (cancelled) return;
+                const videos = ytSnap.docs
+                    .map((d) => ({ id: d.id, ...d.data() }))
+                    .filter((v) => !v.hidden);
+                setKnowledgeInsightsRaw(videos);
+                try { localStorage.setItem('insights_rank_cache', JSON.stringify(videos)); } catch {}
+            } catch {}
+        })();
+
+        return () => { cancelled = true; };
     }, [enableDeferredData]);
 
     const bookLookup = useMemo(() => {
@@ -328,6 +368,20 @@ export default function Test4() {
         return true;
     }, [allBookVisibility, allBookVisibilityByTitle]);
 
+    // 위클리: 어드민·Firestore 순서와 **권 수 전체**로 짝(2권) 슬롯을 돌리므로 isVisibleItem 으로 줄이지 않음
+    // (줄이면 2권만 남고 pairCount=1 → 자정이 돼도 (0,1)만 나와 "안 바뀌는" 것처럼 보임)
+    const enrichWeeklyList = useCallback((list) => (list || []).map((item) => {
+        const bookData = bookLookup.get(item.id) || {};
+        return {
+            ...bookData,
+            ...item,
+            cover: item.cover || bookData.cover || '',
+            purchaseLink: item.purchaseLink || bookData.purchaseLink || '',
+            author: item.author || bookData.author || '',
+            podcastFile: bookData.podcastFile || item.podcastFile,
+        };
+    }), [bookLookup]);
+
     const enrich = useCallback((list) => list
         .filter(isVisibleItem)
         .map(item => {
@@ -337,7 +391,9 @@ export default function Test4() {
             ...item, 
             cover: item.cover || bookData.cover || '', 
             purchaseLink: item.purchaseLink || bookData.purchaseLink || '', 
-            author: item.author || bookData.author || '' 
+            author: item.author || bookData.author || '',
+            // 주간 슬롯(item)이 오래된 podcastFile을 넣는 경우 → 카탈로그(bookData) 우선
+            podcastFile: bookData.podcastFile || item.podcastFile,
         };
     }), [bookLookup, isVisibleItem]);
 
@@ -346,14 +402,15 @@ export default function Test4() {
     // Weekly Focus: 캐시 우선 표시 → allBooks 로드 후 enriched 버전으로 교체
     const weeklyFocusBooks = useMemo(() => {
         if (weeklyFocusRaw.length > 0) {
-            const enriched = enrich(weeklyFocusRaw);
+            const enriched = enrichWeeklyList(weeklyFocusRaw);
             if (publicAllBooks.length > 0) {
                 try { localStorage.setItem('wf_enriched_cache', JSON.stringify(enriched)); } catch {}
                 return enriched;
             }
+            // 카탈로그 로딩 전: 옛날에 캐시된 짧은 목록(5권 등)이 60권 머지를 덮지 않게 함
             try {
                 const cached = JSON.parse(localStorage.getItem('wf_enriched_cache') || '[]');
-                if (cached.length > 0) return cached;
+                if (cached.length > 0 && cached.length >= enriched.length) return cached;
             } catch {}
             return enriched;
         }
@@ -361,16 +418,88 @@ export default function Test4() {
             .filter(b => b.section === 'WEEKLY_FOCUS')
             .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
             .slice(0, 5);
-    }, [weeklyFocusRaw, publicAllBooks, enrich]);
+    }, [weeklyFocusRaw, publicAllBooks, enrichWeeklyList]);
 
-    // 개인화: 퀴즈 페르소나 + 날짜 시드로 Today Contents 선택
-    const persona = localStorage.getItem('quizResult') || localStorage.getItem('myResultType') || null;
+    // 오늘의 2권/2영상: seoulYmd(YYYYMMDD)가 바뀌면(한국 자정) 자동 갱신 — useSyncExternalStore
     const { todayBooks, todayVideos } = useMemo(() => {
         const books = weeklyFocusBooks.length > 0 ? weeklyFocusBooks : [];
         const videos = weeklyFocusVideos.length > 0 ? weeklyFocusVideos : [];
         if (!books.length && !videos.length) return { todayBooks: [], todayVideos: [] };
-        return getTodayContents(books, videos, persona);
-    }, [weeklyFocusBooks, weeklyFocusVideos, persona]);
+        return getTodayContents(books, videos, null, seoulYmd);
+    }, [weeklyFocusBooks, weeklyFocusVideos, seoulYmd]);
+
+    // 1단계: ?autoplay 파라미터 감지 → state 보존 + URL 즉시 클리어
+    // searchParams가 바뀔 때마다 실행 → 초기 로드 & SW client.navigate() 모두 처리
+    useEffect(() => {
+        const intent = searchParams.get('autoplay');
+        if (!intent) return;
+        setAutoplayIntent(intent);
+        setSearchParams({}, { replace: true });
+    }, [searchParams, setSearchParams]);
+
+    // FCM_AUTOPLAY는 App 레벨 AutoplayRouter에서 /?autoplay= 로 navigate 처리
+    // → 위 searchParams 감지 effect가 자동으로 autoplayIntent 설정
+
+    // 2단계: 출퇴근 ?autoplay= — 오늘 도서 로딩 후 자동 재생, 브라우저가 막을 때만 터치 오버레이
+    useEffect(() => {
+        if (!autoplayIntent) return;
+        if (todayBooks.length === 0) {
+            const cancel = setTimeout(() => setAutoplayIntent(null), 15000);
+            return () => clearTimeout(cancel);
+        }
+
+        const savedIntent = autoplayIntent;
+        const book = savedIntent === 'back' && todayBooks[1] ? todayBooks[1] : todayBooks[0];
+        if (!book) {
+            setAutoplayIntent(null);
+            return;
+        }
+        const src = resolvePodcastPlaySrc(book, (bid) => bookLookup.get(bid));
+        if (!src) {
+            setAutoplayIntent(null);
+            return;
+        }
+        const sid = book.id || String(book.title || '').toLowerCase().replace(/\s+/g, '-');
+        const bookPayload = { ...book, src };
+
+        const tid = setTimeout(() => {
+            setAutoplayIntent(null);
+            playPodcastMP3(
+                src,
+                book.title,
+                book.cover,
+                sid,
+                true,
+                0,
+                () => setAutoplayOverlay({ intent: savedIntent, book: bookPayload })
+            );
+        }, 0);
+
+        return () => clearTimeout(tid);
+    }, [autoplayIntent, todayBooks, bookLookup, playPodcastMP3]);
+
+    // SW 타이머 재등록: SW는 30초 후 종료돼 타이머가 날아가므로 앱 열 때마다 재등록
+    useEffect(() => {
+        const reRegisterSW = () => {
+            if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+            if (!('serviceWorker' in navigator)) return;
+            const on = localStorage.getItem('commute_on') === 'true';
+            if (!on) return;
+            const commuteGo = localStorage.getItem('commute_go');
+            const commuteBack = localStorage.getItem('commute_back');
+            if (!commuteGo && !commuteBack) return;
+            let commuteDays;
+            try { commuteDays = JSON.parse(localStorage.getItem('commute_days')) || [0,1,2,3,4]; }
+            catch { commuteDays = [0,1,2,3,4]; }
+            navigator.serviceWorker.ready.then((reg) => {
+                if (reg?.active) reg.active.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', commuteGo, commuteBack, commuteDays });
+            }).catch(() => {});
+        };
+        reRegisterSW(); // 마운트 시
+        const onVisible = () => { if (document.visibilityState === 'visible') reRegisterSW(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, []);
 
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
@@ -404,14 +533,11 @@ export default function Test4() {
     }, [originalArchivesRaw, publicAllBooks, enrich]);
 
     const addToLibrary = (book) => {
-        const saved = JSON.parse(localStorage.getItem('savedBooks') || '[]');
-        if (saved.some(b => b.title === book.title)) {
+        if (savedBooks.some(b => b.title === book.title)) {
             alert('이미 서재에 보관된 도서입니다.');
             return;
         }
-        const updated = [...saved, { id: book.id, title: book.title, author: book.author, cover: book.cover }];
-        localStorage.setItem('savedBooks', JSON.stringify(updated));
-        window.dispatchEvent(new Event('savedBooksUpdated'));
+        addSavedBook({ id: book.id, title: book.title, author: book.author, cover: book.cover });
         alert('서재에 보관되었습니다. ✅');
     };
 
@@ -426,13 +552,65 @@ export default function Test4() {
         visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
     };
 
+    const handleAutoplayOverlayTap = () => {
+        if (!autoplayOverlay) return;
+        const { book } = autoplayOverlay;
+        setAutoplayOverlay(null);
+        const sid = book.id || book.title?.toLowerCase().replace(/\s+/g, '-');
+        playPodcastMP3(book.src, book.title, book.cover, sid, true, 0);
+    };
+
     return (
-        <div className="bg-black text-white font-sans antialiased min-h-screen w-full max-w-full flex flex-col relative overflow-x-hidden selection:bg-orange-500/30">
+        <>
+        {/* 알림 탭 자동재생 오버레이 */}
+        {autoplayOverlay && (
+            <div
+                onClick={handleAutoplayOverlayTap}
+                style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(0,0,0,0.82)',
+                    backdropFilter: 'blur(12px)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    gap: 20, cursor: 'pointer',
+                }}
+            >
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                    {autoplayOverlay.intent === 'go' ? '출근길 콘텐츠' : '퇴근길 콘텐츠'}
+                </div>
+                {autoplayOverlay.book.cover && (
+                    <img src={autoplayOverlay.book.cover} alt="" style={{ width: 100, height: 100, borderRadius: 16, objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }} />
+                )}
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', textAlign: 'center', maxWidth: 260, lineHeight: 1.4 }}>
+                    {autoplayOverlay.book.title}
+                </div>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: 'linear-gradient(135deg,#f97316,#fb923c)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 0 32px rgba(249,115,22,0.6)',
+                    marginTop: 8,
+                }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#fff' }}>play_arrow</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                    탭하면 바로 재생됩니다
+                </div>
+            </div>
+        )}
+        <Helmet>
+            <title>아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서</title>
+            <meta name="description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 출퇴근 15분으로 성공한 사람들의 인사이트를 들어보세요." />
+            <meta property="og:title" content="아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서" />
+            <meta property="og:description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 출퇴근 15분으로 성공한 사람들의 인사이트를 들어보세요." />
+            <meta property="og:url" content="https://archiview.store/" />
+            <link rel="canonical" href="https://archiview.store/" />
+        </Helmet>
+        <div className="bg-black text-white font-sans antialiased min-h-[100dvh] w-full max-w-full flex flex-col relative overflow-x-hidden selection:bg-orange-500/30">
             {/* Styles Injection for Glassmorphism */}
             <style>{`
                 .glass-card {
-                    background: rgba(255, 255, 255, 0.05);
-                    backdrop-filter: blur(10px);
+                    background: rgba(18, 20, 28, 0.92);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                 }
                 .cursive-font {
@@ -443,26 +621,21 @@ export default function Test4() {
             `}</style>
 
             <div className="max-w-md mx-auto w-full flex-grow relative flex flex-col">
-                <main className="flex-grow pb-16 w-full max-w-full overflow-x-hidden">
+                <main className="flex-grow pb-16 w-full max-w-full">
                     <MainHeader />
 
                     <section className="relative pt-0 pb-0 overflow-hidden" style={{ aspectRatio: '1/1', width: '100%' }}>
                         {/* Full background image - face focused */}
                         <div className="absolute inset-0 z-0 overflow-hidden">
-                            {design.main_hero?.type === 'video' && design.main_hero?.src && (
+                            {design.main_hero.type === 'image' ? (
+                                <img src={design.main_hero.src} alt="" className="w-full h-full object-cover" />
+                            ) : (
                                 <video
                                     src={design.main_hero.src}
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    preload="auto"
                                     poster={design.main_hero_poster || undefined}
                                     className="w-full h-full object-cover"
+                                    autoPlay muted loop playsInline
                                 />
-                            )}
-                            {design.main_hero?.type !== 'video' && design.main_hero?.src && (
-                                <img src={design.main_hero.src} alt="" className="w-full h-full object-cover" />
                             )}
                             {/* Left solid → transparent: 텍스트 왼쪽, 얼굴 오른쪽 */}
                             <div className="absolute inset-0" style={{
@@ -487,11 +660,9 @@ export default function Test4() {
                                         성공한 사람들의<br />
                                         <span className="flex items-center gap-[6px]">
                                             인사이트를 듣다
-                                            <span className="inline-flex items-center gap-[2px] opacity-90 h-[24px]">
-                                                <motion.div animate={{ height: [8, 14, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-white rounded-sm" />
-                                                <motion.div animate={{ height: [14, 20, 14] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-white rounded-sm" />
-                                                <motion.div animate={{ height: [18, 10, 18] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-white rounded-sm" />
-                                                <motion.div animate={{ height: [10, 16, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-white rounded-sm" />
+                                            <span className="av-loader-bars opacity-90" style={{ height: 20, gap: 2 }}>
+                                                <span style={{ height: 8 }} /><span style={{ height: 14 }} />
+                                                <span style={{ height: 18 }} /><span style={{ height: 10 }} />
                                             </span>
                                         </span>
                                     </span>
@@ -503,27 +674,30 @@ export default function Test4() {
 
                         </div>
 
-                        {/* ⭐ Social Proof Section */}
-                        <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-3">
-                            <div className="glass-card bg-zinc-900/60 border border-white/5 rounded-none px-4 py-2 text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <span key={star} className="material-symbols-outlined text-orange-500 text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                        {/* ⭐ Social Proof — 히어로 하단에 자연스럽게 융화 */}
+                        <div className="absolute bottom-0 left-0 right-0 z-10"
+                            style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.72) 55%, #0a0b0f 100%)', paddingTop: 32, paddingBottom: 16 }}>
+                            <div className="text-center px-5">
+                                {/* 별 + 멤버 수 한 줄 */}
+                                <div className="flex items-center justify-center flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
+                                    {[1,2,3,4,5].map(s => (
+                                        <span key={s} className="material-symbols-outlined text-orange-400 text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                     ))}
+                                    <span className="text-orange-400/80 text-[12px] sm:text-[13px] font-bold tracking-tight ml-1">이미 <span className="text-orange-400">15,400명</span>이 듣고 있습니다</span>
                                 </div>
-                                <h3 className="text-[12px] font-black tracking-tight text-white mb-1">이미 <span className="text-orange-500">15,400명</span>의 직장인들이 매일 아침 성장하고 있습니다.</h3>
-                                <div className="relative h-[28px] overflow-hidden">
+                                {/* 리뷰 텍스트 페이드 */}
+                                <div className="relative min-h-[32px] max-h-[50px] overflow-hidden flex items-start justify-center -mt-px">
                                     {userReviews.map((review, idx) => (
                                         <motion.div
                                             key={idx}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: idx === reviewIndex ? 1 : 0, y: idx === reviewIndex ? 0 : 10 }}
-                                            transition={{ duration: 0.5 }}
-                                            className="absolute inset-0 flex items-center justify-center px-2"
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: idx === reviewIndex ? 1 : 0, y: idx === reviewIndex ? 0 : 6 }}
+                                            transition={{ duration: 0.6 }}
+                                            className="absolute inset-0 flex items-start justify-center px-0.5 pt-0.5"
                                             style={{ pointerEvents: idx === reviewIndex ? 'auto' : 'none' }}
                                         >
-                                            <p className="text-white text-[11px] font-bold leading-snug break-keep text-center">
-                                                "{review.text}" <span className="text-orange-500/70 text-[10px] font-black whitespace-nowrap shrink-0 ml-1">- {review.name}</span>
+                                            <p className="text-white/75 text-[12px] sm:text-[13px] font-semibold leading-snug break-keep text-center">
+                                                &ldquo;{review.text}&rdquo; <span className="text-orange-400/90 text-[11px] sm:text-[12px] font-bold whitespace-nowrap">— {review.name}</span>
                                             </p>
                                         </motion.div>
                                     ))}
@@ -551,7 +725,7 @@ export default function Test4() {
                                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">멈췄던 콘텐츠를 이어서 들어보세요</p>
                                         </div>
                                     </div>
-                                    <div className={`grid gap-3 ${items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} style={{alignItems:'stretch'}}>
+                                    <div className={`grid w-full min-w-0 gap-3 ${items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ alignItems: 'stretch' }}>
                                         {items.map((item) => {
                                             const pct = item.duration > 0 ? Math.min(100, Math.round((item.currentTime / item.duration) * 100)) : 0;
                                             const remaining = item.duration > 0 ? item.duration - item.currentTime : 0;
@@ -564,13 +738,20 @@ export default function Test4() {
                                                         if (isYt) {
                                                             navigate(`/yt-podcast/${item.id.replace('yt-', '')}`);
                                                         } else {
-                                                            playPodcastMP3(item.src, item.title, item.cover, item.id, false, item.currentTime || 0);
+                                                            // localStorage에서 최신 재생 위치를 직접 읽어 stale state 문제 해결
+                                                            let freshStart = item.currentTime || 0;
+                                                            try {
+                                                                const hist = JSON.parse(localStorage.getItem('archiview_listen_history') || '[]');
+                                                                const fresh = hist.find(h => h.id === item.id);
+                                                                if (fresh?.currentTime > 0) freshStart = fresh.currentTime;
+                                                            } catch {}
+                                                            playPodcastMP3(item.src, item.title, item.cover, item.id, false, freshStart);
                                                         }
                                                     }}
-                                                    className="relative flex flex-col overflow-hidden bg-[#111318] border border-zinc-700/50 hover:border-zinc-500/70 transition-all duration-300 active:scale-[0.98] text-left shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                                                    className="btn-card-pressable relative flex flex-col min-h-0 min-w-0 w-full h-full overflow-hidden bg-[#111318] border border-zinc-700/50 hover:border-zinc-500/70 transition-all duration-300 active:scale-[0.98] text-left shadow-[0_4px_20px_rgba(0,0,0,0.4)] [touch-action:manipulation]"
                                                 >
                                                     {/* 커버 이미지 */}
-                                                    <div className="relative w-full overflow-hidden bg-zinc-900" style={{aspectRatio:'3/2'}}>
+                                                    <div className="relative w-full min-h-0 overflow-hidden bg-zinc-900 shrink-0" style={{aspectRatio:'3/2'}}>
                                                         <img
                                                             src={item.cover || '/images/covers/default_custom.jpg'}
                                                             alt={item.title}
@@ -578,28 +759,30 @@ export default function Test4() {
                                                             onError={e => { e.target.src = '/images/covers/default_custom.jpg'; }}
                                                         />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                                                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/10 px-2 py-1 rounded-full">
+                                                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-black/85 border border-white/10 px-2 py-1 rounded-full">
                                                             <span className="flex items-end gap-[1px]" style={{height:10}}>
                                                                 {[{h:4,d:'0s'},{h:8,d:'0.2s'},{h:10,d:'0.07s'},{h:6,d:'0.28s'},{h:3,d:'0.14s'}].map((b,i)=>(
-                                                                    <span key={i} style={{display:'inline-block',width:1.2,height:b.h,borderRadius:2,background:'#f97316',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                                                                    <span key={i} style={{display:'inline-block',width:1.2,height:b.h,borderRadius:2,background:'#f97316'}} />
                                                                 ))}
                                                             </span>
                                                             <span className="text-[10px] font-black text-orange-400">{pct}%</span>
                                                         </div>
                                                     </div>
                                                     {/* 얇은 진행바 */}
-                                                    <div className="w-full h-[2px] bg-zinc-800">
+                                                    <div className="w-full h-[2px] bg-zinc-800 shrink-0">
                                                         <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all" style={{width:`${pct}%`}} />
                                                     </div>
-                                                    {/* 정보 - flex-1로 늘려서 버튼을 항상 하단에 */}
-                                                    <div className="p-3 flex flex-col flex-1">
-                                                        <p className="text-[12px] font-black text-white leading-snug line-clamp-2 mb-2">{item.title}</p>
-                                                        <p className="text-[10px] text-zinc-500 font-medium mb-3">
+                                                    {/* 정보: items-stretch로 하단 막대가 카드 가로 100% 꽉 참 (모바일 Safari) */}
+                                                    <div className="p-2.5 sm:p-3 flex flex-col flex-1 min-h-0 min-w-0 w-full max-w-full items-stretch">
+                                                        <p className="text-[11px] sm:text-[12px] font-black text-white leading-snug line-clamp-2 mb-1.5 w-full">{item.title}</p>
+                                                        <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium mb-2 w-full">
                                                             {remaining > 5 ? `남은 시간 ${fmt(remaining)}` : '거의 완료'}
                                                         </p>
-                                                        <div className="mt-auto flex items-center justify-center gap-1.5 py-2 bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 transition-colors">
-                                                            <span className="material-symbols-outlined text-orange-400" style={{fontSize:13,fontVariationSettings:"'FILL' 1"}}>play_circle</span>
-                                                            <span className="text-[10px] font-black text-orange-400 tracking-wide">이어 재생</span>
+                                                        <div
+                                                            className="listen-continue-cta mt-auto box-border flex h-9 sm:h-9 w-full max-w-full min-w-0 self-stretch shrink-0 grow-0 items-center justify-center gap-1.5 rounded-md border border-zinc-700/50 bg-zinc-800/80 px-2 active:bg-zinc-700/80 transition-colors [flex-basis:auto]"
+                                                        >
+                                                            <span className="material-symbols-outlined text-orange-400 text-[17px] leading-none shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                                            <span className="text-[11px] sm:text-[11px] font-bold text-orange-400 tracking-tight leading-none">이어 재생</span>
                                                         </div>
                                                     </div>
                                                 </button>
@@ -611,7 +794,7 @@ export default function Test4() {
                         })()}
 
                          {/* 2️⃣ Weekly Focus */}
-                        <div id="weekly-focus" className="relative z-[20] space-y-4 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                        <div id="weekly-focus" className="relative z-[20] space-y-4 w-full bg-white/[0.03] border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">
@@ -703,7 +886,7 @@ export default function Test4() {
                                                         className="flex items-center justify-center gap-1.5 py-2.5 rounded-none bg-gradient-to-b from-[#c02a2a] via-[#a01f1f] to-[#751515] border border-[#c0392b]/60 shadow-[0_2px_8px_rgba(160,31,31,0.5),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-2px_0_rgba(0,0,0,0.3)] text-[10px] font-black text-white transition-all whitespace-nowrap active:scale-95">
                                                         <span className="flex items-end gap-[1.5px]" style={{height:13}}>
                                                             {[{h:5,d:'0s'},{h:11,d:'0.2s'},{h:13,d:'0.07s'},{h:8,d:'0.28s'},{h:4,d:'0.14s'}].map((b,i)=>(
-                                                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                                                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor'}} />
                                                             ))}
                                                         </span>
                                                         팟캐스트
@@ -759,7 +942,7 @@ export default function Test4() {
                                         <div className="relative h-full min-h-[160px] p-7 flex flex-col justify-end z-10 w-full">
                                             {/* Category Pill (Glassmorphism) */}
                                             <div className="mb-3">
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-none bg-white/10 backdrop-blur-xl border border-white/10 text-[12.5px] font-black text-white uppercase tracking-widest drop-shadow-md">
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-none bg-white/10 border border-white/10 text-[12.5px] font-black text-white uppercase tracking-widest drop-shadow-md">
                                                     <span className="mr-1.5 flex items-center gap-[2px]" style={{height:14}}>
                                                         {[1,2,3,4].map(i => (
                                                             <span key={i} style={{
@@ -767,11 +950,6 @@ export default function Test4() {
                                                                 width:2.5,
                                                                 borderRadius:2,
                                                                 background:'#f97316',
-                                                                animationName:'waveBar',
-                                                                animationDuration:'0.9s',
-                                                                animationTimingFunction:'ease-in-out',
-                                                                animationIterationCount:'infinite',
-                                                                animationDelay:`${(i-1)*0.15}s`,
                                                                 height: i===1||i===4 ? 7 : i===2 ? 13 : 10,
                                                             }} />
                                                         ))}
@@ -787,7 +965,7 @@ export default function Test4() {
                                             </h3>
 
                                             {/* Hover Detail (Optional hint) */}
-                                            <div className="absolute right-6 bottom-6 size-10 rounded-none bg-white/5 backdrop-blur-2xl border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                                            <div className="absolute right-6 bottom-6 size-10 rounded-none bg-white/5 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
                                                 <span className="material-symbols-outlined text-white text-xl">arrow_outward</span>
                                             </div>
                                         </div>
@@ -848,8 +1026,6 @@ export default function Test4() {
                         </div>
                     </motion.section>
 
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
-
                     {/* 4.5️⃣ 지식 인사이트 TOP 5 */}
                     {topKnowledgeInsights.length > 0 && (
                         <motion.section id="insights-rank" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
@@ -909,9 +1085,7 @@ export default function Test4() {
                         </motion.section>
                     )}
 
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
-
-                    {/* 📖 나의 도서습관 알아보기 Section */}
+                    {/* Personalized content guide */}
                     <motion.section
                         initial="hidden"
                         whileInView="visible"
@@ -919,78 +1093,98 @@ export default function Test4() {
                         variants={sectionVariants}
                         className="px-4 pt-7 pb-7"
                     >
-                        {/* Section Header */}
-                        <div className="mb-6 px-1">
-                            <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">나를 위한 다음 단계</h2>
-                            <div className="flex items-center gap-2">
-                                <div className="w-6 h-[2px]" style={{ background: '#8b5cf6' }}></div>
-                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">READING PERSONALITY TEST</p>
+                        <div className="mb-7 px-1">
+                            <h2 className="text-[22px] font-black leading-none tracking-tight text-white">나에게 맞는 콘텐츠만</h2>
+                            <div className="mt-2 flex items-center gap-2">
+                                <div className="h-[2px] w-7 bg-[#ff6b00]" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/35">Personalized for you</p>
                             </div>
                         </div>
 
-                        {/* Card */}
-                        <div style={{ background: '#0e0a1a', border: '1px solid rgba(139,92,246,0.25)' }}>
-                            {/* Card Top: badges + image */}
-                            <div className="relative flex items-start justify-between px-5 pt-5 pb-4 gap-3">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="text-[9px] font-black px-2 py-1 tracking-[0.15em] uppercase" style={{ background: '#8b5cf6', color: '#fff' }}>무료 테스트</span>
-                                        <span className="text-[9px] font-bold tracking-[0.1em] uppercase" style={{ color: 'rgba(167,139,250,0.8)' }}>아카이뷰 추천</span>
+                        <div className="relative overflow-x-hidden overflow-y-visible border border-[#ff6b00]/25 bg-[#050507] px-4 py-4 shadow-[0_20px_55px_rgba(0,0,0,0.45)]">
+                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,107,0,0.16),transparent_30%),linear-gradient(145deg,rgba(255,107,0,0.08),transparent_38%,rgba(255,255,255,0.04))]" />
+                            <div className="pointer-events-none absolute -right-12 top-8 h-52 w-52 rounded-full border border-[#ff6b00]/10" />
+                            <div className="pointer-events-none absolute -right-5 top-20 h-32 w-32 rounded-full border border-[#ff6b00]/15" />
+
+                            <div className="relative z-10">
+                                <div className="grid items-start gap-3" style={{ gridTemplateColumns: '1fr 38%' }}>
+                                    <div className="flex min-w-0 flex-col justify-center">
+                                        <div className="mb-3 flex flex-wrap gap-1.5">
+                                            <span className="inline-flex items-center gap-1 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/15 px-2.5 py-1 text-[10px] font-black text-[#ff8a1f]">
+                                                <span className="material-symbols-outlined text-[13px]">headphones</span>
+                                                개인맞춤 설정
+                                            </span>
+                                        </div>
+                                        <p className="text-[17px] font-black leading-[1.45] tracking-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+                                            출근길 아침 1권의 오디오,<br />퇴근길 하루에 어울리는<br />1권 요약 오디오
+                                        </p>
                                     </div>
-                                    <h3 className="text-[19px] font-black text-white leading-[1.25] tracking-tight break-keep">
-                                        "지금 나에게 맞는 책"을<br />찾고 싶다면, 먼저<br />나를 알아야 합니다
-                                    </h3>
-                                </div>
-                                <div className="flex-shrink-0 w-[88px] h-[88px] overflow-hidden" style={{ border: '1px solid rgba(139,92,246,0.3)' }}>
-                                    <img src="/images/photo_selfdev.png" alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                                </div>
-                            </div>
 
-                            {/* Description */}
-                            <p className="px-5 pb-4 text-[12px] text-white/45 leading-relaxed">
-                                12가지 질문으로 분석하는 나만의 독서 유형. 성장형·공감형·사색형·창의형 중 어떤 유형인지 확인하고, 딱 맞는 도서와 콘텐츠를 추천받으세요.
-                            </p>
-
-                            {/* Checklist */}
-                            <div className="px-5 pb-5 space-y-2.5">
-                                {[
-                                    '나의 독서 성향과 강점 파악',
-                                    '유형별 맞춤 도서 & 오디오 추천',
-                                    '독서 습관을 바꿀 1년·5년·10년 로드맵',
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-start gap-2.5">
-                                        <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 15, marginTop: 1, color: '#8b5cf6' }}>check_circle</span>
-                                        <span className="text-[12px] text-white/60 font-medium leading-snug">{item}</span>
+                                    <div className="min-w-0 w-full overflow-visible pt-1.5">
+                                        <div className="relative grid grid-cols-2 overflow-visible border border-[#ff6b00]/25 bg-zinc-950 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" style={{ minHeight: 120 }}>
+                                            {[
+                                                { label: '출근', bgPos: '22% center', alt: '아침 출근길에 오디오 콘텐츠를 듣는 사용자' },
+                                                { label: '퇴근', bgPos: '78% center', alt: '저녁 퇴근길에 오디오 콘텐츠를 듣는 사용자' },
+                                            ].map((shot) => (
+                                                <div
+                                                    key={shot.label}
+                                                    className="relative min-w-0 overflow-hidden border-r border-[#ff6b00]/20 last:border-r-0"
+                                                    role="img"
+                                                    aria-label={shot.alt}
+                                                    style={{
+                                                        minHeight: 120,
+                                                        backgroundImage: "url('/images/personalized-commute-split.png')",
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: shot.bgPos,
+                                                        backgroundRepeat: 'no-repeat',
+                                                    }}
+                                                >
+                                                    <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+                                                    <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/80 px-2.5 py-0.5 text-[9px] font-black text-white/90 shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
+                                                        {shot.label}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            <div className="absolute bottom-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-[#ff6b00]/35 bg-black/65">
+                                                <span className="material-symbols-outlined text-[17px] text-[#ff6b00]">graphic_eq</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
 
-                            {/* CTA Button */}
-                            <div className="px-5 pb-5">
-                                <button
-                                    onClick={() => {
-                                        if (!user) {
-                                            sessionStorage.setItem('loginRedirect', '/quiz');
-                                            navigate('/login');
-                                        } else {
-                                            const savedResult = localStorage.getItem('quizResult');
-                                            const savedScores = localStorage.getItem('quizScores');
-                                            if (savedResult && savedScores) {
-                                                navigate('/result', { state: { resultType: savedResult, scores: JSON.parse(savedScores) } });
-                                            } else {
-                                                navigate('/quiz');
-                                            }
-                                        }
-                                    }}
-                                    className="w-full h-[54px] flex items-center justify-center gap-2 font-black text-[14px] tracking-tight transition-all active:scale-95"
-                                    style={{ background: user && localStorage.getItem('quizResult') ? '#111111' : '#8b5cf6', color: '#fff', border: user && localStorage.getItem('quizResult') ? '1px solid rgba(255,255,255,0.15)' : 'none' }}
-                                >
-                                    {user && localStorage.getItem('quizResult') ? '내 결과 보기' : '독서 성향 테스트 시작하기'}
-                                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
-                                </button>
-                                <p className="text-center text-[10px] text-white/20 mt-2.5 leading-snug">
-                                    * 약 3분 소요 · 무료 · 회원가입 불필요
-                                </p>
+                                <div className="mt-4 flex items-stretch" style={{ gap: 3 }}>
+                                    <button
+                                        onClick={() => navigate('/quiz')}
+                                        className="group flex min-w-0 flex-1 flex-col border border-[#ff6b00]/25 bg-black/45 py-2.5 text-left transition-all active:scale-[0.98]"
+                                        style={{ minHeight: 100, padding: '10px 6px' }}
+                                        aria-label="독서 성향 분석하기"
+                                    >
+                                        <span className="mb-1.5 block text-[11px] font-black uppercase text-[#ff6b00]">Step 01</span>
+                                        <span className="block text-[11px] font-black leading-tight text-white">독서 성향 분석</span>
+                                        <span className="mt-auto inline-flex h-6 items-center rounded-full bg-[#ff6b00] text-[10px] font-black text-black group-hover:bg-[#ff8a1f]" style={{ padding: '0 8px', width: 'fit-content' }}>분석하기</span>
+                                    </button>
+                                    <div className="flex flex-shrink-0 items-center justify-center" style={{ width: 18 }}>
+                                        <span className="material-symbols-outlined flex items-center justify-center rounded-full border border-[#ff6b00]/45 bg-black/75 text-[#ff6b00]" style={{ fontSize: 18, width: 18, height: 18 }}>chevron_right</span>
+                                    </div>
+                                    <div className="flex min-w-0 flex-1 flex-col border border-white/10 bg-white/[0.03] py-2.5" style={{ minHeight: 100, padding: '10px 6px' }}>
+                                        <span className="mb-1.5 block text-[11px] font-black uppercase text-[#ff6b00]">Step 02</span>
+                                        <span className="block text-[11px] font-black leading-tight text-white">맞춤 도서 추천</span>
+                                        <span className="mt-2 block text-[9px] font-bold leading-snug text-white/40">취향과 시간대에 맞춰 큐레이션</span>
+                                    </div>
+                                    <div className="flex flex-shrink-0 items-center justify-center" style={{ width: 18 }}>
+                                        <span className="material-symbols-outlined flex items-center justify-center rounded-full border border-[#ff6b00]/45 bg-black/75 text-[#ff6b00]" style={{ fontSize: 18, width: 18, height: 18 }}>chevron_right</span>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className="group flex min-w-0 flex-1 flex-col border border-[#ff6b00]/25 bg-black/45 text-left transition-all active:scale-[0.98]"
+                                        style={{ minHeight: 100, padding: '10px 6px' }}
+                                        aria-label="알림 설정"
+                                    >
+                                        <span className="mb-1.5 block text-[11px] font-black uppercase text-[#ff6b00]">Step 03</span>
+                                        <span className="block font-black leading-tight text-white" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>출퇴근 알림발송</span>
+                                        <span className="mt-auto inline-flex h-6 items-center rounded-full bg-[#ff6b00] text-[10px] font-black text-black group-hover:bg-[#ff8a1f]" style={{ padding: '0 8px', width: 'fit-content' }}>알림 설정</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </motion.section>
@@ -1285,6 +1479,7 @@ export default function Test4() {
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
+                    {/* 🎯 개인 맞춤 콘텐츠 섹션 */}
                     {/* 5.5️⃣ 멤버십 추천 안내 (요청 복원) */}
                     <motion.section
                         initial="hidden"
@@ -1512,5 +1707,6 @@ export default function Test4() {
             </div >
 
         </div >
+        </>
     );
 }

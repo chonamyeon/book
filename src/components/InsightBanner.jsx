@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAudio } from '../contexts/AudioContext';
+import { useLocation } from 'react-router-dom';
 
 const formatTime = (sec) => {
     if (!sec || isNaN(sec)) return '00:00';
@@ -10,8 +11,13 @@ const formatTime = (sec) => {
 };
 
 export default function InsightBanner() {
-    const { dailyListenTime, dailyTarget, streak } = useAudio();
+    const { dailyListenTime, dailyTarget, streak, podcastInfo } = useAudio();
+    const location = useLocation();
     const [isVisible, setIsVisible] = useState(true);
+    const isReviewMode = location.pathname.startsWith('/review');
+    // MiniPlayer가 표시될 때는 그 위로 올라가야 함 (MiniPlayer 높이 ~70px)
+    const miniPlayerActive = !!podcastInfo && !isReviewMode;
+    const bottomOffset = miniPlayerActive ? 84 + 70 : 84;
 
     // Persist hidden state for the session
     useEffect(() => {
@@ -39,19 +45,20 @@ export default function InsightBanner() {
                     initial={{ opacity: 0, y: 100, x: '-50%' }}
                     animate={{ opacity: 1, y: 0, x: '-50%' }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="fixed bottom-[84px] left-1/2 w-[calc(100%-40px)] max-w-[360px] z-[9999]"
+                    className="fixed left-1/2 w-[calc(100%-40px)] max-w-[360px] z-[9999]"
+                    style={{ bottom: bottomOffset }}
                 >
                     <div className="relative overflow-hidden group rounded-none">
                         {/* Premium Glassmorphism Background */}
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50" />
                         
-                        <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-none">
+                        <div className="relative bg-[#101218]/95 border border-white/10 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-none">
                             {/* Close Button */}
-                            <button 
+                            <button
                                 onClick={handleClose}
-                                className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-none bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-10"
+                                className="absolute top-1 right-1 w-10 h-10 flex items-center justify-center rounded-none text-white/40 hover:text-white transition-all z-10"
                             >
-                                <span className="material-symbols-outlined text-[16px]">close</span>
+                                <span className="material-symbols-outlined text-[18px]">close</span>
                             </button>
 
                             <div className="flex flex-col gap-3">

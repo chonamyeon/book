@@ -17,7 +17,6 @@ import {
 } from 'firebase/firestore';
 import { summarizeReview, generateDailyThought } from '../services/gemini';
 import { AnimatePresence } from 'framer-motion';
-import html2canvas from 'html2canvas';
 
 // ─── Constants ───────────────────────────────────────────────────
 const MOODS = [
@@ -127,6 +126,7 @@ export default function ReadingNotes() {
     const handleDownloadTree = async () => {
         if (!treeContainerRef.current) return;
         try {
+            const { default: html2canvas } = await import('html2canvas');
             const canvas = await html2canvas(treeContainerRef.current, {
                 useCORS: true,
                 backgroundColor: '#0f172a',

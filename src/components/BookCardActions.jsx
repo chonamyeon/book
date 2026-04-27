@@ -7,6 +7,7 @@ import { useAudio } from '../contexts/AudioContext';
 import { useSavedBooks } from '../hooks/useSavedBooks';
 import { shareCard } from '../utils/shareCard';
 import { useBookData } from '../hooks/useBookData';
+import { resolvePodcastPlaySrc } from '../utils/resolvePodcastPlaySrc';
 
 const SITE_ORIGIN = 'https://archiview.store';
 
@@ -24,7 +25,7 @@ export default function BookCardActions({ book, className = '' }) {
     const { user } = useAuth();
     const { playPodcastMP3, openScriptModal, podcastInfo: podInfo, podcastPlaying: podPlaying } = useAudio();
     const { savedBooks, addBook } = useSavedBooks(user);
-    const { overrides } = useBookData();
+    const { overrides, getBook } = useBookData();
 
     const handlePremiumNav = (e, path, isPodcastAction = false) => {
         e.stopPropagation();
@@ -32,13 +33,14 @@ export default function BookCardActions({ book, className = '' }) {
         navigate(path);
     };
 
-    // 팟캐스트: 오디오 즉시 재생 + ReviewDetail 팟캐스트 탭으로 이동
+    // 팟캐스트: TTS 즉시 재생 + ReviewDetail 팟캐스트 탭으로 이동
     const handlePodcastPlay = (e) => {
         e.stopPropagation();
         e.preventDefault();
         if (!user) { navigate('/login'); return; }
         const sid = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
-        const src = book.podcastFile || `/audio/${sid}.mp3`;
+        const src = resolvePodcastPlaySrc(book, (bid) => getBook(bid));
+        if (!src) return;
         try { playPodcastMP3(src, book.title, book.cover || book.coverUrl, sid, true); } catch {}
         navigate(`/review/${sid}?tab=podcast`);
     };
@@ -328,7 +330,7 @@ export default function BookCardActions({ book, className = '' }) {
                     >
                         <span className="flex items-end gap-[1.5px]" style={{height:13}}>
                             {[{h:5,d:'0s'},{h:11,d:'0.2s'},{h:13,d:'0.07s'},{h:8,d:'0.28s'},{h:4,d:'0.14s'}].map((b,i)=>(
-                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor',animationName:'waveBar',animationDuration:'0.9s',animationTimingFunction:'ease-in-out',animationIterationCount:'infinite',animationDirection:'alternate',animationDelay:b.d}} />
+                                <span key={i} style={{display:'inline-block',width:1.5,height:b.h,borderRadius:2,background:'currentColor'}} />
                             ))}
                         </span>
                         <span>팟캐스트</span>

@@ -28,53 +28,95 @@ exports.sendCommuteAlerts = onSchedule(
             .where('commuteAlarm', '==', true)
             .get();
 
-        // 오늘의 추천 콘텐츠 (personalization.js와 동일한 날짜 시드 셔플)
-        const seededShuffle = (arr, seed) => {
-            const s = [...arr];
-            let h = seed;
-            for (let i = s.length - 1; i > 0; i--) {
-                h = ((h * 1664525 + 1013904223) | 0) >>> 0;
-                const j = h % (i + 1);
-                [s[i], s[j]] = [s[j], s[i]];
-            }
-            return s;
+        // src/data/personalization.js 와 동일: 전원 위클리 순서로 짝만 이동(자정 기준)
+        const seoulYmd = () => {
+            const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
+            const p = fmt.formatToParts(new Date());
+            const y = +p.find((x) => x.type === 'year').value;
+            const m = +p.find((x) => x.type === 'month').value;
+            const d = +p.find((x) => x.type === 'day').value;
+            return y * 10000 + m * 100 + d;
         };
-        const todaySeed = now.getUTCFullYear() * 10000 + (now.getUTCMonth() + 1) * 100 + now.getUTCDate();
+        const dayIndexFromYmd = (ymd) => {
+            const y = Math.floor(ymd / 10000);
+            const m = Math.floor((ymd % 10000) / 100);
+            const d = ymd % 100;
+            return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2020, 0, 1)) / 86400000);
+        };
+        // 붙은 짝 (0,1)(2,3)…, 링 없음 — 클라 pickDisjointPairBlock 과 동일
+        const pickDisjointPairBlock = (ordered, dayIndex) => {
+            const n = ordered.length;
+            if (n === 0) return [];
+            if (n === 1) return [ordered[0]];
+            const pairCount = Math.floor(n / 2);
+            const slot = dayIndex % pairCount;
+            const i = slot * 2;
+            return [ordered[i], ordered[i + 1]];
+        };
+        const todayYmd = seoulYmd();
+        const dayIdxKst = dayIndexFromYmd(todayYmd);
 
-        const makeBookInfo = (b) => {
+        const dedupeBooks = (arr) => {
+            const seen = new Set();
+            const a = arr || [];
+            const out = [];
+            for (let i = 0; i < a.length; i++) {
+                const b = a[i];
+                const k = String(b.id || b.title || '').trim() || `__w_${i}`;
+                if (seen.has(k)) continue;
+                seen.add(k);
+                out.push(b);
+            }
+            return out;
+        };
+
+        /** 클라이언트 getTodayContents 와 동일: 전원 순서·날짜 짝 (퀴즈 분기 없음) */
+        const getTodayBooks = (books) => {
+            return pickDisjointPairBlock(dedupeBooks(books), dayIdxKst);
+        };
+
+        const makeBookInfo = (b, isGo) => {
             const title = b.title || '오늘의 추천 콘텐츠';
-            const sid = b.id || (b.title || '').toLowerCase().replace(/\s+/g, '-');
-            const link = sid ? `https://archiview.store/review/${sid}?tab=podcast&autoplay=1` : 'https://archiview.store/';
+            const link = `https://archiview.store/?autoplay=${isGo ? 'go' : 'back'}`;
             return { title, link };
         };
 
-        let goBook  = { title: '오늘의 추천 콘텐츠', link: 'https://archiview.store/' };
-        let backBook = { title: '오늘의 추천 콘텐츠', link: 'https://archiview.store/' };
+        // weekly_focus 책 목록 로드
+        let allBooks = [];
         try {
             const wfSnap = await db.collection('site_config').doc('weekly_focus').get();
             if (wfSnap.exists) {
-                const books = (wfSnap.data().books || []).filter(b => b.id || b.title);
-                if (books.length > 0) {
-                    const shuffled = seededShuffle(books, todaySeed + 2); // lowBooks 셔플 (페르소나 없음)
-                    goBook   = makeBookInfo(shuffled[0]);
-                    backBook = makeBookInfo(shuffled[1] || shuffled[0]);
-                }
+                allBooks = (wfSnap.data().books || []).filter(b => b.id || b.title);
             }
         } catch {}
 
+        console.log(`[commuteAlert] ${hhmm} | commuteAlarm=true 유저 수: ${snap.size}`);
         const sends = [];
         snap.forEach(docSnap => {
             const d = docSnap.data();
-            if (!d.fcmToken) return;
+            // 모든 유저 상태 로깅 (디버깅용)
+            console.log(`[commuteAlert] uid=${docSnap.id} commuteGo=${d.commuteGo} commuteBack=${d.commuteBack} days=${JSON.stringify(d.commuteDays)} hasFcmToken=${!!d.fcmToken} dayIdx=${dayIdx} hhmm=${hhmm}`);
+
+            if (!d.fcmToken) {
+                console.log(`[commuteAlert] fcmToken 없음 → 스킵: uid=${docSnap.id}`);
+                return;
+            }
 
             const days = Array.isArray(d.commuteDays) ? d.commuteDays : [0,1,2,3,4];
-            if (!days.includes(dayIdx)) return;
+            if (!days.includes(dayIdx)) {
+                console.log(`[commuteAlert] 요일 불일치 → 스킵: uid=${docSnap.id} dayIdx=${dayIdx} days=${JSON.stringify(days)}`);
+                return;
+            }
 
             let label = null;
-            let book = null;
-            if (d.commuteGo === hhmm)   { label = '출근길'; book = goBook; }
-            else if (d.commuteBack === hhmm) { label = '퇴근길'; book = backBook; }
+            let isGo = false;
+            if (d.commuteGo === hhmm)        { label = '출근길'; isGo = true; }
+            else if (d.commuteBack === hhmm) { label = '퇴근길'; isGo = false; }
             if (!label) return;
+
+            const todayBooks = allBooks.length > 0 ? getTodayBooks(allBooks) : [];
+            const bookData = isGo ? todayBooks[0] : todayBooks[1];
+            const book = bookData ? makeBookInfo(bookData, isGo) : { title: '오늘의 추천 콘텐츠', link: `https://archiview.store/?autoplay=${isGo ? 'go' : 'back'}` };
 
             sends.push(
                 messaging.send({
@@ -87,7 +129,11 @@ exports.sendCommuteAlerts = onSchedule(
                         notification: { icon: 'https://archiview.store/icon-192.png' },
                         fcmOptions: { link: book.link },
                     },
-                }).catch(() => {})
+                }).then(() => {
+                    console.log(`[commuteAlert] FCM 발송 성공: uid=${docSnap.id}`);
+                }).catch((err) => {
+                    console.error(`[commuteAlert] FCM 발송 실패: uid=${docSnap.id} token=${d.fcmToken?.slice(0,20)}... error=${err.code} ${err.message}`);
+                })
             );
         });
 

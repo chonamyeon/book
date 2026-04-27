@@ -10,9 +10,11 @@ import Footer from '../components/Footer';
 import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
 import { db } from '../firebase';
-import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 import { useSavedBooks } from '../hooks/useSavedBooks';
+import { getTodayContents } from '../data/personalization';
+import { useSeoulCalendarDayKey } from '../hooks/useCalendarDay';
 
 // abstract/ 폴더 AI 이미지 32개 — 책 카드에 순서대로 1:1 배정 (중복 없음)
 const ABSTRACT_IMGS = [
@@ -56,6 +58,7 @@ export default function Home() {
     const { addBook: addSavedBook, savedBooks } = useSavedBooks(user);
     const [mainCategories, setMainCategories] = useState(null);
     const navigate = useNavigate();
+    const seoulYmd = useSeoulCalendarDayKey();
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { playPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [isScrolled, setIsScrolled] = useState(false);
@@ -210,28 +213,8 @@ export default function Home() {
         { id: "story-power", title: "스토리의 힘", listens: "6.8k" },
     ]);
 
-    // 위클리포커스 스케줄 자동 적용
-    useEffect(() => {
-        const applySchedule = async () => {
-            try {
-                const snap = await getDoc(doc(db, 'site_config', 'weekly_focus_schedule'));
-                if (!snap.exists()) return;
-                const weeks = snap.data().weeks || [];
-                const now = new Date();
-                const activeWeek = [...weeks]
-                    .filter(w => w.weekStart && new Date(w.weekStart) <= now && w.books?.length > 0)
-                    .sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))[0];
-                if (!activeWeek) return;
-                const cur = await getDoc(doc(db, 'site_config', 'weekly_focus'));
-                const curIds = (cur.data()?.books || []).map(b => b.id).join(',');
-                const newIds = activeWeek.books.map(b => b.id).join(',');
-                if (curIds !== newIds) {
-                    await setDoc(doc(db, 'site_config', 'weekly_focus'), { books: activeWeek.books });
-                }
-            } catch {}
-        };
-        applySchedule();
-    }, []);
+    // 주의: weekly_focus_schedule(주마다 2권)로 weekly_focus(최대 60권)를 자동 setDoc 하면
+    // 어드민에서 넣은 60권이 통째로 2권으로 덮어써짐 — 자동 적용 제거(인기아카이뷰 '메인에 저장'만 사용)
 
     useEffect(() => {
         const unsub1 = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
@@ -260,24 +243,30 @@ export default function Home() {
 
     const enrichedPopularArchives = useMemo(() => enrich(popularArchives), [popularArchives, allBooks]);
 
-    // Weekly Focus: 캐시 우선 표시 → allBooks 로드 후 enriched 버전으로 교체
+    // Weekly Focus: 캐시 우선 표시 → allBooks 로드 후 enriched 버전으로 교체 (짧은 옛 캐시가 전체 목록을 가리지 않게)
     const weeklyFocusBooks = useMemo(() => {
         if (weeklyFocusRaw.length > 0) {
             const enriched = enrich(weeklyFocusRaw);
-            // allBooks가 로드된 경우에만 enriched 캐시 갱신
             if (allBooks.length > 0) {
                 try { localStorage.setItem('wf_enriched_cache', JSON.stringify(enriched)); } catch {}
                 return enriched;
             }
-            // allBooks 아직 로딩 중 → enriched 캐시 사용
             try {
                 const cached = JSON.parse(localStorage.getItem('wf_enriched_cache') || '[]');
-                if (cached.length > 0) return cached;
+                if (cached.length > 0 && cached.length >= enriched.length) return cached;
             } catch {}
             return enriched;
         }
         return allBooks.filter(b => b.section === 'WEEKLY_FOCUS').sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).slice(0, 5);
     }, [weeklyFocusRaw, allBooks]);
+
+    // 메인 Weekly Focus: Test4와 동일 — 위클리 **순서**로 (0,1)→(2,3)…, 한국 자정마다 다음 짝
+    const { todayBooks: wfTodayBooks, todayVideos: wfTodayVideos } = useMemo(() => {
+        const books = weeklyFocusBooks.length > 0 ? weeklyFocusBooks : [];
+        const videos = weeklyFocusVideos.length > 0 ? weeklyFocusVideos : [];
+        if (!books.length && !videos.length) return { todayBooks: [], todayVideos: [] };
+        return getTodayContents(books, videos, null, seoulYmd);
+    }, [weeklyFocusBooks, weeklyFocusVideos, seoulYmd]);
 
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
@@ -471,27 +460,30 @@ export default function Home() {
 
                         {/* Category Chips moved to top Header */}
 
-                        {/* ⭐ Social Proof Section */}
-                        <div className="relative z-10 px-6 pb-6 pt-0">
-                            <div className="glass-card bg-zinc-900/40 border border-white/5 rounded-none p-4 text-center">
-                                <div className="flex items-center justify-center gap-1 mb-2">
+                        {/* ⭐ Social Proof Section — full-bleed strip, no box */}
+                        <div className="relative z-10 pt-1 pb-5"
+                            style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.45) 100%)' }}>
+                            {/* 상단 구분선: 오렌지 미세 그라디언트 */}
+                            <div className="mx-6 mb-3 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(251,146,60,0.35), transparent)' }} />
+                            <div className="text-center px-6">
+                                <div className="flex items-center justify-center gap-[3px] mb-0.5">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                        <span key={star} className="material-symbols-outlined text-orange-500 text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                        <span key={star} className="material-symbols-outlined text-orange-400/80 text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                     ))}
+                                    <span className="text-gray-400 text-[10px] font-semibold ml-2 tracking-wide">15,400+ 직장인</span>
                                 </div>
-                                <h3 className="text-[12px] font-black tracking-tight text-white mb-2.5">이미 <span className="text-orange-500">15,400명</span>의 직장인들이 매일 아침 성장하고 있습니다.</h3>
-                                <div className="relative h-[36px] overflow-hidden">
+                                <div className="relative h-[36px] overflow-hidden -mt-px sm:h-[38px]">
                                     {userReviews.map((review, idx) => (
                                         <motion.div
                                             key={idx}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: idx === reviewIndex ? 1 : 0, y: idx === reviewIndex ? 0 : 10 }}
+                                            initial={{ opacity: 0, y: 8 }}
+                                            animate={{ opacity: idx === reviewIndex ? 1 : 0, y: idx === reviewIndex ? 0 : 8 }}
                                             transition={{ duration: 0.5 }}
-                                            className="absolute inset-0 flex items-center justify-center px-2"
+                                            className="absolute inset-0 flex items-start justify-center pt-0.5"
                                             style={{ pointerEvents: idx === reviewIndex ? 'auto' : 'none' }}
                                         >
-                                            <p className="text-white text-[12px] font-bold leading-snug break-keep text-center">
-                                                "{review.text}" <span className="text-orange-500/70 text-[11px] font-black whitespace-nowrap shrink-0 ml-1">- {review.name}</span>
+                                            <p className="text-gray-300/90 text-[11px] font-medium leading-snug break-keep text-center">
+                                                "{review.text}"<span className="text-orange-400/60 text-[10px] font-semibold ml-1.5">— {review.name}</span>
                                             </p>
                                         </motion.div>
                                     ))}
@@ -713,7 +705,7 @@ export default function Home() {
                          </div>
 
                          {/* 2️⃣ Weekly Focus */}
-                         {(weeklyFocusBooks.length > 0 || weeklyFocusVideos.length > 0) && (
+                         {(wfTodayBooks.length > 0 || wfTodayVideos.length > 0) && (
                         <div className="relative z-[20] space-y-3 w-full bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-none pt-7 pb-7 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                             <div className="mb-6 flex items-center justify-between">
                                 <div>
@@ -726,7 +718,7 @@ export default function Home() {
                             </div>
 
                             {/* 도서 2개 */}
-                            {weeklyFocusBooks.slice(0, 2).map((book, idx) => (
+                            {wfTodayBooks.map((book, idx) => (
                                 <div key={book.id || idx} className="relative group">
                                     <div onClick={() => navigate(`/review/${book.id || book.title.toLowerCase().replace(/\s+/g, '-')}`)}
                                         className="cursor-pointer glass-card rounded-none p-4 flex gap-4 items-center hover:bg-white/5 transition-all w-full border border-white/5">
@@ -746,7 +738,7 @@ export default function Home() {
                             ))}
 
                             {/* 유튜브 영상 2개 */}
-                            {weeklyFocusVideos.slice(0, 2).map((v, idx) => (
+                            {wfTodayVideos.map((v, idx) => (
                                 <div key={v.id || idx} className="relative group">
                                     <a href={v.youtubeUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.title)}`}
                                         target="_blank" rel="noopener noreferrer"

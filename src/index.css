@@ -9,7 +9,7 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     overscroll-behavior-y: none;
-    scroll-behavior: smooth;
+    /* smooth scroll은 iOS에서 jank 유발 가능, 제거 */
     /* iOS 모멘텀 스크롤 */
     -webkit-overflow-scrolling: touch;
 }
@@ -82,6 +82,26 @@ a {
     min-height: unset;
 }
 
+/* 카드 전체가 <button>인 경우: 콘텐츠 높이는 이미 44pt 이상이나,
+   flex 컬럼 + 전역 min-height:44px 조합이 iOS/Safari에서 내부 영역(이어재생 막대)을 부풀리는 것을 방지 */
+button.btn-card-pressable {
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* 이어듣기 카드 하단: 모바일/PWA에서 flex 자식이 콘텐츠 너비로만 잡히는 것 방지 */
+button.btn-card-pressable .listen-continue-cta {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
 /* iOS Safari 하단 safe area를 위한 CSS 변수 */
 :root {
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -98,6 +118,11 @@ a {
 .scroll-container {
     -webkit-overflow-scrolling: touch;
     will-change: scroll-position;
+}
+
+/* 페이지 섹션 렌더링 격리 — 스크롤 페인트 비용 절감 */
+.page-section {
+    contain: layout style;
 }
 
 /* GPU 가속이 필요한 요소 (헤더, 미니플레이어, 바텀 네비) */
@@ -162,9 +187,9 @@ a {
     }
 
     .glass-nav {
-        background: rgba(8, 13, 20, 0.8);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(8, 13, 20, 0.92);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
     }
 
     .gold-gradient {
@@ -238,4 +263,13 @@ a {
 @keyframes waveBar {
     0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
     50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* 발열 방지: reduced-motion 환경에서는 모든 무한 애니메이션 중지 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

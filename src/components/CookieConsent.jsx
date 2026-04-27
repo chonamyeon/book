@@ -57,6 +57,7 @@ export default function CookieConsent() {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-[9999] p-4 md:p-6"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' }}
       role="dialog"
       aria-modal="true"
       aria-live="polite"

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../hooks/useAuth';
 import { useSavedBooks } from '../hooks/useSavedBooks';
 import { useSiteDesign } from '../hooks/useSiteDesign';
@@ -75,6 +76,12 @@ export default function Editorial() {
     const navigate = useNavigate();
     const scrollContainerRef = useRef(null);
     const { design } = useSiteDesign();
+    // 히어로 비디오 src 잠금: Firestore 업데이트로 src 바뀌어도 영상 재시작 방지
+    const lockedEditorialSrc = useRef(null);
+    if (!lockedEditorialSrc.current && design.editorial_hero?.src) {
+        lockedEditorialSrc.current = design.editorial_hero.src;
+    }
+    const editorialVideoSrc = lockedEditorialSrc.current || design.editorial_hero?.src;
     const { user } = useAuth();
     const { addBook: addSavedBook, savedBooks } = useSavedBooks(user);
     const [selectedCategoryId, setSelectedCategoryId] = useState(categoriesInfo[0].id);
@@ -189,11 +196,16 @@ export default function Editorial() {
         alert('서재에 보관되었습니다. ✅');
     };
 
-    if (booksLoading) {
-        return <LoadingScreen />;
-    }
-
     return (
+        <>
+        <Helmet>
+            <title>에디토리얼 | 아카이뷰 ARCHIVIEW</title>
+            <meta name="description" content="아카이뷰 에디터가 엄선한 주제별 도서 콘텐츠. 자기계발, 경제, 경영, 인문, 심리 분야의 핵심 도서를 깊이 있게 만나보세요." />
+            <meta property="og:title" content="에디토리얼 | 아카이뷰 ARCHIVIEW" />
+            <meta property="og:description" content="아카이뷰 에디터가 엄선한 주제별 도서 콘텐츠. 자기계발, 경제, 경영, 인문, 심리 분야의 핵심 도서를 깊이 있게 만나보세요." />
+            <meta property="og:url" content="https://archiview.store/editorial" />
+            <link rel="canonical" href="https://archiview.store/editorial" />
+        </Helmet>
         <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
             <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
                 <MainHeader showBack />
@@ -203,18 +215,14 @@ export default function Editorial() {
                     <section className="relative h-[480px] w-full overflow-hidden mb-12">
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0e1015] via-[#0e1015]/40 to-transparent z-10"></div>
                         {design.editorial_hero.type === 'image' ? (
-                            <img src={design.editorial_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
+                            <img src={editorialVideoSrc} alt="hero" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
                         ) : (
                             <video
-                                src={design.editorial_hero.src}
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                preload="auto"
+                                src={editorialVideoSrc}
                                 poster={design.editorial_hero_poster || undefined}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 style={{ transform: 'scale(1.1) translateX(30px)' }}
+                                autoPlay muted loop playsInline
                             />
                         )}
                         <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
@@ -462,5 +470,6 @@ export default function Editorial() {
                 <BottomNavigation />
             </div>
         </div>
+        </>
     );
 }

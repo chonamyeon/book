@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, memo } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { AudioProvider } from './contexts/AudioContext';
@@ -7,6 +7,10 @@ import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+// 메인/에디토리얼: 가장 많이 진입하는 페이지 — lazy 없이 즉시 로드
+import Test4 from './pages/Test4';
+import Editorial from './pages/Editorial';
+import KnowledgeInsights from './pages/KnowledgeInsights';
 
 // 청크 로드 실패 시 자동 새로고침 (시간 기반 1회) + 오류 fallback
 const lazyWithRetry = (factory) =>
@@ -44,9 +48,8 @@ const lazyWithRetry = (factory) =>
 // ──────────────────────────────────────────────
 // 코드 스플리팅: 각 페이지 lazy 로드
 // ──────────────────────────────────────────────
-const Test4         = lazyWithRetry(() => import('./pages/Test4'));
+// Test4, Editorial은 위에서 static import
 const Test5         = lazyWithRetry(() => import('./pages/Test5'));
-const Editorial     = lazyWithRetry(() => import('./pages/Editorial'));
 const Result        = lazyWithRetry(() => import('./pages/Result'));
 const Celebrity     = lazyWithRetry(() => import('./pages/Celebrity'));
 const Quiz          = lazyWithRetry(() => import('./pages/Quiz'));
@@ -63,16 +66,16 @@ const ReadingNotes  = lazyWithRetry(() => import('./pages/ReadingNotesLanding'))
 const Membership    = lazyWithRetry(() => import('./pages/Membership'));
 const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
 const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
-const KnowledgeInsights = lazyWithRetry(() => import('./pages/KnowledgeInsights'));
 const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
 
-// 페이지 로딩 스피너 — 인라인 CSS와 일치하는 경량 버전
+// 페이지 로딩 — 아카이뷰 브랜드 웨이브 바 (index.html .av-loader CSS 재사용)
 const PageLoader = memo(() => (
-  <div className="page-loader">
-    <div className="flex flex-col items-center gap-4">
-      <div className="spin" />
-      <p className="text-amber-400/60 text-xs font-bold tracking-widest uppercase">Loading</p>
+  <div className="av-loader">
+    <div className="av-loader-bars">
+      <span /><span /><span /><span />
+      <span /><span /><span />
     </div>
+    <div className="av-loader-label">ARCHIVIEW</div>
   </div>
 ));
 PageLoader.displayName = 'PageLoader';
@@ -90,6 +93,21 @@ const ScrollToTop = () => {
   return null;
 };
 
+const AutoplayRouter = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (e) => {
+      if (e.data?.type === 'FCM_AUTOPLAY' && e.data.intent) {
+        navigate(`/?autoplay=${e.data.intent}`, { replace: true });
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [navigate]);
+  return null;
+};
+
 export default function App() {
   const [deferGlobalUi, setDeferGlobalUi] = useState(false);
 
@@ -103,18 +121,51 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
 
+  // 포그라운드 FCM 핸들러: 앱이 열려있을 때도 알림 표시 (동적 import로 메인 번들 분리)
   useEffect(() => {
-    const prefetchRoutes = () => {
-      // 모바일 최초 진입 뒤 비교적 자주 이동하는 경로만 선로드
+    let unsub = null;
+    const setup = async () => {
+      try {
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        if (!('serviceWorker' in navigator)) return;
+        const { isSupported, getMessaging, onMessage } = await import('firebase/messaging');
+        const { app } = await import('./firebase');
+        const supported = await isSupported();
+        if (!supported) return;
+        const messaging = getMessaging(app);
+        unsub = onMessage(messaging, (payload) => {
+          const title = payload.notification?.title || '아카이뷰';
+          const body = payload.notification?.body || '';
+          const link = payload.fcmOptions?.link || '/';
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, {
+              body,
+              icon: '/icons/icon-192.png',
+              badge: '/icons/icon-192.png',
+              data: { link },
+              tag: 'commute',
+              renotify: true,
+            });
+          }).catch(() => {});
+        });
+      } catch {}
+    };
+    setup();
+    return () => { if (unsub) unsub(); };
+  }, []);
+
+  useEffect(() => {
+    // 네비게이션 탭 반응속도: 앱 시작 직후 네비 페이지 선로드
+    const prefetchNavPages = () => {
       import('./pages/LibraryLanding');
-      import('./pages/Editorial');
-      import('./pages/ReviewDetail');
+      import('./pages/ReadingNotesLanding');
+      import('./pages/ProfileLanding');
     };
     if (typeof requestIdleCallback !== 'undefined') {
-      const id = requestIdleCallback(prefetchRoutes, { timeout: 3000 });
+      const id = requestIdleCallback(prefetchNavPages, { timeout: 400 });
       return () => cancelIdleCallback(id);
     }
-    const t = setTimeout(prefetchRoutes, 1800);
+    const t = setTimeout(prefetchNavPages, 200);
     return () => clearTimeout(t);
   }, []);
 
@@ -123,6 +174,7 @@ export default function App() {
       <AudioProvider>
         <Router>
           <ScrollToTop />
+          <AutoplayRouter />
           <div className="min-h-screen bg-slate-950">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>

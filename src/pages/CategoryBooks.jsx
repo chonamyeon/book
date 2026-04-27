@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { motion } from 'framer-motion';
@@ -172,7 +173,20 @@ export default function CategoryBooks() {
             .trim();
     };
 
+    const catTitle = `${categoryInfo.subLabel} 도서 추천 | 아카이뷰 ARCHIVIEW`;
+    const catDesc = `${categoryInfo.label} 아카이뷰에서 엄선한 ${categoryInfo.subLabel} 핵심 도서를 오디오로 빠르게 만나보세요.`;
+    const catUrl = `https://archiview.store/category/${id}`;
+
     return (
+        <>
+        <Helmet>
+            <title>{catTitle}</title>
+            <meta name="description" content={catDesc} />
+            <meta property="og:title" content={catTitle} />
+            <meta property="og:description" content={catDesc} />
+            <meta property="og:url" content={catUrl} />
+            <link rel="canonical" href={catUrl} />
+        </Helmet>
         <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative selection:bg-orange-500/30 pb-32">
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
@@ -192,7 +206,7 @@ export default function CategoryBooks() {
                             const hero = design.category_heroes?.[categoryInfo.id];
                             const src = hero?.src || categoryInfo.img;
                             return hero?.type === 'video'
-                                ? <video src={src} autoPlay loop muted playsInline className="w-full h-full object-cover grayscale-[30%]" />
+                                ? <video src={src} className="w-full h-full object-cover grayscale-[30%]" autoPlay muted loop playsInline />
                                 : <img src={src} alt={categoryInfo.label} className="w-full h-full object-cover grayscale-[30%]" />;
                         })()}
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
@@ -311,6 +325,7 @@ export default function CategoryBooks() {
 
             <BottomNavigation />
         </div>
+        </>
     );
 }
 

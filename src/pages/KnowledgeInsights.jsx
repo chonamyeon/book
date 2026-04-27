@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import MainHeader from '../components/MainHeader';
@@ -66,25 +67,35 @@ export default function KnowledgeInsights() {
     };
 
     return (
+        <>
+        <Helmet>
+            <title>지식 인사이트 | 아카이뷰 ARCHIVIEW</title>
+            <meta name="description" content="자기계발, 경제, 경영, 인문, 심리 분야 유튜브 인사이트 영상 모음. 바쁜 직장인을 위한 핵심 지식 콘텐츠를 아카이뷰에서 만나보세요." />
+            <meta property="og:title" content="지식 인사이트 | 아카이뷰 ARCHIVIEW" />
+            <meta property="og:description" content="자기계발, 경제, 경영, 인문, 심리 분야 유튜브 인사이트 영상 모음. 바쁜 직장인을 위한 핵심 지식 콘텐츠를 아카이뷰에서 만나보세요." />
+            <meta property="og:url" content="https://archiview.store/insights" />
+            <link rel="canonical" href="https://archiview.store/insights" />
+        </Helmet>
         <div className="bg-[#0a0c12] min-h-screen text-white font-display">
             <MainHeader />
             {/* 히어로 섹션 */}
-            <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0c12]/50 to-[#0a0c12] z-10" />
-                {(design?.youtube_hero || design?.main_hero)?.type === 'video' ? (
-                    <video
-                        src={(design?.youtube_hero || design?.main_hero)?.src}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        poster={design?.youtube_hero_poster || undefined}
+            <section className="relative h-[420px] w-full overflow-hidden flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0f]/50 to-[#0a0a0f] z-10" />
+                {design.youtube_hero.type === 'image' ? (
+                    <img
+                        src={design.youtube_hero.src}
+                        alt="hero"
                         className="absolute inset-0 w-full h-full object-cover opacity-70"
-                        style={{ objectPosition: 'center top' }}
+                        style={{ objectPosition: 'center center' }}
                     />
                 ) : (
-                    <img src={(design?.youtube_hero || design?.main_hero)?.src || '/images/hero_expert_v5.png'} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center top' }} />
+                    <video
+                        src={design.youtube_hero.src}
+                        poster={design.youtube_hero_poster || undefined}
+                        className="absolute inset-0 w-full h-full object-cover opacity-70"
+                        style={{ objectPosition: 'center center' }}
+                        autoPlay muted loop playsInline
+                    />
                 )}
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
@@ -169,13 +180,13 @@ export default function KnowledgeInsights() {
             <BottomNavigation />
             <Footer />
         </div>
+        </>
     );
 }
 
 function YoutubeCard({ video, thumb, embedUrl, idx, onLikeBump, onViewBump }) {
     const [youtubeOpen, setYoutubeOpen] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [podcastHover, setPodcastHover] = useState(false);
     const navigate = useNavigate();
     const { user } = useAuth();
     const likeCount = Math.max(Number(video.likes) || 0, 1024);
@@ -285,23 +296,15 @@ function YoutubeCard({ video, thumb, embedUrl, idx, onLikeBump, onViewBump }) {
                     <motion.button
                         onClick={handlePodcastClick}
                         className={podcastBtn}
-                        onHoverStart={() => setPodcastHover(true)}
-                        onHoverEnd={() => setPodcastHover(false)}
                         whileHover={{ y: -2, scale: 1.02, boxShadow: '0 10px 22px rgba(220,38,38,0.35)' }}
                         whileTap={{ scale: 0.98 }}
                     >
                         <span className="inline-flex items-end gap-[2px] h-[14px]">
                             {[0, 1, 2, 3].map((i) => (
-                                <motion.span
+                                <span
                                     key={i}
                                     className="w-[2px] bg-white/95 rounded-[1px]"
-                                    initial={{ height: [12, 8, 14, 10][i] }}
-                                    animate={podcastHover ? { height: [[12, 8, 14, 10][i], 5, 13, 6, 11, [12, 8, 14, 10][i]] } : { height: [12, 8, 14, 10][i] }}
-                                    transition={{
-                                        duration: 0.7 + i * 0.08,
-                                        repeat: podcastHover ? Infinity : 0,
-                                        ease: 'easeInOut'
-                                    }}
+                                    style={{ height: `${[12, 8, 14, 10][i]}px` }}
                                 />
                             ))}
                         </span>

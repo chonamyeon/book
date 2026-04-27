@@ -1,8 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence, getRedirectResult } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,20 +11,30 @@ const firebaseConfig = {
     appId: "1:176157090689:web:107f25429239f25ffd7e80"
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 
-// FCM: 지원 환경에서만 초기화
+let _storage = null;
+export const getStorageLazy = async () => {
+    if (_storage) return _storage;
+    const { getStorage } = await import("firebase/storage");
+    _storage = getStorage(app);
+    return _storage;
+};
+export const storage = null;
+
+// FCM: 지원 환경에서만 초기화 (messaging을 lazy import)
 export const getFCMToken = async () => {
     try {
+        const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
         const supported = await isSupported();
         if (!supported) return null;
         const messaging = getMessaging(app);
+        const swReg = await navigator.serviceWorker.ready;
         const token = await getToken(messaging, {
             vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-            serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js'),
+            serviceWorkerRegistration: swReg,
         });
         return token || null;
     } catch {

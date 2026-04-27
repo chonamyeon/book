@@ -44,8 +44,8 @@ export default function MiniPlayer() {
             width: '100%',
             maxWidth: 430,
             background: 'rgba(10, 10, 20, 0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             borderTop: '1px solid rgba(255,255,255,0.08)',
             padding: '0 16px 10px',
             paddingTop: 6,
@@ -165,12 +165,16 @@ export default function MiniPlayer() {
                         border: 'none',
                         cursor: 'pointer',
                         color: 'rgba(255,255,255,0.3)',
-                        padding: 2,
+                        padding: 0,
+                        width: 44,
+                        height: 44,
+                        minWidth: 44,
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                     }}
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
                 </button>
             </div>
 

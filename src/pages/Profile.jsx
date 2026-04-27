@@ -84,25 +84,74 @@ export default function Profile() {
         return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
+    // Firestore에서 페르소나 + 출퇴근 설정 로드
+    useEffect(() => {
+        if (!user) return;
+        import('firebase/firestore').then(({ doc: fsDoc, getDoc }) => {
+            import('../firebase').then(({ db: fsDb }) => {
+                getDoc(fsDoc(fsDb, 'users', user.uid)).then(snap => {
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const remote = data.quizResult || data.myResultType;
+                    if (remote) {
+                        setQuizResultType(remote);
+                        localStorage.setItem('quizResult', remote);
+                    }
+                    if (data.commuteGo)   { setCommuteGo(data.commuteGo);   localStorage.setItem('commute_go', data.commuteGo); }
+                    if (data.commuteBack) { setCommuteBack(data.commuteBack); localStorage.setItem('commute_back', data.commuteBack); }
+                    if (Array.isArray(data.commuteDays)) { setCommuteDays(data.commuteDays); localStorage.setItem('commute_days', JSON.stringify(data.commuteDays)); }
+                    if (data.commuteAlarm !== undefined) { setCommuteOn(data.commuteAlarm); localStorage.setItem('commute_on', data.commuteAlarm ? 'true' : 'false'); }
+                }).catch(() => {});
+            });
+        });
+    }, [user?.uid]);
+
+    // 포그라운드 폴백: 앱이 열려있을 때 1분마다 체크
     useEffect(() => {
         if (!commuteOn) return;
+        if (typeof Notification === 'undefined') return;
         const check = () => {
-            const now = new Date();
-            const dayIdx = (now.getDay() + 6) % 7;
-            if (!commuteDays.includes(dayIdx)) return;
-            const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            if ((hhmm === commuteGo || hhmm === commuteBack) && Notification.permission === 'granted') {
-                const label = hhmm === commuteGo ? '출근길' : '퇴근길';
-                const n = new Notification(`🎧 ${label} 콘텐츠 준비됐어요!`, {
-                    body: '아카이뷰에서 오늘의 추천 콘텐츠를 들어보세요.',
-                    icon: '/icons/icon-192.png',
-                });
-                n.onclick = () => { window.focus(); navigate('/'); };
-            }
+            try {
+                const now = new Date();
+                const dayIdx = (now.getDay() + 6) % 7;
+                if (!commuteDays.includes(dayIdx)) return;
+                const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                if (Notification.permission === 'granted') {
+                    if (hhmm === commuteGo) {
+                        const n = new Notification('🎧 출근길 콘텐츠 준비됐어요!', { body: '탭해서 바로 들어보세요.', icon: '/icons/icon-192.png' });
+                        n.onclick = () => { window.focus(); navigate('/?autoplay=go', { replace: true }); };
+                    } else if (hhmm === commuteBack) {
+                        const n = new Notification('🌙 퇴근길 콘텐츠 준비됐어요!', { body: '탭해서 바로 들어보세요.', icon: '/icons/icon-192.png' });
+                        n.onclick = () => { window.focus(); navigate('/?autoplay=back', { replace: true }); };
+                    }
+                }
+            } catch {}
         };
         commuteTimerRef.current = setInterval(check, 60000);
         return () => clearInterval(commuteTimerRef.current);
-    }, [commuteOn, commuteGo, commuteBack, commuteDays, navigate]);
+    }, [commuteOn, commuteGo, commuteBack, commuteDays]);
+
+    // SW에 알림 스케줄 등록 (백그라운드/PWA 지원)
+    useEffect(() => {
+        if (!commuteOn) return;
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.ready.then((reg) => {
+            if (reg && reg.active) {
+                reg.active.postMessage({
+                    type: 'SCHEDULE_NOTIFICATIONS',
+                    commuteGo,
+                    commuteBack,
+                    commuteDays,
+                });
+            }
+        }).catch(() => {});
+        return () => {
+            navigator.serviceWorker.ready.then((reg) => {
+                if (reg && reg.active) reg.active.postMessage({ type: 'CANCEL_NOTIFICATIONS' });
+            }).catch(() => {});
+        };
+    }, [commuteOn, commuteGo, commuteBack, commuteDays]);
 
     useEffect(() => {
         if (!loading && !user) navigate('/login');
@@ -124,7 +173,7 @@ export default function Profile() {
     };
 
     const handleSaveCommute = async () => {
-        // 시간 저장은 알림 권한과 무관하게 항상 실행
+        // 1) localStorage 저장 (항상, 즉시)
         localStorage.setItem('commute_on', 'true');
         localStorage.setItem('commute_go', commuteGo);
         localStorage.setItem('commute_back', commuteBack);
@@ -133,7 +182,7 @@ export default function Profile() {
         setCommuteSaved(true);
         setTimeout(() => setCommuteSaved(false), 2000);
 
-        // 알림 권한 요청 먼저 (사용자 제스처 컨텍스트 안에서)
+        // 2) 알림 권한 요청 (사용자 제스처 컨텍스트 안에서 먼저)
         if (typeof Notification !== 'undefined') {
             try {
                 if (Notification.permission === 'default') {
@@ -147,21 +196,27 @@ export default function Profile() {
 
         alert(`✓ 알림 시간이 저장됐어요!\n출근 ${formatTime(commuteGo)} · 퇴근 ${formatTime(commuteBack)}`);
 
+        // 3) Firestore 저장 — FCM 토큰과 무관하게 반드시 먼저 실행
         if (user) {
             try {
-                // FCM 토큰 등록 (SW 먼저 등록 후 토큰 요청)
-                let fcmToken = null;
-                if ('serviceWorker' in navigator) {
-                    try {
-                        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                        fcmToken = await getFCMToken();
-                    } catch {}
-                }
                 await setDoc(doc(db, 'users', user.uid), {
                     commuteGo, commuteBack, commuteDays, commuteAlarm: true,
-                    ...(fcmToken ? { fcmToken } : {}),
                     updatedAt: serverTimestamp()
                 }, { merge: true });
+            } catch {}
+        }
+
+        // 4) FCM 토큰 등록 — 별도로, 실패해도 저장에 영향 없음
+        if (user && 'serviceWorker' in navigator) {
+            try {
+                await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                // 5초 타임아웃 적용 (모바일 웹에서 FCM 지원 안 될 때 무한 대기 방지)
+                const tokenPromise = getFCMToken();
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+                const fcmToken = await Promise.race([tokenPromise, timeout]).catch(() => null);
+                if (fcmToken) {
+                    await setDoc(doc(db, 'users', user.uid), { fcmToken }, { merge: true });
+                }
             } catch {}
         }
     };
@@ -173,9 +228,8 @@ export default function Profile() {
     };
 
     const handlePersona = () => {
-        const qr = localStorage.getItem('quizResult') || localStorage.getItem('myResultType');
         const qs = (() => { try { return JSON.parse(localStorage.getItem('quizScores')); } catch { return null; } })();
-        qr ? navigate('/result', { state: { resultType: qr, scores: qs } }) : navigate('/quiz');
+        quizResultType ? navigate('/result', { state: { resultType: quizResultType, scores: qs } }) : navigate('/quiz');
     };
 
     const handleDeleteAccount = async () => {
@@ -214,7 +268,7 @@ export default function Profile() {
         return `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,'0')}. ${String(d.getDate()).padStart(2,'0')}`;
     })();
 
-    const quizResultType = localStorage.getItem('quizResult') || localStorage.getItem('myResultType');
+    const [quizResultType, setQuizResultType] = useState(() => localStorage.getItem('quizResult') || localStorage.getItem('myResultType') || null);
     const persona = TYPE_META[quizResultType];
 
     const formatTime = (val) => {
@@ -463,10 +517,8 @@ export default function Profile() {
                         { icon: 'psychology', label: '나의 페르소나', sub: persona?.label || '', onClick: handlePersona },
                     ].map(({ icon, label, sub, onClick }, i, arr) => (
                         <button key={label} onClick={onClick}
-                            className="w-full flex items-center justify-between px-4 py-4 transition-colors text-left"
-                            style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
-                            onTouchStart={e => e.currentTarget.style.background = '#1e1e1e'}
-                            onTouchEnd={e => e.currentTarget.style.background = 'transparent'}>
+                            className="w-full flex items-center justify-between px-4 py-4 transition-colors text-left active:bg-[#1e1e1e]"
+                            style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
                             <div className="flex items-center gap-3">
                                 <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18, lineHeight: 1, width: 20, textAlign: 'center' }}>·</span>
                                 <div>
@@ -485,17 +537,13 @@ export default function Profile() {
                     <div className="flex justify-center px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                         <KakaoAdFit unit="DAN-aXfyL1HtK8zp0vui" width="320" height="100" />
                     </div>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4"
-                        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#F87171' }}
-                        onTouchStart={e => e.currentTarget.style.background = '#1e1e1e'}
-                        onTouchEnd={e => e.currentTarget.style.background = 'transparent'}>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 active:bg-[#1e1e1e] transition-colors"
+                        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#F87171' }}>
                         <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18, lineHeight: 1, width: 20, textAlign: 'center' }}>·</span>
                         <span className="text-[14px]">로그아웃</span>
                     </button>
-                    <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center gap-3 px-5 py-4"
-                        style={{ color: 'rgba(255,255,255,0.45)' }}
-                        onTouchStart={e => e.currentTarget.style.background = '#1e1e1e'}
-                        onTouchEnd={e => e.currentTarget.style.background = 'transparent'}>
+                    <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center gap-3 px-5 py-4 active:bg-[#1e1e1e] transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.45)' }}>
                         <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18, lineHeight: 1, width: 20, textAlign: 'center' }}>·</span>
                         <span className="text-[13px]">탈퇴하기</span>
                     </button>

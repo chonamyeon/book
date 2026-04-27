@@ -202,7 +202,12 @@ export default function Login() {
                     <div className="flex flex-col items-center justify-center min-h-[60px] relative space-y-4">
                         {isLoading && (
                             <div className="absolute inset-0 flex items-center justify-center bg-background-dark/80 z-20">
-                                <div className="size-8 border-3 border-gold/20 border-t-gold rounded-full animate-spin"></div>
+                                <div className="av-loader-bars" style={{ height: 28 }}>
+                                    <span style={{ height: 10 }} /><span style={{ height: 22 }} />
+                                    <span style={{ height: 28 }} /><span style={{ height: 17 }} />
+                                    <span style={{ height: 25 }} /><span style={{ height: 13 }} />
+                                    <span style={{ height: 20 }} />
+                                </div>
                             </div>
                         )}
                         

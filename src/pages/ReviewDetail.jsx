@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import LoadingScreen from '../components/LoadingScreen';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import HTMLFlipBook from 'react-pageflip';
+const HTMLFlipBook = lazy(() => import('react-pageflip'));
 import { celebrities } from '../data/celebrities';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
@@ -1274,14 +1274,33 @@ ${scriptContext}
     return (
         <>
         <Helmet>
-            <title>{book.title || '아카이뷰 도서'} - ARCHIVIEW</title>
-            <meta property="og:title" content={`[아카이뷰] ${book.title || '도서'}`} />
+            <title>{book.title || '아카이뷰 도서'} 핵심 요약 오디오 - ARCHIVIEW</title>
+            <meta name="description" content={book.desc ? `${book.desc.slice(0, 120)}... 아카이뷰에서 핵심만 빠르게 들어보세요.` : `${book.title} 핵심 요약을 오디오로 빠르게 만나보세요.`} />
+            <meta property="og:title" content={`${book.title || '도서'} 핵심 요약 | 아카이뷰`} />
             <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
             <meta property="og:image" content={ogImage} />
             <meta property="og:url" content={`https://archiview.store/review/${encodeURIComponent(book.id)}`} />
             <meta property="og:type" content="article" />
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:image" content={ogImage} />
+            <script type="application/ld+json">{JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Book",
+                "name": book.title,
+                "author": book.author ? { "@type": "Person", "name": book.author } : undefined,
+                "image": ogImage,
+                "description": book.desc,
+                "url": `https://archiview.store/review/${encodeURIComponent(book.id)}`,
+                "publisher": { "@type": "Organization", "name": "ARCHIVIEW" },
+            })}</script>
+            <script type="application/ld+json">{JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    { "@type": "ListItem", "position": 1, "name": "홈", "item": "https://archiview.store/" },
+                    { "@type": "ListItem", "position": 2, "name": book.title || "도서", "item": `https://archiview.store/review/${encodeURIComponent(book.id)}` }
+                ]
+            })}</script>
         </Helmet>
         <div
             className={`rv-root ${activeTab === 'podcast' ? 'podcast-view' : ''}`}
@@ -1417,6 +1436,7 @@ ${scriptContext}
                     style={podcastInfo ? { paddingBottom: `${MINI_PLAYER_H}px` } : undefined}
                 >
                     <div className="rv-book-container">
+                      <Suspense fallback={<div className="rv-book-loading" />}>
                         <HTMLFlipBook
                             key={`flipbook-${hasEbook ? 'ebook' : 'review'}`}
                             ref={hasEbook ? ebookFlipBook : reviewFlipBook}
@@ -1600,6 +1620,7 @@ ${scriptContext}
                                 ]
                             )}
                         </HTMLFlipBook>
+                      </Suspense>
                     </div>
 
                     {/* ── Progress Bar ── */}

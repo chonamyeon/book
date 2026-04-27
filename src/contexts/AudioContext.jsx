@@ -8,6 +8,14 @@ const AudioCtx = createContext();
 
 export const useAudio = () => useContext(AudioCtx);
 
+const getSrcFile = (src) => {
+    if (!src) return '';
+    try { src = decodeURIComponent(src); } catch {}
+    const clean = src.split('?')[0];
+    const parts = clean.split('/');
+    return parts[parts.length - 1].replace(/\.[^.]+$/, '').toLowerCase();
+};
+
 export const AudioProvider = ({ children }) => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [activeAudioId, setActiveAudioId] = useState(null);
@@ -30,6 +38,10 @@ export const AudioProvider = ({ children }) => {
     const speechAudio = useRef(null);
     const musicAudio = useRef(null);
     const podcastAudioRef = useRef(null);
+    // 자식 useEffect(예: Test4 출퇴근 자동재생)가 부모 effect보다 먼저 돌 수 있어, 첫 틱부터 ref에 Audio 보장
+    if (typeof window !== 'undefined' && !podcastAudioRef.current) {
+        podcastAudioRef.current = new Audio();
+    }
     const stopSignal = useRef(false);
     const lastTickRef = useRef(Date.now());
 
@@ -68,7 +80,7 @@ export const AudioProvider = ({ children }) => {
         localStorage.setItem('archiview_progress', JSON.stringify(data));
     }, [dailyListenTime, streak]);
 
-    // Tracking Loop
+    // Tracking Loop — 5초마다 업데이트 (1초 → 5초로 변경, 발열/배터리 절약)
     useEffect(() => {
         let interval;
         if (podcastPlaying) {
@@ -77,13 +89,9 @@ export const AudioProvider = ({ children }) => {
                 const now = Date.now();
                 const delta = (now - lastTickRef.current) / 1000;
                 lastTickRef.current = now;
-                
-                setDailyListenTime(prev => {
-                    const newVal = prev + delta;
-                    // Check if target met for the first time today to maybe bump streak
-                    return newVal;
-                });
-            }, 1000);
+
+                setDailyListenTime(prev => prev + delta);
+            }, 5000);
         }
         return () => clearInterval(interval);
     }, [podcastPlaying]);
@@ -91,17 +99,12 @@ export const AudioProvider = ({ children }) => {
     useEffect(() => {
         speechAudio.current = new Audio();
         musicAudio.current = new Audio();
-        podcastAudioRef.current = new Audio();
+        if (!podcastAudioRef.current) {
+            podcastAudioRef.current = new Audio();
+        }
 
         const pa = podcastAudioRef.current;
-        // 히스토리에 currentTime 주기적 저장 (5초마다)
         let lastSavedTime = 0;
-        const getSrcFile = (src) => {
-            if (!src) return '';
-            const clean = src.split('?')[0];
-            const parts = clean.split('/');
-            return parts[parts.length - 1].replace(/\.[^.]+$/, '').toLowerCase();
-        };
         const saveHistory = (info, ct, dur) => {
             if (!info?.id) return;
             try {
@@ -121,8 +124,14 @@ export const AudioProvider = ({ children }) => {
                 if (uid) setDoc(doc(db, 'users', uid), { listenHistory: next }, { merge: true }).catch(() => {});
             } catch {}
         };
+        // timeupdate가 1초에 4~66번 발생 → 500ms throttle로 발열/재렌더 대폭 감소
+        let lastUiUpdate = 0;
         const onTime = () => {
-            setCurrentTime(pa.currentTime);
+            const now = Date.now();
+            if (now - lastUiUpdate >= 500) {
+                lastUiUpdate = now;
+                setCurrentTime(pa.currentTime);
+            }
             if (Math.abs(pa.currentTime - lastSavedTime) >= 5) {
                 lastSavedTime = pa.currentTime;
                 setPodcastInfo(prev => { saveHistory(prev, pa.currentTime, pa.duration); return prev; });
@@ -214,9 +223,15 @@ export const AudioProvider = ({ children }) => {
 
     const speakReview = (text, id) => playPodcast([], id);
 
-    const playPodcastMP3 = useCallback((src, title, cover, id = null, forcePlay = false, startTime = 0) => {
+    const playPodcastMP3 = useCallback((src, title, cover, id = null, forcePlay = false, startTime = 0, onPlayFailed) => {
+        if (!podcastAudioRef.current && typeof window !== 'undefined') {
+            podcastAudioRef.current = new Audio();
+        }
         const pa = podcastAudioRef.current;
-        if (!pa) return;
+        if (!pa) {
+            onPlayFailed?.(new Error('no audio element'));
+            return;
+        }
 
         // src가 절대 경로로 변환되었을 수 있으므로 normalize
         const getAbsUrl = (s) => (s && !s.startsWith('http')) ? window.location.origin + s : s;
@@ -254,14 +269,8 @@ export const AudioProvider = ({ children }) => {
 
             pa.pause();
             pa.src = src;
-            // startTime이 있으면 메타데이터 로드 후 seek
-            if (startTime > 0) {
-                const onMeta = () => {
-                    pa.currentTime = startTime;
-                    pa.removeEventListener('loadedmetadata', onMeta);
-                };
-                pa.addEventListener('loadedmetadata', onMeta);
-            }
+            pa.load();
+
             setPodcastPlaying(true);
             const newInfo = { src, title, cover, id };
             setPodcastInfo(newInfo);
@@ -278,10 +287,37 @@ export const AudioProvider = ({ children }) => {
                 const uid = getAuth().currentUser?.uid;
                 if (uid) setDoc(doc(db, 'users', uid), { listenHistory: next }, { merge: true }).catch(() => {});
             } catch {}
-            pa.play().catch((err) => {
-                console.error("New podcast play failed:", err);
-                setPodcastPlaying(false);
-            });
+
+            if (startTime > 0) {
+                // canplay 이벤트에서 seek 후 재생 — 처음부터 재생되는 문제 방지
+                const onCanPlay = () => {
+                    pa.removeEventListener('canplay', onCanPlay);
+                    pa.currentTime = startTime;
+                    // seek 완료 후 재생 시작
+                    const onSeeked = () => {
+                        pa.removeEventListener('seeked', onSeeked);
+                        pa.play().catch((err) => {
+                            console.error("Resume play failed:", err);
+                            setPodcastPlaying(false);
+                        });
+                    };
+                    pa.addEventListener('seeked', onSeeked);
+                    // seeked 이벤트가 발생하지 않을 경우 fallback
+                    setTimeout(() => {
+                        pa.removeEventListener('seeked', onSeeked);
+                        if (pa.paused) {
+                            pa.play().catch(() => setPodcastPlaying(false));
+                        }
+                    }, 500);
+                };
+                pa.addEventListener('canplay', onCanPlay);
+            } else {
+                pa.play().catch((err) => {
+                    console.error("New podcast play failed:", err);
+                    setPodcastPlaying(false);
+                    onPlayFailed?.(err);
+                });
+            }
 
             // 잠금화면/미디어 컨트롤 센터에 책 정보 표시
             if ('mediaSession' in navigator) {

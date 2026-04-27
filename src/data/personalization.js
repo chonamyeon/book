@@ -1,125 +1,106 @@
 /**
- * 날짜 + 퀴즈 페르소나 기반 Today Contents 개인화
- * - 기존 Firestore Weekly Focus 데이터(books/videos)를 받아서
- *   페르소나와 날짜 시드로 순서를 결정해 2개씩 반환
- * - 오디오/팟캐스트/TTS 시스템에 영향 없음
+ * Today Contents: 전원 동일
+ * - 짝(도서 2 + 영상 2)은 **한국(Asia/Seoul) 캘린더 날짜가 바뀔 때** 바뀜 = 그날 **밤 12시(자정) 이후**부터 다음 짝
+ * - 도서 n권(예: 60): (0,1)→(2,3)…(58,59) · `dayIndex % 30` · 30일에 한 주기
+ * - 유튜브 m개(예: 10): 별도로 `dayIndex % 5` · 5일 주기
+ * persona: 호환용(미사용)
  */
-
-// 페르소나별 선호 도서 ID (availableAudio 키 기반)
-const PERSONA_BOOK_AFFINITY = {
-    growth: [
-        'lean-startup', 'atomic-habits', 'zero-to-one', 'deep-work', 'essentialism',
-        '7-habits', 'willpower', 'power-of-habit', 'mindset', 'grit',
-        'ultralearning', 'peak', 'thinking-fast-slow', 'outliers', 'drive',
-        'purple-cow', 'blue-ocean', 'good-to-great', 'built-to-last', 'flywheel',
-        'shoe-dog', 'hard-thing', 'no-rules-rules', 'rework', 'zero-to-one',
-    ],
-    entertainment: [
-        'sapiens', 'factfulness', '21-lessons', 'cosmos', 'brief-history-of-time',
-        '1984', 'brave-new-world', 'catcher-in-the-rye', 'demian', 'almond',
-        'greek-lessons', 'gentleman-in-moscow', 'eichmann-jerusalem', 'brahms',
-        'the-old-man-and-the-sea', 'siddhartha',
-    ],
-    empathy: [
-        'man-search-for-meaning', 'emotional-intelligence', 'give-and-take',
-        'courage-to-disliked', 'nonviolent-communication', 'attachment',
-        'almond', 'greek-lessons', 'demian', 'brahms',
-        'how-to-win-friends', 'quiet', 'highly-sensitive', 'daring-greatly',
-    ],
-    mindfulness: [
-        'power-of-now', 'stoicism', 'meditations', 'ikigai', 'flow',
-        'man-search-for-meaning', 'courage-to-disliked', 'siddhartha',
-        'deep-work', '4-hour-workweek', 'essentialism', 'digital-minimalism',
-        'demian', 'brahms', 'greek-lessons',
-    ],
-};
-
-// 페르소나별 유튜브 키워드 가중치 (제목/설명에 포함 여부로 점수 계산)
-const PERSONA_VIDEO_KEYWORDS = {
-    growth:        ['startup', 'entrepreneur', 'business', 'success', 'productivity', 'leadership', '창업', '성공', '생산성', '리더십', '비즈니스'],
-    entertainment: ['science', 'history', 'story', 'culture', 'art', '과학', '역사', '문화', '예술', '우주'],
-    empathy:       ['emotion', 'relationship', 'psychology', 'mental', 'community', '감정', '관계', '심리', '공감', '소통'],
-    mindfulness:   ['mindfulness', 'meditation', 'life', 'philosophy', 'happiness', '마음', '철학', '행복', '명상', '삶'],
-};
 
 /**
- * 결정론적 셔플 (같은 시드 → 항상 같은 결과)
+ * 한국(Asia/Seoul) 기준 YYYYMMDD 정수
  */
-const seededShuffle = (arr, seed) => {
-    const s = [...arr];
-    let h = seed;
-    for (let i = s.length - 1; i > 0; i--) {
-        h = ((h * 1664525 + 1013904223) | 0) >>> 0;
-        const j = h % (i + 1);
-        [s[i], s[j]] = [s[j], s[i]];
+export const getCalendarDayKey = () => {
+    try {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Seoul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+        const p = fmt.formatToParts(new Date());
+        const y = +p.find((x) => x.type === 'year').value;
+        const m = +p.find((x) => x.type === 'month').value;
+        const d = +p.find((x) => x.type === 'day').value;
+        return y * 10000 + m * 100 + d;
+    } catch {
+        const x = new Date();
+        return x.getFullYear() * 10000 + (x.getMonth() + 1) * 100 + x.getDate();
     }
-    return s;
+};
+
+/** 이번 **서울** 날의 다음 자정(다음날 00:00:00) 시각(UTC ms). PWA가 자정에 Today를 맞출 때 씀. */
+export const getNextSeoulMidnightAfter = (nowMs = Date.now()) => {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    const p = fmt.formatToParts(new Date(nowMs));
+    const y = p.find((x) => x.type === 'year').value;
+    const mo = p.find((x) => x.type === 'month').value;
+    const da = p.find((x) => x.type === 'day').value;
+    const t0 = new Date(`${y}-${mo}-${da}T00:00:00+09:00`).getTime();
+    return t0 + 24 * 60 * 60 * 1000;
+};
+
+/** YYYYMMDD → 2020-01-01(UTC 달력)부터 경과한 **일 수** (하루마다 1씩 증가) */
+export const dayIndexFromYmd = (ymd) => {
+    const y = Math.floor(ymd / 10000);
+    const m = Math.floor((ymd % 10000) / 100);
+    const d = ymd % 100;
+    return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2020, 0, 1)) / 86400000);
 };
 
 /**
- * 오늘 날짜 시드 (YYYYMMDD 정수)
+ * id/title 기준 중복 제거(선행 유지). 키가 비어 있으면 `__w_i`로 구분 — **빈 키로 통째로 버리지 않음**(그랬다가 60→2면 짝이 영원히 안 밀림)
  */
-const getTodaySeed = () => {
-    const d = new Date();
-    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+const dedupeOrdered = (arr, getKey) => {
+    const seen = new Set();
+    const out = [];
+    const a = arr || [];
+    for (let i = 0; i < a.length; i++) {
+        const x = a[i];
+        const raw = getKey(x, i);
+        const k = raw && String(raw).trim() ? String(raw).trim() : `__w_${i}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push(x);
+    }
+    return out;
 };
 
-/**
- * 페르소나 기반 도서 점수 계산
- * Firestore에서 받은 books 배열을 페르소나 친화도 순으로 정렬 후 날짜 시드로 선택
- */
-const scoreBook = (book, affinityIds) => {
-    const id = (book.id || '').toLowerCase();
-    // 완전 일치
-    if (affinityIds.includes(id)) return 2;
-    // 부분 일치
-    if (affinityIds.some(a => id.includes(a) || a.includes(id))) return 1;
-    return 0;
+/** 붙은 두 칸씩(0-1, 2-3, …) 짝. `dayIndex % pairCount`로 **그날** 어느 짝인지. 링(끈 이어 붙이기) 없음. */
+const pickDisjointPairBlock = (ordered, dayIndex) => {
+    const n = ordered.length;
+    if (n === 0) return [];
+    if (n === 1) return [ordered[0]];
+    const pairCount = Math.floor(n / 2);
+    const slot = dayIndex % pairCount;
+    const i = slot * 2;
+    return [ordered[i], ordered[i + 1]];
 };
 
-/**
- * 페르소나 기반 유튜브 점수 계산
- */
-const scoreVideo = (video, keywords) => {
-    const text = `${video.title || ''} ${video.description || ''} ${video.speaker || ''}`.toLowerCase();
-    return keywords.filter(k => text.includes(k.toLowerCase())).length;
-};
+export const getTodaySeed = getCalendarDayKey;
 
 /**
- * 메인 함수: Today Contents 도서 2개 + 유튜브 2개 반환
- * @param {Array} books - Firestore weekly_focus books 배열
- * @param {Array} videos - Firestore weekly_focus videos 배열
- * @param {string|null} persona - 'growth'|'empathy'|'mindfulness'|'entertainment'|null
- * @returns {{ todayBooks: Array, todayVideos: Array }}
+ * @param {Array} books
+ * @param {Array} videos
+ * @param {string|null|undefined} _persona — 호환용(현재 미사용)
+ * @param {number} [dayKey] — YYYYMMDD (미주입 시 오늘 서울)
  */
-export const getTodayContents = (books, videos, persona) => {
-    const seed = getTodaySeed();
-    const affinityIds = PERSONA_BOOK_AFFINITY[persona] || [];
-    const keywords = PERSONA_VIDEO_KEYWORDS[persona] || [];
+export const getTodayContents = (books, videos, _persona, dayKey) => {
+    const ymd = typeof dayKey === 'number' ? dayKey : getCalendarDayKey();
+    const dayIdx = dayIndexFromYmd(ymd);
 
-    // 도서: 페르소나 점수 → 날짜 시드 셔플 → 상위 2개
-    const scoredBooks = books.map(b => ({ ...b, _score: scoreBook(b, affinityIds) }));
-    const highBooks = scoredBooks.filter(b => b._score >= 2);
-    const midBooks  = scoredBooks.filter(b => b._score === 1);
-    const lowBooks  = scoredBooks.filter(b => b._score === 0);
+    const bookList = dedupeOrdered(books || [], (b) => String(b.id || b.title || '').trim() || null);
+    const videoList = dedupeOrdered(
+        videos || [],
+        (v) => String(v.id || v.videoId || v.url || v.youtubeUrl || v.title || '').trim() || null
+    );
 
-    const shuffled = [
-        ...seededShuffle(highBooks, seed),
-        ...seededShuffle(midBooks, seed + 1),
-        ...seededShuffle(lowBooks, seed + 2),
-    ];
-    const todayBooks = shuffled.slice(0, 2);
-
-    // 유튜브: 페르소나 점수 → 날짜 시드 셔플 → 상위 2개
-    const scoredVideos = videos.map(v => ({ ...v, _score: scoreVideo(v, keywords) }));
-    const highVids = scoredVideos.filter(v => v._score > 0);
-    const lowVids  = scoredVideos.filter(v => v._score === 0);
-
-    const shuffledVids = [
-        ...seededShuffle(highVids, seed + 3),
-        ...seededShuffle(lowVids,  seed + 4),
-    ];
-    const todayVideos = shuffledVids.slice(0, 2);
-
-    return { todayBooks, todayVideos };
+    return {
+        todayBooks: pickDisjointPairBlock(bookList, dayIdx),
+        todayVideos: pickDisjointPairBlock(videoList, dayIdx),
+    };
 };

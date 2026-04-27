@@ -24,7 +24,7 @@ function BottomNavigation() {
 
     return (
         <nav
-            className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[#0a0d12] transition-all duration-300 gpu-accelerated"
+            className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[#0a0d12] gpu-accelerated"
             style={{
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                 transform: 'translate3d(-50%, 0, 0)',
@@ -40,14 +40,14 @@ function BottomNavigation() {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 px-2 py-1.5 rounded-none ${
+                            className={`flex flex-col items-center justify-center gap-1.5 active:scale-95 px-2 py-1.5 rounded-none ${
                                 isActive
                                     ? 'bg-[#3a3f47] text-gold'
-                                    : 'text-white/85 hover:bg-white/5'
+                                    : 'text-white/85'
                             }`}
                         >
                             <div className="flex items-center justify-center mb-0.5">
-                                <span className={`material-symbols-outlined text-[23px] transition-colors duration-200 ${
+                                <span className={`material-symbols-outlined text-[23px] ${
                                     isActive ? 'text-gold' : 'text-white/85'
                                 }`}>
                                     {item.icon}
