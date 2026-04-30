@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import KakaoAdFit from '../components/KakaoAdFit';
 import { deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { applyCommuteNotificationIntent } from '../utils/applyCommuteNotificationIntent';
 
 const TYPE_META = {
     growth:        { label: '성장·실행형', accent: '#3B82F6' },
@@ -19,8 +20,19 @@ const TYPE_META = {
 
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-const isInStandaloneMode = () =>
-    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+/** 홈 화면 설치 PWA / iOS standalone — 브라우저 탭(PC·모바일 웹)과 구분 */
+const isInStandaloneMode = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+        return (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.matchMedia('(display-mode: fullscreen)').matches ||
+            window.navigator.standalone === true
+        );
+    } catch {
+        return false;
+    }
+};
 
 const AppleIcon = () => (
     <svg width="13" height="15" viewBox="0 0 814 1000" fill="currentColor">
@@ -64,6 +76,7 @@ export default function Profile() {
     const [pwaInstalled, setPwaInstalled] = useState(false);
     const [showIphoneGuide, setShowIphoneGuide] = useState(false);
     const [showAndroidGuide, setShowAndroidGuide] = useState(false);
+    const [showAppOnlySaveModal, setShowAppOnlySaveModal] = useState(false);
 
     const [commuteOn, setCommuteOn] = useState(() => localStorage.getItem('commute_on') === 'true');
     const [commuteGo, setCommuteGo] = useState(() => localStorage.getItem('commute_go') || '08:00');
@@ -76,6 +89,7 @@ export default function Profile() {
         typeof Notification !== 'undefined' ? Notification.permission : 'default');
     const [commuteSaved, setCommuteSaved] = useState(false);
     const commuteTimerRef = useRef(null);
+    const lastForegroundAlertRef = useRef('');
 
     useEffect(() => {
         const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
@@ -110,47 +124,48 @@ export default function Profile() {
     useEffect(() => {
         if (!commuteOn) return;
         if (typeof Notification === 'undefined') return;
+        const sendNotif = (intent) => {
+            const title = intent === 'go' ? '🎧 출근길 콘텐츠 준비됐어요!' : '🌙 퇴근길 콘텐츠 준비됐어요!';
+            const body = '탭해서 바로 들어보세요.';
+            const data = { url: `${window.location.origin}/?autoplay=${intent}`, autoplay: intent };
+            // SW 경유 알림 → notificationclick 핸들러가 BroadcastChannel로 오버레이 처리
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
+                        data, tag: `commute-${intent}-${Date.now()}`, renotify: true,
+                    });
+                }).catch(() => {
+                    const n = new Notification(title, { body, icon: '/icons/icon-192.png' });
+                    n.onclick = () => applyCommuteNotificationIntent(intent);
+                });
+            } else {
+                const n = new Notification(title, { body, icon: '/icons/icon-192.png' });
+                n.onclick = () => applyCommuteNotificationIntent(intent);
+            }
+        };
         const check = () => {
             try {
                 const now = new Date();
                 const dayIdx = (now.getDay() + 6) % 7;
                 if (!commuteDays.includes(dayIdx)) return;
                 const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                if (Notification.permission === 'granted') {
-                    if (hhmm === commuteGo) {
-                        const n = new Notification('🎧 출근길 콘텐츠 준비됐어요!', { body: '탭해서 바로 들어보세요.', icon: '/icons/icon-192.png' });
-                        n.onclick = () => { window.focus(); navigate('/?autoplay=go', { replace: true }); };
-                    } else if (hhmm === commuteBack) {
-                        const n = new Notification('🌙 퇴근길 콘텐츠 준비됐어요!', { body: '탭해서 바로 들어보세요.', icon: '/icons/icon-192.png' });
-                        n.onclick = () => { window.focus(); navigate('/?autoplay=back', { replace: true }); };
-                    }
+                if (Notification.permission !== 'granted') return;
+                if (hhmm === commuteGo) {
+                    const key = `go:${now.toDateString()}:${hhmm}`;
+                    if (lastForegroundAlertRef.current === key) return;
+                    lastForegroundAlertRef.current = key;
+                    sendNotif('go');
+                } else if (hhmm === commuteBack) {
+                    const key = `back:${now.toDateString()}:${hhmm}`;
+                    if (lastForegroundAlertRef.current === key) return;
+                    lastForegroundAlertRef.current = key;
+                    sendNotif('back');
                 }
             } catch {}
         };
         commuteTimerRef.current = setInterval(check, 60000);
         return () => clearInterval(commuteTimerRef.current);
-    }, [commuteOn, commuteGo, commuteBack, commuteDays]);
-
-    // SW에 알림 스케줄 등록 (백그라운드/PWA 지원)
-    useEffect(() => {
-        if (!commuteOn) return;
-        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-        if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.ready.then((reg) => {
-            if (reg && reg.active) {
-                reg.active.postMessage({
-                    type: 'SCHEDULE_NOTIFICATIONS',
-                    commuteGo,
-                    commuteBack,
-                    commuteDays,
-                });
-            }
-        }).catch(() => {});
-        return () => {
-            navigator.serviceWorker.ready.then((reg) => {
-                if (reg && reg.active) reg.active.postMessage({ type: 'CANCEL_NOTIFICATIONS' });
-            }).catch(() => {});
-        };
     }, [commuteOn, commuteGo, commuteBack, commuteDays]);
 
     useEffect(() => {
@@ -173,6 +188,10 @@ export default function Profile() {
     };
 
     const handleSaveCommute = async () => {
+        if (!isInStandaloneMode()) {
+            setShowAppOnlySaveModal(true);
+            return;
+        }
         // 1) localStorage 저장 (항상, 즉시)
         localStorage.setItem('commute_on', 'true');
         localStorage.setItem('commute_go', commuteGo);
@@ -209,7 +228,7 @@ export default function Profile() {
         // 4) FCM 토큰 등록 — 별도로, 실패해도 저장에 영향 없음
         if (user && 'serviceWorker' in navigator) {
             try {
-                await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await navigator.serviceWorker.ready;
                 // 5초 타임아웃 적용 (모바일 웹에서 FCM 지원 안 될 때 무한 대기 방지)
                 const tokenPromise = getFCMToken();
                 const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
@@ -225,6 +244,12 @@ export default function Profile() {
         setCommuteOn(val);
         localStorage.setItem('commute_on', val ? 'true' : 'false');
         if (!val) clearInterval(commuteTimerRef.current);
+        if (user) {
+            setDoc(doc(db, 'users', user.uid), {
+                commuteAlarm: val,
+                updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
+        }
     };
 
     const handlePersona = () => {
@@ -551,6 +576,24 @@ export default function Profile() {
 
                 <Footer />
             </main>
+
+            {showAppOnlySaveModal && (
+                <InstallModal onClose={() => setShowAppOnlySaveModal(false)}>
+                    <div className="px-5 pt-8 pb-2 text-center">
+                        <p className="text-[16px] font-semibold text-white leading-snug">
+                            앱에서만 알람을 저장할수 있습니다
+                        </p>
+                    </div>
+                    <div className="px-5 pb-6">
+                        <button type="button"
+                            onClick={() => setShowAppOnlySaveModal(false)}
+                            className="w-full py-3.5 text-[14px] font-bold text-white active:opacity-80 transition-opacity"
+                            style={{ background: '#FF6B00', borderRadius: 8 }}>
+                            확인
+                        </button>
+                    </div>
+                </InstallModal>
+            )}
 
             {/* ══════════════════════════════════
                 Android 설치 가이드 모달

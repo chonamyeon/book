@@ -200,7 +200,7 @@ export default function CategoryBooks() {
 
             <main className="flex-grow">
                 {/* 🌟 Dynamic Hero Section */}
-                <section className="relative h-[65vh] w-full flex flex-col justify-end overflow-hidden mb-12" style={{ touchAction: 'pan-y' }}>
+                <section className="relative h-[65vh] w-full flex flex-col justify-end overflow-hidden mb-2" style={{ touchAction: 'pan-y' }}>
                     <motion.div initial={{ scale: 1.1, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.5 }} className="absolute inset-0">
                         {(() => {
                             const hero = design.category_heroes?.[categoryInfo.id];

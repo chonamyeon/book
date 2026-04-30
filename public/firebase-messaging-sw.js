@@ -49,9 +49,9 @@ function scheduleOne(hhmm, label, key, commuteDays) {
             body,
             icon: '/icons/icon-192.png',
             badge: '/icons/icon-192.png',
-            tag: key,
+            tag: `${key}-${Date.now()}`,
             renotify: true,
-            data: { url: `${self.location.origin}/?autoplay=${key}` },
+            data: { url: `${self.location.origin}/?autoplay=${key}`, autoplay: key },
         });
 
         // 다음 날 동일 시간 재예약
@@ -90,6 +90,20 @@ messaging.onBackgroundMessage((payload) => {
     });
 });
 
+// pending intent 보관 (앱이 frozen 상태여서 postMessage/BroadcastChannel 못 받을 때 대비)
+let pendingNotifIntent = null;
+
+self.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'GET_PENDING_INTENT') {
+        const reply = pendingNotifIntent && (Date.now() - pendingNotifIntent.ts < 60000)
+            ? { intent: pendingNotifIntent.intent }
+            : { intent: null };
+        pendingNotifIntent = null;
+        if (e.ports && e.ports[0]) e.ports[0].postMessage(reply);
+    }
+});
+
 // 알림 클릭 처리
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
@@ -98,31 +112,79 @@ self.addEventListener('notificationclick', (e) => {
 
     let autoplayIntent = null;
     try { autoplayIntent = new URL(targetUrl).searchParams.get('autoplay'); } catch {}
+    if (!autoplayIntent && e.notification.data?.autoplay) {
+        autoplayIntent = e.notification.data.autoplay;
+    }
+    // tag는 `go-타임스탬프` · `commute-back-…` 형태 — 일부 환경에서 data 유실 시 폴백
+    if (!autoplayIntent && typeof e.notification.tag === 'string') {
+        const tag = e.notification.tag;
+        if (tag === 'go' || tag === 'back') autoplayIntent = tag;
+        else if (/^go-\d/.test(tag) || tag.includes('-go-')) autoplayIntent = 'go';
+        else if (/^back-\d/.test(tag) || tag.includes('-back-')) autoplayIntent = 'back';
+    }
+    if (!autoplayIntent && typeof e.notification.title === 'string') {
+        if (e.notification.title.includes('출근')) autoplayIntent = 'go';
+        else if (e.notification.title.includes('퇴근')) autoplayIntent = 'back';
+    }
+    const finalUrl = autoplayIntent
+        ? `${self.location.origin}/?autoplay=${autoplayIntent}&ap_n=${Date.now()}`
+        : targetUrl;
+
+    // frozen 앱을 위해 pending intent 저장
+    if (autoplayIntent) {
+        pendingNotifIntent = { intent: autoplayIntent, ts: Date.now() };
+    }
+
+    const pingBroadcast = () => {
+        if (!autoplayIntent || typeof BroadcastChannel === 'undefined') return;
+        try {
+            const bc = new BroadcastChannel('archiview-autoplay');
+            bc.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
+            bc.close();
+        } catch (_e) { /* ignore */ }
+    };
 
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-            for (const client of list) {
-                let sameOrigin = false;
-                try { sameOrigin = new URL(client.url).origin === self.location.origin; } catch {}
-                if (sameOrigin) {
-                    if ('navigate' in client) {
-                        return client
-                            .navigate(targetUrl)
-                            .then((c) => (c || client).focus())
-                            .catch(() => {
-                                if (autoplayIntent) {
-                                    client.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
-                                }
-                                return client.focus();
-                            });
-                    }
+            const originOk = (url) => {
+                try {
+                    return new URL(url).origin === self.location.origin;
+                } catch {
+                    return false;
+                }
+            };
+            const ours = list.filter((c) => originOk(c.url));
+            ours.sort((a, b) => Number(b.focused) - Number(a.focused));
+            const client = ours[0];
+
+            if (client) {
+                const pingAutoplay = () => {
                     if (autoplayIntent) {
                         client.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
                     }
-                    return client.focus();
-                }
+                };
+                const runPing = () => {
+                    pingAutoplay();
+                    pingBroadcast();
+                };
+                const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+                return Promise.resolve(client.focus())
+                    .then(() => {
+                        if (autoplayIntent && 'navigate' in client) {
+                            return client.navigate(finalUrl).catch(() => {});
+                        }
+                    })
+                    .then(() => delay(40))
+                    .then(() => runPing())
+                    .then(() => {
+                        if (!autoplayIntent) return undefined;
+                        return delay(180).then(() =>
+                            clients.openWindow(finalUrl).catch(() => {})
+                        );
+                    })
+                    .catch(() => runPing());
             }
-            return clients.openWindow(targetUrl);
-        })
+            return clients.openWindow(finalUrl);
+        }).catch(() => clients.openWindow(finalUrl))
     );
 });

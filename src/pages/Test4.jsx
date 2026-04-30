@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../hooks/useAuth';
@@ -15,9 +15,16 @@ import { db } from '../firebase';
 import { doc, onSnapshot, getDoc, setDoc, collection } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 import { useSiteDesign } from '../hooks/useSiteDesign';
-import { getTodayContents } from '../data/personalization';
+import { getTodayContents, getCalendarDayKey } from '../data/personalization';
 import { useSeoulCalendarDayKey } from '../hooks/useCalendarDay';
 import { resolvePodcastPlaySrc } from '../utils/resolvePodcastPlaySrc';
+import {
+    readStashedAutoplayIntent,
+    clearStashedAutoplayIntent,
+    isValidAutoplayIntent,
+    stashAutoplayIntent,
+} from '../utils/autoplayBridge';
+import { applyCommuteNotificationIntent } from '../utils/applyCommuteNotificationIntent';
 
 export default function Test4() {
     const { design, loading: designLoading } = useSiteDesign();
@@ -30,7 +37,7 @@ export default function Test4() {
     const [searchParams, setSearchParams] = useSearchParams();
     // autoplay intent: searchParams 감지 → state로 보존 (SW navigate & 초기 로드 모두 처리)
     const [autoplayIntent, setAutoplayIntent] = useState(null);
-    const [autoplayOverlay, setAutoplayOverlay] = useState(null); // { intent, book }
+    const [autoplayOverlay, setAutoplayOverlay] = useState(null); // { intent, book?, loading? }
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { playPodcastMP3, seekPodcastMP3, podcastPlaying, podcastInfo, openScriptModal } = useAudio();
     const [showAllCelebs, setShowAllCelebs] = useState(false);
@@ -428,78 +435,131 @@ export default function Test4() {
         return getTodayContents(books, videos, null, seoulYmd);
     }, [weeklyFocusBooks, weeklyFocusVideos, seoulYmd]);
 
-    // 1단계: ?autoplay 파라미터 감지 → state 보존 + URL 즉시 클리어
-    // searchParams가 바뀔 때마다 실행 → 초기 로드 & SW client.navigate() 모두 처리
+    // 출퇴근 알림 autoplay: URL · SW 메시지 · sessionStorage 백업 (백그라운드 탭에서 라우터 미갱신 대비)
     useEffect(() => {
-        const intent = searchParams.get('autoplay');
-        if (!intent) return;
-        setAutoplayIntent(intent);
-        setSearchParams({}, { replace: true });
+        const onPending = (ev) => {
+            const intent = ev.detail?.intent;
+            if (!isValidAutoplayIntent(intent)) return;
+            // 최신 탭(출근→퇴근 등)이 항상 이전 intent를 덮어씀 — prev||intent면 back이 무시됨
+            setAutoplayIntent(intent);
+        };
+        window.addEventListener('archiview-autoplay-pending', onPending);
+        return () => window.removeEventListener('archiview-autoplay-pending', onPending);
+    }, []);
+
+    useEffect(() => {
+        const consume = (intent, stripParams) => {
+            if (!isValidAutoplayIntent(intent)) return false;
+            setAutoplayIntent(intent);
+            clearStashedAutoplayIntent();
+            if (stripParams) setSearchParams({}, { replace: true });
+            return true;
+        };
+
+        const fromUrl = searchParams.get('autoplay');
+        if (isValidAutoplayIntent(fromUrl)) {
+            consume(fromUrl, true);
+            return undefined;
+        }
+
+        const stashed = readStashedAutoplayIntent();
+        if (stashed) consume(stashed, true);
+
+        return undefined;
     }, [searchParams, setSearchParams]);
 
-    // FCM_AUTOPLAY는 App 레벨 AutoplayRouter에서 /?autoplay= 로 navigate 처리
-    // → 위 searchParams 감지 effect가 자동으로 autoplayIntent 설정
+    useEffect(() => {
+        let cancelled = false;
 
-    // 2단계: 출퇴근 ?autoplay= — 오늘 도서 로딩 후 자동 재생, 브라우저가 막을 때만 터치 오버레이
+        const recoverFromHrefAndStorage = () => {
+            if (cancelled) return;
+            try {
+                const hrefIntent = new URL(window.location.href).searchParams.get('autoplay');
+                if (isValidAutoplayIntent(hrefIntent)) {
+                    applyCommuteNotificationIntent(hrefIntent);
+                    return;
+                }
+            } catch {
+                void 0;
+            }
+            const stashed = readStashedAutoplayIntent();
+            if (stashed) {
+                clearStashedAutoplayIntent();
+                applyCommuteNotificationIntent(stashed);
+            }
+        };
+
+        const onWake = () => recoverFromHrefAndStorage();
+
+        const onVisibility = () => {
+            if (document.visibilityState !== 'visible') return;
+            recoverFromHrefAndStorage();
+            [50, 250, 700].forEach((ms) => {
+                setTimeout(() => {
+                    if (!cancelled) recoverFromHrefAndStorage();
+                }, ms);
+            });
+        };
+
+        window.addEventListener('focus', onWake);
+        window.addEventListener('pageshow', onWake);
+        document.addEventListener('visibilitychange', onVisibility);
+        recoverFromHrefAndStorage();
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener('focus', onWake);
+            window.removeEventListener('pageshow', onWake);
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
+    }, []);
+
+    // 출퇴근 알림 의도가 생기는 즉시 전체 화면 재생 UI 강제 표시 (데이터 로드 전에도 로딩 오버레이)
+    useEffect(() => {
+        if (!isValidAutoplayIntent(autoplayIntent)) return;
+        setAutoplayOverlay((prev) => {
+            if (prev?.intent === autoplayIntent && prev.book && prev.loading === false) return prev;
+            return { intent: autoplayIntent, book: null, loading: true };
+        });
+    }, [autoplayIntent]);
+
+    // 2단계: 출퇴근 — 오늘 도서 로드 후 오버레이에 책·재생 버튼 채움 (항상 탭으로 재생)
     useEffect(() => {
         if (!autoplayIntent) return;
-        if (todayBooks.length === 0) {
-            const cancel = setTimeout(() => setAutoplayIntent(null), 15000);
+        if (weeklyFocusBooks.length === 0) {
+            const cancel = setTimeout(() => {
+                setAutoplayIntent(null);
+                setAutoplayOverlay(null);
+            }, 120000);
             return () => clearTimeout(cancel);
         }
 
+        // seoulYmd React state는 아직 어제 날짜일 수 있으므로
+        // 오버레이 확정 시점에 직접 현재 날짜를 계산해 항상 오늘 도서 사용
+        const currentYmd = getCalendarDayKey();
+        const { todayBooks: freshBooks } = getTodayContents(
+            weeklyFocusBooks, weeklyFocusVideos, null, currentYmd
+        );
+        const books = freshBooks.length > 0 ? freshBooks : todayBooks;
+
         const savedIntent = autoplayIntent;
-        const book = savedIntent === 'back' && todayBooks[1] ? todayBooks[1] : todayBooks[0];
+        const book = savedIntent === 'back' && books[1] ? books[1] : books[0];
         if (!book) {
             setAutoplayIntent(null);
+            setAutoplayOverlay(null);
             return;
         }
         const src = resolvePodcastPlaySrc(book, (bid) => bookLookup.get(bid));
         if (!src) {
             setAutoplayIntent(null);
+            setAutoplayOverlay(null);
             return;
         }
-        const sid = book.id || String(book.title || '').toLowerCase().replace(/\s+/g, '-');
         const bookPayload = { ...book, src };
 
-        const tid = setTimeout(() => {
-            setAutoplayIntent(null);
-            playPodcastMP3(
-                src,
-                book.title,
-                book.cover,
-                sid,
-                true,
-                0,
-                () => setAutoplayOverlay({ intent: savedIntent, book: bookPayload })
-            );
-        }, 0);
-
-        return () => clearTimeout(tid);
-    }, [autoplayIntent, todayBooks, bookLookup, playPodcastMP3]);
-
-    // SW 타이머 재등록: SW는 30초 후 종료돼 타이머가 날아가므로 앱 열 때마다 재등록
-    useEffect(() => {
-        const reRegisterSW = () => {
-            if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-            if (!('serviceWorker' in navigator)) return;
-            const on = localStorage.getItem('commute_on') === 'true';
-            if (!on) return;
-            const commuteGo = localStorage.getItem('commute_go');
-            const commuteBack = localStorage.getItem('commute_back');
-            if (!commuteGo && !commuteBack) return;
-            let commuteDays;
-            try { commuteDays = JSON.parse(localStorage.getItem('commute_days')) || [0,1,2,3,4]; }
-            catch { commuteDays = [0,1,2,3,4]; }
-            navigator.serviceWorker.ready.then((reg) => {
-                if (reg?.active) reg.active.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', commuteGo, commuteBack, commuteDays });
-            }).catch(() => {});
-        };
-        reRegisterSW(); // 마운트 시
-        const onVisible = () => { if (document.visibilityState === 'visible') reRegisterSW(); };
-        document.addEventListener('visibilitychange', onVisible);
-        return () => document.removeEventListener('visibilitychange', onVisible);
-    }, []);
+        setAutoplayOverlay({ intent: savedIntent, book: bookPayload, loading: false });
+        setAutoplayIntent(null);
+    }, [autoplayIntent, todayBooks, bookLookup, weeklyFocusBooks, weeklyFocusVideos]);
 
     // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
@@ -552,12 +612,18 @@ export default function Test4() {
         visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
     };
 
+    const overlayTapLockRef = useRef(false);
     const handleAutoplayOverlayTap = () => {
-        if (!autoplayOverlay) return;
+        if (!autoplayOverlay || overlayTapLockRef.current) return;
+        if (autoplayOverlay.loading || !autoplayOverlay.book?.src) return;
+        overlayTapLockRef.current = true;
         const { book } = autoplayOverlay;
         setAutoplayOverlay(null);
         const sid = book.id || book.title?.toLowerCase().replace(/\s+/g, '-');
         playPodcastMP3(book.src, book.title, book.cover, sid, true, 0);
+        requestAnimationFrame(() => {
+            overlayTapLockRef.current = false;
+        });
     };
 
     return (
@@ -565,37 +631,67 @@ export default function Test4() {
         {/* 알림 탭 자동재생 오버레이 */}
         {autoplayOverlay && (
             <div
-                onClick={handleAutoplayOverlayTap}
+                onPointerDown={(e) => {
+                    e.preventDefault();
+                    handleAutoplayOverlayTap();
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={autoplayOverlay.loading ? '출퇴근 콘텐츠 준비 중' : '출퇴근 팟캐스트 재생'}
+                aria-busy={autoplayOverlay.loading}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAutoplayOverlayTap();
+                    }
+                }}
                 style={{
-                    position: 'fixed', inset: 0, zIndex: 9999,
-                    background: 'rgba(0,0,0,0.82)',
+                    position: 'fixed', inset: 0, zIndex: 99999,
+                    background: 'rgba(0,0,0,0.88)',
                     backdropFilter: 'blur(12px)',
                     display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center',
-                    gap: 20, cursor: 'pointer',
+                    gap: 20,
+                    cursor: autoplayOverlay.loading ? 'wait' : 'pointer',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
                 }}
             >
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
                     {autoplayOverlay.intent === 'go' ? '출근길 콘텐츠' : '퇴근길 콘텐츠'}
                 </div>
-                {autoplayOverlay.book.cover && (
-                    <img src={autoplayOverlay.book.cover} alt="" style={{ width: 100, height: 100, borderRadius: 16, objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }} />
+                {autoplayOverlay.loading ? (
+                    <>
+                        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 48, color: '#fb923c' }}>progress_activity</span>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.85)', textAlign: 'center', maxWidth: 280, lineHeight: 1.5 }}>
+                            오늘의 추천 오디오를 불러오는 중이에요
+                        </div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)' }}>
+                            잠시만 기다려 주세요
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {autoplayOverlay.book.cover && (
+                            <img src={autoplayOverlay.book.cover} alt="" style={{ width: 100, height: 100, borderRadius: 16, objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }} />
+                        )}
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', textAlign: 'center', maxWidth: 260, lineHeight: 1.4 }}>
+                            {autoplayOverlay.book.title}
+                        </div>
+                        <div style={{
+                            width: 72, height: 72, borderRadius: '50%',
+                            background: 'linear-gradient(135deg,#f97316,#fb923c)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 0 32px rgba(249,115,22,0.6)',
+                            marginTop: 8,
+                        }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#fff' }}>play_arrow</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                            탭하면 바로 재생됩니다
+                        </div>
+                    </>
                 )}
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', textAlign: 'center', maxWidth: 260, lineHeight: 1.4 }}>
-                    {autoplayOverlay.book.title}
-                </div>
-                <div style={{
-                    width: 72, height: 72, borderRadius: '50%',
-                    background: 'linear-gradient(135deg,#f97316,#fb923c)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 0 32px rgba(249,115,22,0.6)',
-                    marginTop: 8,
-                }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#fff' }}>play_arrow</span>
-                </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-                    탭하면 바로 재생됩니다
-                </div>
             </div>
         )}
         <Helmet>
@@ -1371,10 +1467,8 @@ export default function Test4() {
                             
                             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
                                 <div className="flex items-end gap-[2px] h-4">
-                                    {[1,2,3,4,5].map(i => (
-                                        <motion.div key={i} className="w-[3px] bg-orange-500"
-                                            animate={{ height: ['30%','100%','30%'] }}
-                                            transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                    {[6, 14, 16, 10, 8].map((h, i) => (
+                                        <div key={i} className="w-[3px] bg-orange-500 rounded-none" style={{ height: h }} />
                                     ))}
                                 </div>
                                 <span className="text-orange-500 text-[11px] font-bold tracking-[0.25em] uppercase">CREATOR INSIGHTS v2</span>

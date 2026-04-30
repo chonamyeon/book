@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import MainHeader from '../components/MainHeader';
@@ -13,6 +13,265 @@ import PersonaAvatar from '../components/PersonaAvatar';
 import { useAudio } from '../contexts/AudioContext';
 import { motion } from 'framer-motion';
 import { useSavedBooks } from '../hooks/useSavedBooks';
+
+const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
+const DAY_HEADER = ['월', '화', '수', '목', '금', '토', '일']; // 월 시작
+
+function toDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+}
+
+// 이번 달 달력 셀 배열 생성 (월요일 시작, 빈칸 포함)
+function buildMonthGrid(year, month) {
+    const firstDay = new Date(year, month, 1);
+    // getDay(): 0=일 → 월 시작으로 변환 (월=0, 화=1, ..., 일=6)
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return cells;
+}
+
+function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
+    const STAMPS_KEY = 'archiview_challenge_stamps';
+    const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+
+    const now = new Date();
+    const todayStr  = toDateStr(now);
+    const isGoalMet = (dailyListenTime || 0) >= (dailyTarget || 900);
+
+    const [stamps, setStamps] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(STAMPS_KEY) || '[]'); } catch { return []; }
+    });
+    const [showBadge, setShowBadge] = useState(false);
+
+    // 로그인 시 로컬 ↔ Firestore 양방향 병합
+    useEffect(() => {
+        if (!user?.uid) return;
+        import('firebase/firestore').then(({ doc, getDoc, setDoc }) => {
+            import('../firebase').then(({ db }) => {
+                const local = (() => { try { return JSON.parse(localStorage.getItem(STAMPS_KEY) || '[]'); } catch { return []; } })();
+                getDoc(doc(db, 'users', user.uid)).then(snap => {
+                    const remote = snap.exists() ? (snap.data().challenge_stamps || []) : [];
+                    const merged = [...new Set([...local, ...remote])].sort();
+                    setStamps(merged);
+                    localStorage.setItem(STAMPS_KEY, JSON.stringify(merged));
+                    if (merged.length > remote.length) {
+                        setDoc(doc(db, 'users', user.uid), { challenge_stamps: merged }, { merge: true }).catch(() => {});
+                    }
+                }).catch(() => {});
+            });
+        });
+    }, [user?.uid]);
+
+    const saveStamps = (next) => {
+        setStamps(next);
+        localStorage.setItem(STAMPS_KEY, JSON.stringify(next));
+        if (user?.uid) {
+            import('firebase/firestore').then(({ doc, setDoc }) => {
+                import('../firebase').then(({ db }) => {
+                    setDoc(doc(db, 'users', user.uid), { challenge_stamps: next }, { merge: true }).catch(() => {});
+                });
+            });
+        }
+    };
+
+    // 오늘 목표 달성 시 자동 도장 (주 7일 모두)
+    useEffect(() => {
+        if (!isGoalMet) return;
+        if (stamps.includes(todayStr)) return;
+        saveStamps([...stamps, todayStr]);
+    }, [isGoalMet]);
+
+    // 이번 주 월~일 날짜 배열 (월요일 시작)
+    const weekDays = useMemo(() => {
+        const dayOfWeek = (now.getDay() + 6) % 7;
+        return Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(now);
+            d.setDate(now.getDate() - dayOfWeek + i);
+            return d;
+        });
+    }, [todayStr]);
+
+    // 연속 streak (오늘 포함 최근 평일 연속 도장)
+    const streak = useMemo(() => {
+        let count = 0;
+        const cur = new Date(now);
+        for (let i = 0; i < 60; i++) {
+            const dow = cur.getDay();
+            if (dow !== 0 && dow !== 6) {
+                if (stamps.includes(toDateStr(cur))) count++;
+                else if (toDateStr(cur) !== todayStr) break;
+            }
+            cur.setDate(cur.getDate() - 1);
+        }
+        return count;
+    }, [stamps, todayStr]);
+
+    // 이번 달 도장 수 (주 7일 기준)
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
+    const monthCount = stamps.filter(s => s.startsWith(monthPrefix)).length;
+    const allDone = monthCount >= 7;
+    useEffect(() => { if (allDone) setShowBadge(true); }, [allDone]);
+
+    // 이번 주 통계 (7일 기준)
+    const weekStamps = weekDays.filter(d => stamps.includes(toDateStr(d)));
+    const focusHours = (weekStamps.length * 15 / 60).toFixed(1);
+    const achieveRate = Math.round((weekStamps.length / 7) * 100);
+    const totalRoutine = stamps.length;
+
+    // 바 차트 최대 높이 기준 (이번 주 도장 여부)
+    const BAR_MAX = 56;
+
+    const remainMin = Math.max(0, Math.ceil(((dailyTarget || 900) - (dailyListenTime || 0)) / 60));
+
+    return (
+        <div>
+            <h3 className="text-[14px] font-black text-white mb-3 tracking-tight uppercase flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-orange-500 rounded-sm" />
+                7일 독서 챌린지
+            </h3>
+
+            <div className="rounded-sm overflow-hidden bg-white/[0.02] border border-white/5">
+
+                {/* 나의 루틴 섹션 */}
+                <div className="px-5 pt-5 pb-4">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[13px] font-bold text-white/40 tracking-wide">나의 루틴</span>
+                        <span className="material-symbols-outlined text-white/20" style={{ fontSize: 16 }}>chevron_right</span>
+                    </div>
+                    <p className="text-[20px] font-black text-white tracking-tight mb-4">
+                        {streak > 0 ? `${streak}일 연속 · 기록 중` : '오늘부터 시작해요'}
+                    </p>
+
+                    {/* 요일 체크 */}
+                    <div className="grid grid-cols-7 gap-2">
+                        {weekDays.map((d, i) => {
+                            const dStr = toDateStr(d);
+                            const isStamped = stamps.includes(dStr);
+                            const isToday = dStr === todayStr;
+                            const dow = d.getDay();
+                            const isWknd = dow === 0 || dow === 6;
+                            return (
+                                <div key={i} className="flex flex-col items-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-white/45">
+                                        {DAY_LABELS[i]}
+                                    </span>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                                        style={{
+                                            border: isStamped ? '2px solid #f97316' : isToday ? '2px solid rgba(249,115,22,0.4)' : '2px solid rgba(255,255,255,0.12)',
+                                            background: isStamped ? 'rgba(249,115,22,0.15)' : 'transparent',
+                                        }}>
+                                        {isStamped && (
+                                            <motion.svg
+                                                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                                viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5"
+                                                style={{ width: 16, height: 16 }}>
+                                                <path d="M20 6 9 17l-5-5" />
+                                            </motion.svg>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* 오늘 목표 진행 */}
+                    {!stamps.includes(todayStr) && (
+                        <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg"
+                            style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.15)' }}>
+                            <span className="material-symbols-outlined text-orange-400" style={{ fontSize: 14 }}>timer</span>
+                            <span className="text-[11px] text-white/55">
+                                오늘 목표까지&nbsp;<span className="font-black text-orange-400">{remainMin}분</span>&nbsp;남았어요
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* 구분선 */}
+                <div className="border-t border-white/5" />
+
+                {/* 이번 주 리포트 섹션 */}
+                <div className="px-5 pt-4 pb-5">
+                    <p className="text-[13px] font-bold text-white/40 mb-3 tracking-wide">이번 주 리포트</p>
+                    <div className="flex gap-4 items-end">
+                        {/* 통계 */}
+                        <div className="flex flex-col gap-3 flex-1">
+                            <div>
+                                <p className="text-[10px] text-white/35 font-bold mb-0.5">집중시간</p>
+                                <p className="text-[22px] font-black text-white leading-none">{focusHours}<span className="text-[13px] font-bold text-white/50 ml-0.5">h</span></p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-white/35 font-bold mb-0.5">달성률</p>
+                                <p className="text-[22px] font-black text-white leading-none">{achieveRate}<span className="text-[13px] font-bold text-white/50 ml-0.5">%</span></p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-white/35 font-bold mb-0.5">총 루틴</p>
+                                <p className="text-[22px] font-black text-white leading-none">{totalRoutine}<span className="text-[13px] font-bold text-white/50 ml-0.5">회</span></p>
+                            </div>
+                        </div>
+
+                        {/* 바 차트 */}
+                        <div className="flex items-end gap-1.5 flex-1 justify-end" style={{ height: BAR_MAX + 24 }}>
+                            {weekDays.map((d, i) => {
+                                const dStr = toDateStr(d);
+                                const isStamped = stamps.includes(dStr);
+                                const isToday = dStr === todayStr;
+                                const isPast = dStr <= todayStr;
+                                const dow = d.getDay();
+                                const isWknd = dow === 0 || dow === 6;
+                                const barH = isStamped ? BAR_MAX : isPast && !isWknd ? 12 : 8;
+                                return (
+                                    <div key={i} className="flex flex-col items-center gap-1">
+                                        <motion.div
+                                            initial={{ height: 0 }}
+                                            animate={{ height: barH }}
+                                            transition={{ delay: i * 0.05, type: 'spring', stiffness: 260, damping: 20 }}
+                                            style={{
+                                                width: 22,
+                                                borderRadius: 6,
+                                                background: isStamped
+                                                    ? isToday
+                                                        ? 'linear-gradient(180deg,#ff9a50,#f97316)'
+                                                        : 'linear-gradient(180deg,#fb923c,#ea6a0a)'
+                                                    : 'rgba(255,255,255,0.07)',
+                                            }}
+                                        />
+                                        <span className="text-[9px] font-bold text-white/35">
+                                            {DAY_LABELS[i]}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 7일 달성 뱃지 */}
+                {showBadge && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        className="mx-5 mb-5 flex items-center gap-3 px-4 py-3 rounded-xl"
+                        style={{ background: 'linear-gradient(135deg,rgba(251,191,36,0.15),rgba(249,115,22,0.1))', border: '1px solid rgba(251,191,36,0.35)' }}>
+                        <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 22, color: '#fbbf24', fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
+                        <div>
+                            <p className="text-[12px] font-black text-amber-300 leading-tight">🎉 7일 독서 챌린지 성공!</p>
+                            <p className="text-[10px] text-white/40 mt-0.5">이번 달 평일 7일 15분 청취 달성!</p>
+                        </div>
+                    </motion.div>
+                )}
+            </div>
+            <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">
+                평일 매일 15분 이상 청취하면 도장이 찍혀요. 7일 달성 시 챌린지 성공 뱃지를 획득해요.
+            </p>
+        </div>
+    );
+}
 
 const formatInsightTime = (sec) => {
     if (!sec || isNaN(sec)) return '00:00';
@@ -56,28 +315,41 @@ export default function Library() {
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
 
-    // 페르소나: Firestore 우선, localStorage 폴백
+    // 페르소나: Firestore ↔ localStorage 양방향 병합
     useEffect(() => {
-        const localType = localStorage.getItem('myResultType');
-        const localQuiz = localStorage.getItem('quizResult');
+        const localType   = localStorage.getItem('myResultType');
+        const localQuiz   = localStorage.getItem('quizResult');
+        const localScores = localStorage.getItem('quizScores');
         if (user) {
-            import('firebase/firestore').then(({ doc, getDoc }) => {
+            import('firebase/firestore').then(({ doc, getDoc, setDoc }) => {
                 import('../firebase').then(({ db }) => {
                     getDoc(doc(db, 'users', user.uid)).then(snap => {
                         const remote = snap.exists() ? snap.data() : {};
-                        const type = remote.myResultType || localType;
+                        // quizResult(Quiz.jsx가 저장)와 myResultType(Result.jsx가 저장) 모두 폴백으로 사용
+                        const type = remote.myResultType || remote.quizResult || localType || localQuiz;
                         const quiz = remote.quizResult || localQuiz;
+                        let scores = null;
+                        try {
+                            const s = remote.quizScores || localScores;
+                            if (s) scores = typeof s === 'string' ? JSON.parse(s) : s;
+                        } catch {}
                         setMyResultType(type);
                         setQuizResult(quiz);
+                        if (scores) setQuizScores(scores);
                         if (type) localStorage.setItem('myResultType', type);
                         if (quiz) localStorage.setItem('quizResult', quiz);
-                        try {
-                            const qScoresStr = remote.quizScores || localStorage.getItem('quizScores');
-                            if (qScoresStr) setQuizScores(typeof qScoresStr === 'string' ? JSON.parse(qScoresStr) : qScoresStr);
-                        } catch {}
+                        // 로컬에만 있는 데이터를 Firestore에 업로드
+                        const toUpload = {};
+                        if (type && !remote.myResultType) toUpload.myResultType = type;
+                        if (quiz && !remote.quizResult)   toUpload.quizResult   = quiz;
+                        if (scores && !remote.quizScores) toUpload.quizScores   = scores;
+                        if (Object.keys(toUpload).length > 0) {
+                            setDoc(doc(db, 'users', user.uid), toUpload, { merge: true }).catch(() => {});
+                        }
                     }).catch(() => {
                         setMyResultType(localType);
                         setQuizResult(localQuiz);
+                        try { if (localScores) setQuizScores(JSON.parse(localScores)); } catch {}
                     });
                 });
             });
@@ -85,8 +357,7 @@ export default function Library() {
             setMyResultType(localType);
             setQuizResult(localQuiz);
             try {
-                const qScoresStr = localStorage.getItem('quizScores');
-                if (qScoresStr) setQuizScores(JSON.parse(qScoresStr));
+                if (localScores) setQuizScores(JSON.parse(localScores));
             } catch {}
         }
     }, [user?.uid]);
@@ -140,10 +411,8 @@ export default function Library() {
                     <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
                             <div className="flex items-end gap-[2px] h-4">
-                                {[1,2,3,4,5].map(i => (
-                                    <motion.div key={i} className="w-[3px] bg-orange-500"
-                                        animate={{ height: ['30%','100%','30%'] }}
-                                        transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                {[6, 14, 16, 10, 8].map((h, i) => (
+                                    <div key={i} className="w-[3px] bg-orange-500 rounded-none" style={{ height: h }} />
                                 ))}
                             </div>
                             <span className="text-orange-400 text-[11px] font-bold tracking-[0.25em] uppercase">My Library</span>
@@ -157,7 +426,7 @@ export default function Library() {
                     </div>
                 </section>
 
-                <main className="px-6 pt-4 pb-24 animate-fade-in flex-grow space-y-6">
+                <main className="px-6 pt-2 pb-24 animate-fade-in flex-grow space-y-6">
 
                     {/* ── 나의 페르소나 ── */}
                     <div>
@@ -171,11 +440,9 @@ export default function Library() {
                             return (
                                 <div
                                     onClick={() => navigate('/result', { state: { resultType: resType, scores: quizScores } })}
-                                    className="relative overflow-hidden border border-orange-500/30 bg-[#101218]/90 backdrop-blur-3xl group cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm"
+                                    className="relative overflow-hidden bg-white/[0.02] border border-white/5 group cursor-pointer rounded-sm"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none" />
                                     <div className="relative p-5 flex items-center gap-4 z-10">
-                                        <div className={`absolute -top-8 -right-8 w-28 h-28 ${typeMeta.bgColor} blur-[40px] rounded-full pointer-events-none opacity-60`} />
                                         <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-orange-500/20 shadow-lg">
                                             <PersonaAvatar type={resType} />
                                         </div>
@@ -189,8 +456,7 @@ export default function Library() {
                                 </div>
                             );
                         })() : (
-                            <div className="relative rounded-sm overflow-hidden border border-orange-500/20 group bg-[#101218]/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-orange-500/10 blur-xl opacity-50 pointer-events-none" />
+                            <div className="relative rounded-sm overflow-hidden bg-white/[0.02] border border-white/5 group">
                                 <div className="relative p-8 text-center flex flex-col items-center z-10">
                                     <span className="material-symbols-outlined text-orange-500 text-4xl mb-4 font-light">psychology</span>
                                     <h3 className="text-white text-[18px] font-black mb-2 tracking-tight">나의 페르소나 찾기</h3>
@@ -217,8 +483,7 @@ export default function Library() {
                                     <span className="w-1.5 h-4 bg-orange-500 rounded-sm"></span>
                                     나의 인사이트 타임
                                 </h3>
-                                <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm w-full">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none rounded-sm" />
+                                <div className="relative bg-white/[0.02] border border-white/5 p-5 rounded-sm w-full">
                                     <div className="relative z-10 flex flex-col gap-4">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 청취 시간</h4>
@@ -255,6 +520,9 @@ export default function Library() {
                             </div>
                         );
                     })()}
+
+                    {/* ── 7일 독서 챌린지 ── */}
+                    <ReadingChallenge dailyListenTime={dailyListenTime} dailyTarget={dailyTarget} user={user} />
 
                     {/* ── 쿠팡 파트너스 배너 ── */}
                     <div className="flex flex-col items-center gap-1.5">

@@ -830,6 +830,8 @@ export default function AdminDashboard() {
     const [scheduleSearches, setScheduleSearches] = useState(['','','','']);
     const [scheduleSaving, setScheduleSaving] = useState(false);
     const [weeklyFocusVideos, setWeeklyFocusVideos] = useState([]);
+    // Firestore에서 로드 완료된 섹션 추적 (기본값 덮어쓰기 방지)
+    const [loadedSections, setLoadedSections] = useState(new Set());
     const [wfVideoSearch, setWfVideoSearch] = useState('');
     const [wfVideoFocused, setWfVideoFocused] = useState(false);
     const [wfBookFocused, setWfBookFocused] = useState(false);
@@ -860,8 +862,10 @@ export default function AdminDashboard() {
         .map(toPopularBookItem);
 
     // 인기 아카이뷰: Firestore 문서가 비어 있어도 현재 사이트 기준 목록을 자동 표시
+    // (단, Firestore 로드 완료된 섹션은 건드리지 않음)
     useEffect(() => {
         if (activeTab !== 'popular') return;
+        if (loadedSections.has(popularSubTab)) return; // Firestore 로드 완료 — 기본값 덮어쓰기 금지
 
         const current = sectionData[popularSubTab] || [];
         if (current.length > 0) return;
@@ -914,7 +918,7 @@ export default function AdminDashboard() {
         if (defaults.length > 0) {
             setSectionData(prev => ({ ...prev, [popularSubTab]: defaults }));
         }
-    }, [activeTab, popularSubTab, sectionData, realBooks, popularList]);
+    }, [activeTab, popularSubTab, sectionData, realBooks, popularList, loadedSections]);
 
     useEffect(() => {
         if (popularSubTab !== 'weekly_focus') {
@@ -1011,6 +1015,7 @@ export default function AdminDashboard() {
         };
         const unsubs = Object.entries(SECTION_DB_MAP).map(([key, dbKey]) =>
             onSnapshot(doc(db, 'site_config', dbKey), (snap) => {
+                setLoadedSections(prev => { const next = new Set(prev); next.add(key); return next; });
                 if (snap.exists()) {
                     setSectionData(prev => ({ ...prev, [key]: snap.data().books || [] }));
                     if (key === 'weekly_focus' && snap.data().videos) {
@@ -9553,9 +9558,10 @@ ${raw}`;
                             setSectionSaving(prev => ({ ...prev, [popularSubTab]: true }));
                             try {
                                 const booksToSaveRaw = typeof curSection.max === 'number' ? curList.slice(0, curSection.max) : curList;
-                                const booksToSave = booksToSaveRaw
-                                    .map(normalizePopularItem)
-                                    .filter(item => item.isPublic !== false);
+                                // 위클리 포커스는 수동 등록이므로 isPublic 필터 미적용
+                                const booksToSave = popularSubTab === 'weekly_focus'
+                                    ? booksToSaveRaw.map(normalizePopularItem)
+                                    : booksToSaveRaw.map(normalizePopularItem).filter(item => item.isPublic !== false);
                                 const payload = { books: booksToSave };
                                 if (popularSubTab === 'weekly_focus') {
                                     payload.videos = weeklyFocusVideos.slice(0, 10).map(v => ({
@@ -9569,10 +9575,10 @@ ${raw}`;
                                     }));
                                 }
                                 await setDoc(doc(db, 'site_config', curSection.dbKey), payload);
-                                if (booksToSave.length !== booksToSaveRaw.length) {
+                                if (popularSubTab !== 'weekly_focus' && booksToSave.length !== booksToSaveRaw.length) {
                                     alert('비공개 도서는 자동 제외되어 저장되었습니다.');
                                 }
-                                alert('저장 완료! ✅');
+                                alert(`저장 완료! ✅ (${booksToSave.length}개 저장됨)`);
                             }
                             catch (e) { alert('저장 실패: ' + e.message); }
                             setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));

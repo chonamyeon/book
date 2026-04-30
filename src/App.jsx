@@ -1,8 +1,8 @@
-import React, { lazy, Suspense, memo } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import React, { lazy, Suspense, memo, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 import { AudioProvider } from './contexts/AudioContext';
+import { applyCommuteNotificationIntent } from './utils/applyCommuteNotificationIntent';
 import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -93,18 +93,42 @@ const ScrollToTop = () => {
   return null;
 };
 
-const AutoplayRouter = () => {
-  const navigate = useNavigate();
+const AutoplayVideoKeeper = () => {
+  const { pathname, search } = useLocation();
+
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-    const handler = (e) => {
-      if (e.data?.type === 'FCM_AUTOPLAY' && e.data.intent) {
-        navigate(`/?autoplay=${e.data.intent}`, { replace: true });
-      }
+    const kick = () => {
+      // Notification deep-link + podcast autoplay 진입 시 일부 브라우저에서
+      // hero autoplay video가 정지 상태로 남는 현상을 방지한다.
+      const videos = document.querySelectorAll('video[autoplay]');
+      videos.forEach((v) => {
+        try {
+          v.muted = true;
+          v.defaultMuted = true;
+          v.playsInline = true;
+          if (v.paused) v.play().catch(() => {});
+        } catch {}
+      });
     };
-    navigator.serviceWorker.addEventListener('message', handler);
-    return () => navigator.serviceWorker.removeEventListener('message', handler);
-  }, [navigate]);
+
+    kick();
+    const t1 = setTimeout(kick, 250);
+    const t2 = setTimeout(kick, 900);
+    const onVisible = () => { if (document.visibilityState === 'visible') kick(); };
+    const onFocus = () => kick();
+    const onPageShow = () => kick();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [pathname, search]);
+
   return null;
 };
 
@@ -119,6 +143,34 @@ export default function App() {
     }
     const t = setTimeout(activate, 800);
     return () => clearTimeout(t);
+  }, []);
+
+  // 전역 포그라운드 출퇴근 타이머 — iOS는 앱이 열려있을 때 SW 알림 배너를 표시하지 않으므로
+  // 클라이언트에서 직접 시간을 체크해 오버레이를 트리거해야 함 (모든 페이지에서 동작)
+  useEffect(() => {
+    const FG_KEY = '_commute_fg_last';
+    const check = () => {
+      try {
+        if (localStorage.getItem('commute_on') !== 'true') return;
+        const go   = localStorage.getItem('commute_go');
+        const back = localStorage.getItem('commute_back');
+        const days = JSON.parse(localStorage.getItem('commute_days') || '[0,1,2,3,4]');
+        const now  = new Date();
+        const dayIdx = (now.getDay() + 6) % 7;
+        if (!days.includes(dayIdx)) return;
+        const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        let intent = null;
+        if (hhmm === go)   intent = 'go';
+        else if (hhmm === back) intent = 'back';
+        if (!intent) return;
+        const key = `${intent}:${now.toDateString()}:${hhmm}`;
+        if (sessionStorage.getItem(FG_KEY) === key) return;
+        sessionStorage.setItem(FG_KEY, key);
+        applyCommuteNotificationIntent(intent);
+      } catch {}
+    };
+    const id = setInterval(check, 60000);
+    return () => clearInterval(id);
   }, []);
 
   // 포그라운드 FCM 핸들러: 앱이 열려있을 때도 알림 표시 (동적 import로 메인 번들 분리)
@@ -136,14 +188,19 @@ export default function App() {
         unsub = onMessage(messaging, (payload) => {
           const title = payload.notification?.title || '아카이뷰';
           const body = payload.notification?.body || '';
-          const link = payload.fcmOptions?.link || '/';
+          const link = payload.fcmOptions?.link || payload.data?.link || payload.data?.url || '/';
+          const autoplay =
+            payload.data?.autoplay ||
+            (() => {
+              try { return new URL(link, window.location.origin).searchParams.get('autoplay'); } catch { return null; }
+            })();
           navigator.serviceWorker.ready.then(reg => {
             reg.showNotification(title, {
               body,
               icon: '/icons/icon-192.png',
               badge: '/icons/icon-192.png',
-              data: { link },
-              tag: 'commute',
+              data: { link, url: link, autoplay },
+              tag: autoplay === 'go' || autoplay === 'back' ? `commute-${autoplay}-${Date.now()}` : `commute-${Date.now()}`,
               renotify: true,
             });
           }).catch(() => {});
@@ -174,7 +231,7 @@ export default function App() {
       <AudioProvider>
         <Router>
           <ScrollToTop />
-          <AutoplayRouter />
+          <AutoplayVideoKeeper />
           <div className="min-h-screen bg-slate-950">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
@@ -186,7 +243,7 @@ export default function App() {
                   <Route path="/result" element={<ProtectedRoute><MobileLayout><Result /></MobileLayout></ProtectedRoute>} />
                   <Route path="/celebrity/:id" element={<MobileLayout><Celebrity /></MobileLayout>} />
                   <Route path="/celebrity" element={<MobileLayout><Celebrity /></MobileLayout>} />
-                  <Route path="/quiz" element={<MobileLayout><Quiz /></MobileLayout>} />
+                  <Route path="/quiz" element={<ProtectedRoute><MobileLayout><Quiz /></MobileLayout></ProtectedRoute>} />
                   <Route path="/library" element={<MobileLayout><Library /></MobileLayout>} />
                   <Route path="/profile" element={<MobileLayout><Profile /></MobileLayout>} />
                   <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />

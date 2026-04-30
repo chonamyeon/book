@@ -60,11 +60,11 @@ export default function MainHeader() {
                         <Link to="/" className="transition-opacity active:opacity-70">
                             <div className="flex items-center gap-[7px]">
                                 <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]">
-                                    <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                    <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                    <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                    <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-none" />
-                                    <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-none" />
+                                    <div className="w-[3px] h-[10px] bg-zinc-400 rounded-none" />
+                                    <div className="w-[3px] h-[14px] bg-zinc-400 rounded-none" />
+                                    <div className="w-[3px] h-[18px] bg-zinc-400 rounded-none" />
+                                    <div className="w-[3px] h-[12px] bg-zinc-400 rounded-none" />
+                                    <div className="w-[3px] h-[16px] bg-zinc-400 rounded-none" />
                                 </div>
                                 <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5 text-white" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                             </div>

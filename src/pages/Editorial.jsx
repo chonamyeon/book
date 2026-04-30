@@ -206,74 +206,65 @@ export default function Editorial() {
             <meta property="og:url" content="https://archiview.store/editorial" />
             <link rel="canonical" href="https://archiview.store/editorial" />
         </Helmet>
-        <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
+        <div className="bg-[#0e1015] text-white font-display antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
             <div className="w-full max-w-md relative flex flex-col bg-[#0e1015] shadow-2xl overflow-x-hidden">
                 <MainHeader showBack />
 
-                <main className="flex-grow">
-                    {/* 🚀 1. Weekly Insight Section */}
-                    <section className="relative h-[480px] w-full overflow-hidden mb-12">
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0e1015] via-[#0e1015]/40 to-transparent z-10"></div>
-                        {design.editorial_hero.type === 'image' ? (
-                            <img src={editorialVideoSrc} alt="hero" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1) translateX(30px)' }} />
-                        ) : (
-                            <video
-                                src={editorialVideoSrc}
-                                poster={design.editorial_hero_poster || undefined}
-                                className="absolute inset-0 w-full h-full object-cover"
-                                style={{ transform: 'scale(1.1) translateX(30px)' }}
-                                autoPlay muted loop playsInline
-                            />
-                        )}
-                        <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex items-end gap-[2px] h-4">
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <motion.div
-                                            key={i}
-                                            className="w-[3px] bg-orange-500"
-                                            animate={{ height: ["30%", "100%", "30%"] }}
-                                            transition={{
-                                                repeat: Infinity,
-                                                duration: 0.8 + (i % 3) * 0.2,
-                                                ease: "easeInOut",
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                                <motion.span
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="text-orange-500 font-bold text-xs tracking-[0.3em] uppercase"
-                                >
-                                    THE ART OF TIME
-                                </motion.span>
+                {/* Weekly Insight — /insights 와 같은 높이: 2줄 서브카피, mb 없음, 미디어 transform 없음 */}
+                <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e1015]/50 to-[#0e1015] z-10" />
+                    {design.editorial_hero.type === 'image' ? (
+                        <img
+                            src={editorialVideoSrc}
+                            alt="hero"
+                            className="absolute inset-0 w-full h-full object-cover opacity-70"
+                            style={{ objectPosition: 'center center' }}
+                        />
+                    ) : (
+                        <video
+                            src={editorialVideoSrc}
+                            poster={design.editorial_hero_poster || undefined}
+                            className="absolute inset-0 w-full h-full object-cover opacity-70"
+                            style={{ objectPosition: 'center center' }}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                        />
+                    )}
+                    <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
+                            <div className="flex items-end gap-[2px] h-4">
+                                {[6, 14, 16, 10, 8].map((h, i) => (
+                                    <div key={i} className="w-[3px] bg-orange-500 rounded-none" style={{ height: h }} />
+                                ))}
                             </div>
-                            <motion.h2
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="text-[35px] font-light leading-tight tracking-tighter mb-4"
-                            >
-                                모두 흘려보낼 때<br />
-                                <span className="font-bold">당신은 채워갑니다</span>
-                            </motion.h2>
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                                className="text-white/60 text-sm max-w-xs leading-relaxed"
-                            >
-                                누구에게나 시간은 공평하게 흐르지만<br />
-                                그 시간을 무엇으로 채우느냐가<br />
-                                내일의 당신을 결정합니다
-                            </motion.p>
-                        </div>
-                    </section>
+                            <span className="text-orange-500 text-[11px] font-bold tracking-[0.25em] uppercase">THE ART OF TIME</span>
+                        </motion.div>
+                        <motion.h1
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.08 }}
+                            className="text-[35px] font-light leading-tight tracking-tighter mb-4"
+                        >
+                            모두 흘려보낼 때<br />
+                            <span className="font-bold">당신은 채워갑니다</span>
+                        </motion.h1>
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.16 }}
+                            className="text-white/55 text-sm leading-relaxed max-w-xs"
+                        >
+                            누구에게나 시간은 공평하게 흐르지만<br />
+                            무엇으로 채우느냐가 내일의 당신을 결정합니다
+                        </motion.p>
+                    </div>
+                </section>
 
-
+                <main className="flex-grow">
                     {/* 🚀 2. Trending Now Horizontal Scroll */}
-                    <section className="relative">
+                    <section className="relative pt-2">
                         <div className="px-6 mb-8">
                             <h3 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">직장인이 가장 많이 듣는 인사이트</h3>
                             <div className="flex items-center gap-2">

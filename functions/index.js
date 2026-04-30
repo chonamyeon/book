@@ -117,6 +117,7 @@ exports.sendCommuteAlerts = onSchedule(
             const todayBooks = allBooks.length > 0 ? getTodayBooks(allBooks) : [];
             const bookData = isGo ? todayBooks[0] : todayBooks[1];
             const book = bookData ? makeBookInfo(bookData, isGo) : { title: '오늘의 추천 콘텐츠', link: `https://archiview.store/?autoplay=${isGo ? 'go' : 'back'}` };
+            const autoplay = isGo ? 'go' : 'back';
 
             sends.push(
                 messaging.send({
@@ -126,13 +127,38 @@ exports.sendCommuteAlerts = onSchedule(
                         body: `「${book.title}」지금 바로 들어보세요.`,
                     },
                     webpush: {
-                        notification: { icon: 'https://archiview.store/icon-192.png' },
+                        headers: {
+                            Urgency: 'high',
+                            TTL: '300',
+                        },
+                        notification: {
+                            icon: 'https://archiview.store/icon-192.png',
+                            // 동일 타입(go/back) 알림이 서로 덮이지 않도록 매 발송마다 고유 tag (테스트·연속 알림 대응)
+                            tag: `commute-${autoplay}-${Date.now()}`,
+                            renotify: true,
+                        },
+                        data: {
+                            url: book.link,
+                            link: book.link,
+                            autoplay,
+                        },
                         fcmOptions: { link: book.link },
+                    },
+                    data: {
+                        autoplay,
+                        url: book.link,
+                        link: book.link,
                     },
                 }).then(() => {
                     console.log(`[commuteAlert] FCM 발송 성공: uid=${docSnap.id}`);
                 }).catch((err) => {
                     console.error(`[commuteAlert] FCM 발송 실패: uid=${docSnap.id} token=${d.fcmToken?.slice(0,20)}... error=${err.code} ${err.message}`);
+                    if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+                        return db.collection('users').doc(docSnap.id).set({
+                            fcmToken: admin.firestore.FieldValue.delete(),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        }, { merge: true });
+                    }
                 })
             );
         });

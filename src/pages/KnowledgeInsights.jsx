@@ -79,8 +79,8 @@ export default function KnowledgeInsights() {
         <div className="bg-[#0a0c12] min-h-screen text-white font-display">
             <MainHeader />
             {/* 히어로 섹션 */}
-            <section className="relative h-[420px] w-full overflow-hidden flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0f]/50 to-[#0a0a0f] z-10" />
+            <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0c12]/50 to-[#0a0c12] z-10" />
                 {design.youtube_hero.type === 'image' ? (
                     <img
                         src={design.youtube_hero.src}
@@ -100,10 +100,8 @@ export default function KnowledgeInsights() {
                 <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
                         <div className="flex items-end gap-[2px] h-4">
-                            {[1,2,3,4,5].map(i => (
-                                <motion.div key={i} className="w-[3px] bg-red-500"
-                                    animate={{ height: ['30%','100%','30%'] }}
-                                    transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                            {[6, 14, 16, 10, 8].map((h, i) => (
+                                <div key={i} className="w-[3px] bg-red-500 rounded-none" style={{ height: h }} />
                             ))}
                         </div>
                         <span className="text-red-500 text-[11px] font-bold tracking-[0.25em] uppercase">YouTube Insight</span>
@@ -121,7 +119,7 @@ export default function KnowledgeInsights() {
             </section>
 
             {/* 유튜브 인사이트 섹션 */}
-            <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-8 pb-8">
+            <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-2 pb-8">
                 <div className="mb-4">
                     <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white flex items-center gap-2">
                         <span className="material-symbols-outlined text-red-500 text-[22px]">play_circle</span>유튜브 인사이트

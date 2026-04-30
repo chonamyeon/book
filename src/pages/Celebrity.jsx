@@ -229,7 +229,7 @@ export default function Celebrity() {
                     </section>
 
                     {/* Transition Content Section */}
-                    <section className="bg-background-dark px-6 py-12 md:py-20 border-b border-primary/20">
+                    <section className="bg-background-dark px-6 pt-4 pb-12 md:pt-6 md:pb-20 border-b border-primary/20">
                         <div className="max-w-3xl mx-auto">
                             <div className="mb-10">
                                 <h3 className="text-gold text-2xl md:text-3xl uppercase tracking-[0.3em] mb-6 font-bold flex items-center gap-4">

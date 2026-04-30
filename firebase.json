@@ -15,6 +15,10 @@
     ],
     "rewrites": [
       {
+        "source": "/challenge",
+        "destination": "/challenge.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

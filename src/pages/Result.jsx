@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { recommendations } from '../data/recommendations';
 import { resultData, futureVision } from '../data/resultData';
 import { generateResultQRCard } from '../utils/shareCard';
@@ -78,6 +79,8 @@ export default function Result() {
             setIsPremiumUnlocked(true);
             localStorage.setItem('premiumUnlocked', 'true');
             localStorage.setItem('myResultType', resultType);
+            const uid = getAuth().currentUser?.uid;
+            if (uid) setDoc(doc(db, 'users', uid), { myResultType: resultType }, { merge: true }).catch(() => {});
         }
     };
 

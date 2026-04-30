@@ -1,6 +1,21 @@
 const CACHE = 'archiview-v2';
 const IMG_CACHE = 'archiview-img-v2';
 
+// FCM background handling is unified in this SW.
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: 'AIzaSyDRenQjyt9gknve6tUItfUnaGjfoEZx-8s',
+  authDomain: 'archiview.store',
+  projectId: 'book-site-123',
+  storageBucket: 'book-site-123.firebasestorage.app',
+  messagingSenderId: '176157090689',
+  appId: '1:176157090689:web:107f25429239f25ffd7e80',
+});
+
+const messaging = firebase.messaging();
+
 // 오래된 캐시 정리
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -65,11 +80,24 @@ self.addEventListener('fetch', (e) => {
 // 예약된 알림 타이머
 const scheduledTimers = {};
 
+// 알림 탭으로 생긴 pending intent (앱이 아직 준비 안 됐을 때 보관)
+let pendingNotifIntent = null;
+
 self.addEventListener('message', (e) => {
   if (!e.data) return;
+
+  // 앱이 포그라운드로 돌아올 때 pending intent 조회 (iOS 대응)
+  if (e.data.type === 'GET_PENDING_INTENT') {
+    const reply = pendingNotifIntent && (Date.now() - pendingNotifIntent.ts < 60000)
+      ? { intent: pendingNotifIntent.intent }
+      : { intent: null };
+    pendingNotifIntent = null; // 소비 후 초기화
+    if (e.ports && e.ports[0]) e.ports[0].postMessage(reply);
+    return;
+  }
+
   if (e.data.type === 'SCHEDULE_NOTIFICATIONS') {
     const { commuteGo, commuteBack, commuteDays } = e.data;
-    // 기존 타이머 모두 취소 후 재등록
     cancelTimer('go');
     cancelTimer('back');
     if (commuteGo)   scheduleOne(commuteGo,   '출근길', 'go',   commuteBack, commuteDays);
@@ -115,9 +143,9 @@ function scheduleOne(hhmm, label, key, otherHhmm, commuteDays) {
         : '퇴근길 팟캐스트가 준비됐어요. 탭해서 바로 들어보세요.',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      tag: key,
+      tag: `${key}-${Date.now()}`,
       renotify: true,
-      data: { url: `${self.location.origin}/?autoplay=${key}` },
+      data: { url: `${self.location.origin}/?autoplay=${key}`, autoplay: key },
     });
 
     // 이 키만 다음 날로 재예약 (다른 키 타이머는 건드리지 않음)
@@ -128,36 +156,79 @@ function scheduleOne(hhmm, label, key, otherHhmm, commuteDays) {
 // 알림 클릭 처리
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const targetUrl = (e.notification.data && e.notification.data.url) || `${self.location.origin}/`;
+  const payloadData = e.notification.data || {};
+  const targetUrl = payloadData.url || payloadData.link || `${self.location.origin}/`;
 
-  let autoplayIntent = null;
-  try { autoplayIntent = new URL(targetUrl).searchParams.get('autoplay'); } catch {}
+  let autoplayIntent = payloadData.autoplay || null;
+  if (!autoplayIntent) {
+    try { autoplayIntent = new URL(targetUrl).searchParams.get('autoplay'); } catch {}
+  }
+  if (!autoplayIntent && typeof e.notification.tag === 'string') {
+    const tag = e.notification.tag;
+    if (tag === 'go' || tag === 'back') autoplayIntent = tag;
+    else if (/^go-\d/.test(tag) || tag.includes('-go-')) autoplayIntent = 'go';
+    else if (/^back-\d/.test(tag) || tag.includes('-back-')) autoplayIntent = 'back';
+  }
+  if (!autoplayIntent && typeof e.notification.title === 'string') {
+    if (e.notification.title.includes('출근')) autoplayIntent = 'go';
+    else if (e.notification.title.includes('퇴근')) autoplayIntent = 'back';
+  }
+  const finalUrl = autoplayIntent
+    ? `${self.location.origin}/?autoplay=${autoplayIntent}&ap_n=${Date.now()}`
+    : targetUrl;
+
+  // pending intent 저장 (앱이 아직 준비 안 됐거나 iOS에서 matchAll이 빈 배열일 때 대비)
+  if (autoplayIntent) {
+    pendingNotifIntent = { intent: autoplayIntent, ts: Date.now() };
+  }
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const client of list) {
-        let sameOrigin = false;
-        try { sameOrigin = new URL(client.url).origin === self.location.origin; } catch {}
-        if (sameOrigin) {
-          // ① SPA에 ?autoplay= 쿼리로 직접 반영(가장 확실). postMessage만 쓰면 리스너/타이밍에 빠질 수 있음
-          if ('navigate' in client) {
-            return client
-              .navigate(targetUrl)
-              .then((c) => (c || client).focus())
-              .catch(() => {
-                if (autoplayIntent) {
-                  client.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
-                }
-                return client.focus();
-              });
-          }
-          if (autoplayIntent) {
-            client.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
-          }
-          return client.focus();
-        }
+      const ours = list.filter((c) => {
+        try { return new URL(c.url).origin === self.location.origin; } catch { return false; }
+      });
+
+      const ping = () => {
+        if (!autoplayIntent) return;
+        // postMessage: 이미 실행 중인 탭에 직접 전달
+        ours.forEach((c) => {
+          try { c.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent }); } catch (_) {}
+        });
+        // BroadcastChannel: iOS 포함 모든 탭에 브로드캐스트
+        try {
+          const bc = new BroadcastChannel('archiview-autoplay');
+          bc.postMessage({ type: 'FCM_AUTOPLAY', intent: autoplayIntent });
+          bc.close();
+        } catch (_) {}
+      };
+
+      if (ours.length > 0) {
+        // 앱이 열려있음: ping 즉시 + openWindow 병행
+        // ping: 이미 화면에 보이는 탭에 즉시 오버레이
+        // openWindow: iOS에서 기존 창 navigate, Android에서 새 창 (URL 파라미터로 확실히 처리)
+        ping();
+        return clients.openWindow(finalUrl).catch(() => {});
       }
-      return clients.openWindow(targetUrl);
-    })
+
+      // 앱이 닫혀있음: 새 창 열기
+      return clients.openWindow(finalUrl).catch(() => {});
+    }).catch(() => clients.openWindow(finalUrl).catch(() => {}))
   );
+});
+
+// 앱이 꺼진 상태에서 FCM 수신
+messaging.onBackgroundMessage((payload) => {
+  const title = payload?.notification?.title || '아카이뷰';
+  const body = payload?.notification?.body || '오늘의 콘텐츠를 확인하세요!';
+  const link = payload?.fcmOptions?.link || payload?.data?.link || payload?.data?.url || `${self.location.origin}/`;
+  const autoplay = payload?.data?.autoplay || null;
+
+  self.registration.showNotification(title, {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: autoplay === 'go' || autoplay === 'back' ? `commute-${autoplay}-${Date.now()}` : `commute-${Date.now()}`,
+    renotify: true,
+    data: { url: link, autoplay },
+  });
 });

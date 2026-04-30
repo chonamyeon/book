@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, useCallb
 import { availableAudio } from '../data/availableAudio';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 const AudioCtx = createContext();
 
@@ -45,39 +45,58 @@ export const AudioProvider = ({ children }) => {
     const stopSignal = useRef(false);
     const lastTickRef = useRef(Date.now());
 
-    // Load progress from localStorage
+    // Load progress from localStorage, then merge with Firestore when user logs in
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
         const savedData = JSON.parse(localStorage.getItem('archiview_progress') || '{}');
-        
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
         if (savedData.date === today) {
             setDailyListenTime(savedData.listenTime || 0);
+            setStreak(savedData.streak || 0);
         } else {
-            // New day, reset daily time but check streak
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-            
-            if (savedData.date === yesterdayStr && savedData.listenTime >= (10 * 60)) { // 10 mins minimum for streak
-                 setStreak(prev => (savedData.streak || 0) + 1);
-            } else if (savedData.date !== today) {
-                 setStreak(savedData.streak || 0); // Keep existing or reset if missed? User requested "3일 연속"
+            if (savedData.date === yesterdayStr && savedData.listenTime >= (10 * 60)) {
+                setStreak((savedData.streak || 0) + 1);
+            } else {
+                setStreak(savedData.streak || 0);
             }
             setDailyListenTime(0);
         }
-        
-        if (savedData.streak) setStreak(savedData.streak);
     }, []);
 
-    // Save progress to localStorage
+    // 로그인 시 로컬 ↔ Firestore 양방향 병합 (기존 데이터 포함)
+    useEffect(() => {
+        const auth = getAuth();
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const local = JSON.parse(localStorage.getItem('archiview_progress') || '{}');
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                const remote = snap.exists() ? (snap.data().archiview_progress || {}) : {};
+                const remoteTime = remote.date === today ? (remote.listenTime || 0) : 0;
+                const localTime  = local.date  === today ? (local.listenTime  || 0) : 0;
+                const mergedTime   = Math.max(remoteTime, localTime);
+                const mergedStreak = Math.max(remote.streak || 0, local.streak || 0);
+                const merged = { date: today, listenTime: mergedTime, streak: mergedStreak };
+                setDailyListenTime(mergedTime);
+                setStreak(mergedStreak);
+                localStorage.setItem('archiview_progress', JSON.stringify(merged));
+                // 로컬 데이터가 더 많거나 Firestore가 비어 있으면 업로드
+                setDoc(doc(db, 'users', user.uid), { archiview_progress: merged }, { merge: true }).catch(() => {});
+            } catch {}
+        });
+        return () => unsub();
+    }, []);
+
+    // Save progress to localStorage + Firestore
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        const data = {
-            date: today,
-            listenTime: dailyListenTime,
-            streak: streak
-        };
+        const data = { date: today, listenTime: dailyListenTime, streak };
         localStorage.setItem('archiview_progress', JSON.stringify(data));
+        const uid = getAuth().currentUser?.uid;
+        if (uid) setDoc(doc(db, 'users', uid), { archiview_progress: data }, { merge: true }).catch(() => {});
     }, [dailyListenTime, streak]);
 
     // Tracking Loop — 5초마다 업데이트 (1초 → 5초로 변경, 발열/배터리 절약)
@@ -102,6 +121,13 @@ export const AudioProvider = ({ children }) => {
         if (!podcastAudioRef.current) {
             podcastAudioRef.current = new Audio();
         }
+        try {
+            const paInit = podcastAudioRef.current;
+            if (paInit) {
+                paInit.preload = 'auto';
+                if ('playsInline' in paInit) paInit.playsInline = true;
+            }
+        } catch {}
 
         const pa = podcastAudioRef.current;
         let lastSavedTime = 0;
@@ -236,12 +262,30 @@ export const AudioProvider = ({ children }) => {
         // src가 절대 경로로 변환되었을 수 있으므로 normalize
         const getAbsUrl = (s) => (s && !s.startsWith('http')) ? window.location.origin + s : s;
         const targetSrc = getAbsUrl(src);
-        const currentPaSrc = getAbsUrl(pa.src);
+        const infoSrcNorm = podcastInfo?.src ? getAbsUrl(podcastInfo.src) : '';
+        const sameTrack = infoSrcNorm && (infoSrcNorm === targetSrc || podcastInfo?.src === src);
 
-        if (podcastInfo?.src === src) {
+        if (sameTrack) {
             // 커버가 새로 로드됐으면 업데이트
             if (cover && cover !== podcastInfo?.cover) {
                 setPodcastInfo(prev => ({ ...prev, cover }));
+            }
+            // 알림 재진입 등: 같은 트랙이 이미 재생 중이어도 forcePlay면 처음부터 다시 재생 시도 (조용히 return 하면 안 됨)
+            if (forcePlay) {
+                try {
+                    pa.currentTime = 0;
+                } catch {}
+                pa.play()
+                    .then(() => {
+                        setPodcastPlaying(true);
+                        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+                    })
+                    .catch((err) => {
+                        console.error('Podcast replay (forcePlay) failed:', err);
+                        setPodcastPlaying(false);
+                        onPlayFailed?.(err);
+                    });
+                return;
             }
             if (podcastPlaying && !forcePlay) {
                 pa.pause();
@@ -251,6 +295,7 @@ export const AudioProvider = ({ children }) => {
                 pa.play().catch((err) => {
                     console.error("Podcast play failed:", err);
                     setPodcastPlaying(false);
+                    onPlayFailed?.(err);
                 });
                 setPodcastPlaying(true);
                 if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { motion } from 'framer-motion';
 
 export default function TopNavigation({ title, type = 'main' }) {
     const navigate = useNavigate();
@@ -25,11 +24,11 @@ export default function TopNavigation({ title, type = 'main' }) {
                 <div className="flex items-center gap-[7px]">
                     {/* 🔊 Gray Waveform Graphic Logo */}
                     <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]">
-                        <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-sm" />
+                        <div className="w-[3px] h-[10px] bg-zinc-400 rounded-sm" />
+                        <div className="w-[3px] h-[14px] bg-zinc-400 rounded-sm" />
+                        <div className="w-[3px] h-[18px] bg-zinc-400 rounded-sm" />
+                        <div className="w-[3px] h-[12px] bg-zinc-400 rounded-sm" />
+                        <div className="w-[3px] h-[16px] bg-zinc-400 rounded-sm" />
                     </div>
                     <span className="text-white uppercase tracking-[-0.03em] font-black text-[18px] leading-none mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
                 </div>

@@ -435,10 +435,8 @@ export default function ReadingNotes() {
                     <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-3 mb-4">
                             <div className="flex items-end gap-[2px] h-4">
-                                {[1,2,3,4,5].map(i => (
-                                    <motion.div key={i} className="w-[3px] bg-red-500"
-                                        animate={{ height: ['30%','100%','30%'] }}
-                                        transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }} />
+                                {[6, 14, 16, 10, 8].map((h, i) => (
+                                    <div key={i} className="w-[3px] bg-red-500 rounded-none" style={{ height: h }} />
                                 ))}
                             </div>
                             <span className="text-red-400 text-[11px] font-bold tracking-[0.25em] uppercase">Reading Notes</span>
@@ -453,7 +451,7 @@ export default function ReadingNotes() {
                 </section>
 
                 {/* ── Today's Choice Section (Tree of Records) ── */}
-                <header className="px-6 pt-4 pb-0">
+                <header className="px-6 pt-0 pb-0">
                     <div className="flex items-center justify-between mb-4 invisible h-0 overflow-hidden">
                         <h2 className="text-xl font-black flex items-center gap-2 text-white italic">
                             <span className="material-symbols-outlined text-red-500 fill-1">potted_plant</span>
@@ -676,9 +674,9 @@ export default function ReadingNotes() {
 
 
                 {/* ── Archive List ── */}
-                <section className="pt-3">
+                <section className="px-6 pt-2 pb-0">
                     {/* Section Title */}
-                    <div className="px-4 pb-3">
+                    <div className="pb-3">
                         <h2 className="text-[22px] font-black tracking-tight leading-none mb-1 text-white flex items-center gap-2">
                             <span className="material-symbols-outlined text-red-500 text-[22px]">edit_note</span>기록노트
                         </h2>
@@ -688,7 +686,7 @@ export default function ReadingNotes() {
                         </div>
                     </div>
                     {/* Filter Chips */}
-                    <div className="flex border border-white/10 overflow-hidden mx-4">
+                    <div className="flex border border-white/10 overflow-hidden">
                         {FILTERS.map(f => (
                             <button
                                 key={f}
@@ -703,7 +701,7 @@ export default function ReadingNotes() {
                         ))}
                     </div>
 
-                    <div className="mt-3 space-y-4 px-4">
+                    <div className="mt-3 space-y-4">
                         {fetching ? (
                             <div className="space-y-4">
                                 {[1,2,3].map(i => (

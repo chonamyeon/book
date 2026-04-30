@@ -49,7 +49,7 @@ export default function LibraryLanding() {
             <MainHeader showBack />
 
             {/* Hero Section */}
-            <section className="relative h-[420px] w-full overflow-hidden flex-shrink-0">
+            <section className="relative h-[480px] w-full overflow-hidden flex-shrink-0">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0f]/50 to-[#0a0a0f] z-10" />
                 {design.library_hero.type === 'image' ? (
                     <img src={design.library_hero.src} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-70" style={{ objectPosition: 'center center' }} />
@@ -62,20 +62,15 @@ export default function LibraryLanding() {
                         autoPlay muted loop playsInline
                     />
                 )}
-                <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-10">
+                <div className="relative z-20 h-full flex flex-col justify-end px-6 pb-16">
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="inline-flex items-center gap-3 mb-3"
+                        className="inline-flex items-center gap-3 mb-4"
                     >
                         <div className="flex items-end gap-[2px] h-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <motion.div
-                                    key={i}
-                                    className="w-[3px] bg-orange-500"
-                                    animate={{ height: ['30%', '100%', '30%'] }}
-                                    transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }}
-                                />
+                            {[6, 14, 16, 10, 8].map((h, i) => (
+                                <div key={i} className="w-[3px] bg-orange-500 rounded-none" style={{ height: h }} />
                             ))}
                         </div>
                         <span className="text-orange-400 text-[11px] font-bold tracking-[0.25em] uppercase">My Library</span>
@@ -84,7 +79,7 @@ export default function LibraryLanding() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.08 }}
-                        className="text-[34px] font-light leading-tight tracking-tighter mb-3"
+                        className="text-[35px] font-light leading-tight tracking-tighter mb-4"
                     >
                         나만의<br />
                         <span className="font-bold">지식 서재</span>
@@ -102,7 +97,7 @@ export default function LibraryLanding() {
             </section>
 
             {/* Features */}
-            <section className="px-6 py-8 flex flex-col gap-3">
+            <section className="px-6 pt-2 pb-8 flex flex-col gap-3">
                 {features.map((f, i) => (
                     <motion.div
                         key={f.title}
