@@ -11,6 +11,7 @@ import { applyCommuteNotificationIntent } from './applyCommuteNotificationIntent
 let commuteBc = null;
 
 const GUARD = '__ARCHIVIEW_COMMUTE_REGISTERED';
+const COMMUTE_SW_URL = '/sw.js?v=20260430-commute-fix-1';
 
 /** SW 한 개에 GET_PENDING_INTENT 전송하고 응답 처리 */
 function queryOne(sw) {
@@ -56,7 +57,7 @@ export function registerCommuteNotificationListeners() {
             if (!d || d.type !== 'FCM_AUTOPLAY') return;
             applyCommuteNotificationIntent(d.intent);
         });
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register(COMMUTE_SW_URL).catch(() => {});
     }
 
     // BroadcastChannel 수신
