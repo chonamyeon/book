@@ -1298,9 +1298,10 @@
 
     /* YOUTUBE GRID */
     .today-yt-grid {
-      display: none;
+      display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+      margin-top: 20px;
     }
 
     .yt-thumb-card {
@@ -2317,15 +2318,10 @@
 
       .hero::after { height: 20px; opacity: 0.75; }
 
-      /* Sections */
-      .section { padding: 44px 20px; }
-
       /* 히어로 ~ 오늘의 콘텐츠 사이 세로 간격 절반 */
       .section.today-section {
-        padding-top: 22px;
+        padding-top: 20px;
       }
-
-      .headline-center { font-size: 30px; margin-bottom: 28px; }
 
       .today-tab-btn {
         font-size: 14px;
@@ -2389,8 +2385,10 @@
       }
 
       .today-yt-grid {
+        display: grid;
         grid-template-columns: 1fr;
-        gap: 18px;
+        gap: 12px;
+        margin-top: 16px;
       }
 
       .today-section { padding-left: 16px; padding-right: 16px; }
@@ -2429,27 +2427,29 @@
       .ac-time { flex: 0 0 38px; font-size: 13px; }
 
       .feature-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
-        align-items: stretch;
+        grid-template-columns: 1fr;
+        gap: 12px;
       }
       .feature-card {
-        padding: 14px 8px 16px;
-        border-radius: 16px;
+        padding: 16px 18px;
+        border-radius: 18px;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
         min-height: 0;
+        text-align: left;
       }
       .feature-card .circle-icon {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 10px;
+        width: 52px;
+        height: 52px;
+        flex-shrink: 0;
+        margin: 0;
       }
-      .feature-card .circle-icon svg { width: 22px; height: 22px; }
-      .feature-card h3 { font-size: 15px; margin: 0 0 6px; line-height: 1.25; }
-      .feature-card p { font-size: 13px; line-height: 1.42; }
+      .feature-card .circle-icon svg { width: 24px; height: 24px; }
+      .feature-card h3 { font-size: 16px; margin: 0 0 4px; line-height: 1.25; }
+      .feature-card p { font-size: 14px; line-height: 1.45; }
 
-      .steps-box { padding: 24px 16px; border-radius: 22px; }
       .steps-with-report {
         grid-template-columns: 1fr;
         gap: 20px;
@@ -2495,33 +2495,13 @@
         margin-bottom: 8px;
       }
 
-      .beta-proof {
-        padding-top: 16px;
-        padding-bottom: 8px;
-      }
-
-      .beta-proof-title {
-        font-size: 24px;
-        margin-bottom: 18px;
-      }
-
       .beta-proof-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 10px;
       }
 
-      .beta-quote {
-        padding: 18px 16px 14px;
-      }
-
-      .beta-quote blockquote {
-        font-size: 16px;
-        line-height: 1.58;
-      }
-
-      .beta-quote figcaption {
-        font-size: 14px;
-      }
+      .beta-quote { padding: 16px 14px 12px; }
+      .beta-quote figcaption { font-size: 13px; }
 
       .steps {
         gap: 18px;
@@ -2544,63 +2524,81 @@
       .step-copy h3 { font-size: 16px; margin: 0 0 6px; line-height: 1.3; }
       .step-copy p { font-size: 14px; line-height: 1.5; }
 
-      /* Dark CTA */
+      /* Dark CTA base layout */
       .dark-cta {
-        margin: 0 16px 48px;
-        padding: 32px 24px 28px;
         grid-template-columns: 1fr;
         text-align: center;
-        border-radius: 22px;
-        padding-right: 24px;
+        padding-right: 20px;
       }
 
       .dark-app { margin: 0 auto; width: 80px; }
-      .dark-copy h2 { font-size: 26px; margin-bottom: 16px; }
-      .dark-list { font-size: 17px; gap: 10px; }
-
       .phone-frame { display: none; }
-
-      .dark-cta .wide-btn { min-width: 0; width: 100%; font-size: 18px; padding: 16px 20px; }
-      .dark-note { font-size: 16px; }
+      .dark-cta .wide-btn { min-width: 0; width: 100%; }
+      .dark-note { font-size: 15px; }
 
       /* FOMO + PROOF mobile */
-      .fomo-bar { font-size: 14px; padding: 8px 16px; }
-      .social-proof { padding: 16px 20px 24px; }
+      .fomo-bar { font-size: 13px; padding: 8px 14px; }
       .proof-items { gap: 14px; flex-wrap: wrap; justify-content: center; }
       .proof-divider { display: none; }
-      .proof-num { font-size: 22px; }
-      .proof-label { font-size: 13px; }
-      .proof-sub { font-size: 15px; }
 
       /* FAQ PWA 카드 */
-      .faq-pwa-card {
-        margin-bottom: 20px;
-        padding: 18px 16px 16px;
-      }
-      .faq-pwa-lead {
-        font-size: 14px;
-      }
-      .faq-pwa-lead-line + .faq-pwa-lead-line {
-        font-size: 13px;
-      }
-      .faq-pwa-actions {
-        grid-template-columns: 1fr;
-        gap: 8px;
-      }
-      .faq-pwa-btn {
-        padding: 12px 12px;
-      }
+      .faq-pwa-card { margin-bottom: 20px; }
+      .faq-pwa-lead { font-size: 14px; }
+      .faq-pwa-lead-line + .faq-pwa-lead-line { font-size: 13px; }
+      .faq-pwa-actions { grid-template-columns: 1fr; gap: 8px; }
+      .faq-pwa-btn { padding: 12px 12px; }
       .faq-pwa-btn-title { font-size: 13px; }
       .faq-pwa-btn-sub { font-size: 11px; }
-
-      .faq-question { font-size: 17px; padding: 18px 20px; gap: 12px; }
-      .faq-question svg { width: 22px; height: 22px; }
-      .faq-answer { font-size: 16px; padding: 0 20px 18px 54px; }
+      .faq-question svg { width: 20px; height: 20px; }
 
       /* Footer */
       .footer { display: block; padding: 36px 20px 52px; }
       .footer-logo { width: 120px; margin-bottom: 18px; }
       .footer p { text-align: left; font-size: 15px; }
+
+      /* 섹션 여백 통일 */
+      .section { padding: 36px 16px; }
+      .section.today-section { padding-top: 20px; padding-bottom: 36px; }
+
+      /* 섹션 제목 */
+      .headline-center { font-size: 26px; margin-bottom: 20px; }
+
+      /* social proof 컴팩트 */
+      .social-proof { padding: 14px 16px 20px; }
+      .proof-num { font-size: 24px; }
+      .proof-label { font-size: 12px; }
+      .proof-items { gap: 16px; }
+      .proof-sub { font-size: 14px; }
+
+      /* 오늘의 콘텐츠 유튜브 카드 */
+      .yt-thumb-card { border-radius: 14px; }
+      .yt-thumb-label { font-size: 12px; }
+      .yt-mini-panel { margin-top: 16px; }
+
+      /* 참여 방법 */
+      .steps-box { padding: 22px 16px; border-radius: 20px; }
+      .steps-title { font-size: 22px; margin-bottom: 20px; }
+
+      /* 리포트 카드 가운데 정렬 */
+      .report-preview-column { align-items: center; }
+      .report-preview-intro { font-size: 15px; text-align: center; }
+
+      /* beta 테스터 */
+      .beta-proof { padding-top: 12px; padding-bottom: 4px; }
+      .beta-proof-title { font-size: 20px; margin-bottom: 14px; }
+      .beta-quote blockquote { font-size: 15px; }
+
+      /* FAQ */
+      .faq-title { font-size: 26px; margin-bottom: 20px; }
+      .faq-question { font-size: 16px; padding: 16px 16px; gap: 10px; }
+      .faq-answer { font-size: 15px; padding: 0 16px 16px 48px; }
+      .faq-pwa-card { padding: 16px; }
+
+      /* Dark CTA */
+      .dark-cta { margin: 0 12px 40px; padding: 28px 20px 24px; border-radius: 20px; }
+      .dark-copy h2 { font-size: 24px; margin-bottom: 14px; line-height: 1.3; }
+      .dark-list { font-size: 16px; gap: 8px; }
+      .dark-cta .wide-btn { font-size: 16px; padding: 14px 18px; }
     }
   </style>
 </head>
