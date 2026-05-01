@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBookData } from '../hooks/useBookData';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useAudio } from '../contexts/AudioContext';
+import { getTodayContents } from '../data/personalization';
+import { useSeoulCalendarDayKey } from '../hooks/useCalendarDay';
 
 const TABS = [
     { label: 'NOW',    path: '/' },
@@ -21,13 +24,31 @@ export default function MainHeader() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [videos, setVideos] = useState([]);
+    const [weeklyFocusBooks, setWeeklyFocusBooks] = useState([]);
+    const [popularArchives, setPopularArchives] = useState([]);
     const searchInputRef = useRef(null);
     const { getAllBooks } = useBookData();
+    const { openScriptModal, playPodcastMP3 } = useAudio();
+    const seoulYmd = useSeoulCalendarDayKey();
 
     useEffect(() => {
         if (!searchOpen) return;
         getDoc(doc(db, 'site_config', 'weekly_focus')).then(snap => {
-            if (snap.exists()) setVideos(snap.data().videos || []);
+            if (snap.exists()) {
+                setVideos(snap.data().videos || []);
+                const books = snap.data().books || [];
+                const allBks = getAllBooks();
+                const enriched = books.map(b => allBks.find(ab => ab.id === b.id) || b);
+                setWeeklyFocusBooks(enriched.filter(Boolean));
+            }
+        }).catch(() => {});
+        getDoc(doc(db, 'site_config', 'popular_archives')).then(snap => {
+            if (snap.exists()) {
+                const raw = snap.data().books || snap.data().items || [];
+                const allBks = getAllBooks();
+                const enriched = raw.map(b => allBks.find(ab => ab.id === b.id) || b);
+                setPopularArchives(enriched.filter(Boolean));
+            }
         }).catch(() => {});
         setTimeout(() => searchInputRef.current?.focus(), 80);
     }, [searchOpen]);
@@ -44,6 +65,23 @@ export default function MainHeader() {
     }, [query, videos]);
 
     const hasResults = results.books.length > 0 || results.videos.length > 0;
+
+    const todayBooks = useMemo(() => {
+        if (!weeklyFocusBooks.length && !videos.length) return [];
+        const { todayBooks: tb } = getTodayContents(weeklyFocusBooks, videos, null, seoulYmd);
+        return tb.slice(0, 2);
+    }, [weeklyFocusBooks, videos, seoulYmd]);
+
+    const originalBooks = useMemo(() => {
+        return getAllBooks().filter(b => b.id?.includes('framework') || b.id?.includes('original')).slice(0, 2);
+    }, []);
+
+    const handleBookClick = (book) => {
+        setSearchOpen(false);
+        const audioUrl = `/audio/${book.id}.mp3`;
+        openScriptModal(book.id, audioUrl, book.title, book.cover);
+        playPodcastMP3(audioUrl, book.title, book.cover, book.id);
+    };
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [hoverIdx, setHoverIdx] = useState(null);
     const tabRefs = useRef([]);
@@ -185,7 +223,77 @@ export default function MainHeader() {
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto px-4 py-3">
-                            {!query.trim() && <p className="text-white/20 text-[13px] text-center mt-12">도서 제목, 저자명, 영상 제목으로 검색하세요</p>}
+                            {!query.trim() && (
+                                <div className="space-y-6 mt-2">
+                                    {/* 1. 투데이 컨텐츠 */}
+                                    {todayBooks.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">투데이 컨텐츠</p>
+                                            <div className="flex flex-col gap-1">
+                                                {todayBooks.map(book => (
+                                                    <button key={book.id} onClick={() => handleBookClick(book)}
+                                                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                        {book.cover
+                                                            ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
+                                                            : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">menu_book</span></div>}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white text-[13px] font-bold truncate">{book.title}</p>
+                                                            <p className="text-white/40 text-[11px] mt-0.5 truncate">{book.author}</p>
+                                                        </div>
+                                                        <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* 2. 최다 조회 아카이뷰 */}
+                                    {popularArchives.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">최다 조회 아카이뷰</p>
+                                            <div className="flex flex-col gap-1">
+                                                {popularArchives.slice(0, 2).map(book => (
+                                                    <button key={book.id} onClick={() => handleBookClick(book)}
+                                                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                        {book.cover
+                                                            ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
+                                                            : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">menu_book</span></div>}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white text-[13px] font-bold truncate">{book.title}</p>
+                                                            <p className="text-white/40 text-[11px] mt-0.5 truncate">{book.author}</p>
+                                                        </div>
+                                                        <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* 3. 아카이뷰 오리지널 */}
+                                    {originalBooks.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">아카이뷰 오리지널</p>
+                                            <div className="flex flex-col gap-1">
+                                                {originalBooks.map(book => (
+                                                    <button key={book.id} onClick={() => handleBookClick(book)}
+                                                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.12)' }}>
+                                                        {book.cover
+                                                            ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
+                                                            : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">auto_stories</span></div>}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-0.5">ORIGINAL</p>
+                                                            <p className="text-white text-[13px] font-bold truncate">{book.title}</p>
+                                                            <p className="text-white/40 text-[11px] mt-0.5 truncate">{book.author}</p>
+                                                        </div>
+                                                        <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!todayBooks.length && !popularArchives.length && !originalBooks.length && (
+                                        <p className="text-white/20 text-[13px] text-center mt-12">도서 제목, 저자명, 영상 제목으로 검색하세요</p>
+                                    )}
+                                </div>
+                            )}
                             {query.trim() && !hasResults && <p className="text-white/20 text-[13px] text-center mt-12">검색 결과가 없습니다</p>}
                             {results.books.length > 0 && (
                                 <div className="mb-5">
