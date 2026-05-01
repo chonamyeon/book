@@ -27,31 +27,39 @@ export default function MainHeader() {
     const [weeklyFocusBooks, setWeeklyFocusBooks] = useState([]);
     const [popularArchives, setPopularArchives] = useState([]);
     const searchInputRef = useRef(null);
-    const { getAllBooks } = useBookData();
+    const { getAllBooks, loading: booksLoading } = useBookData();
     const { openScriptModal, playPodcastMP3 } = useAudio();
     const seoulYmd = useSeoulCalendarDayKey();
+
+    const [rawWeeklyFocusBooks, setRawWeeklyFocusBooks] = useState([]);
+    const [rawPopularArchives, setRawPopularArchives] = useState([]);
 
     useEffect(() => {
         if (!searchOpen) return;
         getDoc(doc(db, 'site_config', 'weekly_focus')).then(snap => {
             if (snap.exists()) {
                 setVideos(snap.data().videos || []);
-                const books = snap.data().books || [];
-                const allBks = getAllBooks();
-                const enriched = books.map(b => allBks.find(ab => ab.id === b.id) || b);
-                setWeeklyFocusBooks(enriched.filter(Boolean));
+                setRawWeeklyFocusBooks(snap.data().books || []);
             }
         }).catch(() => {});
         getDoc(doc(db, 'site_config', 'popular_archives')).then(snap => {
             if (snap.exists()) {
-                const raw = snap.data().books || snap.data().items || [];
-                const allBks = getAllBooks();
-                const enriched = raw.map(b => allBks.find(ab => ab.id === b.id) || b);
-                setPopularArchives(enriched.filter(Boolean));
+                setRawPopularArchives(snap.data().books || snap.data().items || []);
             }
         }).catch(() => {});
         setTimeout(() => searchInputRef.current?.focus(), 80);
     }, [searchOpen]);
+
+    useEffect(() => {
+        if (booksLoading) return;
+        const allBks = getAllBooks();
+        if (rawWeeklyFocusBooks.length) {
+            setWeeklyFocusBooks(rawWeeklyFocusBooks.map(b => allBks.find(ab => ab.id === b.id) || b).filter(Boolean));
+        }
+        if (rawPopularArchives.length) {
+            setPopularArchives(rawPopularArchives.map(b => allBks.find(ab => ab.id === b.id) || b).filter(Boolean));
+        }
+    }, [booksLoading, rawWeeklyFocusBooks, rawPopularArchives]);
 
     useEffect(() => { if (!searchOpen) setQuery(''); }, [searchOpen]);
 
@@ -74,7 +82,7 @@ export default function MainHeader() {
 
     const originalBooks = useMemo(() => {
         return getAllBooks().filter(b => b.id?.includes('framework') || b.id?.includes('original')).slice(0, 2);
-    }, []);
+    }, [getAllBooks, booksLoading]);
 
     const handleBookClick = (book) => {
         setSearchOpen(false);
