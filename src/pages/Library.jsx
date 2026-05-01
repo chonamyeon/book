@@ -321,9 +321,11 @@ export default function Library() {
     const { getAllBooks } = useBookData();
     const { dailyListenTime, dailyTarget, streak } = useAudio();
     const [unlocked, setUnlocked] = useState(false);
-    const [myResultType, setMyResultType] = useState(null);
-    const [quizResult, setQuizResult] = useState(null);
-    const [quizScores, setQuizScores] = useState(null);
+    const [myResultType, setMyResultType] = useState(() => localStorage.getItem('myResultType'));
+    const [quizResult, setQuizResult] = useState(() => localStorage.getItem('quizResult'));
+    const [quizScores, setQuizScores] = useState(() => {
+        try { const s = localStorage.getItem('quizScores'); return s ? JSON.parse(s) : null; } catch { return null; }
+    });
     const [hiddenRecs, setHiddenRecs] = useState([]);
     const [finderRecs, setFinderRecs] = useState([]);
     const navigate = useNavigate();
