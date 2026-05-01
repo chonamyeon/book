@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSiteDesign } from '../hooks/useSiteDesign';
 import { useAuth } from '../hooks/useAuth';
@@ -296,6 +297,11 @@ export default function Home() {
 
     return (
         <div className="bg-black text-white font-sans antialiased min-h-screen flex flex-col relative overflow-x-hidden selection:bg-orange-500/30">
+            <Helmet>
+                <title>아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서</title>
+                <link rel="canonical" href="https://archiview.store/" />
+                <meta name="description" content="아카이뷰(ARCHIVIEW)는 독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오를 제공하는 프리미엄 디지털 독서 플랫폼입니다." />
+            </Helmet>
             {/* Styles Injection for Glassmorphism */}
             <style>{`
                 .glass-card {

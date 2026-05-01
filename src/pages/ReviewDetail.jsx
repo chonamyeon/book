@@ -1275,11 +1275,12 @@ ${scriptContext}
         <>
         <Helmet>
             <title>{book.title || '아카이뷰 도서'} 핵심 요약 오디오 - ARCHIVIEW</title>
+            <link rel="canonical" href={`https://archiview.store/review/${book.id}`} />
             <meta name="description" content={book.desc ? `${book.desc.slice(0, 120)}... 아카이뷰에서 핵심만 빠르게 들어보세요.` : `${book.title} 핵심 요약을 오디오로 빠르게 만나보세요.`} />
             <meta property="og:title" content={`${book.title || '도서'} 핵심 요약 | 아카이뷰`} />
             <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
             <meta property="og:image" content={ogImage} />
-            <meta property="og:url" content={`https://archiview.store/review/${encodeURIComponent(book.id)}`} />
+            <meta property="og:url" content={`https://archiview.store/review/${book.id}`} />
             <meta property="og:type" content="article" />
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:image" content={ogImage} />
