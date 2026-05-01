@@ -86,9 +86,13 @@ export default function MainHeader() {
 
     const handleBookClick = (book) => {
         setSearchOpen(false);
-        const audioUrl = `/audio/${book.id}.mp3`;
-        openScriptModal(book.id, audioUrl, book.title, book.cover);
-        playPodcastMP3(audioUrl, book.title, book.cover, book.id);
+        navigate(`/review/${book.id}?tab=podcast`);
+    };
+
+    const handleVideoClick = (v) => {
+        setSearchOpen(false);
+        const vid = v.videoId || v.id || (v.url||'').match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1];
+        if (vid) navigate(`/yt-podcast/${vid}`);
     };
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [hoverIdx, setHoverIdx] = useState(null);
@@ -308,7 +312,7 @@ export default function MainHeader() {
                                     <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">도서</p>
                                     <div className="flex flex-col gap-1">
                                         {results.books.map(book => (
-                                            <button key={book.id} onClick={() => { setSearchOpen(false); navigate(`/category/${book.category || 'SELF_DEV'}`); }}
+                                            <button key={book.id} onClick={() => handleBookClick(book)}
                                                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                 {book.cover ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
                                                     : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">menu_book</span></div>}
@@ -329,13 +333,13 @@ export default function MainHeader() {
                                         {results.videos.map((v, i) => {
                                             const vid = v.videoId || v.id || (v.url||'').match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1];
                                             return (
-                                                <a key={i} href={vid ? `https://www.youtube.com/watch?v=${vid}` : v.url} target="_blank" rel="noopener noreferrer" onClick={() => setSearchOpen(false)}
+                                                <button key={i} onClick={() => handleVideoClick(v)}
                                                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                     {vid ? <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt={v.title} className="w-14 h-9 object-cover rounded-md flex-shrink-0"/>
                                                         : <div className="w-14 h-9 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(255,0,0,0.15)' }}><span className="material-symbols-outlined text-red-400 text-[16px]">play_circle</span></div>}
                                                     <p className="flex-1 text-white text-[13px] font-bold line-clamp-2 leading-tight">{v.title}</p>
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/20 flex-shrink-0"><path d="M9 18l6-6-6-6"/></svg>
-                                                </a>
+                                                </button>
                                             );
                                         })}
                                     </div>
