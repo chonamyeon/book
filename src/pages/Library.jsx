@@ -80,48 +80,78 @@ function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
         }
     };
 
-    // 오늘 목표 달성 시 자동 도장 (주 7일 모두)
+    // 오늘 목표 달성 시 자동 도장
     useEffect(() => {
         if (!isGoalMet) return;
         if (stamps.includes(todayStr)) return;
         saveStamps([...stamps, todayStr]);
     }, [isGoalMet]);
 
-    // 이번 주 월~일 날짜 배열 (월요일 시작)
-    const weekDays = useMemo(() => {
-        const dayOfWeek = (now.getDay() + 6) % 7;
+    // 오늘 도장이 있는데 15분 미달이면 제거 (페이지 로드 후 listenTime이 확정된 뒤)
+    useEffect(() => {
+        if (isGoalMet) return;
+        if (!stamps.includes(todayStr)) return;
+        // dailyListenTime이 0이면 아직 로드 중일 수 있으므로 500ms 후 재확인
+        const t = setTimeout(() => {
+            if ((dailyListenTime || 0) < (dailyTarget || 900)) {
+                saveStamps(stamps.filter(s => s !== todayStr));
+            }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [dailyListenTime]);
+
+    // 챌린지 시작일: 현재 연속 도장 구간의 첫째 날
+    const challengeStart = useMemo(() => {
+        // 오늘부터 또는 어제부터 연속 구간 역추적
+        const base = new Date(now);
+        if (!stamps.includes(todayStr)) {
+            // 오늘 아직 안 찍었으면 어제부터 확인
+            base.setDate(base.getDate() - 1);
+        }
+        if (!stamps.includes(toDateStr(base))) return now; // 연속 없으면 오늘부터
+        const cur = new Date(base);
+        while (stamps.includes(toDateStr(cur))) {
+            cur.setDate(cur.getDate() - 1);
+        }
+        cur.setDate(cur.getDate() + 1);
+        return cur;
+    }, [stamps, todayStr]);
+
+    // 챌린지 7일 창: 시작일 기준 7일 연속
+    const challengeDays = useMemo(() => {
         return Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(now);
-            d.setDate(now.getDate() - dayOfWeek + i);
+            const d = new Date(challengeStart);
+            d.setDate(challengeStart.getDate() + i);
             return d;
         });
-    }, [todayStr]);
+    }, [challengeStart]);
 
-    // 연속 streak (오늘 포함 최근 평일 연속 도장)
+    // 연속 streak (주말 포함 모든 날)
     const streak = useMemo(() => {
         let count = 0;
         const cur = new Date(now);
-        for (let i = 0; i < 60; i++) {
-            const dow = cur.getDay();
-            if (dow !== 0 && dow !== 6) {
-                if (stamps.includes(toDateStr(cur))) count++;
-                else if (toDateStr(cur) !== todayStr) break;
+        for (let i = 0; i < 30; i++) {
+            if (stamps.includes(toDateStr(cur))) {
+                count++;
+                cur.setDate(cur.getDate() - 1);
+            } else if (toDateStr(cur) === todayStr) {
+                // 오늘 아직 안 찍혀도 어제 연속 이어지면 건너뜀
+                cur.setDate(cur.getDate() - 1);
+            } else {
+                break;
             }
-            cur.setDate(cur.getDate() - 1);
         }
         return count;
     }, [stamps, todayStr]);
 
-    // 이번 달 도장 수 (주 7일 기준)
-    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
-    const monthCount = stamps.filter(s => s.startsWith(monthPrefix)).length;
-    const allDone = monthCount >= 7;
+    // 챌린지 7일 달성 여부
+    const challengeStamps = challengeDays.filter(d => stamps.includes(toDateStr(d)));
+    const allDone = challengeStamps.length >= 7;
     useEffect(() => { if (allDone) setShowBadge(true); }, [allDone]);
 
-    // 이번 주 통계 (7일 기준)
-    const weekStamps = weekDays.filter(d => stamps.includes(toDateStr(d)));
-    const focusHours = (weekStamps.length * 15 / 60).toFixed(1);
-    const achieveRate = Math.round((weekStamps.length / 7) * 100);
+    // 리포트 통계 (챌린지 7일 기준)
+    const focusHours = (challengeStamps.length * 15 / 60).toFixed(1);
+    const achieveRate = Math.round((challengeStamps.length / 7) * 100);
     const totalRoutine = stamps.length;
 
     // 바 차트 최대 높이 기준 (이번 주 도장 여부)
@@ -150,16 +180,15 @@ function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
 
                     {/* 요일 체크 */}
                     <div className="grid grid-cols-7 gap-2">
-                        {weekDays.map((d, i) => {
+                        {challengeDays.map((d, i) => {
                             const dStr = toDateStr(d);
                             const isStamped = stamps.includes(dStr);
                             const isToday = dStr === todayStr;
                             const dow = d.getDay();
-                            const isWknd = dow === 0 || dow === 6;
                             return (
                                 <div key={i} className="flex flex-col items-center gap-1.5">
                                     <span className="text-[11px] font-bold text-white/45">
-                                        {DAY_LABELS[i]}
+                                        {DAY_KR[dow]}
                                     </span>
                                     <div className="w-8 h-8 rounded-full flex items-center justify-center"
                                         style={{
@@ -218,14 +247,13 @@ function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
 
                         {/* 바 차트 */}
                         <div className="flex items-end gap-1.5 flex-1 justify-end" style={{ height: BAR_MAX + 24 }}>
-                            {weekDays.map((d, i) => {
+                            {challengeDays.map((d, i) => {
                                 const dStr = toDateStr(d);
                                 const isStamped = stamps.includes(dStr);
                                 const isToday = dStr === todayStr;
                                 const isPast = dStr <= todayStr;
                                 const dow = d.getDay();
-                                const isWknd = dow === 0 || dow === 6;
-                                const barH = isStamped ? BAR_MAX : isPast && !isWknd ? 12 : 8;
+                                const barH = isStamped ? BAR_MAX : isPast ? 12 : 8;
                                 return (
                                     <div key={i} className="flex flex-col items-center gap-1">
                                         <motion.div
@@ -243,7 +271,7 @@ function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
                                             }}
                                         />
                                         <span className="text-[9px] font-bold text-white/35">
-                                            {DAY_LABELS[i]}
+                                            {DAY_KR[dow]}
                                         </span>
                                     </div>
                                 );
@@ -261,13 +289,13 @@ function ReadingChallenge({ dailyListenTime, dailyTarget, user }) {
                         <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 22, color: '#fbbf24', fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
                         <div>
                             <p className="text-[12px] font-black text-amber-300 leading-tight">🎉 7일 독서 챌린지 성공!</p>
-                            <p className="text-[10px] text-white/40 mt-0.5">이번 달 평일 7일 15분 청취 달성!</p>
+                            <p className="text-[10px] text-white/40 mt-0.5">7일 연속 15분 청취 달성!</p>
                         </div>
                     </motion.div>
                 )}
             </div>
             <p className="text-white/35 text-[11px] font-medium leading-relaxed mt-3 pl-1">
-                평일 매일 15분 이상 청취하면 도장이 찍혀요. 7일 달성 시 챌린지 성공 뱃지를 획득해요.
+                매일 15분 이상 청취하면 도장이 찍혀요. 7일 연속 달성 시 챌린지 성공 뱃지를 획득해요.
             </p>
         </div>
     );

@@ -918,7 +918,7 @@ export default function AdminDashboard() {
         if (defaults.length > 0) {
             setSectionData(prev => ({ ...prev, [popularSubTab]: defaults }));
         }
-    }, [activeTab, popularSubTab, sectionData, realBooks, popularList, loadedSections]);
+    }, [activeTab, popularSubTab, realBooks, popularList, loadedSections]);
 
     useEffect(() => {
         if (popularSubTab !== 'weekly_focus') {
@@ -9871,9 +9871,9 @@ ${raw}`;
                                         <p className="text-slate-500 text-xl font-medium italic">메인 화면 각 섹션의 도서 순위를 관리합니다.</p>
                                     </div>
                                     <div className="flex gap-3 items-center">
-                                        <button onClick={saveSection} disabled={curSaving} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
+                                        <button onClick={saveSection} disabled={curSaving || !loadedSections.has(popularSubTab)} className="px-10 py-5 rounded-[24px] bg-gold text-primary font-black text-base flex items-center gap-4 hover:bg-white hover:scale-105 transition-all shadow-[0_20px_50px_rgba(212,175,55,0.3)] disabled:opacity-50">
                                             <span className="material-symbols-outlined text-2xl">{curSaving ? 'sync' : 'save'}</span>
-                                            {curSaving ? '저장 중...' : '메인에 저장'}
+                                            {curSaving ? '저장 중...' : !loadedSections.has(popularSubTab) ? '로딩 중...' : '메인에 저장'}
                                         </button>
                                     </div>
                                 </div>
