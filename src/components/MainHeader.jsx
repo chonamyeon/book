@@ -25,28 +25,25 @@ export default function MainHeader() {
     const [query, setQuery] = useState('');
     const [videos, setVideos] = useState([]);
     const [weeklyFocusBooks, setWeeklyFocusBooks] = useState([]);
-    const [popularArchives, setPopularArchives] = useState([]);
     const searchInputRef = useRef(null);
     const { getAllBooks, loading: booksLoading } = useBookData();
     const { openScriptModal, playPodcastMP3 } = useAudio();
     const seoulYmd = useSeoulCalendarDayKey();
 
     const [rawWeeklyFocusBooks, setRawWeeklyFocusBooks] = useState([]);
-    const [rawPopularArchives, setRawPopularArchives] = useState([]);
 
+    // 마운트 시 미리 로드 → 검색창 열리자마자 바로 표시
     useEffect(() => {
-        if (!searchOpen) return;
         getDoc(doc(db, 'site_config', 'weekly_focus')).then(snap => {
             if (snap.exists()) {
                 setVideos(snap.data().videos || []);
                 setRawWeeklyFocusBooks(snap.data().books || []);
             }
         }).catch(() => {});
-        getDoc(doc(db, 'site_config', 'popular_archives')).then(snap => {
-            if (snap.exists()) {
-                setRawPopularArchives(snap.data().books || snap.data().items || []);
-            }
-        }).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        if (!searchOpen) return;
         setTimeout(() => searchInputRef.current?.focus(), 80);
     }, [searchOpen]);
 
@@ -56,10 +53,7 @@ export default function MainHeader() {
         if (rawWeeklyFocusBooks.length) {
             setWeeklyFocusBooks(rawWeeklyFocusBooks.map(b => allBks.find(ab => ab.id === b.id) || b).filter(Boolean));
         }
-        if (rawPopularArchives.length) {
-            setPopularArchives(rawPopularArchives.map(b => allBks.find(ab => ab.id === b.id) || b).filter(Boolean));
-        }
-    }, [booksLoading, rawWeeklyFocusBooks, rawPopularArchives]);
+    }, [booksLoading, rawWeeklyFocusBooks]);
 
     useEffect(() => { if (!searchOpen) setQuery(''); }, [searchOpen]);
 
@@ -74,10 +68,10 @@ export default function MainHeader() {
 
     const hasResults = results.books.length > 0 || results.videos.length > 0;
 
-    const todayBooks = useMemo(() => {
-        if (!weeklyFocusBooks.length && !videos.length) return [];
-        const { todayBooks: tb } = getTodayContents(weeklyFocusBooks, videos, null, seoulYmd);
-        return tb.slice(0, 2);
+    const { todayBooks, todayVideos } = useMemo(() => {
+        if (!weeklyFocusBooks.length && !videos.length) return { todayBooks: [], todayVideos: [] };
+        const { todayBooks: tb, todayVideos: tv } = getTodayContents(weeklyFocusBooks, videos, null, seoulYmd);
+        return { todayBooks: tb.slice(0, 2), todayVideos: tv.slice(0, 2) };
     }, [weeklyFocusBooks, videos, seoulYmd]);
 
     const originalBooks = useMemo(() => {
@@ -237,8 +231,8 @@ export default function MainHeader() {
                         <div className="flex-1 overflow-y-auto px-4 py-3">
                             {!query.trim() && (
                                 <div className="space-y-6 mt-2">
-                                    {/* 1. 투데이 컨텐츠 */}
-                                    {todayBooks.length > 0 && (
+                                    {/* 1. 투데이 컨텐츠 (도서 2 + 유튜브 2) */}
+                                    {(todayBooks.length > 0 || todayVideos.length > 0) && (
                                         <div>
                                             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">투데이 컨텐츠</p>
                                             <div className="flex flex-col gap-1">
@@ -249,33 +243,29 @@ export default function MainHeader() {
                                                             ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
                                                             : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">menu_book</span></div>}
                                                         <div className="flex-1 min-w-0">
+                                                            <p className="text-[9px] font-black text-orange-400/70 uppercase tracking-widest mb-0.5">BOOK</p>
                                                             <p className="text-white text-[13px] font-bold truncate">{book.title}</p>
                                                             <p className="text-white/40 text-[11px] mt-0.5 truncate">{book.author}</p>
                                                         </div>
                                                         <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
                                                     </button>
                                                 ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* 2. 최다 조회 아카이뷰 */}
-                                    {popularArchives.length > 0 && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">최다 조회 아카이뷰</p>
-                                            <div className="flex flex-col gap-1">
-                                                {popularArchives.slice(0, 2).map(book => (
-                                                    <button key={book.id} onClick={() => handleBookClick(book)}
-                                                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                                        {book.cover
-                                                            ? <img src={book.cover} alt={book.title} className="w-9 h-12 object-cover rounded-md flex-shrink-0"/>
-                                                            : <div className="w-9 h-12 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.15)' }}><span className="material-symbols-outlined text-orange-400 text-[16px]">menu_book</span></div>}
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-white text-[13px] font-bold truncate">{book.title}</p>
-                                                            <p className="text-white/40 text-[11px] mt-0.5 truncate">{book.author}</p>
-                                                        </div>
-                                                        <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
-                                                    </button>
-                                                ))}
+                                                {todayVideos.map((v, i) => {
+                                                    const vid = v.videoId || v.id || (v.url||'').match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1];
+                                                    return (
+                                                        <button key={i} onClick={() => handleVideoClick(v)}
+                                                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            {vid
+                                                                ? <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt={v.title} className="w-14 h-9 object-cover rounded-md flex-shrink-0"/>
+                                                                : <div className="w-14 h-9 rounded-md flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(255,0,0,0.15)' }}><span className="material-symbols-outlined text-red-400 text-[16px]">play_circle</span></div>}
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-0.5">YOUTUBE</p>
+                                                                <p className="text-white text-[13px] font-bold line-clamp-2 leading-tight">{v.title}</p>
+                                                            </div>
+                                                            <span className="material-symbols-outlined text-orange-400 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
@@ -301,7 +291,7 @@ export default function MainHeader() {
                                             </div>
                                         </div>
                                     )}
-                                    {!todayBooks.length && !popularArchives.length && !originalBooks.length && (
+                                    {!todayBooks.length && !todayVideos.length && !originalBooks.length && (
                                         <p className="text-white/20 text-[13px] text-center mt-12">도서 제목, 저자명, 영상 제목으로 검색하세요</p>
                                     )}
                                 </div>
