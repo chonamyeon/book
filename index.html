@@ -11,7 +11,7 @@
   <!-- viewport-fit=cover: iOS 노치/홈 인디케이터 safe area 활성화 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="manifest" href="/manifest.json" />
-  <title>아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서</title>
+  <title>아카이뷰 ARCHIVIEW | 출퇴근 15분 책 요약 오디오 독서</title>
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
@@ -19,19 +19,20 @@
   <meta property="og:url" content="https://archiview.store/" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ko_KR" />
-  <meta property="og:title" content="아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서" />
-  <meta property="og:description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 아카이뷰에서 빠르게 핵심을 듣고 읽어보세요." />
+  <meta property="og:title" content="아카이뷰 ARCHIVIEW | 출퇴근 15분 책 요약 오디오 독서" />
+  <meta property="og:description" content="바쁜 직장인을 위한 책 핵심 요약, 오디오 독서, 맞춤 도서 추천 플랫폼. 출퇴근 15분으로 지식을 빠르게 쌓아보세요." />
   <meta property="og:image" content="https://archiview.store/images/hero_expert_v5.png" />
   <meta property="og:image:alt" content="아카이뷰 메인 소개 이미지" />
 
   <!-- SEO -->
-  <meta name="description" content="아카이뷰(ARCHIVIEW)는 독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오를 제공하는 프리미엄 디지털 독서 플랫폼입니다.">
-  <meta name="keywords" content="아카이뷰,ARCHIVIEW,책 요약,오디오북,독서,도서 추천,독서 성향 분석,북 리뷰,책 인사이트" />
+  <meta name="description" content="아카이뷰는 바쁜 직장인을 위한 책 핵심 요약, 오디오 독서, 맞춤 도서 추천 플랫폼입니다. 출퇴근 15분으로 지식을 빠르게 쌓아보세요.">
+  <meta name="keywords" content="아카이뷰,ARCHIVIEW,책 요약,오디오북,독서,도서 추천,독서 성향 분석,북 리뷰,책 인사이트,출퇴근 독서" />
   <meta name="author" content="ARCHIVIEW" />
+  <link rel="canonical" href="https://archiview.store/" />
   <meta name="naver-site-verification" content="e9f2050e2448f5ddccaa133a78013076757da33e" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="아카이뷰 ARCHIVIEW | 출퇴근길 책 요약, 인사이트, 오디오 독서" />
-  <meta name="twitter:description" content="독서 성향 분석, 맞춤 도서 추천, 책 핵심 요약 오디오까지. 아카이뷰에서 빠르게 핵심을 듣고 읽어보세요." />
+  <meta name="twitter:title" content="아카이뷰 ARCHIVIEW | 출퇴근 15분 책 요약 오디오 독서" />
+  <meta name="twitter:description" content="바쁜 직장인을 위한 책 핵심 요약, 오디오 독서, 맞춤 도서 추천 플랫폼. 출퇴근 15분으로 지식을 빠르게 쌓아보세요." />
   <meta name="twitter:image" content="https://archiview.store/images/hero_expert_v5.png" />
 
   <!-- iOS & PWA Settings -->
@@ -164,6 +165,7 @@
       "alternateName": "아카이뷰",
       "url": "https://archiview.store/",
       "logo": "https://archiview.store/icon-512.png",
+      "description": "바쁜 직장인을 위한 책 핵심 요약, 오디오 독서, 맞춤 도서 추천 플랫폼",
       "sameAs": []
     }
   </script>
@@ -174,7 +176,12 @@
       "name": "ARCHIVIEW",
       "alternateName": "아카이뷰",
       "url": "https://archiview.store/",
-      "inLanguage": "ko-KR"
+      "inLanguage": "ko-KR",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://archiview.store/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
     }
   </script>
 

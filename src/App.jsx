@@ -7,6 +7,7 @@ import MiniPlayer from './components/MiniPlayer';
 import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import SeoHead from './components/SeoHead';
 // 메인/에디토리얼: 가장 많이 진입하는 페이지 — lazy 없이 즉시 로드
 import Test4 from './pages/Test4';
 import Editorial from './pages/Editorial';
@@ -231,6 +232,7 @@ export default function App() {
       <AudioProvider>
         <Router>
           <ScrollToTop />
+          <SeoHead />
           <AutoplayVideoKeeper />
           <div className="min-h-screen bg-slate-950">
             <ErrorBoundary>

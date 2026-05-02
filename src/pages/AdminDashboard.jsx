@@ -282,7 +282,8 @@ const ADMIN_TAB_PATHS = {
     sales: 'sales',
     payment: 'payment',
     design: 'design',
-    'cf-prompt': 'cf-prompt'
+    viral: 'viral',
+    'cf-prompt': 'viral'
 };
 
 const resolveAdminTabFromPath = (pathname) => {
@@ -293,6 +294,7 @@ const resolveAdminTabFromPath = (pathname) => {
     if (!match?.[1]) return 'dashboard';
 
     const slug = match[1].toLowerCase();
+    if (slug === 'cf-prompt') return 'viral';
     const matchedEntry = Object.entries(ADMIN_TAB_PATHS).find(([, path]) => path === slug);
     return matchedEntry ? matchedEntry[0] : 'dashboard';
 };
@@ -643,6 +645,256 @@ ${cfForm.target ? `타겟 고객: ${cfForm.target}` : ''}
     );
 }
 
+function ViralTab() {
+    const [viralForm, setViralForm] = useState({
+        topic: '아카이뷰',
+        message: '출퇴근 15분, 사놓고 못 읽은 책을 오디오 요약으로 끝내는 지식 루틴',
+        target: '바쁜 직장인, 자기계발을 하고 싶지만 시간이 부족한 사람',
+        benefit: '무료로 7일 챌린지 시작하기',
+        url: 'https://archiview.store/challenge',
+        tone: '직장인이 공감하기 쉬운 자연스러운 말투'
+    });
+    const [viralOutputs, setViralOutputs] = useState([]);
+    const [copiedKey, setCopiedKey] = useState('');
+
+    const platforms = [
+        { id: 'cafe', label: '카페 글쓰기', icon: 'groups', color: 'from-amber-500 to-orange-500' },
+        { id: 'blog', label: '블로그', icon: 'article', color: 'from-emerald-500 to-teal-500' },
+        { id: 'instagram', label: '인스타', icon: 'photo_camera', color: 'from-pink-500 to-rose-500' },
+        { id: 'tiktok', label: '틱톡', icon: 'smart_display', color: 'from-slate-100 to-slate-400' },
+        { id: 'threads', label: '스레드', icon: 'alternate_email', color: 'from-indigo-500 to-violet-500' },
+    ];
+
+    const buildViralCopy = (platformId) => {
+        const { topic, message, target, benefit, url, tone } = viralForm;
+        const pick = (items) => items[Math.floor(Math.random() * items.length)];
+        const pickMany = (items, count) => [...items].sort(() => Math.random() - 0.5).slice(0, count);
+        const vMoment = pick(['월요일 출근길', '퇴근길 지하철', '점심 먹고 남는 15분', '야근 끝나고 집에 가는 길', '주말 아침 커피 마실 때', '회의 전 애매하게 뜬 시간', '잠들기 전 10분']);
+        const vPain = pick(['책을 사놓고도 첫 장을 못 넘기는 상황', '자기계발은 하고 싶은데 시간이 계속 밀리는 문제', '출퇴근 시간이 그냥 사라지는 느낌', '읽어야 할 책은 많은데 고르는 것부터 피곤한 순간', '퇴근 후에는 의지가 남아있지 않은 현실']);
+        const vHook = pick(['이건 광고처럼 밀어붙이는 글보다 실제 사용 후기 톤이 더 잘 맞습니다.', '핵심은 책을 더 많이 사는 게 아니라, 매일 듣는 루틴을 만드는 쪽입니다.', '처음부터 완독을 목표로 잡으면 부담이 큰데, 15분 요약은 시작 장벽이 낮습니다.', '바쁜 사람에게 필요한 건 의지가 아니라 바로 켤 수 있는 구조였습니다.']);
+        const vProof = pick(['3일만 들어봐도 출퇴근 시간이 덜 버려지는 느낌이 납니다', '책 한 권을 시작하기 전 부담이 꽤 줄었습니다', '듣고 나서 읽을 책을 고르니 실패 확률이 낮아졌습니다', '사놓은 책을 다시 꺼내게 되는 계기가 됐습니다', '짧게 듣고 기록까지 남기니 루틴으로 붙기 쉬웠습니다']);
+        const vAngle = pick(['후기형', '질문형', '리스트형', '문제-해결형', '짧은 고백형', '실험 기록형', '체크리스트형']);
+        const vBenefits = pickMany([
+            '출퇴근 15분에 바로 듣기 좋음',
+            '책 전체를 읽기 전 핵심 흐름을 먼저 잡을 수 있음',
+            '사놓고 못 읽은 책을 다시 꺼내게 됨',
+            '짧은 시간에도 자기계발 루틴을 만들기 쉬움',
+            '읽을 책을 고르는 기준이 생김',
+            '오디오라 이동 중에도 부담이 적음',
+            '기록으로 남기기 쉬워서 꾸준함을 확인할 수 있음'
+        ], 4);
+        const vTags = pickMany(['#아카이뷰', '#직장인자기계발', '#출퇴근루틴', '#책요약', '#오디오북추천', '#독서루틴', '#15분루틴', '#자기계발습관'], 5).join(' ');
+        const vTitleStyles = {
+            cafe: [
+                `출퇴근길 그냥 보내기 아까운 분들께 공유해요`,
+                `책 못 읽는 직장인이라면 이 방식 한번 봐보세요`,
+                `${vMoment}에 써본 ${topic} 후기`,
+                `완독 부담 줄이고 싶은 분들께 괜찮았던 방법`
+            ],
+            blog: [
+                `${topic} 사용 후기: 바쁜 직장인의 15분 독서 루틴`,
+                `책 읽을 시간이 없는 사람을 위한 오디오 요약 활용법`,
+                `출퇴근 시간을 자기계발 시간으로 바꾸는 현실적인 방법`,
+                `${target}에게 맞는 ${topic} 활용 기록`
+            ],
+            instagram: [
+                `책 못 읽는 직장인의 15분 루틴`,
+                `출퇴근 시간이 아깝다면 저장`,
+                `${topic}으로 바꾼 작은 습관`,
+                `완독 부담 줄이는 오디오 요약`
+            ],
+            tiktok: [
+                `책 못 읽는 직장인 공감 릴스 대본`,
+                `출퇴근 15분 활용 숏폼 대본`,
+                `${topic} 바이럴 영상 스크립트`,
+                `자기계발 루틴 전환 숏폼`
+            ],
+            threads: [
+                `책을 못 읽는 건 의지 문제가 아닐 수 있습니다`,
+                `출퇴근 시간이 루틴이 되면 달라지는 것`,
+                `완독보다 먼저 필요한 건 시작 장벽 낮추기`,
+                `${topic}을 써보고 남긴 짧은 생각`
+            ]
+        };
+        const bullet = (items, mark = '-') => items.map(item => `${mark} ${item}`).join('\n');
+        const numbered = (items) => items.map((item, index) => `${index + 1}. ${item}`).join('\n');
+        const vFormats = {
+            cafe: [
+                () => `[제목]\n${pick(vTitleStyles.cafe)}\n\n[본문]\n안녕하세요. 요즘 ${vPain} 때문에 고민하다가 ${topic}을 써보고 있어서 공유해요.\n\n${vMoment}에 켜봤는데 생각보다 부담이 적었습니다. ${message}\n\n개인적으로 좋았던 점은 아래예요.\n${bullet(vBenefits)}\n\n${vHook}\n\n특히 ${target}이라면 공감할 부분이 많을 것 같아요. 저는 "${vProof}" 쪽이 제일 크게 느껴졌습니다.\n\n${benefit}\n${url}\n\n검색 키워드: ${topic}, 직장인 독서 루틴, 오디오 요약, 출퇴근 자기계발`,
+                () => `[제목]\n${pick(vTitleStyles.cafe)}\n\n[본문]\n혹시 책은 계속 사는데 읽지는 못하는 분 계신가요? 저는 딱 그랬습니다.\n\n퇴근하면 체력이 없고, 주말에는 밀린 일을 하다 보니 책이 계속 쌓이더라고요. 그래서 이번에는 책을 읽는 방식보다 "먼저 듣는 방식"으로 바꿔봤습니다.\n\n써본 건 ${topic}이고, 핵심은 ${message} 입니다.\n\n좋았던 포인트\n${numbered(vBenefits)}\n\n${vProof}. 그래서 완독을 못 해도 책과 멀어지는 느낌은 줄었습니다.\n\n${benefit}\n${url}\n\n${tone} 톤으로 적어봤고, 비슷한 고민 있는 분들은 참고해보세요.`,
+                () => `[제목]\n${pick(vTitleStyles.cafe)}\n\n[본문]\n짧게 후기 남깁니다.\n\n대상: ${target}\n상황: ${vPain}\n써본 것: ${topic}\n느낀 점: ${vProof}\n\n${message}\n\n제 기준에서는 ${vMoment}처럼 애매하게 뜨는 시간에 쓰기 좋았습니다. 긴 오디오북보다 가볍고, 단순 요약보다 루틴으로 이어지는 느낌이 있어요.\n\n추천 포인트\n${bullet(vBenefits, '•')}\n\n${benefit}\n${url}`
+            ],
+            blog: [
+                () => `[블로그 제목]\n${pick(vTitleStyles.blog)}\n\n[도입]\n바쁜 직장인에게 가장 부족한 건 의지가 아니라 반복 가능한 시간입니다. 저도 ${vPain} 때문에 독서 루틴이 자주 끊겼습니다.\n\n[사용해본 서비스]\n이번에 써본 건 ${topic}입니다. 핵심 메시지는 ${message}\n\n[좋았던 점]\n${numbered(vBenefits)}\n\n[추천 대상]\n${target}\n\n[마무리]\n${vHook} 실제로는 ${vProof}는 점이 좋았습니다.\n\n${benefit}\n${url}\n\n${vTags}`,
+                () => `[블로그 제목]\n${pick(vTitleStyles.blog)}\n\n독서를 다시 시작하고 싶다면 처음부터 완독을 목표로 잡지 않는 편이 더 현실적일 수 있습니다.\n\n저는 ${vMoment}에 ${topic}을 켜보면서 루틴을 바꿔봤습니다. ${message}\n\n왜 괜찮았나\n${bullet(vBenefits)}\n\n이 방식은 ${target}에게 특히 맞습니다. 긴 시간을 비우지 않아도 되고, 책을 고르기 전에 핵심 흐름을 먼저 볼 수 있기 때문입니다.\n\n개인적인 결론은 "${vProof}" 입니다.\n\n${benefit}\n${url}`,
+                () => `[블로그 제목]\n${pick(vTitleStyles.blog)}\n\n이번 글은 ${vAngle} 관점으로 적어봅니다.\n\n문제는 간단했습니다. ${vPain}. 그래서 책을 더 사기보다, 듣는 진입점을 먼저 만들기로 했습니다.\n\n사용한 서비스는 ${topic}이고, 핵심은 ${message}\n\n체감한 변화\n${numbered(vBenefits)}\n\n완벽한 독서 앱이라기보다 바쁜 하루 안에 책을 다시 끼워 넣는 도구에 가깝습니다.\n\n${benefit}\n${url}`
+            ],
+            instagram: [
+                () => `${pick(vTitleStyles.instagram)}\n\n책은 읽고 싶은데 시간이 없다면\n처음부터 완독을 목표로 잡지 않아도 됩니다.\n\n요즘 저는 ${vMoment}에 ${topic}을 켜고 있어요.\n\n${message}\n\n좋았던 점\n${bullet(vBenefits, '✓')}\n\n${target}이라면 한 번쯤 맞을 수 있습니다.\n\n${benefit}\n${url}\n\n${vTags}`,
+                () => `저장해두면 좋은 15분 루틴\n\n문제: ${vPain}\n해결: ${topic}으로 먼저 듣기\n핵심: ${message}\n\n써보니 ${vProof}.\n\n이런 분께 추천\n${bullet([target, '사놓은 책이 쌓여 있는 분', '출퇴근 시간을 그냥 보내는 게 아까운 분'], '•')}\n\n${benefit}\n${url}\n\n${vTags}`,
+                () => `책 못 읽는다고 자책하지 마세요.\n\n퇴근 후에 책을 못 펴는 건 이상한 일이 아닙니다.\n이미 하루 에너지를 다 썼을 가능성이 커요.\n\n그래서 저는 ${topic}을 ${vMoment}에 켜봤습니다.\n\n${message}\n\n결론: ${vProof}\n\n${benefit}\n${url}\n\n${vTags}`
+            ],
+            tiktok: [
+                () => `[0-2초]\n책 사놓고 안 읽는 직장인이라면 멈춰보세요.\n\n[3-7초]\n문제는 의지가 아니라 ${vPain}일 수 있습니다.\n\n[8-15초]\n저는 ${topic}을 ${vMoment}에 켜봤습니다.\n\n[16-25초]\n${message}\n\n[26-35초]\n좋았던 점은 ${vBenefits.slice(0, 3).join(', ')}.\n\n[CTA]\n${benefit}\n${url}`,
+                () => `[후킹]\n출퇴근 15분, 그냥 넘기면 일주일에 꽤 큽니다.\n\n[공감]\n퇴근하고 책 읽으려면 솔직히 너무 피곤하잖아요.\n\n[전환]\n그래서 ${topic}처럼 먼저 듣는 방식을 써봤습니다.\n\n[핵심]\n${message}\n\n[결론]\n${vProof}\n\n[마지막 자막]\n책 읽을 시간이 없다면, 듣는 루틴부터 시작해보세요.\n${url}`,
+                () => `[숏폼 대본]\n카메라 보고 한 문장:\n"책 못 읽는 사람에게 필요한 건 더 큰 목표가 아니라 더 작은 시작입니다."\n\n바로 이어서:\n${topic}은 ${message}\n\n화면 자막:\n${bullet(vBenefits, '•')}\n\n마무리:\n${target}이라면 ${benefit}\n${url}`
+            ],
+            threads: [
+                () => `책을 못 읽는 건 의지 문제가 아닐 수 있습니다.\n\n하루가 끝나면 이미 집중력이 바닥나 있으니까요. 저도 ${vPain} 때문에 책이 계속 쌓였습니다.\n\n그래서 ${topic}을 써봤습니다.\n\n${message}\n\n좋았던 점은 ${vProof}.\n\n${benefit}\n${url}\n\n${vTags}`,
+                () => `출퇴근 시간이 짧아 보여도 일주일로 모으면 꽤 큽니다.\n\n그 시간을 그냥 흘려보내지 않으려고 ${topic}을 켜봤습니다.\n\n${message}\n\n개인적으로 체감한 변화:\n${bullet(vBenefits)}\n\n${target}이라면 완독보다 먼저 듣는 루틴이 더 현실적일 수 있습니다.\n\n${url}`,
+                () => `완독을 목표로 잡으면 실패감이 먼저 옵니다.\n\n그래서 요즘은 "책 한 권 끝내기"보다 "${vMoment}에 15분 듣기"로 기준을 낮췄습니다.\n\n써본 건 ${topic}.\n${message}\n\n결론은 ${vProof}.\n\n${benefit}\n${url}`
+            ]
+        };
+        const vBody = pick(vFormats[platformId] || vFormats.cafe)();
+        const vTitle = pick(vTitleStyles[platformId] || vTitleStyles.cafe);
+        return {
+            id: `${platformId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            platform: platforms.find(p => p.id === platformId)?.label || platformId,
+            title: vTitle,
+            body: vBody
+        };
+        const dayHint = pick(['월요일 출근길', '퇴근길 지하철', '점심 먹고 남는 15분', '야근 끝나고 집 가는 길', '주말 아침 커피 마실 때']);
+        const proof = pick(['3일 써보고 계속 켜게 됐어요', '책 한 권을 시작하기 전 부담이 확 줄었어요', '출근길에 하나 듣고 나면 하루가 덜 흘러가는 느낌이에요', '사놓고 못 읽은 책을 다시 꺼내게 됐어요']);
+        const keywords = '출퇴근 자기계발, 직장인 독서 루틴, 오디오북 추천, 책 요약, 아카이뷰';
+        const templates = {
+            cafe: [
+                () => ({ title: '출퇴근길에 써봤는데 생각보다 괜찮아서 공유해요', body: `[제목]\n출퇴근길에 써봤는데 생각보다 괜찮아서 공유해요\n\n[본문]\n안녕하세요. 책은 좋아하는데 퇴근하면 체력이 없어서 사놓은 책만 쌓이는 직장인입니다.\n\n요즘 ${dayHint}에 ${topic}를 써보고 있는데, 생각보다 괜찮아서 공유해요. 광고처럼 엄청 거창한 앱이라기보다, ${message}으로 부담을 낮춰주는 쪽에 가깝습니다.\n\n저는 특히 "${proof}" 이 부분이 좋았어요. 책 한 권을 처음부터 끝까지 읽어야 한다는 압박이 아니라, 먼저 핵심을 듣고 나중에 읽을 책을 고르는 느낌이라 편했습니다.\n\n${target} 분들이면 공감하실 것 같아요. 자기계발 해야 하는 건 아는데, 퇴근 후 책상 앞에 앉는 건 진짜 쉽지 않잖아요.\n\n좋았던 점은\n1. 출퇴근 시간에 바로 듣기 좋음\n2. 15분 단위라 시작 장벽이 낮음\n3. 책 요약을 듣고 관심 있는 책만 골라볼 수 있음\n4. 기록이 남아서 루틴 만드는 맛이 있음\n\n${benefit}라서 가볍게 테스트해보기 좋았습니다.\n\n${url}\n\n검색 키워드: ${keywords}\n혹시 비슷한 오디오 요약 앱 써보신 분 있으면 추천도 부탁드려요 :)` }),
+                () => ({ title: '책 못 읽는 직장인분들 이거 한 번 써보세요', body: `[제목]\n책 못 읽는 직장인분들 이거 한 번 써보세요\n\n[본문]\n요즘 "올해는 책 좀 읽어야지" 생각만 하고 실제로는 거의 못 읽고 있었어요. 출근하면 바쁘고, 퇴근하면 지치고, 주말엔 밀린 잠부터 자게 되더라고요.\n\n그러다 ${topic}를 써봤는데 제 기준에서는 꽤 현실적인 방법이었습니다. 시간을 새로 만드는 게 아니라 이미 흘려보내던 출퇴근 15분을 쓰는 방식이라 부담이 덜했어요.\n\n핵심은 ${message}입니다. 긴 독서 시간을 확보하지 않아도 일단 책의 흐름을 먼저 잡을 수 있어서 좋았습니다.\n\n이런 분께 잘 맞을 것 같아요.\n- 출퇴근 시간이 아까운 직장인\n- 자기계발은 하고 싶은데 책 읽을 시간이 없는 분\n- 오디오북은 길어서 부담스러운 분\n- 사놓은 책이 계속 쌓이는 분\n\n개인적으로는 ${proof}\n\n${benefit}\n${url}\n\n#직장인자기계발 #출퇴근시간활용 #책요약 #오디오북추천 #아카이뷰` }),
+                () => ({ title: '광고 아니고 직접 써본 입장에서 괜찮았던 서비스', body: `[제목]\n광고 아니고 직접 써본 입장에서 괜찮았던 서비스\n\n[본문]\n책 읽어야 한다는 생각은 늘 있는데, 실제로 퇴근 후 책을 펴면 10분도 안 돼서 집중이 깨지는 편입니다.\n\n그래서 ${topic}를 써봤어요. 한마디로 말하면 "책을 완독하기 전 핵심을 먼저 듣는 서비스"에 가까웠습니다. ${message}이라서, 공부한다는 느낌보다 출퇴근길에 하나 챙겨 듣는 느낌이 강했어요.\n\n며칠 써보면서 좋았던 건 대단한 결심이 필요 없다는 점이었습니다. ${dayHint}처럼 원래 비는 시간에 켜면 되니까요.\n\n괜찮았던 부분\n✔ 책 선택 전 핵심 파악 가능\n✔ 15분이라 부담 적음\n✔ 이어듣기와 기록으로 루틴화 가능\n✔ ${target}에게 현실적임\n\n아직 오래 쓴 건 아니지만, 적어도 책 읽어야 한다는 부담은 조금 줄었습니다.\n\n${benefit}\n${url}\n\n관심 있는 분들은 참고해보세요. 검색은 "${keywords}" 쪽으로 보면 비슷한 정보 찾기 쉬울 것 같아요.` })
+            ],
+            blog: [
+                () => ({ title: '직장인 출퇴근 시간 활용법, 아카이뷰로 15분 지식 루틴 만들기', body: `[블로그 제목]\n직장인 출퇴근 시간 활용법: 아카이뷰로 15분 지식 루틴 만들기\n\n[도입]\n직장인 자기계발에서 가장 어려운 건 의지가 아니라 시간입니다. 퇴근 후 독서 시간을 만들겠다고 마음먹어도 회의, 야근, 피로가 겹치면 책을 펴는 것 자체가 부담이 됩니다.\n\n[사용해본 서비스]\n최근 ${topic}를 사용해봤습니다. 핵심은 ${message}입니다. 책을 처음부터 끝까지 읽기 전에 중요한 내용과 흐름을 오디오로 먼저 파악할 수 있어, 출퇴근 시간 활용법으로 꽤 현실적이었습니다.\n\n[좋았던 점]\n1. 출근길 15분에 하나씩 듣기 좋다\n2. 책 요약이라 완독 부담이 줄어든다\n3. 관심 있는 책을 고르는 기준이 생긴다\n4. 7일 챌린지로 독서 루틴을 확인할 수 있다\n\n[추천 대상]\n${target}이라면 특히 잘 맞습니다. 오디오북 추천을 찾고 있거나, 직장인 독서 루틴을 만들고 싶은 분에게도 괜찮습니다.\n\n[마무리]\n${proof}. 하루 15분도 일주일이면 꽤 쌓입니다.\n\n${benefit}\n${url}\n\n검색 키워드: ${keywords}` }),
+                () => ({ title: '책 읽을 시간이 없는 직장인을 위한 오디오 요약 후기', body: `[블로그 제목]\n책 읽을 시간이 없는 직장인을 위한 오디오 요약 후기\n\n책을 사고도 읽지 못하는 이유는 의지가 부족해서라기보다, 하루 에너지가 이미 바닥나 있기 때문일 때가 많습니다. 저도 퇴근 후 독서를 목표로 잡았다가 실패한 적이 많았습니다.\n\n그래서 이번에는 책을 읽는 방식이 아니라 듣는 방식으로 바꿔봤습니다. 사용한 서비스는 ${topic}입니다.\n\n[핵심 기능]\n${message}\n\n[실제로 좋았던 부분]\n출퇴근길에 이어폰만 꽂으면 바로 시작할 수 있다는 점이 가장 컸습니다. 긴 오디오북보다 짧고, 단순한 책 요약보다 루틴 관리가 들어가 있어서 계속 듣게 됩니다.\n\n[이런 사람에게 추천]\n- 직장인 자기계발을 시작하고 싶은 사람\n- 책 읽을 시간이 없는 사람\n- 출퇴근 시간을 그냥 보내는 게 아까운 사람\n- 오디오북 추천을 찾는 사람\n\n${benefit}\n${url}\n\n#아카이뷰 #책요약 #오디오요약 #직장인독서 #출퇴근자기계발` })
+            ],
+            instagram: [
+                () => ({ title: '책 못 읽는 직장인을 위한 15분 루틴', body: `책은 샀는데 아직 첫 장도 못 넘겼다면 📚\n저장해두고 퇴근길에 봐주세요.\n\n문제는 의지가 아니라\n"읽는 시간이 너무 늦게 온다"는 걸 수도 있어요.\n\n요즘 저는 ${topic}로\n${dayHint}에 짧게 듣고 있습니다.\n\n✅ ${message}\n✅ 15분이라 부담 적음\n✅ 이어폰만 있으면 바로 시작\n✅ 기록이 남아서 루틴 만들기 좋음\n\n${proof}\n\n${target}이라면 한 번쯤 써봐도 괜찮아요.\n\n${benefit}\n${url}\n\n#아카이뷰 #출퇴근루틴 #직장인자기계발 #책요약 #오디오북추천 #성장루틴` }),
+                () => ({ title: '출퇴근 시간이 아깝다면 이거', body: `출퇴근 시간 그냥 흘려보내기 아깝다면 🚇\n\n요즘 써보고 괜찮았던 것:\n${topic}\n\n책 한 권을 다 읽는 부담보다\n핵심을 먼저 듣는 방식이라\n생각보다 시작이 쉬웠어요.\n\n📌 좋은 점\n- 출근길에 하나 듣기 좋음\n- 퇴근길에 이어듣기 편함\n- 사놓은 책 고르는 데 도움 됨\n- 7일 챌린지로 계속 확인 가능\n\n${message}\n\n바쁜 직장인 독서 루틴 찾는 분들은 참고해보세요.\n\n${benefit}\n${url}\n\n#직장인루틴 #출퇴근시간활용 #아카이뷰 #오디오요약 #책추천` })
+            ],
+            tiktok: [
+                () => ({ title: '책 못 읽는 직장인 공감 숏폼', body: `[0-2초 훅]\n책은 사는데 읽지는 못하는 직장인? 저요 🙋‍♂️\n\n[3-7초 공감]\n퇴근하면 피곤하고, 주말엔 쉬고 싶고, 책은 계속 쌓이죠.\n\n[8-14초 전환]\n그래서 요즘 ${topic}를 ${dayHint}에 써보고 있어요.\n\n[15-24초 핵심]\n${message}\n책 전체를 읽기 전에 핵심을 먼저 잡을 수 있어서 시작이 훨씬 쉬웠습니다.\n\n[25-32초 추천]\n${target}이라면 부담 없이 테스트하기 좋습니다.\n\n[CTA]\n${benefit}\n${url}\n\n[화면 자막]\n출퇴근 15분, 그냥 흘려보내지 마세요 🚇` }),
+                () => ({ title: '출퇴근 15분 활용 릴스/틱톡 대본', body: `[첫 장면]\n지하철에서 멍 때리는 시간, 하루에 몇 분이나 되세요?\n\n[공감]\n저도 그 시간이 아까운데 막상 책은 못 읽겠더라고요.\n\n[해결]\n${topic}를 써보니까 ${proof}\n\n[핵심]\n${message}\n짧게 듣고, 핵심만 잡고, 기록까지 남깁니다.\n\n[마무리]\n책 읽을 시간이 없다면 읽는 루틴보다 듣는 루틴부터 시작해보세요.\n\n${benefit}\n${url}\n\n[추천 해시태그]\n#직장인자기계발 #출퇴근루틴 #책요약 #아카이뷰` })
+            ],
+            threads: [
+                () => ({ title: '책을 못 읽는 건 의지가 아니라 시간 설계 문제일 수 있습니다', body: `책을 못 읽는 건 의지가 약해서가 아니라, 읽는 시간이 항상 하루의 끝에 밀려 있어서일 수 있습니다.\n\n퇴근 후에는 이미 에너지가 거의 없으니까요.\n\n그래서 저는 ${topic}처럼 출퇴근 시간에 듣는 방식을 써봤습니다.\n\n${message}\n\n완독보다 먼저 "하루 15분 듣는 루틴"을 만드는 게 훨씬 현실적이었습니다.\n\n${proof}\n\n${benefit}\n${url}\n\n#직장인자기계발 #출퇴근루틴` }),
+                () => ({ title: '출퇴근 시간을 루틴으로 바꾸면 생기는 변화', body: `출퇴근 시간은 짧아 보여도 일주일로 보면 꽤 큽니다.\n\n문제는 그 시간이 너무 쉽게 흘러가 버린다는 점.\n\n요즘 ${topic}를 쓰는 이유도 그 시간이 아까워서입니다.\n\n좋았던 건 부담이 작다는 것. 하루 15분이면 시작할 수 있고, ${message}\n\n${target}에게는 꽤 현실적인 자기계발 방식이라고 느꼈습니다.\n\n${benefit}\n${url}` })
+            ]
+        };
+        const selected = pick(templates[platformId] || templates.cafe)();
+        return {
+            id: `${platformId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            platform: platforms.find(p => p.id === platformId)?.label || platformId,
+            title: selected.title,
+            body: selected.body
+        };
+    };
+
+    const generateFor = (platformId) => {
+        if (platformId === 'all') {
+            const batch = platforms.map(p => buildViralCopy(p.id));
+            setViralOutputs(prev => [...batch, ...prev].slice(0, 30));
+            return;
+        }
+        const next = buildViralCopy(platformId);
+        setViralOutputs(prev => [next, ...prev].slice(0, 30));
+    };
+
+    const copyText = (item) => {
+        navigator.clipboard.writeText(item.body).then(() => {
+            setCopiedKey(item.id);
+            setTimeout(() => setCopiedKey(''), 1600);
+        });
+    };
+
+    const updateField = (field, value) => setViralForm(prev => ({ ...prev, [field]: value }));
+
+    return (
+        <div className="space-y-8 max-w-6xl mx-auto">
+            <div className="flex items-center justify-between gap-6 flex-wrap">
+                <div className="flex items-center gap-4">
+                    <div className="size-14 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                        <span className="material-symbols-outlined text-white text-2xl">campaign</span>
+                    </div>
+                    <div>
+                        <h2 className="text-white text-2xl font-black tracking-tight">바이럴 글 생성기</h2>
+                        <p className="text-slate-500 text-sm">카페, 블로그, 인스타, 틱톡, 스레드에 올릴 홍보 글을 바로 만듭니다.</p>
+                    </div>
+                </div>
+                <button onClick={() => generateFor('all')} className="px-6 py-3 rounded-2xl bg-gold text-primary font-black text-sm shadow-lg shadow-gold/20 hover:scale-[1.02] transition-all">
+                    전체 플랫폼 생성
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8">
+                <div className="space-y-5">
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-4">
+                        <label className="text-white text-xs font-black uppercase tracking-widest">기본 정보</label>
+                        {[
+                            ['topic', '서비스/캠페인', '아카이뷰'],
+                            ['message', '핵심 메시지', '출퇴근 15분, 사놓고 못 읽은 책을 오디오 요약으로 끝내는 지식 루틴'],
+                            ['target', '타겟', '바쁜 직장인, 자기계발을 하고 싶지만 시간이 부족한 사람'],
+                            ['benefit', '혜택/CTA', '무료로 7일 챌린지 시작하기'],
+                            ['url', '링크', 'https://archiview.store/challenge'],
+                            ['tone', '톤', '직장인이 공감하기 쉬운 자연스러운 말투']
+                        ].map(([field, label, placeholder]) => (
+                            <div key={field} className="space-y-1.5">
+                                <p className="text-slate-400 text-xs font-bold">{label}</p>
+                                {field === 'message' || field === 'target' ? (
+                                    <textarea value={viralForm[field]} onChange={e => updateField(field, e.target.value)} rows={2}
+                                        placeholder={placeholder}
+                                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-orange-500/70 placeholder:text-slate-600" />
+                                ) : (
+                                    <input value={viralForm[field]} onChange={e => updateField(field, e.target.value)}
+                                        placeholder={placeholder}
+                                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500/70 placeholder:text-slate-600" />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 space-y-3">
+                        <p className="text-white text-xs font-black uppercase tracking-widest">플랫폼 선택</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            {platforms.map(platform => (
+                                <button key={platform.id} onClick={() => generateFor(platform.id)}
+                                    className={`rounded-2xl p-4 text-left bg-gradient-to-br ${platform.color} text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all`}>
+                                    <span className="material-symbols-outlined text-2xl mb-3 block">{platform.icon}</span>
+                                    <span className="font-black text-sm">{platform.label} 만들기</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {viralOutputs.length === 0 ? (
+                        <div className="min-h-[520px] bg-white/[0.03] border border-white/[0.08] rounded-3xl flex flex-col items-center justify-center text-center gap-3 p-10">
+                            <span className="material-symbols-outlined text-6xl text-slate-700">ads_click</span>
+                            <p className="text-white font-black text-xl">플랫폼 버튼을 누르면 글이 생성됩니다</p>
+                            <p className="text-slate-600 text-sm font-bold">카페/블로그/인스타/틱톡/스레드별 문체로 자동 구성합니다.</p>
+                        </div>
+                    ) : (
+                        viralOutputs.map(item => (
+                            <div key={item.id} className="bg-slate-900 border border-white/10 rounded-3xl overflow-hidden">
+                                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 bg-white/[0.03]">
+                                    <div>
+                                        <p className="text-orange-400 text-[11px] font-black uppercase tracking-widest">{item.platform}</p>
+                                        <h3 className="text-white font-black">{item.title}</h3>
+                                    </div>
+                                    <button onClick={() => copyText(item)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${copiedKey === item.id ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}>
+                                        {copiedKey === item.id ? '복사됨' : '복사'}
+                                    </button>
+                                </div>
+                                <pre className="whitespace-pre-wrap p-5 text-slate-200 text-sm leading-7 font-sans">{item.body}</pre>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 let _adminStorage = null;
 const getStorage = async () => {
     if (_adminStorage) return _adminStorage;
@@ -885,7 +1137,7 @@ export default function AdminDashboard() {
                 defaults = getBooksBySection('PHILOSOPHY');
                 break;
             case 'weekly_focus':
-                defaults = getBooksBySection('WEEKLY_FOCUS').slice(0, 5);
+                defaults = getBooksBySection('WEEKLY_FOCUS').slice(0, 60);
                 break;
             case 'weekly_viewed':
                 defaults = (popularList || []).slice(0, 5).map(toPopularBookItem);
@@ -1624,6 +1876,26 @@ export default function AdminDashboard() {
         }
         return { label: '미가입', color: 'text-slate-500 border-slate-700' };
     };
+
+    const getUserEmail = (user) => (
+        user.email ||
+        user.providerEmail ||
+        user.authEmail ||
+        user.loginEmail ||
+        user.accountEmail ||
+        ''
+    );
+
+    const getUserName = (user) => (
+        user.displayName ||
+        user.name ||
+        user.userName ||
+        user.nickname ||
+        getUserEmail(user)?.split('@')[0] ||
+        'GUEST USER'
+    );
+
+    const getUserPhoto = (user) => user.photoURL || user.photoUrl || user.avatar || user.profileImage || '';
 
     const handleUpdateCoverPath = async (bookId, path) => {
         try {
@@ -6234,7 +6506,7 @@ ${raw}`;
         'sales': '매출 관리',
         'payment': '결제 설정',
         'design': '🎨 디자인',
-        'cf-prompt': '🎬 CF 프롬프트'
+        'viral': '🔥 바이럴'
     };
 
     // If not authenticated, show password gate (must come before loading check)
@@ -6590,7 +6862,7 @@ ${raw}`;
                                     {realUsers.filter(u => {
                                         if (!memberSearch.trim()) return true;
                                         const q = memberSearch.toLowerCase();
-                                        return (u.displayName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                                        return getUserName(u).toLowerCase().includes(q) || getUserEmail(u).toLowerCase().includes(q);
                                     }).map((user) => {
                                         const membership = getMembershipStatus(user);
                                         return (
@@ -6599,11 +6871,11 @@ ${raw}`;
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-5">
                                                     <div className="size-16 rounded-2xl bg-slate-800 border-4 border-white/5 flex items-center justify-center text-slate-300 font-black text-2xl overflow-hidden group-hover:border-gold/50 transition-all">
-                                                        {user.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : user.displayName?.charAt(0)}
+                                                        {getUserPhoto(user) ? <img src={getUserPhoto(user)} alt="" className="w-full h-full object-cover" /> : getUserName(user)?.charAt(0)}
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <p className="text-white text-lg font-black leading-tight">{user.displayName || 'GUEST USER'}</p>
-                                                        <p className="text-slate-500 text-xs font-bold font-mono">{user.email}</p>
+                                                        <p className="text-white text-lg font-black leading-tight">{getUserName(user)}</p>
+                                                        <p className="text-slate-500 text-xs font-bold font-mono">{getUserEmail(user) || '이메일 없음'}</p>
                                                         <div className="flex items-center gap-2 pt-1">
                                                             <span className="text-[9px] font-black text-slate-600 uppercase bg-white/5 px-2 py-0.5 rounded">ID: {user.id?.substring(0, 10)}</span>
                                                             <span className="text-[9px] font-black text-slate-600 uppercase">Login: {user.lastLogin ? new Date(user.lastLogin.seconds * 1000).toLocaleDateString('ko-KR') : 'N/A'}</span>
@@ -9573,8 +9845,29 @@ ${raw}`;
                                         thumbnail: `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`,
                                         youtubeUrl: v.url || v.youtubeUrl || `https://www.youtube.com/watch?v=${v.id}`
                                     }));
+                                    const existingSnap = await getDoc(doc(db, 'site_config', curSection.dbKey));
+                                    if (existingSnap.exists()) {
+                                        const existing = existingSnap.data();
+                                        const existingBooks = Array.isArray(existing.books) ? existing.books : [];
+                                        const existingVideos = Array.isArray(existing.videos) ? existing.videos : [];
+                                        const willReduceBooks = existingBooks.length > booksToSave.length;
+                                        const willReduceVideos = existingVideos.length > payload.videos.length;
+
+                                        if (willReduceBooks || willReduceVideos) {
+                                            const ok = window.confirm(
+                                                `위클리포커스 기존 등록 수보다 적게 저장하려고 합니다.\n\n` +
+                                                `도서: ${existingBooks.length}개 → ${booksToSave.length}개\n` +
+                                                `유튜브: ${existingVideos.length}개 → ${payload.videos.length}개\n\n` +
+                                                `정말 줄여서 저장할까요? 취소하면 기존 등록을 보호합니다.`
+                                            );
+                                            if (!ok) {
+                                                setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));
+                                                return;
+                                            }
+                                        }
+                                    }
                                 }
-                                await setDoc(doc(db, 'site_config', curSection.dbKey), payload);
+                                await setDoc(doc(db, 'site_config', curSection.dbKey), payload, { merge: true });
                                 if (popularSubTab !== 'weekly_focus' && booksToSave.length !== booksToSaveRaw.length) {
                                     alert('비공개 도서는 자동 제외되어 저장되었습니다.');
                                 }
@@ -9584,7 +9877,7 @@ ${raw}`;
                             setSectionSaving(prev => ({ ...prev, [popularSubTab]: false }));
                         };
                         const addToList     = (book) => {
-                            if (book?.isPublic === false) {
+                            if (!isWeeklyFocusTab && book?.isPublic === false) {
                                 alert('비공개 도서는 인기아카이뷰에 추가할 수 없습니다.');
                                 return;
                             }
@@ -9623,7 +9916,7 @@ ${raw}`;
                                     if (typeof curSection.max === 'number' && next.length >= curSection.max) break;
                                     if (existing.has(id)) continue;
                                     const book = realBookMap.get(id);
-                                    if (!book || book.isPublic === false) continue;
+                                    if (!book || (!isWeeklyFocusTab && book.isPublic === false)) continue;
                                     next.push({
                                         id: book.id,
                                         title: book.title,
@@ -9667,7 +9960,7 @@ ${raw}`;
                                 const n = new Set(prev);
                                 for (const b of shown) {
                                     if (curList.some((c) => c.id === b.id)) continue;
-                                    if (b.isPublic === false) continue;
+                                    if (!isWeeklyFocusTab && b.isPublic === false) continue;
                                     n.add(b.id);
                                 }
                                 return n;
@@ -10080,8 +10373,8 @@ ${raw}`;
                                                             className="size-4 accent-amber-400 shrink-0 cursor-pointer"
                                                             checked={wfBookBulk.has(book.id)}
                                                             onChange={() => toggleWfBookBulkId(book.id)}
-                                                            disabled={registered || book.isPublic === false}
-                                                            title={registered ? '이미 등록됨' : book.isPublic === false ? '비공개' : '일괄 등록에 포함'}
+                                                            disabled={registered || (!isWeeklyFocusTab && book.isPublic === false)}
+                                                            title={registered ? '이미 등록됨' : (!isWeeklyFocusTab && book.isPublic === false) ? '비공개' : '일괄 등록에 포함'}
                                                         />
                                                     )}
                                                     <div className="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 border border-white/10">
@@ -10097,7 +10390,7 @@ ${raw}`;
                                                         )}
                                                     </div>
                                                     <button onClick={() => addToList(book)}
-                                                        disabled={registered || (typeof curSection.max === 'number' && curList.length >= curSection.max)}
+                                                        disabled={registered || (!isWeeklyFocusTab && book.isPublic === false) || (typeof curSection.max === 'number' && curList.length >= curSection.max)}
                                                         className="px-5 py-2.5 rounded-xl bg-gold/20 text-gold text-[11px] font-black border border-gold/30 hover:bg-gold hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">
                                                         {registered ? '등록됨' : '+ 추가'}
                                                     </button>
@@ -12421,8 +12714,8 @@ ${raw}`;
                         );
                     })()}
 
-                    {/* ── 🎬 CF 프롬프트 생성기 ─────────────────────────────────────── */}
-                    {activeTab === 'cf-prompt' && <CfPromptTab />}
+                    {/* ── 🔥 바이럴 글 생성기 ─────────────────────────────────────── */}
+                    {activeTab === 'viral' && <ViralTab />}
 </main>
 
                 {/* PC 환경에서는 하단 바를 숨기거나 다르게 처리 */}

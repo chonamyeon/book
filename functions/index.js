@@ -1,5 +1,6 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 const { GoogleAuth } = require('google-auth-library');
 const admin = require('firebase-admin');
@@ -7,6 +8,115 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 
 const GCP_TTS_KEY = defineSecret('GCP_TTS_KEY');
+// ── 신규 회원 가입 시 EmailJS로 관리자 알림 ──────────────────────────
+const EMAILJS_SERVICE_ID = 'service_noic2rv';
+const EMAILJS_TEMPLATE_ID = 'template_pwerkul';
+const EMAILJS_PUBLIC_KEY = 'jfYYJhpCupsAeKvAf';
+const ADMIN_NOTICE_EMAIL = 'gosipaa902@gmail.com';
+
+// ── 위클리포커스 보호: 60권/10영상 목록이 작은 목록으로 덮어써지는 사고 방지 ──
+exports.protectWeeklyFocus = onDocumentWritten(
+    { document: 'site_config/weekly_focus', region: 'asia-northeast3' },
+    async (event) => {
+        const beforeSnap = event.data?.before;
+        const afterSnap = event.data?.after;
+        if (!beforeSnap?.exists || !afterSnap?.exists) return;
+
+        const before = beforeSnap.data() || {};
+        const after = afterSnap.data() || {};
+        const beforeBooks = Array.isArray(before.books) ? before.books : [];
+        const afterBooks = Array.isArray(after.books) ? after.books : [];
+        const beforeVideos = Array.isArray(before.videos) ? before.videos : [];
+        const afterVideos = Array.isArray(after.videos) ? after.videos : [];
+
+        const booksReduced = beforeBooks.length >= 10 && afterBooks.length < beforeBooks.length;
+        const videosReduced = beforeVideos.length >= 3 && afterVideos.length < beforeVideos.length;
+        if (!booksReduced && !videosReduced) return;
+
+        console.warn(
+            `[protectWeeklyFocus] prevented reduction books ${beforeBooks.length}->${afterBooks.length}, videos ${beforeVideos.length}->${afterVideos.length}`
+        );
+
+        await afterSnap.ref.set({
+            books: beforeBooks,
+            videos: beforeVideos,
+            weeklyFocusGuardRestoredAt: admin.firestore.FieldValue.serverTimestamp(),
+            weeklyFocusGuardReason: `Prevented reduction books ${beforeBooks.length}->${afterBooks.length}, videos ${beforeVideos.length}->${afterVideos.length}`,
+        }, { merge: true });
+    }
+);
+
+exports.notifyNewUser = onDocumentWritten(
+    { document: 'users/{userId}', region: 'asia-northeast3' },
+    async (event) => {
+        const before = event.data?.before?.data() || {};
+        let data = event.data?.after?.data() || {};
+        if (!event.data?.after?.exists) return;
+
+        let authUser = null;
+        try {
+            authUser = await admin.auth().getUser(event.params.userId);
+        } catch (error) {
+            console.log(`[notifyNewUser] Auth user lookup skipped: ${event.params.userId} / ${error.code || error.message}`);
+        }
+
+        const enriched = {};
+        if (!data.email && authUser?.email) enriched.email = authUser.email;
+        if (!data.displayName && authUser?.displayName) enriched.displayName = authUser.displayName;
+        if (!data.photoURL && authUser?.photoURL) enriched.photoURL = authUser.photoURL;
+        if (Object.keys(enriched).length) {
+            await event.data.after.ref.set({
+                ...enriched,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            data = { ...data, ...enriched };
+        }
+
+        const email = data.email || authUser?.email || '';
+        if (!email) return;
+        if (data.newUserEmailNotified) return;
+        if (before.email === email && before.newUserEmailNotifyError) return;
+        if (before.email === email && before.newUserEmailNotified) return;
+
+        const displayName = data.displayName || data.name || authUser?.displayName || email.split('@')[0] || '(이름 없음)';
+        const joinedAt = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        try {
+            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: EMAILJS_SERVICE_ID,
+                    template_id: EMAILJS_TEMPLATE_ID,
+                    user_id: EMAILJS_PUBLIC_KEY,
+                    template_params: {
+                        from_name: 'Archiview 회원 알림',
+                        from_email: email,
+                        to_email: ADMIN_NOTICE_EMAIL,
+                        subject: `[아카이뷰 신규가입] ${displayName}`,
+                        message: `새 회원이 가입했습니다.\n\n이름: ${displayName}\n이메일: ${email}\n가입일시: ${joinedAt}\nUID: ${event.params.userId}`,
+                    },
+                }),
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`EmailJS ${response.status}: ${errorText}`);
+            }
+            console.log(`[notifyNewUser] EmailJS 발송 완료: ${email} -> ${ADMIN_NOTICE_EMAIL}`);
+
+            await event.data.after.ref.set({
+                newUserEmailNotified: true,
+                newUserEmailNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+                newUserEmailNotifyError: admin.firestore.FieldValue.delete(),
+            }, { merge: true });
+        } catch (error) {
+            console.error(`[notifyNewUser] EmailJS 발송 실패: ${error.code || error.message}`);
+            await event.data.after.ref.set({
+                newUserEmailNotifyError: error.code || error.message || 'send_failed',
+                newUserEmailNotifyErrorAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+        }
+    }
+);
 
 // ── 출퇴근 알림 스케줄러 (매 분 실행, KST 기준) ──────────────────────
 exports.sendCommuteAlerts = onSchedule(

@@ -3,5 +3,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /login
 
 Sitemap: https://archiview.store/sitemap.xml
+Sitemap: https://archiview.store/rss.xml

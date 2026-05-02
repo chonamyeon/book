@@ -12,17 +12,57 @@ export default function Login() {
     const [isLoading, setIsLoading] = useState(true);
     const googleBtnRef = useRef(null);
 
+    const finishLogin = () => {
+        const redirectTo = sessionStorage.getItem('loginRedirect');
+        if (redirectTo) {
+            sessionStorage.removeItem('loginRedirect');
+            navigate(redirectTo, { replace: true });
+        } else {
+            navigate('/profile', { replace: true });
+        }
+    };
+
+    const syncUserProfile = async (user) => {
+        if (!user) return false;
+        const { db } = await import('../firebase');
+        const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+
+        const safeKey = (user.email || '').replace(/[.#$\[\]]/g, '_');
+        const blockedSnap = await getDoc(doc(db, 'deletedUsers', safeKey));
+        if (blockedSnap.exists()) {
+            await import('firebase/auth').then(({ signOut }) => signOut(auth));
+            alert('탈퇴된 계정입니다. 동일한 구글 계정으로는 재가입이 불가능합니다.');
+            return false;
+        }
+
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        const updates = {
+            displayName: user.displayName || user.email?.split('@')[0] || '회원',
+            name: user.displayName || user.email?.split('@')[0] || '회원',
+            email: user.email,
+            photoURL: user.photoURL,
+            lastLogin: serverTimestamp(),
+            status: '활동중',
+        };
+        const isNewUser = !snap.exists() || !snap.data().trialStartDate;
+        if (isNewUser) {
+            updates.trialStartDate = serverTimestamp();
+            updates.isPremium = false;
+        }
+        await setDoc(userRef, updates, { merge: true });
+        if (isNewUser && window.fbq) {
+            window.fbq('track', 'CompleteRegistration', { method: 'Google' });
+        }
+        return true;
+    };
+
     useEffect(() => {
         // 1. Check for redirect result (브라우저 redirect flow)
-        getRedirectResult(auth).then((result) => {
+        getRedirectResult(auth).then(async (result) => {
             if (result) {
-                const redirectTo = sessionStorage.getItem('loginRedirect');
-                if (redirectTo) {
-                    sessionStorage.removeItem('loginRedirect');
-                    navigate(redirectTo, { replace: true });
-                } else {
-                    navigate('/profile', { replace: true });
-                }
+                const synced = await syncUserProfile(result.user);
+                if (synced) finishLogin();
             }
             // result 없으면(= redirect 아님) 로딩 해제는 onAuthStateChanged에서 처리
         }).catch((error) => {
@@ -55,48 +95,12 @@ export default function Login() {
             if (user) {
                 // Save/Update user profile in Firestore
                 try {
-                    const { db } = await import('../firebase');
-                    const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
-
-                    // 탈퇴 블랙리스트 체크
-                    const safeKey = (user.email || '').replace(/[.#$\[\]]/g, '_');
-                    const blockedSnap = await getDoc(doc(db, 'deletedUsers', safeKey));
-                    if (blockedSnap.exists()) {
-                        await import('firebase/auth').then(({ signOut }) => signOut(auth));
-                        alert('탈퇴된 계정입니다. 동일한 구글 계정으로는 재가입이 불가능합니다.');
-                        return;
-                    }
-
-                    const userRef = doc(db, "users", user.uid);
-                    const snap = await getDoc(userRef);
-                    const updates = {
-                        displayName: user.displayName,
-                        email: user.email,
-                        photoURL: user.photoURL,
-                        lastLogin: serverTimestamp(),
-                        status: '활동중',
-                    };
-                    // 첫 로그인인 경우에만 trialStartDate 설정
-                    const isNewUser = !snap.exists() || !snap.data().trialStartDate;
-                    if (isNewUser) {
-                        updates.trialStartDate = serverTimestamp();
-                        updates.isPremium = false;
-                    }
-                    await setDoc(userRef, updates, { merge: true });
-                    // Meta Pixel: 신규 회원가입 이벤트
-                    if (isNewUser && window.fbq) {
-                        window.fbq('track', 'CompleteRegistration', { method: 'Google' });
-                    }
+                    const synced = await syncUserProfile(user);
+                    if (!synced) return;
                 } catch (error) {
                     console.error("Error updating user profile:", error);
                 }
-                const redirectTo = sessionStorage.getItem('loginRedirect');
-                if (redirectTo) {
-                    sessionStorage.removeItem('loginRedirect');
-                    navigate(redirectTo, { replace: true });
-                } else {
-                    navigate('/profile', { replace: true });
-                }
+                finishLogin();
             } else {
                 initGoogle();
             }
@@ -110,47 +114,8 @@ export default function Login() {
         try {
             const credential = GoogleAuthProvider.credential(response.credential);
             const userCredential = await signInWithCredential(auth, credential);
-            const user = userCredential.user;
-
-            // Sync with Firestore
-            const { db } = await import('../firebase');
-            const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
-
-            // 탈퇴 블랙리스트 체크
-            const safeKey = (user.email || '').replace(/[.#$\[\]]/g, '_');
-            const blockedSnap = await getDoc(doc(db, 'deletedUsers', safeKey));
-            if (blockedSnap.exists()) {
-                await import('firebase/auth').then(({ signOut }) => signOut(auth));
-                setIsLoading(false);
-                alert('탈퇴된 계정입니다. 동일한 구글 계정으로는 재가입이 불가능합니다.');
-                return;
-            }
-            const userRef = doc(db, "users", user.uid);
-            const snap = await getDoc(userRef);
-            const updates = {
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: serverTimestamp(),
-            };
-            const isNewUser = !snap.exists() || !snap.data().trialStartDate;
-            if (isNewUser) {
-                updates.trialStartDate = serverTimestamp();
-                updates.isPremium = false;
-            }
-            await setDoc(userRef, updates, { merge: true });
-            // Meta Pixel: 신규 회원가입 이벤트
-            if (isNewUser && window.fbq) {
-                window.fbq('track', 'CompleteRegistration', { method: 'Google' });
-            }
-
-            const redirectTo = sessionStorage.getItem('loginRedirect');
-            if (redirectTo) {
-                sessionStorage.removeItem('loginRedirect');
-                navigate(redirectTo, { replace: true });
-            } else {
-                navigate('/profile', { replace: true });
-            }
+            const synced = await syncUserProfile(userCredential.user);
+            if (synced) finishLogin();
         } catch (error) {
             console.error("Auth Fail:", error);
             setIsLoading(false);
@@ -222,7 +187,8 @@ export default function Login() {
                                     const result = await loginWithGoogleRedirect();
                                     // PWA popup 방식이면 result가 즉시 반환됨
                                     if (result?.user) {
-                                        navigate('/profile', { replace: true });
+                                        const synced = await syncUserProfile(result.user);
+                                        if (synced) finishLogin();
                                     }
                                     // redirect 방식이면 페이지가 이동하므로 여기 도달 안 함
                                 } catch (error) {

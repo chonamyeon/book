@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-static-seo-pages.mjs && node scripts/generate-rss.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "vite build && firebase deploy --only hosting",
+    "indexing:dry": "node scripts/google-indexing-submit.mjs",
+    "indexing:submit": "node scripts/google-indexing-submit.mjs --submit",
     "test:today": "node scripts/verify-today.mjs",
     "verify:notify": "node scripts/verify-notification-inline.mjs"
   },
