@@ -58,5 +58,10 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/((?!.*\\.[a-zA-Z0-9]{1,5}$).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
