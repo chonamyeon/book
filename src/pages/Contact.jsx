@@ -53,7 +53,37 @@ export default function Contact() {
           </a>
         </section>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5 rounded-lg border border-slate-200 p-6">
+        {/* FAQ */}
+        <section className="mt-10">
+          <h2 className="text-lg font-black text-slate-900 mb-4">자주 묻는 질문</h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: '콘텐츠의 내용이 사실과 다른 것 같아요.',
+                a: '콘텐츠 정정 요청은 아래 이메일 또는 문의 폼으로 보내주세요. 해당 도서명과 수정이 필요한 내용을 명시해 주시면 편집팀이 검토 후 신속하게 반영하겠습니다.',
+              },
+              {
+                q: '제 책 또는 콘텐츠가 무단으로 사용된 것 같아요.',
+                a: 'Whiteboard는 저작권을 엄격히 준수합니다. 저작권 관련 문의는 이메일로 보내주시면 24시간 이내에 확인하고 조치합니다.',
+              },
+              {
+                q: '광고 또는 제휴 문의는 어떻게 하나요?',
+                a: '광고 및 콘텐츠 제휴 문의는 gosipass902@gmail.com으로 제안서와 함께 보내주세요. 영업일 기준 3일 이내 회신드립니다.',
+              },
+              {
+                q: '특정 도서 리뷰 요청이 가능한가요?',
+                a: '독자 여러분의 도서 추천은 언제나 환영합니다. 문의 폼에 추천 도서명과 이유를 남겨주시면 편집팀 검토 후 콘텐츠 제작을 검토합니다.',
+              },
+            ].map(({ q, a }) => (
+              <div key={q} className="rounded-lg border border-slate-200 p-5">
+                <p className="text-sm font-black text-slate-900">Q. {q}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">A. {a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <form onSubmit={handleSubmit} className="mt-10 space-y-5 rounded-lg border border-slate-200 p-6">
           <div>
             <label htmlFor="contact-name" className="block text-xs font-black uppercase tracking-widest text-slate-500">
               이름

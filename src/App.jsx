@@ -86,7 +86,7 @@ const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
 const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
 const Terms         = lazyWithRetry(() => import('./pages/Terms'));
 const Disclaimer    = lazyWithRetry(() => import('./pages/Disclaimer'));
-const Test4         = lazyWithRetry(() => import('./pages/Test4'));
+const Guide         = lazyWithRetry(() => import('./pages/Guide'));
 
 
 // 페이지 로딩 스피너
@@ -144,7 +144,7 @@ export default function App() {
                   <Route path="/review-board/:id" element={<SidebarLayout><MobileLayout><ReviewBoardDetail /></MobileLayout></SidebarLayout>} />
                   <Route path="/story/:id" element={<StaticReview />} />
                   <Route path="/reading-notes" element={<SidebarLayout><MobileLayout><ReadingNotes /></MobileLayout></SidebarLayout>} />
-                  <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
+                  <Route path="/guide" element={<SidebarLayout><MobileLayout><Guide /></MobileLayout></SidebarLayout>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

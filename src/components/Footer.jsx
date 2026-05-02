@@ -22,6 +22,7 @@ export default function Footer() {
 
         <nav className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3" aria-label="사이트 정보">
           <Link to="/about" className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600">About</Link>
+          <Link to="/guide" className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600">Guide</Link>
           <Link to="/contact" className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600">Contact</Link>
           <Link to="/privacy" className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600">Privacy</Link>
           <Link to="/terms" className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600">Terms</Link>
