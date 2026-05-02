@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import TopNavigation from '../../components/TopNavigation';
+import AdSenseAd from '../../components/AdSenseAd';
 import { adsenseBooks } from '../../data/adsense/books';
 import { bookInsightById } from '../../data/bookInsights';
 import { ensureHtml, getAdminEbook, resolveEbookContent, stripHtml } from '../../utils/ebookContent';
@@ -282,6 +283,9 @@ export default function StaticReview() {
               </div>
             )}
           </article>
+
+          {/* 광고: 본문 끝 */}
+          <AdSenseAd className="my-10" />
 
           {showDetails && <FaqSection faq={faq} />}
 

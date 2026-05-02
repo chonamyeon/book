@@ -13,6 +13,7 @@ import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
 import { availableAudio } from '../data/availableAudio';
 import { adsenseBooks, ADSENSE_CATEGORIES } from '../data/adsense/books';
+import AdSenseAd from '../components/AdSenseAd';
 import { prefetchStory } from './AdSense/StaticReview';
 import KakaoAdFit from '../components/KakaoAdFit';
 
@@ -408,6 +409,9 @@ export default function Home() {
                             </div>
                         </div>
 
+                        {/* 광고 */}
+                        <AdSenseAd className="mb-8" />
+
                         {/* Section Header */}
                         <div id="book-list" className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
                             <div className="flex items-center gap-3">
@@ -489,6 +493,9 @@ export default function Home() {
                                 </Link>
                             </div>
                         )}
+
+                        {/* 광고 */}
+                        <AdSenseAd className="mt-8 mb-4" />
 
                         <div className="mt-6 pb-24">
                             <Footer />
