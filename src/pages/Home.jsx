@@ -380,8 +380,8 @@ export default function Home() {
                             </div>
                         </div>
 
-                        {/* 광고 */}
-                        <AdSenseAd className="mb-8" />
+                        {/* 광고 - 가로형 */}
+                        <AdSenseAd slot="8272784441" className="mb-8" />
 
                         {/* Section Header */}
                         <div id="book-list" className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
