@@ -14,6 +14,8 @@ import BookCardActions from '../components/BookCardActions';
 import { availableAudio } from '../data/availableAudio';
 import { adsenseBooks, ADSENSE_CATEGORIES } from '../data/adsense/books';
 import AdSenseAd from '../components/AdSenseAd';
+import LeftSidebar from '../components/LeftSidebar';
+import RightSidebar from '../components/RightSidebar';
 import { prefetchStory } from './AdSense/StaticReview';
 import KakaoAdFit from '../components/KakaoAdFit';
 
@@ -348,48 +350,17 @@ export default function Home() {
             <div className="flex pt-16 min-h-screen">
 
                 {/* Left Sidebar */}
-                <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 p-6 flex flex-col gap-y-3 bg-white border-r border-slate-200 hidden lg:flex overflow-y-auto">
-                    <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">카테고리</div>
-                    <nav className="flex flex-col gap-y-0.5">
-                        {sideNavItems.map((item) => {
-                            const isActive = activeNav === item.id;
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        setActiveNav(item.id);
-                                        if (item.id === 'NOW') window.scrollTo({ top: 0, behavior: 'smooth' });
-                                        else {
-                                            const el = document.getElementById('book-list');
-                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }
-                                    }}
-                                    className={`flex items-center gap-3 py-2 px-3 rounded-md transition-all text-left w-full ${
-                                        isActive
-                                            ? 'text-slate-900 font-semibold bg-slate-100 border-r-2 border-slate-900'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                                    }`}
-                                >
-                                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                                    <span className="text-[13px]">{item.label}</span>
-                                </button>
-                            );
-                        })}
-                    </nav>
-
-                    <div className="mt-4">
-                        <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-1">실시간 인기 키워드</div>
-                        <div className="flex flex-col gap-y-2">
-                            {trendingKeywords.map((kw, i) => (
-                                <div key={i} className="flex items-center gap-2 px-1 cursor-pointer hover:text-blue-500 transition-colors">
-                                    <span className={`font-bold text-xs w-4 ${i === 0 ? 'text-blue-500' : 'text-slate-400'}`}>{i + 1}</span>
-                                    <span className="truncate text-[13px] text-slate-600">{kw}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                </aside>
+                <LeftSidebar
+                    activeNav={activeNav}
+                    onNavChange={(id) => {
+                        setActiveNav(id);
+                        if (id === 'NOW') window.scrollTo({ top: 0, behavior: 'smooth' });
+                        else {
+                            const el = document.getElementById('book-list');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }}
+                />
 
                 {/* Main Content */}
                 <main className="flex-1 lg:ml-64 xl:mr-72 bg-white min-h-screen">
@@ -504,47 +475,7 @@ export default function Home() {
                 </main>
 
                 {/* Right Sidebar */}
-                <aside className="hidden xl:block w-72 p-6 border-l border-slate-200 h-[calc(100vh-64px)] fixed right-0 top-16 overflow-y-auto bg-white">
-                    <div className="mb-8">
-                        <h4 className="text-[15px] font-bold mb-4 flex items-center gap-2 text-slate-900">
-                            <span className="material-symbols-outlined text-blue-500 text-[20px]">trending_up</span> 인기 인사이트
-                        </h4>
-                        <div className="space-y-4">
-                            {adsenseBooks.filter(b => b.fullReview).slice(0, 5).map((item, i) => (
-                                <Link
-                                    key={item.id}
-                                    to={`/story/${item.id}`}
-                                    className="group cursor-pointer block"
-                                >
-                                    <div className={`text-[11px] font-bold mb-1 ${i === 0 ? 'text-blue-500' : 'text-slate-400'}`}>BEST {i + 1}</div>
-                                    <h5 className="text-[13px] font-bold text-slate-700 group-hover:text-blue-600 truncate transition-colors">{item.title}</h5>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[11px] text-slate-400">{item.author}</span>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mb-5">
-                        <h4 className="text-[11px] font-bold text-blue-600 mb-2 uppercase tracking-wider">이용자 리뷰</h4>
-                        <p className="text-[12px] text-slate-600 leading-relaxed italic">
-                            "{userReviews[reviewIndex].text}"
-                        </p>
-                        <p className="text-[11px] text-blue-500 font-bold mt-2">— {userReviews[reviewIndex].name}</p>
-                    </div>
-
-                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <h4 className="text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider">서비스 안내</h4>
-                        <p className="text-[12px] text-slate-500 leading-relaxed">
-                            Whiteboard는 도서 원문을 낭독하지 않으며, 각 도서의 핵심 철학을 분석한 독창적인 2차 창작물을 제공합니다.
-                        </p>
-                        <div className="flex flex-wrap gap-3 mt-3">
-                            <Link to="/about" className="text-[11px] text-blue-500 hover:underline">서비스 소개</Link>
-                            <Link to="/privacy" className="text-[11px] text-blue-500 hover:underline">개인정보처리방침</Link>
-                        </div>
-                    </div>
-                </aside>
+                <RightSidebar />
             </div>
 
             <BottomNavigation />

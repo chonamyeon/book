@@ -8,6 +8,7 @@ import PodcastScriptModal from './components/PodcastScriptModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import CookieConsent from './components/CookieConsent';
+import SidebarLayout from './components/SidebarLayout';
 
 // 청크 로드 실패 시 자동 새로고침 (시간 기반 1회) + 오류 fallback
 const lazyWithRetry = (factory) =>
@@ -121,28 +122,28 @@ export default function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<MobileLayout><Home /></MobileLayout>} />
-                  <Route path="/editorial" element={<MobileLayout><Editorial /></MobileLayout>} />
-                  <Route path="/result" element={<ProtectedRoute><MobileLayout><Result /></MobileLayout></ProtectedRoute>} />
-                  <Route path="/celebrity/:id" element={<MobileLayout><Celebrity /></MobileLayout>} />
-                  <Route path="/celebrity" element={<MobileLayout><Celebrity /></MobileLayout>} />
-                  <Route path="/quiz" element={<MobileLayout><Quiz /></MobileLayout>} />
-                  <Route path="/library" element={<MobileLayout><Library /></MobileLayout>} />
-                  <Route path="/profile" element={<ProtectedRoute><MobileLayout><Profile /></MobileLayout></ProtectedRoute>} />
-                  <Route path="/membership" element={<MobileLayout><Membership /></MobileLayout>} />
-                  <Route path="/category/:id" element={<MobileLayout><CategoryBooks /></MobileLayout>} />
+                  <Route path="/editorial" element={<SidebarLayout><MobileLayout><Editorial /></MobileLayout></SidebarLayout>} />
+                  <Route path="/result" element={<ProtectedRoute><SidebarLayout><MobileLayout><Result /></MobileLayout></SidebarLayout></ProtectedRoute>} />
+                  <Route path="/celebrity/:id" element={<SidebarLayout><MobileLayout><Celebrity /></MobileLayout></SidebarLayout>} />
+                  <Route path="/celebrity" element={<SidebarLayout><MobileLayout><Celebrity /></MobileLayout></SidebarLayout>} />
+                  <Route path="/quiz" element={<SidebarLayout><MobileLayout><Quiz /></MobileLayout></SidebarLayout>} />
+                  <Route path="/library" element={<SidebarLayout><MobileLayout><Library /></MobileLayout></SidebarLayout>} />
+                  <Route path="/profile" element={<ProtectedRoute><SidebarLayout><MobileLayout><Profile /></MobileLayout></SidebarLayout></ProtectedRoute>} />
+                  <Route path="/membership" element={<SidebarLayout><MobileLayout><Membership /></MobileLayout></SidebarLayout>} />
+                  <Route path="/category/:id" element={<SidebarLayout><MobileLayout><CategoryBooks /></MobileLayout></SidebarLayout>} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/login" element={<MobileLayout><Login /></MobileLayout>} />
-                  <Route path="/about" element={<MobileLayout><About /></MobileLayout>} />
-                  <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
-                  <Route path="/privacy-policy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
-                  <Route path="/terms" element={<MobileLayout><Terms /></MobileLayout>} />
-                  <Route path="/disclaimer" element={<MobileLayout><Disclaimer /></MobileLayout>} />
-                  <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
-                  <Route path="/review/:id" element={<ProtectedRoute><MobileLayout><ReviewDetail /></MobileLayout></ProtectedRoute>} />
-                  <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />
-                  <Route path="/review-board/:id" element={<MobileLayout><ReviewBoardDetail /></MobileLayout>} />
+                  <Route path="/about" element={<SidebarLayout><MobileLayout><About /></MobileLayout></SidebarLayout>} />
+                  <Route path="/privacy" element={<SidebarLayout><MobileLayout><PrivacyPolicy /></MobileLayout></SidebarLayout>} />
+                  <Route path="/privacy-policy" element={<SidebarLayout><MobileLayout><PrivacyPolicy /></MobileLayout></SidebarLayout>} />
+                  <Route path="/terms" element={<SidebarLayout><MobileLayout><Terms /></MobileLayout></SidebarLayout>} />
+                  <Route path="/disclaimer" element={<SidebarLayout><MobileLayout><Disclaimer /></MobileLayout></SidebarLayout>} />
+                  <Route path="/contact" element={<SidebarLayout><MobileLayout><Contact /></MobileLayout></SidebarLayout>} />
+                  <Route path="/review/:id" element={<ProtectedRoute><SidebarLayout><MobileLayout><ReviewDetail /></MobileLayout></SidebarLayout></ProtectedRoute>} />
+                  <Route path="/review-board" element={<SidebarLayout><MobileLayout><ReviewBoard /></MobileLayout></SidebarLayout>} />
+                  <Route path="/review-board/:id" element={<SidebarLayout><MobileLayout><ReviewBoardDetail /></MobileLayout></SidebarLayout>} />
                   <Route path="/story/:id" element={<StaticReview />} />
-                  <Route path="/reading-notes" element={<MobileLayout><ReadingNotes /></MobileLayout>} />
+                  <Route path="/reading-notes" element={<SidebarLayout><MobileLayout><ReadingNotes /></MobileLayout></SidebarLayout>} />
                   <Route path="/test4" element={<MobileLayout><Test4 /></MobileLayout>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
