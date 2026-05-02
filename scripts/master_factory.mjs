@@ -37,7 +37,7 @@ async function generateScript(book) {
     const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 8000,
-        system: `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
+        system: `당신은 Whiteboard 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
 이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
 - 화자는 제임스(남)와 스텔라(여) 두 명입니다.
 - 두 화자가 자연스럽게 대화하며 책의 핵심 내용을 전달합니다.
@@ -59,7 +59,7 @@ async function generateScript(book) {
     let script = JSON.parse(text.substring(jsonStart, jsonEnd));
 
     const intro = [
-        { speaker: "제임스", text: `안녕하세요! 아카이뷰 에디토리얼의 제임스입니다. 오늘 저희가 살펴볼 도서는 바로 '${book.title}'입니다.` },
+        { speaker: "제임스", text: `안녕하세요! Whiteboard 에디토리얼의 제임스입니다. 오늘 저희가 살펴볼 도서는 바로 '${book.title}'입니다.` },
         { speaker: "스텔라", text: `반갑습니다, 스텔라입니다. ${book.celeb}의 이 작품, 오늘 정말 기대되는데요. 바로 시작해보겠습니다.` }
     ];
     return [...intro, ...script];
@@ -135,7 +135,7 @@ async function sendEmail(bookTitle) {
     });
     try {
         await transporter.sendMail({
-            from: 'Archiview Factory',
+            from: 'Whiteboard Factory',
             to: 'gosipass902@gmail.com',
             subject: `[완료 보고] ${bookTitle} 연동 완료`,
             text: `${bookTitle} 도서의 팟캐스트 생성이 완료되어 실서버에 연동되었습니다.`

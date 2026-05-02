@@ -88,7 +88,7 @@ async function main() {
     console.log('  Change status back to "pending" to retry.');
   }
   console.log('\nNext steps:');
-  console.log('  1. firebase deploy --only hosting');
+  console.log('  1. npm run deploy');
   console.log('  2. Admin dashboard -> sync scripts');
   console.log('='.repeat(55) + '\n');
 }

@@ -1,50 +1,56 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
 
-export default function TopNavigation({ title, type = 'main' }) {
-    const navigate = useNavigate();
-    const { user } = useAuth();
+export default function TopNavigation({ searchTerm, setSearchTerm }) {
+  const location = useLocation();
 
-    return (
-        <nav className="sticky top-0 z-50 w-full bg-[#090b10] border-b border-white/5 flex items-center justify-between px-6 py-5" style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))', transform: 'translate3d(0, 0, 0)', willChange: 'transform' }}>
-            <div className="flex items-center gap-4">
-                {type === 'sub' ? (
-                    <button onClick={() => navigate(-1)} className="text-white flex items-center justify-center transition-transform active:scale-90">
-                        <span className="material-symbols-outlined text-2xl font-bold">arrow_back_ios_new</span>
-                    </button>
-                ) : (
-                    <div className="text-gold flex items-center justify-center">
-                        <span className="material-symbols-outlined text-3xl">menu_book</span>
-                    </div>
-                )}
-            </div>
+  const navItems = [
+    { path: '/', label: '홈' },
+    { path: '/review-board', label: '리뷰' },
+    { path: '/library', label: '서재' },
+    { path: '/about', label: '소개' },
+    { path: '/contact', label: '문의' },
+  ];
 
-            <Link to="/" className="flex-1 transition-opacity active:opacity-70 group flex justify-center" aria-label="Archiview 홈">
-                <div className="flex items-center gap-[7px]">
-                    {/* 🔊 Gray Waveform Graphic Logo */}
-                    <div className="flex items-end h-[18px] gap-[2px] mr-1 pb-[2px]" aria-hidden="true">
-                        <motion.div animate={{ height: [8, 12, 8] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [12, 16, 12] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut", delay: 0.1 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [16, 20, 16] }} transition={{ repeat: Infinity, duration: 0.9, ease: "easeInOut", delay: 0.2 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                        <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-sm" />
-                    </div>
-                    <span className="text-white uppercase tracking-[-0.03em] font-black text-[18px] leading-none mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
-                </div>
-            </Link>
+  return (
+    <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="flex w-full items-center gap-4 px-4 md:px-8">
+        <Link to="/" className="flex shrink-0 items-center gap-2 no-underline" aria-label="Whiteboard 홈">
+          <span className="flex h-[18px] items-end gap-[3px]" aria-hidden="true">
+            <span className="h-2 w-[3px] rounded-sm bg-blue-300" />
+            <span className="h-[18px] w-[3px] rounded-sm bg-blue-600" />
+            <span className="h-3 w-[3px] rounded-sm bg-blue-400" />
+            <span className="h-4 w-[3px] rounded-sm bg-blue-500" />
+          </span>
+          <span className="text-base font-black tracking-tight text-slate-900">Whiteboard</span>
+        </Link>
 
-            <div className="flex items-center justify-end">
-                <Link to="/profile" className="flex size-10 items-center justify-center rounded-full bg-white/5 text-gold border border-gold/30 shadow-sm transition-all active:scale-95 overflow-hidden">
-                    {user ? (
-                        <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="material-symbols-outlined text-2xl">person</span>
-                    )}
-                </Link>
-            </div>
+        <nav className="hidden flex-1 items-center justify-center gap-7 md:flex" aria-label="주요 메뉴">
+          {navItems.map((item) => {
+            const active = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`text-sm font-bold no-underline ${active ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
-    );
-}
 
+        <div className="ml-auto hidden items-center sm:flex">
+          <label className="sr-only" htmlFor="site-search">검색</label>
+          <input
+            id="site-search"
+            className="w-44 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            placeholder="책 제목 검색"
+            value={searchTerm || ''}
+            onChange={(event) => setSearchTerm && setSearchTerm(event.target.value)}
+          />
+        </div>
+      </div>
+    </header>
+  );
+}

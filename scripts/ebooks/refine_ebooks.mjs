@@ -171,7 +171,7 @@ const updatedCelebrities = celebrities.map(celeb => {
         cleanReview = cleanReview.replace(/\n{3,}/g, "\n\n");
 
         // 3. Replace repetitive "지식의 아카이브" with varied phrases
-        const alternatives = ["아카이뷰의 서가", "지혜의 보고", "이곳의 기록물", "우리의 서고", "엄선된 지식", "사유의 기록"];
+        const alternatives = ["Whiteboard의 서가", "지혜의 보고", "이곳의 기록물", "우리의 서고", "엄선된 지식", "사유의 기록"];
         let altIdx = 0;
         cleanReview = cleanReview.replace(/지식의 아카이브/g, () => {
             const pick = alternatives[altIdx % alternatives.length];

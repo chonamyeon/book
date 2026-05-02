@@ -1,12 +1,29 @@
 User-agent: *
 
-# 검색 노출 제외 경로 (애드센스 심사 기준)
-Disallow: /celebrity/
-Disallow: /category/
+# Private or thin utility screens — keep out of search results
+Disallow: /admin
+Disallow: /login
+Disallow: /profile
+Disallow: /result
 Disallow: /review/
-Disallow: /editorial
 
-# 나머지 전체 허용 (기본값)
+# Explicitly allow all public editorial and content pages
 Allow: /
+Allow: /about
+Allow: /contact
+Allow: /privacy
+Allow: /privacy-policy
+Allow: /terms
+Allow: /disclaimer
+Allow: /library
+Allow: /editorial
+Allow: /celebrity
+Allow: /quiz
+Allow: /category/
+Allow: /story/
+Allow: /review-board
+Allow: /review-board/
+
+Crawl-delay: 1
 
 Sitemap: https://archiview.shop/sitemap.xml

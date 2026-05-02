@@ -44,7 +44,7 @@ function extractSource(book) {
 }
 
 async function run() {
-    console.log("🚀 ARCHIVIEW ALL-NIGHT MASTER RUNNER START");
+    console.log("🚀 WHITEBOARD ALL-NIGHT MASTER RUNNER START");
     
     for (const book of PRIORITY_LIST) {
         try {

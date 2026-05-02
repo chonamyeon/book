@@ -1,4 +1,4 @@
-# The Archiview — 프로젝트 현황 정리
+# Whiteboard — 프로젝트 현황 정리
 
 > 최종 업데이트: 2026-03-18 (TTS 최적화 파이프라인 + 배치 모드 3종)
 > 배포: https://book-site-123.web.app
@@ -12,7 +12,7 @@
 |------|------|
 | 프론트엔드 | React 19, React Router 7, Vite 7 |
 | 스타일 | Tailwind CSS 3, Framer Motion |
-| 백엔드 | Firebase (Auth, Firestore, Storage), Firebase Hosting |
+| 백엔드 | Vercel (Auth, static data, Storage), Vercel Hosting |
 | AI | Claude Sonnet 4.6 (대본 생성), Claude Haiku (맞춤법), Gemini 2.5 Flash (TTS 최적화), Gemini 2.5 Pro/Flash TTS |
 | 결제 | Toss Payments (예정) |
 | 국제화 | i18next |
@@ -41,7 +41,7 @@
 ```
 src/
 ├── App.jsx                   # 라우팅 (모든 페이지 lazy loading)
-├── firebase.js               # Firebase 초기화 (API 키 → .env)
+├── vercel.js               # Vercel 초기화 (API 키 → .env)
 ├── contexts/
 │   └── AudioContext.jsx      # 오디오 재생 전역 상태
 ├── components/
@@ -55,7 +55,7 @@ src/
 │   ├── availableAudio.js     # 오디오 파일 목록
 │   └── resultData.js         # 퀴즈 결과 데이터
 ├── hooks/
-│   └── useBookData.js        # Firestore 데이터 훅
+│   └── useBookData.js        # static data 데이터 훅
 └── pages/
     ├── AdminDashboard.jsx    # 관리자 (AI 대본 생성, TTS, 팟캐스트 등록)
     ├── Home.jsx
@@ -80,7 +80,7 @@ src/
 5. Gemini 2.5 Flash → TTS 최적화 (문장 분리·숫자 한글화·불필요 표기 제거)
 6. Gemini 2.5 Pro/Flash TTS → WAV 변환
 7. 인트로/아웃트로 병합 → MP3
-8. Firestore 저장 + 팟캐스트 활성화
+8. static data 저장 + 팟캐스트 활성화
 ```
 
 ### TTS 최적화 단계 (optimizeScriptForTts)
@@ -130,9 +130,9 @@ TTS 직전 자동 실행. 실패 시 원본 그대로 진행.
 
 | 모드 | 색상 | 동작 |
 |------|------|------|
-| **풀 배치** | 보라 | 대본 생성(Claude) → Flash 최적화 → Firestore 저장 → TTS → WAV |
-| **TTS 전용** | 초록 | Firestore 대본 → Flash 최적화 → TTS → WAV (대본 없으면 스킵) |
-| **대본 최적화** | 노랑 | Firestore 대본 → Flash 교정 → Firestore 저장 → TTS → WAV |
+| **풀 배치** | 보라 | 대본 생성(Claude) → Flash 최적화 → static data 저장 → TTS → WAV |
+| **TTS 전용** | 초록 | static data 대본 → Flash 최적화 → TTS → WAV (대본 없으면 스킵) |
+| **대본 최적화** | 노랑 | static data 대본 → Flash 교정 → static data 저장 → TTS → WAV |
 
 ### 추가된 상태 (배치 전용)
 
@@ -145,7 +145,7 @@ const [batchBookStatuses, setBatchBookStatuses] = useState({});
 const [batchScriptStatuses, setBatchScriptStatuses] = useState({});
 // { [bookId]: true(스크립트 있음) | false(없음) }
 const [batchOptimizedStatuses, setBatchOptimizedStatuses] = useState({});
-// { [bookId]: boolean } — Firestore optimizedAt 필드 존재 여부
+// { [bookId]: boolean } — static data optimizedAt 필드 존재 여부
 const [batchScriptPreview, setBatchScriptPreview] = useState(null);
 // { bookId, title, script: [{speaker, text}] } | null
 ```
@@ -182,8 +182,8 @@ const runTtsForBook = async (script, bookId, addBatchLog) => {
 
 #### `handleBatchRun(mode)`
 - `mode='full'`: 대본 생성(Claude) → 최적화 → TTS
-- `mode='tts-only'`: Firestore 대본 → 최적화 → TTS (없으면 스킵)
-- `mode='optimize-only'`: Firestore 대본 → 최적화 → Firestore 저장 → TTS
+- `mode='tts-only'`: static data 대본 → 최적화 → TTS (없으면 스킵)
+- `mode='optimize-only'`: static data 대본 → 최적화 → static data 저장 → TTS
 - 기존 `handleGenerateScript({ isBatch: true })` 호출 (단일 모드 UI 상태 우회)
 
 ### UI 구성 (automation 탭)
@@ -196,10 +196,10 @@ const runTtsForBook = async (script, bookId, addBatchLog) => {
   - 📝 대본만
   - ⬜ 미시작
   - 뱃지 클릭 → 스크립트 미리보기 모달
-- **스크립트 미리보기 모달**: 턴별 인라인 편집 → Firestore 저장 → "이 도서 TTS 실행" 버튼
+- **스크립트 미리보기 모달**: 턴별 인라인 편집 → static data 저장 → "이 도서 TTS 실행" 버튼
 - **진행 상황**: 전체 진행바 + 도서별 상태 요약 + 배치 로그 패널
 
-### Firestore scripts/{bookId} 구조
+### static data scripts/{bookId} 구조
 ```js
 {
   script: [{speaker, text}, ...],  // 대본 배열
@@ -215,12 +215,12 @@ const runTtsForBook = async (script, bookId, addBatchLog) => {
 쉼표(,)에서 0.5초, 마침표(.)에서 1초 이상 반드시 쉬어 읽을 것.
 ```
 
-### Firestore 스크립트 상태 조회 (탭 진입 시 자동)
+### static data 스크립트 상태 조회 (탭 진입 시 자동)
 
 ```js
 useEffect(() => {
     if (activeTab !== 'automation' || !realBooks.length) return;
-    // 전체 도서 Firestore scripts/{id} 존재 여부 일괄 조회
+    // 전체 도서 static data scripts/{id} 존재 여부 일괄 조회
     // → setBatchScriptStatuses({ [bookId]: boolean })
 }, [activeTab, realBooks.length]);
 ```
@@ -231,7 +231,7 @@ useEffect(() => {
 
 ```
 VITE_GEMINI_API_KEY=...        # Gemini TTS API
-VITE_FIREBASE_API_KEY=...      # Firebase 웹 API 키
+VITE_VERCEL_API_KEY=...      # Vercel 웹 API 키
 ANTHROPIC_API_KEY=...          # Claude API
 ```
 
@@ -243,12 +243,12 @@ ANTHROPIC_API_KEY=...          # Claude API
 
 ```bash
 npm run build          # build_output/ 생성
-firebase deploy --only hosting
+npm run deploy
 ```
 
-- Firebase Hosting: `book-site-123.web.app`
+- Vercel Hosting: `book-site-123.web.app`
 - Vercel (auth domain): `book-psi-sage.vercel.app`
-- 오디오 파일: `public/audio/` → Firebase Hosting
+- 오디오 파일: `public/audio/` → Vercel Hosting
 
 ---
 

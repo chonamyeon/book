@@ -1,4 +1,4 @@
-# Archiview 원스톱 팟캐스트 자동화 시스템
+# Whiteboard 원스톱 팟캐스트 자동화 시스템
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### 우리는 무엇을 만드는가
 
-**이카이뷰(Archiview)는 책 소개 사이트가 아닙니다.**
+**이카이뷰(Whiteboard)는 책 소개 사이트가 아닙니다.**
 
 우리가 만드는 것은 **오리지널 팟캐스트 콘텐츠**입니다.
 책을 소재로 삼되, 책을 단순히 요약하거나 소개하는 것이 아니라
@@ -79,7 +79,7 @@
         ↓
 ⑨ bookScripts.js 자동 업데이트
         ↓
-⑩ npm run deploy → 실서버 자동 배포 (Firebase Hosting)
+⑩ npm run deploy → 실서버 자동 배포 (Vercel Hosting)
 ```
 
 ---

@@ -35,7 +35,7 @@ export const celebrities = [
                         "description": "오늘 힘들었던 일을 믿을 수 있는 동료에게 짧게 털어놓아 보세요. 속으로 쌓아두기보다 표현하는 것이 관계를 깊게 하고 스트레스를 줄여줍니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0375704027?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0375704027?tag=whiteboard2026-20"
             },
             {
                 "id": "leverage",
@@ -64,7 +64,7 @@ export const celebrities = [
                         "description": "내일 출근 직후 30분을 이메일·메신저 없이 가장 중요한 업무 하나에만 집중하는 루틴을 시작해보세요. 하루 중 가장 생산적인 시간대를 레버리지로 활용하는 가장 쉬운 방법입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1473640285?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1473640285?tag=whiteboard2026-20"
             },
             {
                 "id": "sapiens",
@@ -93,7 +93,7 @@ export const celebrities = [
                         "description": "오늘 회의나 업무에서 잘 모르는 것이 있었다면, 아는 척하지 말고 담당자나 동료에게 직접 물어보세요. '모름'을 인정하는 것이 더 나은 협업의 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0062316117?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0062316117?tag=whiteboard2026-20"
             },
             {
                 "id": "factfulness",
@@ -120,7 +120,7 @@ export const celebrities = [
                         "description": "중요한 결정을 내리기 전, 내가 이것을 '성공 아니면 실패', '우리 편 아니면 적'처럼 이분법으로 보고 있지는 않은지 5초간 점검해보세요. 연속 스펙트럼으로 보면 더 좋은 해결책이 보입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1250107814?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1250107814?tag=whiteboard2026-20"
             },
             {
                 "id": "homo-deus",
@@ -147,7 +147,7 @@ export const celebrities = [
                         "description": "점심 메뉴나 오늘 읽을 기사를 알고리즘 추천 없이 직접 선택해보세요. 내 취향이 알고리즘 취향인지, 진짜 내 선택인지를 확인하는 가장 쉬운 훈련입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0062464310?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0062464310?tag=whiteboard2026-20"
             },
             {
                 "id": "21-lessons",
@@ -174,7 +174,7 @@ export const celebrities = [
                         "description": "오늘 업무 중 내가 진짜 주체적으로 판단한 것과 관행이나 압력에 따라 한 것을 구분해보세요. 내 판단 근거를 한 줄씩 적는 것이 자기 주도적 커리어의 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0525512179?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0525512179?tag=whiteboard2026-20"
             },
             {
                 "id": "built-to-last",
@@ -201,7 +201,7 @@ export const celebrities = [
                         "description": "지금은 불가능해 보여도 가슴 뛰는 3년 후 목표를 딱 한 문장으로 써보세요. 그리고 오늘 그 목표를 향한 가장 작은 행동 하나를 실천해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/Built-Last-Successful-Visionary-Companies/dp/0060516402?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/Built-Last-Successful-Visionary-Companies/dp/0060516402?tag=whiteboard2026-20"
             },
             {
                 "id": "gentleman-in-moscow",
@@ -228,7 +228,7 @@ export const celebrities = [
                         "description": "업무 효율을 높이는 가장 간단한 방법은 매일 같은 시간에 같은 방식으로 하루를 시작하는 것입니다. 내일부터 지킬 아침 루틴 하나(예: 9시 TO-DO 정리)를 정해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0143110438?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0143110438?tag=whiteboard2026-20"
             },
             {
                 "id": "why-we-sleep",
@@ -255,7 +255,7 @@ export const celebrities = [
                         "description": "이번 주 오후 2시 이후 커피를 끊고 일주일간 수면 질 변화를 체크해보세요. 야근용 커피가 오히려 다음 날 집중력을 더 떨어뜨리는 악순환을 직접 확인해볼 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1501144316?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1501144316?tag=whiteboard2026-20"
             },
             {
                 "id": "klara-and-the-sun",
@@ -282,7 +282,7 @@ export const celebrities = [
                         "description": "내 업무에서 자동화할 수 있는 부분과 반드시 사람이 해야 하는 부분을 나눠보세요. 사람이 해야 할 부분을 더 잘하는 것이 AI 시대 커리어 전략입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/059331817X?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/059331817X?tag=whiteboard2026-20"
             },
             {
                 "id": "project-hail-mary",
@@ -309,7 +309,7 @@ export const celebrities = [
                         "description": "오늘 업무에서 예상과 다른 결과가 나왔다면, 방어하지 말고 즉시 원인 하나를 분석해 수정 방향을 팀에 공유해보세요. 빠른 수정이 완벽한 첫 시도보다 훨씬 더 가치 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0593135202?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0593135202?tag=whiteboard2026-20"
             },
             {
                 "id": "the-one-thing",
@@ -337,7 +337,7 @@ export const celebrities = [
                         "description": "지금 오늘 할 일 목록을 보고 안 해도 되는 것, 위임할 수 있는 것 2개를 과감하게 삭제하거나 나중으로 미뤄보세요. 덜 하는 것이 더 잘하는 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1885167776?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1885167776?tag=whiteboard2026-20"
             }
         ]
     },
@@ -351,6 +351,7 @@ export const celebrities = [
         "quote": "저는 책으로 자랐습니다. 부모님이 아니라 책이 저를 키웠죠.",
         "books": [
             {
+                "id": "foundation",
                 "title": "파운데이션",
                 "section": "BURNOUT",
                 "author": "아이작 아시모프",
@@ -373,9 +374,10 @@ export const celebrities = [
                         "description": "오늘 직감이나 관성으로 내린 결정 하나를 골라, 실제 숫자나 사례 데이터로 그 결정이 옳은지 5분만 검증해보세요. 느낌이 아닌 증거로 판단하는 습관이 장기적으로 차이를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0553293354?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0553293354?tag=whiteboard2026-20"
             },
             {
+                "id": "super-intelligence",
                 "title": "슈퍼인텔리전스",
                 "section": "WEALTH",
                 "author": "닉 보스트롬",
@@ -398,9 +400,10 @@ export const celebrities = [
                         "description": "내 업계에서 AI가 어떻게 활용되고 있는지 기사 하나를 읽고 팀 채널에 짧게 요약해 공유해보세요. 변화를 먼저 파악하고 공유하는 사람이 조직에서 인정받습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0199678111?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0199678111?tag=whiteboard2026-20"
             },
             {
+                "id": "hitchhikers-guide",
                 "title": "은하수를 여행하는 히치하이커를 위한 안내서",
                 "author": "더글러스 애덤스",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780345391803.jpg",
@@ -422,9 +425,10 @@ export const celebrities = [
                         "description": "다음 팀 회의에서 '이건 좀 황당할 수 있는데...'로 시작하는 아이디어 하나를 꺼내보세요. 엉뚱해 보이는 발상이 가장 혁신적인 해결책이 되는 경우가 많습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0345391802?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0345391802?tag=whiteboard2026-20"
             },
             {
+                "id": "zero-to-one",
                 "title": "제로 투 원",
                 "section": "BURNOUT",
                 "author": "피터 틸",
@@ -447,9 +451,10 @@ export const celebrities = [
                         "description": "우리 팀이나 업계에서 '당연히 이렇게 하는 것'이지만 실은 비효율적이라고 느끼는 것 하나를 찾아 메모해두세요. 이 질문이 혁신의 시작점입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0804139296?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0804139296?tag=whiteboard2026-20"
             },
             {
+                "id": "benjamin-franklin",
                 "title": "벤자민 프랭클린 인생의 발견",
                 "author": "월터 아이작슨",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780743260848.jpg",
@@ -471,9 +476,10 @@ export const celebrities = [
                         "description": "회의 때 핸드폰 보기, 보고서 마감 직전에 시작하기 등 고치고 싶은 업무 습관 하나를 골라 이번 주만 집중적으로 바꿔보세요. 작은 습관 하나가 평판을 바꿉니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0743223226?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0743223226?tag=whiteboard2026-20"
             },
             {
+                "id": "better-angels",
                 "title": "우리 본성의 선한 천사",
                 "author": "스티븐 핑커",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780670022953.jpg",
@@ -495,7 +501,7 @@ export const celebrities = [
                         "description": "팀 내 의견 불일치가 있을 때 감정이 아닌 실제 데이터나 사실을 기반으로 대화를 이끌어보세요. 공통의 사실에서 출발하면 서로 다른 의견도 합의점을 찾기 쉬워집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0143122010?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0143122010?tag=whiteboard2026-20"
             }
         ]
     },
@@ -535,7 +541,7 @@ export const celebrities = [
                         "description": "이직, 업무 변경, 교육 신청 등 최근 고민 중인 결정이 있다면, 타인의 기대가 아닌 내가 진짜 원하는 방향인지 한 번만 더 확인해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0486414132?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0486414132?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-아몬드",
@@ -562,7 +568,7 @@ export const celebrities = [
                         "description": "내 방식과 다르게 일하는 동료를 '틀렸다'가 아닌 '다르다'고 바라보는 연습을 해보세요. 다름을 인정하는 팀이 더 창의적이고 강합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0062941372?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0062941372?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-참을-수-없는-존재의-가벼움",
@@ -589,7 +595,7 @@ export const celebrities = [
                         "description": "오늘 점심 메뉴, 보고서 폰트 같은 사소한 결정은 30초 안에 내리고, 그 에너지를 정말 중요한 결정에 쓰도록 연습해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0061731013?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0061731013?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-채식주의자",
@@ -618,7 +624,7 @@ export const celebrities = [
                         "description": "우리 팀이 당연하게 지키는 관행 중 한 번도 의문을 갖지 않은 것을 하나 찾아보세요. '왜 이렇게 해야 하지?'라는 질문이 더 나은 업무 방식을 만드는 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1101906111?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1101906111?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-소년이-온다",
@@ -645,7 +651,7 @@ export const celebrities = [
                         "description": "회의에서 잘못된 방향이 감지됐는데도 분위기상 말을 못 했다면, 회의 후 슬랙이나 1:1로라도 의견을 전달해보세요. 작은 용기 있는 발언이 더 좋은 의사결정을 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1101906100?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1101906100?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-이방인",
@@ -672,7 +678,7 @@ export const celebrities = [
                         "description": "오늘 관성적으로 처리한 업무 하나에 '이 방식이 정말 최선인가?'라고 질문해보세요. 비판적 사고를 잃지 않는 것이 직장에서 자신을 지키는 방법입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0679720200?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0679720200?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-1984",
@@ -699,7 +705,7 @@ export const celebrities = [
                         "description": "다음에 쓸 보고서나 이메일에 복사-붙여넣기 대신 내 생각과 판단을 직접 한 문단이라도 써보세요. 자신의 언어로 표현하는 연습이 직장 내 존재감을 높여줍니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0451524934?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0451524934?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-호밀밭의-파수꾼",
@@ -726,7 +732,7 @@ export const celebrities = [
                         "description": "어떤 압력이 있어도 지키고 싶은 직업적 원칙을 한 문장으로 명확하게 써보세요. 그것이 흔들릴 때 다시 꺼내 읽는 나만의 나침반이 됩니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0316769487?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0316769487?tag=whiteboard2026-20"
             }
         ]
     },
@@ -764,7 +770,7 @@ export const celebrities = [
                         "description": "오늘 업무 중 아무리 작아도 의미 있었던 것 하나를 퇴근 전 메모해두세요. 사라지는 것들 속에서 남는 것을 기록하는 습관이 직장 생활의 지속 가능성을 높여줍니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0525520279?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0525520279?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-작별하지-않는다",
@@ -818,7 +824,7 @@ export const celebrities = [
                         "description": "지금 해결하기 어려운 팀 갈등이나 업무 문제를 완전히 다른 관점(예: 고객 입장, 경쟁사 입장)으로 설명해보세요. 새로운 언어로 바라보면 새로운 해결책이 보입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=whiteboard2026-20"
             }
         ]
     },
@@ -832,6 +838,7 @@ export const celebrities = [
         "quote": "계속 갈망하라, 여전히 우직하게. (Stay Hungry, Stay Foolish)",
         "books": [
             {
+                "id": "beginner-mind",
                 "title": "선심초심",
                 "section": "PHILOSOPHY",
                 "author": "스즈키 슌류",
@@ -854,9 +861,10 @@ export const celebrities = [
                         "description": "데이터보다 앞서 '이건 분명 사용자가 불편할 것 같다'고 느끼는 서비스나 프로세스의 문제점을 오늘 메모해두세요. 직관적 판단이 혁신의 씨앗이 됩니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0593318164?tag=whiteboard2026-20"
             },
             {
+                "id": "innovators-dilemma",
                 "title": "혁신 기업의 딜레마",
                 "section": "BURNOUT",
                 "author": "클레이튼 크리스텐슨",
@@ -879,9 +887,10 @@ export const celebrities = [
                         "description": "팀이나 업계에서 '별로 중요하지 않다'고 무시하는 트렌드나 고객층을 하나 찾아보세요. 기존 강자들이 간과한 틈새가 다음 기회가 될 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/Innovators-Dilemma-Revolutionary-Change-Business/dp/0062060244?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/Innovators-Dilemma-Revolutionary-Change-Business/dp/0062060244?tag=whiteboard2026-20"
             },
             {
+                "id": "moby-dick",
                 "title": "모비 딕",
                 "section": "PHILOSOPHY",
                 "author": "허먼 멜빌",
@@ -904,9 +913,10 @@ export const celebrities = [
                         "description": "혼자 다 하려다 에이해브처럼 파국으로 가지 않으려면, 지금 과부하 상태인 업무를 동료에게 솔직하게 알리고 도움을 요청해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0142437247?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0142437247?tag=whiteboard2026-20"
             },
             {
+                "id": "king-lear",
                 "title": "리어 왕",
                 "author": "윌리엄 셰익스피어",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780743477123.jpg",
@@ -928,7 +938,7 @@ export const celebrities = [
                         "description": "가까운 동료에게 '내가 개선해야 할 점 한 가지만 솔직하게 말해줄 수 있어?'라고 물어보세요. 불편한 피드백을 요청하는 용기가 성장을 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/074347712X?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/074347712X?tag=whiteboard2026-20"
             }
         ]
     },
@@ -942,6 +952,7 @@ export const celebrities = [
         "quote": "책은 우리가 어떤 주제에 대해 가장 깊이 몰입할 수 있게 해준다.",
         "books": [
             {
+                "id": "why-nations-fail",
                 "title": "국가는 왜 실패하는가",
                 "section": "WEALTH",
                 "author": "대런 애쓰모글루",
@@ -964,7 +975,7 @@ export const celebrities = [
                         "description": "이번 달 팀이 단기 성과에만 매달리고 있다면, 장기적으로 팀 역량을 키울 수 있는 교육이나 개선 활동을 하나 제안해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307719227?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307719227?tag=whiteboard2026-20"
             }
         ]
     },
@@ -978,6 +989,7 @@ export const celebrities = [
         "quote": "말이 작동하지 않을 때, 책은 작동한다.",
         "books": [
             {
+                "id": "promised-land",
                 "title": "약속의 땅",
                 "section": "WEALTH",
                 "author": "버락 오바마",
@@ -1000,9 +1012,10 @@ export const celebrities = [
                         "description": "중요한 결정이나 도전적인 업무 앞에서 느끼는 두려움을 구체적으로 적어보세요. 불안을 막연하게 느끼는 것보다 글로 쓰면 훨씬 덜 무서워집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1524763160?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1524763160?tag=whiteboard2026-20"
             },
             {
+                "id": "three-body-problem",
                 "title": "삼체",
                 "section": "PHILOSOPHY",
                 "author": "류츠신",
@@ -1025,9 +1038,10 @@ export const celebrities = [
                         "description": "비슷한 업무를 하는 동료나 타부서를 경쟁자가 아닌 협력자로 바라보고, 함께하면 더 좋아질 프로젝트 하나를 제안해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0765377063?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0765377063?tag=whiteboard2026-20"
             },
             {
+                "id": "go-set-watchman",
                 "title": "가라, 파수꾼이여",
                 "author": "하퍼 리",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780062409850.jpg",
@@ -1063,6 +1077,7 @@ export const celebrities = [
         "quote": "독서는 당신이 꿈꾸는 어떤 사람이든 될 수 있게 해주는 개인적 자유의 열쇠다.",
         "books": [
             {
+                "id": "becoming",
                 "title": "비커밍",
                 "section": "BURNOUT",
                 "author": "미셸 오바마",
@@ -1085,9 +1100,10 @@ export const celebrities = [
                         "description": "내게는 당연한 환경(좋은 장비, 정보 접근성 등)이 누군가에게는 장벽일 수 있습니다. 팀에서 더 불리한 여건의 동료가 있다면 오늘 한 번 더 도움을 건네보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1524763136?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1524763136?tag=whiteboard2026-20"
             },
             {
+                "id": "underground-railroad",
                 "title": "언더그라운드 레일로드",
                 "author": "콜슨 화이트헤드",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780385542364.jpg",
@@ -1109,9 +1125,10 @@ export const celebrities = [
                         "description": "오늘 내가 당연하게 누리고 있는 것(안정적인 월급, 협업하는 동료, 쾌적한 사무실 등) 중 하나를 의식적으로 감사하는 시간을 가져보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0345804325?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0345804325?tag=whiteboard2026-20"
             },
             {
+                "id": "what-i-know-for-sure",
                 "title": "내가 확실히 아는 것들",
                 "author": "오프라 윈프리",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9781250307217.jpg",
@@ -1133,9 +1150,10 @@ export const celebrities = [
                         "description": "오늘 점심시간에 스마트폰을 내려놓고 음식 맛, 주변 소리, 햇살 같은 지금 이 순간만 느껴보세요. 과거 실수나 오후 회의 걱정 없이 딱 10분만 현재에 머무는 연습을 해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1250054056?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1250054056?tag=whiteboard2026-20"
             },
             {
+                "id": "wild-strayed",
                 "title": "와일드",
                 "author": "셰릴 스트레이드",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780307476074.jpg",
@@ -1157,9 +1175,10 @@ export const celebrities = [
                         "description": "지금껏 가장 힘들었던 직장 경험을 떠올리고, 그 고통이 나에게 가르쳐준 것 한 가지를 솔직하게 써보세요. 고통을 피하지 않고 통과한 경험이 지금의 나를 더 단단하게 만들었습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=whiteboard2026-20"
             },
             {
+                "id": "to-kill-a-mockingbird",
                 "title": "앵무새 죽이기",
                 "author": "하퍼 리",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780061935466.jpg",
@@ -1181,7 +1200,7 @@ export const celebrities = [
                         "description": "회의에서 잘못된 방향이 정해지거나 특정 동료가 부당하게 배제될 때, 침묵하는 대신 사실 기반으로 조심스럽게 한마디를 꺼내보세요. 옳은 일을 위해 목소리를 낸 경험이 쌓일수록 직장에서의 자존감도 높아집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307476073?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1220,7 +1239,7 @@ export const celebrities = [
                         "description": "지금 핫한 트렌드 스킬이 아닌, 10년 뒤에도 나의 가치를 높여줄 역량 하나를 정해 이번 달 학습 계획에 넣어보세요. 버핏이 복리 투자를 고집했듯, 진짜 역량은 시간이 지날수록 가치가 커집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0060555661?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0060555661?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-증권분석",
@@ -1248,7 +1267,7 @@ export const celebrities = [
                         "description": "지금 하는 업무 중 진짜 성과보다 바빠 보이는 것에 가까운 작업 하나를 찾아보세요. 그 시간을 실제로 팀과 회사에 임팩트를 주는 일에 쓰도록 오늘 스케줄을 조정해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0071592539?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0071592539?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1262,6 +1281,7 @@ export const celebrities = [
         "quote": "우리의 가치는 우리가 만드는 제품에 녹아있다.",
         "books": [
             {
+                "id": "shoe-dog",
                 "title": "슈독",
                 "section": "BURNOUT",
                 "author": "필 나이트",
@@ -1284,7 +1304,7 @@ export const celebrities = [
                         "description": "완벽한 준비가 될 때까지 기다리는 동안 기회는 지나갑니다. 나이키의 슬로건처럼 오늘 '그냥 해보기'로 결심한 한 가지를 5분만 시작해보세요. 시작하는 것 자체가 이미 절반입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1501135910?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1501135910?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1298,6 +1318,7 @@ export const celebrities = [
         "quote": "읽을 시간이 없다면, 쓸 시간도 (그리고 도구도) 없는 것이다.",
         "books": [
             {
+                "id": "lord-of-the-flies",
                 "title": "파리대왕",
                 "author": "윌리엄 골딩",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780399501487.jpg",
@@ -1319,7 +1340,7 @@ export const celebrities = [
                         "description": "다음 번 갈등이 생긴 회의에서 감정이 아닌 사실과 논리로 말하는 랠프 역할을 해보세요. '제가 이해한 바로는…'으로 시작하는 침착한 한마디가 분위기를 바꿀 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0399501487?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0399501487?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1333,6 +1354,7 @@ export const celebrities = [
         "quote": "만약 당신이 다른 사람들과 똑같은 책을 읽는다면, 당신은 다른 사람들과 똑같은 생각만 하게 될 것이다.",
         "books": [
             {
+                "id": "great-gatsby",
                 "title": "위대한 개츠비",
                 "section": "PHILOSOPHY",
                 "author": "F. 스콧 피츠제럴드",
@@ -1356,7 +1378,7 @@ export const celebrities = [
                         "description": "과거의 성공, 아쉬운 선택, 지나간 기회에 에너지를 쓰는 대신 오늘 내가 바꿀 수 있는 것 한 가지에 집중해보세요. 개츠비는 과거에 집착하다 현재를 잃었습니다. 당신의 초록 불빛은 지금 여기에 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0743273562?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0743273562?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1395,9 +1417,10 @@ export const celebrities = [
                         "description": "이번 주 가장 기다려지는 것 하나를 오늘 적어보세요. 맛있는 주말 식사, 친구와의 약속, 관심 있는 책 한 권이어도 됩니다. 사소해도 기다리는 것이 있는 사람은 더 잘 버팁니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/080701429X?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/080701429X?tag=whiteboard2026-20"
             },
             {
+                "id": "the-alchemist",
                 "title": "연금술사",
                 "section": "PHILOSOPHY",
                 "author": "파울로 코엘료",
@@ -1420,7 +1443,7 @@ export const celebrities = [
                         "description": "모든 두려움은 시작 전이 가장 큽니다. 오랫동안 준비만 하고 시작 못 한 것 하나를 골라, 결과에 상관없이 딱 첫 번째 행동 하나만 오늘 해보세요. 연금술사가 말하듯, 원하면 온 우주가 도와줍니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0062315005?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0062315005?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1434,6 +1457,7 @@ export const celebrities = [
         "quote": "당신의 목소리를 내는 것을 두려워하지 마세요.",
         "books": [
             {
+                "id": "song-of-solomon",
                 "title": "솔로몬의 노래",
                 "author": "토니 모리슨",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780307278449.jpg",
@@ -1455,9 +1479,10 @@ export const celebrities = [
                         "description": "요즘 표정이 어두운 동료나 후배 한 명에게 오늘 조용히 '요즘 어때요?'라고 물어보세요. 조언하려 하지 말고 그냥 들어주기만 해도, 그 5분이 누군가에게 큰 힘이 됩니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0452260116?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0452260116?tag=whiteboard2026-20"
             },
             {
+                "id": "life-of-pi",
                 "title": "파이 이야기",
                 "author": "얀 마텔",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780156027328.jpg",
@@ -1479,7 +1504,7 @@ export const celebrities = [
                         "description": "최근 겪은 힘든 업무 경험을 '나는 이 고난을 통해 ___를 배웠다'라는 형식으로 다시 써보세요. 같은 사건도 어떻게 해석하느냐에 따라 트라우마가 되기도 하고 성장의 증거가 되기도 합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0156027321?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0156027321?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1515,10 +1540,11 @@ export const celebrities = [
                         "description": "자책하고 스스로를 부족하다고 느끼는 날, 친한 친구에게 해주듯 나 자신에게도 따뜻한 말 한 마디를 써주세요. '그래도 넌 오늘 최선을 다했어'처럼 짧아도 됩니다. 자기 자신에게 공감하는 것이 회복의 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0811204812?tag=archiview2026-20",
+                "amazonLink": "https://www.amazon.com/dp/0811204812?tag=whiteboard2026-20",
                 "id": "top70-카라마조프-가의-형제들"
             },
             {
+                "id": "brothers-karamazov",
                 "title": "카라마조프 가의 형제들",
                 "author": "도스토예프스키",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780374528379.jpg",
@@ -1540,7 +1566,7 @@ export const celebrities = [
                         "description": "불합리한 지시, 이해 안 되는 회사 정책에 분노하고 싶을 때, 내가 어쩔 수 없는 것은 내려놓고 오늘 내가 바꿀 수 있는 것 하나를 찾아 행동해보세요. 주체성을 회복하는 것이 번아웃 예방의 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0374528373?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0374528373?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-브람스를-좋아하세요",
@@ -1572,6 +1598,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
+                "id": "best-life",
                 "title": "최선의 삶",
                 "section": "HEALING",
                 "author": "임솔아",
@@ -1597,6 +1624,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
+                "id": "outside-summer",
                 "title": "바깥은 여름",
                 "section": "HEALING",
                 "author": "김애란",
@@ -1633,6 +1661,7 @@ export const celebrities = [
         "quote": "뜻을 높게 가져라. 그것이 모든 것의 시작이다.",
         "books": [
             {
+                "id": "ryoma-ga-yuku",
                 "title": "료마가 간다",
                 "section": "BURNOUT",
                 "author": "시바 료타로",
@@ -1658,6 +1687,7 @@ export const celebrities = [
                 "amazonLink": ""
             },
             {
+                "id": "softbank-square-law",
                 "title": "손정의 제곱법칙",
                 "section": "BURNOUT",
                 "author": "손정의",
@@ -1694,6 +1724,7 @@ export const celebrities = [
         "quote": "오늘의 결정은 3년 후의 결과를 위해 내려져야 합니다.",
         "books": [
             {
+                "id": "remains-of-the-day",
                 "title": "남아 있는 나날",
                 "author": "가즈오 이시구로",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780679731726.jpg",
@@ -1729,6 +1760,7 @@ export const celebrities = [
         "quote": "독서는 우리에게 다른 사람의 삶을 살 기회를 줍니다.",
         "books": [
             {
+                "id": "little-prince",
                 "title": "어린 왕자",
                 "section": "PHILOSOPHY",
                 "author": "생텍쥐페리",
@@ -1751,9 +1783,10 @@ export const celebrities = [
                         "description": "어른들은 집의 가격, 연봉 숫자, 직급 타이틀로만 중요도를 매깁니다. 오늘 '숫자로 표현할 수 없지만 나에게 진짜 소중한 직장 경험 3가지'를 적어보세요. 그것이 번아웃에서 나를 지켜주는 진짜 이유입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0156012197?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0156012197?tag=whiteboard2026-20"
             },
             {
+                "id": "thousand-splendid-suns",
                 "title": "천 개의 찬란한 태양",
                 "section": "HEALING",
                 "author": "할레드 호세이니",
@@ -1776,7 +1809,7 @@ export const celebrities = [
                         "description": "자신보다 팀을 위해 일하고, 인정은 못 받은 채 지나간 순간이 있다면 오늘 그 헌신을 스스로 인정해주세요. 당신의 선택은 기록되지 않아도 당신의 성품에 새겨집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/159448385X?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/159448385X?tag=whiteboard2026-20"
             }
         ]
     },
@@ -1821,11 +1854,11 @@ export const celebrities = [
     },
     {
         "id": "archide-editors",
-        "name": "Archiview Editors",
+        "name": "Whiteboard Editors",
         "role": "Editorial Team",
         "image": "https://images.unsplash.com/photo-1548048026-5a1a941d93d3?q=80&w=2000&auto=format&fit=crop",
         "readingNow": "돈의 심리학",
-        "intro": "아카이뷰 에디토리얼 팀이 엄선한 지혜의 도서들입니다. 우리는 단순한 베스트셀러가 아니라, 인생의 변곡점을 만들어줄 수 있는 강력한 문장들을 발굴합니다.",
+        "intro": "Whiteboard 에디토리얼 팀이 엄선한 지혜의 도서들입니다. 우리는 단순한 베스트셀러가 아니라, 인생의 변곡점을 만들어줄 수 있는 강력한 문장들을 발굴합니다.",
         "quote": "지식의 아카이브가 당신의 미래를 결정합니다.",
         "books": [
             {
@@ -1974,7 +2007,7 @@ export const celebrities = [
                         "description": "시끄러운 소음 없는 조용한 장소에서 15분간 책을 읽거나 명상을 하며 나만의 내면 세계를 단단하게 다지는 시간을 가지세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1590171993?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1590171993?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-이처럼-사소한-것들",
@@ -2001,15 +2034,15 @@ export const celebrities = [
                         "description": "이익과 손해를 따지기 전, 내 마음속 깊은 곳에서 '옳다'고 하는 일을 아주 사소한 것이라도 하나 실행해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0571368174?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0571368174?tag=whiteboard2026-20"
             }
         ]
     },
     {
         "id": "top70-실패-자산화-프레임워크",
         "section": "BURNOUT",
-        "name": "Archiview Original",
-        "role": "Archiview Editors",
+        "name": "Whiteboard Original",
+        "role": "Whiteboard Editors",
         "image": "/images/celebrities/steve-jobs.jpg",
         "readingNow": "Failure Logs",
         "intro": "실패를 감정이 아닌 데이터로 치환하여 커리어의 자산으로 만드는 5단계 프레임워크입니다.",
@@ -2021,11 +2054,11 @@ export const celebrities = [
                 "isPodcast": true,
                 "podcastFile": "/audio/failure-asset-framework_v1.mp3",
                 "title": "실패 자산화 프레임워크",
-                "author": "Archiview Original",
+                "author": "Whiteboard Original",
                 "cover": "/images/covers/ax_02.jpg",
                 "desc": "실패 → 데이터화 → 재설계 → 재도전: 당신의 실수를 황금 자산으로 바꾸는 5가지 단계.",
-                "review": "■ ARCHIVIEW ORIGINAL #03: 실패를 자산으로 바꾸는 5단계 구조\n참고 사례: 스티브 잡스(Apple/NeXT/Pixar), '타이탄의 도구들', '원칙'(레이 달리오)\n\n【 서론: 월요일 오전 9시, 프로젝트가 무너졌다 】\n\n숨이 막히는 정적. 회의실의 대형 스크린에는 '반려'라는 두 글자가 선명하게 박혀 있다. 당신의 손은 미세하게 떨리고, 목구멍은 바짝 타들어 간다. 지난 한 달간의 밤샘, 수십 번의 수정, 동료들의 기대... 이 모든 것이 단 5분 만에 '실패'라는 낙인이 찍혀 바닥으로 추락했다. \n\n우리는 보통 이 순간, 실패를 '감정'으로 수용한다. 수치심, 자책, 분노, 그리고 무력감. 하지만 아카이뷰가 분석한 수많은 성공한 이들, 특히 스티브 잡스 같은 이들에게 이 순간은 전혀 다른 의미를 갖는다. 그들에게 실패는 '내가 무능하다'는 증거가 아니라, '시장이 원하는 정답이 여기는 아니다'라는 매우 비싸고 정교한 '유료 데이터'의 입고 알림이다. \n\n이제 우리는 당신의 실패를 상처가 아닌 자산으로 재설계할 것이다. 이름하여 ARCHIVIEW FRAMEWORK #03.\n\n【 STEP 1. 실패의 탈감정화: 나를 시도와 분리하라 】\n\n실패가 아픈 이유는 '나'와 '나의 시도'를 동일시하기 때문이다. \"내 기획안이 거절당했다\"를 \"내가 거절당했다\"로 번역하는 순간, 이성적인 사고는 마비된다. \n\n1985년, 자신이 세운 회사에서 쫓겨난 스티브 잡스를 떠올려보라. 전 세계가 그의 실패를 조롱했다. 하지만 그는 훗날 이렇게 회고했다. \"애플에서 해고된 것은 내 인생에서 일어난 일 중 최고였다. 성공했다는 중압감이 사라지고, 다시 시작하는 사람의 가벼움이 찾아왔다.\"\n\n당신은 실패작이 아니다. 당신은 지금 '가설 검증'을 수행 중인 과학자일 뿐이다. 이번 실험(기획안)에서 폭발이 일어났다면, 과학자는 울지 않는다. 왜 터졌는지 기록할 뿐이다.\n\n【 STEP 2. 데이터화: 실패 로그 시스템 구축 】\n\n실패를 자산으로 만드는 핵심은 '기록'이다. 아카이뷰는 모든 직장인에게 '실패 로그(Failure Log)' 작성을 제안한다. 단순히 \"팀장님한테 깨짐\"이라고 적지 마라.\n\n- 가설: 이 논리로 설득하면 통과될 것이다.\n- 결과: 논리적 근거 부족으로 반려.\n- 특이사항: 팀장님은 숫자보다 '고객 인터뷰' 데이터를 더 중요하게 생각함.\n- 획득 데이터: 다음 기획에는 정성적 데이터 비중을 40% 이상 높여야 함.\n\n이것이 바로 '유료 데이터'를 수익화하는 과정이다. 데이터로 기록되지 않은 실패는 그냥 사라지는 쓰레기지만, 기록된 실패는 다음 성공을 위한 정교한 지도가 된다.\n\n【 STEP 3. 재설계: 의지를 믿지 말고 구조를 믿어라 】\n\n\"다음에는 더 주의하겠습니다\"라는 말만큼 무책임한 말은 없다. 인간의 주의력은 한계가 있고, 의지는 소모되는 자원이다. 반복되는 실패는 당신의 태도 문제가 아니라 '구조적 결함'이다.\n\n보고서에 오타가 반복되는가? 더 열심히 눈을 부라리는 것은 답이 아니다. '맞춤법 검사기 통과 후 동료 1인의 크로스 체크 없이는 업로드 불가'라는 강제적 프로세스(Structure)를 설계하라. 억만장자들은 자신의 의지를 믿지 않는다. 오직 자신이 설계한 시스템의 견고함만을 믿는다.\n\n【 STEP 4. 업그레이드된 재도전: 가설의 수정 】\n\n데이터를 얻었고 구조를 바꿨다면, 이제 다시 링 위로 올라갈 시간이다. 하지만 이전과 같은 모습으로 올라가서는 안 된다. \n\n스티브 잡스는 애플에서 쫓겨난 뒤 NeXT와 픽사를 거치며 '조직 운영'과 '디지털 스토리텔링'이라는 새로운 데이터를 수집했다. 그 데이터들이 합쳐졌을 때, 그는 이전의 독선적인 천재가 아닌, 세상을 바꿀 준비가 된 완성형 리더로 애플에 복귀할 수 있었다. 당신의 재도전은 이전 도전의 단순 반복이 아니라, 데이터가 반영된 'v2.0'이어야 한다.\n\n【 STEP 5. 자산화의 공유: 리더의 자격 】\n\n진정한 고수는 자신의 실패를 숨기지 않는다. 오히려 동료들에게 공유한다. \"내가 이런 구덩이에 빠져봤으니, 여러분은 이 길로 가지 마세요.\"\n\n실패를 공유하는 순간, 그것은 개인의 경험을 넘어 조직 전체의 '공유 자산'이 된다. 당신의 실패를 데이터 리포트로 만들어 팀원들과 나누라. 그 순간 당신은 '실패한 사원'에서 '조직의 성장을 이끄는 퍼실리테이터'로 격상된다.\n\n【 결론: 당신의 실패 로그를 환영합니다 】\n\n직장 생활은 거대한 실험실이다. 우리는 매일 새로운 가설을 세우고 시장과 상사라는 거대한 변수 앞에서 검증을 받는다. 폭발할 수도 있고, 반려될 수도 있다. \n\n하지만 기억하라. 아카이뷰는 당신의 성공만을 기록하는 곳이 아니다. 우리는 당신이 그 처절한 실패의 현장에서 어떻게 데이터를 건져 올리는지, 그 데이터를 통해 어떻게 더 단단한 사람으로 재설계되는지를 응원한다.\n\n오늘 당신의 실패 로그에는 어떤 데이터가 쌓였는가? 축하한다. 당신은 방금 세상에서 가장 비싼 강의를 들었다. 이제 그 데이터를 가지고 다음 게임을 준비하라. 당신의 찬란한 재설계를 아카이뷰가 지지한다.\n\n【 미션: 당신의 최근 실패 1개를 구조화하라 】\n1. 최근 겪은 가장 뼈아픈 실패 하나를 떠올리세요.\n2. 거기서 감정을 싹 빼고 '순수 사실' 3가지만 적어보세요.\n3. 그 실패가 재발하지 않도록 나만의 '강제적 시스템' 1개를 설계해 보세요.",
-                "source": "Archiview Original Production",
+                "review": "■ Whiteboard ORIGINAL #03: 실패를 자산으로 바꾸는 5단계 구조\n참고 사례: 스티브 잡스(Apple/NeXT/Pixar), '타이탄의 도구들', '원칙'(레이 달리오)\n\n【 서론: 월요일 오전 9시, 프로젝트가 무너졌다 】\n\n숨이 막히는 정적. 회의실의 대형 스크린에는 '반려'라는 두 글자가 선명하게 박혀 있다. 당신의 손은 미세하게 떨리고, 목구멍은 바짝 타들어 간다. 지난 한 달간의 밤샘, 수십 번의 수정, 동료들의 기대... 이 모든 것이 단 5분 만에 '실패'라는 낙인이 찍혀 바닥으로 추락했다. \n\n우리는 보통 이 순간, 실패를 '감정'으로 수용한다. 수치심, 자책, 분노, 그리고 무력감. 하지만 Whiteboard가 분석한 수많은 성공한 이들, 특히 스티브 잡스 같은 이들에게 이 순간은 전혀 다른 의미를 갖는다. 그들에게 실패는 '내가 무능하다'는 증거가 아니라, '시장이 원하는 정답이 여기는 아니다'라는 매우 비싸고 정교한 '유료 데이터'의 입고 알림이다. \n\n이제 우리는 당신의 실패를 상처가 아닌 자산으로 재설계할 것이다. 이름하여 Whiteboard FRAMEWORK #03.\n\n【 STEP 1. 실패의 탈감정화: 나를 시도와 분리하라 】\n\n실패가 아픈 이유는 '나'와 '나의 시도'를 동일시하기 때문이다. \"내 기획안이 거절당했다\"를 \"내가 거절당했다\"로 번역하는 순간, 이성적인 사고는 마비된다. \n\n1985년, 자신이 세운 회사에서 쫓겨난 스티브 잡스를 떠올려보라. 전 세계가 그의 실패를 조롱했다. 하지만 그는 훗날 이렇게 회고했다. \"애플에서 해고된 것은 내 인생에서 일어난 일 중 최고였다. 성공했다는 중압감이 사라지고, 다시 시작하는 사람의 가벼움이 찾아왔다.\"\n\n당신은 실패작이 아니다. 당신은 지금 '가설 검증'을 수행 중인 과학자일 뿐이다. 이번 실험(기획안)에서 폭발이 일어났다면, 과학자는 울지 않는다. 왜 터졌는지 기록할 뿐이다.\n\n【 STEP 2. 데이터화: 실패 로그 시스템 구축 】\n\n실패를 자산으로 만드는 핵심은 '기록'이다. Whiteboard는 모든 직장인에게 '실패 로그(Failure Log)' 작성을 제안한다. 단순히 \"팀장님한테 깨짐\"이라고 적지 마라.\n\n- 가설: 이 논리로 설득하면 통과될 것이다.\n- 결과: 논리적 근거 부족으로 반려.\n- 특이사항: 팀장님은 숫자보다 '고객 인터뷰' 데이터를 더 중요하게 생각함.\n- 획득 데이터: 다음 기획에는 정성적 데이터 비중을 40% 이상 높여야 함.\n\n이것이 바로 '유료 데이터'를 수익화하는 과정이다. 데이터로 기록되지 않은 실패는 그냥 사라지는 쓰레기지만, 기록된 실패는 다음 성공을 위한 정교한 지도가 된다.\n\n【 STEP 3. 재설계: 의지를 믿지 말고 구조를 믿어라 】\n\n\"다음에는 더 주의하겠습니다\"라는 말만큼 무책임한 말은 없다. 인간의 주의력은 한계가 있고, 의지는 소모되는 자원이다. 반복되는 실패는 당신의 태도 문제가 아니라 '구조적 결함'이다.\n\n보고서에 오타가 반복되는가? 더 열심히 눈을 부라리는 것은 답이 아니다. '맞춤법 검사기 통과 후 동료 1인의 크로스 체크 없이는 업로드 불가'라는 강제적 프로세스(Structure)를 설계하라. 억만장자들은 자신의 의지를 믿지 않는다. 오직 자신이 설계한 시스템의 견고함만을 믿는다.\n\n【 STEP 4. 업그레이드된 재도전: 가설의 수정 】\n\n데이터를 얻었고 구조를 바꿨다면, 이제 다시 링 위로 올라갈 시간이다. 하지만 이전과 같은 모습으로 올라가서는 안 된다. \n\n스티브 잡스는 애플에서 쫓겨난 뒤 NeXT와 픽사를 거치며 '조직 운영'과 '디지털 스토리텔링'이라는 새로운 데이터를 수집했다. 그 데이터들이 합쳐졌을 때, 그는 이전의 독선적인 천재가 아닌, 세상을 바꿀 준비가 된 완성형 리더로 애플에 복귀할 수 있었다. 당신의 재도전은 이전 도전의 단순 반복이 아니라, 데이터가 반영된 'v2.0'이어야 한다.\n\n【 STEP 5. 자산화의 공유: 리더의 자격 】\n\n진정한 고수는 자신의 실패를 숨기지 않는다. 오히려 동료들에게 공유한다. \"내가 이런 구덩이에 빠져봤으니, 여러분은 이 길로 가지 마세요.\"\n\n실패를 공유하는 순간, 그것은 개인의 경험을 넘어 조직 전체의 '공유 자산'이 된다. 당신의 실패를 데이터 리포트로 만들어 팀원들과 나누라. 그 순간 당신은 '실패한 사원'에서 '조직의 성장을 이끄는 퍼실리테이터'로 격상된다.\n\n【 결론: 당신의 실패 로그를 환영합니다 】\n\n직장 생활은 거대한 실험실이다. 우리는 매일 새로운 가설을 세우고 시장과 상사라는 거대한 변수 앞에서 검증을 받는다. 폭발할 수도 있고, 반려될 수도 있다. \n\n하지만 기억하라. Whiteboard는 당신의 성공만을 기록하는 곳이 아니다. 우리는 당신이 그 처절한 실패의 현장에서 어떻게 데이터를 건져 올리는지, 그 데이터를 통해 어떻게 더 단단한 사람으로 재설계되는지를 응원한다.\n\n오늘 당신의 실패 로그에는 어떤 데이터가 쌓였는가? 축하한다. 당신은 방금 세상에서 가장 비싼 강의를 들었다. 이제 그 데이터를 가지고 다음 게임을 준비하라. 당신의 찬란한 재설계를 Whiteboard가 지지한다.\n\n【 미션: 당신의 최근 실패 1개를 구조화하라 】\n1. 최근 겪은 가장 뼈아픈 실패 하나를 떠올리세요.\n2. 거기서 감정을 싹 빼고 '순수 사실' 3가지만 적어보세요.\n3. 그 실패가 재발하지 않도록 나만의 '강제적 시스템' 1개를 설계해 보세요.",
+                "source": "Whiteboard Original Production",
                 "price": "Free",
                 "category": "자기계발",
                 "actionGuide": [
@@ -2047,12 +2080,12 @@ export const celebrities = [
         ]
     },
     {
-        "id": "archiview-editor",
-        "name": "Archiview Editor",
-        "role": "Archiview Editors",
+        "id": "whiteboard-editor",
+        "name": "Whiteboard Editor",
+        "role": "Whiteboard Editors",
         "image": "/images/celebrities/steve-jobs.jpg",
         "readingNow": "7 Mindsets",
-        "intro": "아카이뷰 에디터들이 수많은 명저를 분석하여 직접 기획하고 제작하는 오리지널 콘텐츠입니다.",
+        "intro": "Whiteboard 에디터들이 수많은 명저를 분석하여 직접 기획하고 제작하는 오리지널 콘텐츠입니다.",
         "quote": "세상의 모든 지혜를 당신의 일상으로.",
         "books": [
             {
@@ -2065,7 +2098,7 @@ export const celebrities = [
                 "cover": "/images/covers/default_custom.jpg",
                 "desc": "뇌과학과 마케팅을 결합한 소비 심리학의 바이블.",
                 "review": "현재 이 도서에 대한 리뷰 스크립트는 준비 중입니다. 조만간 추가될 예정입니다.",
-                "source": "Archiview Original Production",
+                "source": "Whiteboard Original Production",
                 "price": "18,000원",
                 "category": "경제경영",
                 "actionGuide": [
@@ -2087,7 +2120,7 @@ export const celebrities = [
                 "cover": "/images/covers/default_custom.jpg",
                 "desc": "내 안의 확증편향을 깨고 유연한 사고로 나아가는 지혜.",
                 "review": "현재 이 도서에 대한 리뷰 스크립트는 준비 중입니다. 조만간 추가될 예정입니다.",
-                "source": "Archiview Original Production",
+                "source": "Whiteboard Original Production",
                 "price": "19,800원",
                 "category": "자기계발",
                 "actionGuide": [
@@ -2097,7 +2130,7 @@ export const celebrities = [
                     }
                 ],
                 "createdAt": 1774259647467,
-                "amazonLink": "https://www.amazon.com/dp/0593395780?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0593395780?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-생각-빠르고-느리게",
@@ -2109,7 +2142,7 @@ export const celebrities = [
                 "cover": "/images/covers/default_custom.jpg",
                 "desc": "행동경제학의 창시자가 밝히는 두 가지 사고 시스템의 비밀.",
                 "review": "현재 이 도서에 대한 리뷰 스크립트는 준비 중입니다. 조만간 추가될 예정입니다.",
-                "source": "Archiview Original Production",
+                "source": "Whiteboard Original Production",
                 "price": "22,000원",
                 "category": "경제경영",
                 "actionGuide": [
@@ -2119,7 +2152,7 @@ export const celebrities = [
                     }
                 ],
                 "createdAt": 1774259646467,
-                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-당신의-뇌는-최적화를-원한다",
@@ -2131,7 +2164,7 @@ export const celebrities = [
                 "cover": "/images/covers/default_custom.jpg",
                 "desc": "뇌내 물질들을 조절하여 최고의 성과를 끌어내는 실전 뇌과학.",
                 "review": "현재 이 도서에 대한 리뷰 스크립트는 준비 중입니다. 조만간 추가될 예정입니다.",
-                "source": "Archiview Original Production",
+                "source": "Whiteboard Original Production",
                 "price": "15,000원",
                 "category": "자기계발",
                 "actionGuide": [
@@ -2149,11 +2182,11 @@ export const celebrities = [
                 "isPodcast": true,
                 "podcastFile": "/audio/billionaire-framework.mp3",
                 "title": "억만장자의 사고법 7가지",
-                "author": "Archiview Original",
+                "author": "Whiteboard Original",
                 "cover": "/images/covers/ax_01.jpg",
-                "desc": "아카이뷰 석세스 프레임워크: 세상을 바꾸는 워렌 버핏과 일론 머스크의 7가지 성공 공식을 압축했습니다.",
-                "review": "■ ARCHIVIEW SUCCESS FRAMEWORK™: 억만장자의 사고법 7가지\n참고 도서: '스노볼'(워렌 버핏 평전), '일론 머스크'(월터 아이작슨), '타이탄의 도구들'(팀 페리스)\n\n【 서론: 성공이라는 이름의 알케미(Alchemy) 】\n\n성공은 결코 우연의 산물이 아니다. 수많은 명저를 탐독하며 우리가 내린 결론은 하나다. 부는 '운'이 아니라 '설계'의 결과물이라는 것이다. 우리는 흔히 억만장자들이 우리와 다른 세상을 산다고 생각한다. 그들의 자산 규모, 그들이 타는 전용기, 그들이 내리는 결정의 파급력은 확실히 거대하다. 하지만 그 거대한 빙산 아래에는 우리와 똑같은 '인간'으로서 그들이 매일같이 단련해온 '사고의 근육'이 있다.\n\n이 리뷰는 단순히 책을 요약하는 것을 넘어, 현대의 '욜로(YOLO)'와 '조용한 사직(Quiet Quitting)'이라는 유행병에 맞서, 왜 우리가 다시금 그들의 '광기 어린 열정'과 '치밀한 전략'을 배워야 하는지 논리적으로 파헤친다. 우리는 이들을 '성공한 부자'가 아니라 '사고의 연금술사'라고 부르고자 한다.\n\n【 STEP 1. 문제를 구조화하라 (Elon Musk: First Principles) 】\n\n일론 머스크의 가장 강력한 무기는 '제1원칙 사고법(First Principles Thinking)'이다. 사람들은 보통 '유추(Analogy)'를 통해 생각한다. \"남들이 다 그렇게 하니까\", \"예전부터 이랬으니까\". 하지만 머스크는 모든 고정관념을 원자 단위로 분해한다.\n\n예를 들어, 스페이스X를 시작할 때 로켓 가격이 너무 비쌌다. 기존 업계는 \"로켓은 원래 수천억 원이야\"라고 말했다. 하지만 머스크는 로켓을 구성하는 알루미늄, 티타늄, 구리, 탄소 섬유의 시장가를 조사했다. 결과는 충격적이었다. 로켓의 원자재 가격은 판매가의 단 2%에 불과했다. 그는 구조를 새로 짰다. \"왜 직접 만들지 않지?\" 이것이 민간 우주 시대의 시작이었다.\n\n우리의 삶도 마찬가지다. \"요즘 경기가 안 좋아서\", \"내 전공이 아니라서\"라는 핑계는 구조화되지 않은 생각의 파편들이다. 문제를 본질적인 조각으로 쪼개라. 당신이 해결하고자 하는 문제의 '원자재 가격'은 얼마인가?\n\n【 STEP 2. 리스크를 계산하라 (The Calculated Gamble) 】\n\n많은 이들이 억만장자를 '위험한 도박사'로 오해한다. 하지만 일론 머스크는 테슬라와 스페이스X가 동시에 파산 위기에 몰렸던 2008년, 자신의 마지막 남은 전 재산을 쏟아부으며 이렇게 말했다. \"실패할 확률이 훨씬 높다는 걸 압니다. 하지만 이 일이 충분히 중요하다면, 실패하더라도 시도해야 합니다.\"\n\n그는 '무모함'이 아니라 '가치 있는 리스크'를 선택했다. 버핏 역시 마찬가지다. 그는 확실한 기회가 올 때까지 수년을 기다리지만, 기회가 오면 '배짱 있게' 베팅한다. 그들에게 리스크란 피해야 할 괴물이 아니라, 통제하고 계산해야 할 데이터다. 당신은 지금 '안전한 감옥'에 갇혀 있지는 않은가? 진짜 위험한 것은 아무런 리스크도 지지 않는 삶 그 자체다.\n\n【 STEP 3. 장기 게임을 한다 (Warren Buffett: Compound Interest) 】\n\n워렌 버핏의 자산 중 90% 이상은 그가 65세 이후에 형성되었다. 이것이 '복리의 마법'이자 '장기 게임'의 위력이다. 현대인들은 '단기적 보상'에 미쳐 있다. 주식 수익률이 하루만 떨어져도 불안해하고, 유튜브 조회수가 즉각 나오지 않으면 포기한다.\n\n버핏은 50년 뒤를 내다보고 투자한다. 그는 \"10년 동안 보유할 주식이 아니라면 단 10분도 쳐다보지 마라\"고 경고한다. 장기 게임을 한다는 것은 단순히 오래 기다리는 것이 아니다. '시간이라는 파도'에 올라타는 법을 배우는 것이다. 조급함은 가난의 냄새를 풍긴다. 반면, 장기적인 안목은 여유로운 승자의 향기를 풍긴다.\n\n【 STEP 4. 에너지를 관리한다 (Selective Ignorance) 】\n\n워렌 버핏의 일과표는 텅 비어 있는 것으로 유명하다. 그는 말한다. \"성공한 사람과 정말 성공한 사람의 차이는, 정말 성공한 사람은 거의 모든 것에 'No'라고 말한다는 것이다.\"\n\n우리는 너무 많은 것에 에너지를 분산한다. 단톡방의 소음, 넷플릭스의 유혹, 영혼 없는 인간관계. 억만장자들은 자신의 에너지를 '신성한 자원'으로 대우한다. 그들은 하루에 내리는 '결정의 횟수'를 제한하고, 가장 중요한 결정에 모든 에너지를 집중한다. 이것이 '선택적 무지(Selective Ignorance)'의 기술이다. 당신의 에너지는 지금 어디로 새고 있는가?\n\n【 STEP 5. 인맥을 레버리지한다 (Strategic Network) 】\n\n성공은 절대 혼자 이루어지지 않는다. 하지만 이는 단순히 '인맥을 넓히는 것'과는 다르다. 버핏에게는 평생의 파트너 찰리 멍거가 있었다. 머스크에게는 그의 광기를 현실로 구현해줄 엔지니어 팀이 있었다.\n\n그들은 자신보다 똑똑한 사람을 곁에 두는 것을 두려워하지 않는다. 오히려 그들의 지능과 시간을 '레버리지'한다. 타인의 강점을 내 목표를 위한 엔진으로 활용하는 법, 그것이 진정한 리더의 사고법이다. 혼자서 바둥거리는 것은 성실함이 아니라 전략의 부재일 뿐이다.\n\n【 STEP 6. 실패를 데이터화한다 (Failure as Assets) 】\n\n스페이스X의 초기 로켓 3발이 연달아 폭발했을 때, 머스크는 절망하는 대신 데이터를 수집했다. \"로켓이 폭발한 것이 아니라, 성공에 필요한 1,000가지 데이터 중 3개를 확보한 것\"이라고 그는 생각했다.\n\n실패를 '상처'로 받지 말고 '데이터'로 치환하라. 감정을 배제하고 원인을 분석하라. 실패가 쌓여 데이터가 되고, 그 데이터가 정교해졌을 때 비로소 성공이라는 결과값이 도출된다. 성공한 이들에게 실패는 '비용'이 아니라 'R&D 투자'다.\n\n【 STEP 7. 시장을 읽는다 (Market Perception) 】\n\n버핏은 남들이 탐욕을 부릴 때 공포를 느끼고, 남들이 공포를 느낄 때 탐욕을 부린다. 그는 시장의 '소음'이 아니라 '신호'를 본다. 시장의 흐름에 휩쓸리지 않고, 그 파도의 높낮이를 계산하여 가장 깊은 골에서 도약할 준비를 한다.\n\n이것은 단순히 주식 시장의 이야기가 아니다. 세상의 트렌드, 사람들의 욕망, 시대의 결핍을 예리하게 포착하는 능력이다. 고집스럽게 자신의 생각만 고수하는 것이 아니라, 시장의 목소리에 귀를 기울이되 자신만의 필터로 해석하는 유연함이 필요하다.\n\n【 결론: 당신의 삶에 적용할 5가지 실천 리스트 】\n\n이 장엄한 사고법의 여정을 마치며, 아카이뷰는 여러분께 5가지 구체적인 행동 강령을 제안한다.\n\n1. [구조화 훈련] 오늘 하루 나를 괴롭히는 가장 큰 고민을 적고, 그것을 '원자 단위'로 5단계까지 쪼개 보라.\n2. [에너지 청소] 내 스케줄 표에서 나에게 에너지를 주지 않는 일 3가지를 삭제하고, 그 시간에 명상을 하거나 책을 읽어라.\n3. [리스크 베팅] 내가 늘 두려워했던 일 중, 잃어도 감당 가능한 리스크를 가진 일 하나를 오늘 당장 시도하라.\n4. [장기 게임 선언] \"10년 뒤의 나는 무엇을 하고 있을까?\"를 생각하며, 당장의 성과가 나지 않더라도 멈추지 않을 '나만의 프로젝트'를 시작하라.\n5. [데이터 마인드] 최근에 겪은 실패 하나를 떠올려라. 거기서 얻은 '순수 데이터' 3가지를 기록하고 다음 전략에 반영하라.\n\n성공은 멀리 있지 않다. 당신의 사고구조(Mindset)가 바뀌는 순간, 세상은 다른 색깔로 당신에게 다가올 것이다. 당신의 찬란한 도약을 아카이뷰가 응원한다. ARCHIVIEW SUCCESS FRAMEWORK™가 당신의 삶을 바꾸는 나침반이 되기를.",
-                "source": "Archiview Original Production",
+                "desc": "Whiteboard 석세스 프레임워크: 세상을 바꾸는 워렌 버핏과 일론 머스크의 7가지 성공 공식을 압축했습니다.",
+                "review": "■ Whiteboard SUCCESS FRAMEWORK™: 억만장자의 사고법 7가지\n참고 도서: '스노볼'(워렌 버핏 평전), '일론 머스크'(월터 아이작슨), '타이탄의 도구들'(팀 페리스)\n\n【 서론: 성공이라는 이름의 알케미(Alchemy) 】\n\n성공은 결코 우연의 산물이 아니다. 수많은 명저를 탐독하며 우리가 내린 결론은 하나다. 부는 '운'이 아니라 '설계'의 결과물이라는 것이다. 우리는 흔히 억만장자들이 우리와 다른 세상을 산다고 생각한다. 그들의 자산 규모, 그들이 타는 전용기, 그들이 내리는 결정의 파급력은 확실히 거대하다. 하지만 그 거대한 빙산 아래에는 우리와 똑같은 '인간'으로서 그들이 매일같이 단련해온 '사고의 근육'이 있다.\n\n이 리뷰는 단순히 책을 요약하는 것을 넘어, 현대의 '욜로(YOLO)'와 '조용한 사직(Quiet Quitting)'이라는 유행병에 맞서, 왜 우리가 다시금 그들의 '광기 어린 열정'과 '치밀한 전략'을 배워야 하는지 논리적으로 파헤친다. 우리는 이들을 '성공한 부자'가 아니라 '사고의 연금술사'라고 부르고자 한다.\n\n【 STEP 1. 문제를 구조화하라 (Elon Musk: First Principles) 】\n\n일론 머스크의 가장 강력한 무기는 '제1원칙 사고법(First Principles Thinking)'이다. 사람들은 보통 '유추(Analogy)'를 통해 생각한다. \"남들이 다 그렇게 하니까\", \"예전부터 이랬으니까\". 하지만 머스크는 모든 고정관념을 원자 단위로 분해한다.\n\n예를 들어, 스페이스X를 시작할 때 로켓 가격이 너무 비쌌다. 기존 업계는 \"로켓은 원래 수천억 원이야\"라고 말했다. 하지만 머스크는 로켓을 구성하는 알루미늄, 티타늄, 구리, 탄소 섬유의 시장가를 조사했다. 결과는 충격적이었다. 로켓의 원자재 가격은 판매가의 단 2%에 불과했다. 그는 구조를 새로 짰다. \"왜 직접 만들지 않지?\" 이것이 민간 우주 시대의 시작이었다.\n\n우리의 삶도 마찬가지다. \"요즘 경기가 안 좋아서\", \"내 전공이 아니라서\"라는 핑계는 구조화되지 않은 생각의 파편들이다. 문제를 본질적인 조각으로 쪼개라. 당신이 해결하고자 하는 문제의 '원자재 가격'은 얼마인가?\n\n【 STEP 2. 리스크를 계산하라 (The Calculated Gamble) 】\n\n많은 이들이 억만장자를 '위험한 도박사'로 오해한다. 하지만 일론 머스크는 테슬라와 스페이스X가 동시에 파산 위기에 몰렸던 2008년, 자신의 마지막 남은 전 재산을 쏟아부으며 이렇게 말했다. \"실패할 확률이 훨씬 높다는 걸 압니다. 하지만 이 일이 충분히 중요하다면, 실패하더라도 시도해야 합니다.\"\n\n그는 '무모함'이 아니라 '가치 있는 리스크'를 선택했다. 버핏 역시 마찬가지다. 그는 확실한 기회가 올 때까지 수년을 기다리지만, 기회가 오면 '배짱 있게' 베팅한다. 그들에게 리스크란 피해야 할 괴물이 아니라, 통제하고 계산해야 할 데이터다. 당신은 지금 '안전한 감옥'에 갇혀 있지는 않은가? 진짜 위험한 것은 아무런 리스크도 지지 않는 삶 그 자체다.\n\n【 STEP 3. 장기 게임을 한다 (Warren Buffett: Compound Interest) 】\n\n워렌 버핏의 자산 중 90% 이상은 그가 65세 이후에 형성되었다. 이것이 '복리의 마법'이자 '장기 게임'의 위력이다. 현대인들은 '단기적 보상'에 미쳐 있다. 주식 수익률이 하루만 떨어져도 불안해하고, 유튜브 조회수가 즉각 나오지 않으면 포기한다.\n\n버핏은 50년 뒤를 내다보고 투자한다. 그는 \"10년 동안 보유할 주식이 아니라면 단 10분도 쳐다보지 마라\"고 경고한다. 장기 게임을 한다는 것은 단순히 오래 기다리는 것이 아니다. '시간이라는 파도'에 올라타는 법을 배우는 것이다. 조급함은 가난의 냄새를 풍긴다. 반면, 장기적인 안목은 여유로운 승자의 향기를 풍긴다.\n\n【 STEP 4. 에너지를 관리한다 (Selective Ignorance) 】\n\n워렌 버핏의 일과표는 텅 비어 있는 것으로 유명하다. 그는 말한다. \"성공한 사람과 정말 성공한 사람의 차이는, 정말 성공한 사람은 거의 모든 것에 'No'라고 말한다는 것이다.\"\n\n우리는 너무 많은 것에 에너지를 분산한다. 단톡방의 소음, 넷플릭스의 유혹, 영혼 없는 인간관계. 억만장자들은 자신의 에너지를 '신성한 자원'으로 대우한다. 그들은 하루에 내리는 '결정의 횟수'를 제한하고, 가장 중요한 결정에 모든 에너지를 집중한다. 이것이 '선택적 무지(Selective Ignorance)'의 기술이다. 당신의 에너지는 지금 어디로 새고 있는가?\n\n【 STEP 5. 인맥을 레버리지한다 (Strategic Network) 】\n\n성공은 절대 혼자 이루어지지 않는다. 하지만 이는 단순히 '인맥을 넓히는 것'과는 다르다. 버핏에게는 평생의 파트너 찰리 멍거가 있었다. 머스크에게는 그의 광기를 현실로 구현해줄 엔지니어 팀이 있었다.\n\n그들은 자신보다 똑똑한 사람을 곁에 두는 것을 두려워하지 않는다. 오히려 그들의 지능과 시간을 '레버리지'한다. 타인의 강점을 내 목표를 위한 엔진으로 활용하는 법, 그것이 진정한 리더의 사고법이다. 혼자서 바둥거리는 것은 성실함이 아니라 전략의 부재일 뿐이다.\n\n【 STEP 6. 실패를 데이터화한다 (Failure as Assets) 】\n\n스페이스X의 초기 로켓 3발이 연달아 폭발했을 때, 머스크는 절망하는 대신 데이터를 수집했다. \"로켓이 폭발한 것이 아니라, 성공에 필요한 1,000가지 데이터 중 3개를 확보한 것\"이라고 그는 생각했다.\n\n실패를 '상처'로 받지 말고 '데이터'로 치환하라. 감정을 배제하고 원인을 분석하라. 실패가 쌓여 데이터가 되고, 그 데이터가 정교해졌을 때 비로소 성공이라는 결과값이 도출된다. 성공한 이들에게 실패는 '비용'이 아니라 'R&D 투자'다.\n\n【 STEP 7. 시장을 읽는다 (Market Perception) 】\n\n버핏은 남들이 탐욕을 부릴 때 공포를 느끼고, 남들이 공포를 느낄 때 탐욕을 부린다. 그는 시장의 '소음'이 아니라 '신호'를 본다. 시장의 흐름에 휩쓸리지 않고, 그 파도의 높낮이를 계산하여 가장 깊은 골에서 도약할 준비를 한다.\n\n이것은 단순히 주식 시장의 이야기가 아니다. 세상의 트렌드, 사람들의 욕망, 시대의 결핍을 예리하게 포착하는 능력이다. 고집스럽게 자신의 생각만 고수하는 것이 아니라, 시장의 목소리에 귀를 기울이되 자신만의 필터로 해석하는 유연함이 필요하다.\n\n【 결론: 당신의 삶에 적용할 5가지 실천 리스트 】\n\n이 장엄한 사고법의 여정을 마치며, Whiteboard는 여러분께 5가지 구체적인 행동 강령을 제안한다.\n\n1. [구조화 훈련] 오늘 하루 나를 괴롭히는 가장 큰 고민을 적고, 그것을 '원자 단위'로 5단계까지 쪼개 보라.\n2. [에너지 청소] 내 스케줄 표에서 나에게 에너지를 주지 않는 일 3가지를 삭제하고, 그 시간에 명상을 하거나 책을 읽어라.\n3. [리스크 베팅] 내가 늘 두려워했던 일 중, 잃어도 감당 가능한 리스크를 가진 일 하나를 오늘 당장 시도하라.\n4. [장기 게임 선언] \"10년 뒤의 나는 무엇을 하고 있을까?\"를 생각하며, 당장의 성과가 나지 않더라도 멈추지 않을 '나만의 프로젝트'를 시작하라.\n5. [데이터 마인드] 최근에 겪은 실패 하나를 떠올려라. 거기서 얻은 '순수 데이터' 3가지를 기록하고 다음 전략에 반영하라.\n\n성공은 멀리 있지 않다. 당신의 사고구조(Mindset)가 바뀌는 순간, 세상은 다른 색깔로 당신에게 다가올 것이다. 당신의 찬란한 도약을 Whiteboard가 응원한다. Whiteboard SUCCESS FRAMEWORK™가 당신의 삶을 바꾸는 나침반이 되기를.",
+                "source": "Whiteboard Original Production",
                 "price": "Free",
                 "category": "자기계발",
                 "actionGuide": [
@@ -2235,7 +2268,7 @@ export const celebrities = [
                         "description": "끊고 싶은 습관에 물리적 장벽을 만들어보세요. 핸드폰을 다른 방에, 과자를 눈에 안 보이는 곳에. 의지력보다 환경 변화가 습관을 더 확실히 바꿉니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1524763403?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1524763403?tag=whiteboard2026-20"
             },
             {
                 "id": "tools-of-titans",
@@ -2262,7 +2295,7 @@ export const celebrities = [
                         "description": "내 분야에서 존경하는 사람 1명에게 10분만 대화를 요청해보세요. 타이탄들은 모두 적극적으로 연결을 만든 사람들입니다. 거절당해도 잃을 것이 없습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1328683788?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1328683788?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-부자-아빠-가난한-아빠",
@@ -2289,7 +2322,7 @@ export const celebrities = [
                         "description": "매주 30분, 재무제표 보는 법, ETF 종류, 부동산 수익률 계산 중 하나를 공부하세요. 부자 아빠는 돈에 대해 계속 배웠고, 가난한 아빠는 배우기를 멈췄습니다. 그 차이가 10년 뒤를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1612680194?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1612680194?tag=whiteboard2026-20"
             },
             {
                 "id": "guns-germs-steel",
@@ -2316,7 +2349,7 @@ export const celebrities = [
                         "description": "우리 팀에서 특정 사람이나 부서에만 쏠리는 정보, 기회, 예산이 있다면 더 공정하게 배분하는 방법을 한 장 제안서로 써보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=whiteboard2026-20"
             },
             {
                 "id": "how-to-win-friends",
@@ -2343,7 +2376,7 @@ export const celebrities = [
                         "description": "오늘 동료 한 명의 근황이나 고민을 먼저 물어보세요. 카네기는 상대방이 관심 있는 것에 관심을 가지는 것이 인간관계의 핵심이라고 했습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0671027034?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0671027034?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-그릿-grit",
@@ -2370,7 +2403,7 @@ export const celebrities = [
                         "description": "다음 번 프로젝트가 뜻대로 안 될 때, 낙담하는 시간을 일주일에서 하루로 줄여보세요. 빠른 회복력 자체가 경쟁력입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1501111108?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1501111108?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-미라클-모닝",
@@ -2397,7 +2430,7 @@ export const celebrities = [
                         "description": "오늘 밤 운동복, 물 한 잔, 책 한 권을 눈에 띄는 곳에 두세요. 아침 결정을 줄이면 루틴을 실행할 확률이 훨씬 높아집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0979019710?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0979019710?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-마인드셋",
@@ -2424,7 +2457,7 @@ export const celebrities = [
                         "description": "팀원이나 후배의 성과를 칭찬할 때 '잘했어'보다 '그 방식이 정말 좋았어', '끝까지 포기 안 한 것이 대단해'로 바꿔보세요. 과정 칭찬이 성장 마인드셋을 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0345472322?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0345472322?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-생각하라-그리고-부자가-되어라",
@@ -2451,7 +2484,7 @@ export const celebrities = [
                         "description": "내가 되고 싶은 모습의 사람 1명을 정하고 그 사람의 책, 인터뷰, 강의를 이번 달 집중적으로 흡수해보세요. 나폴레온 힐은 성공한 사람들의 사고방식을 복제하는 것이 핵심이라고 했습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1788441029?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1788441029?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-아웃라이어",
@@ -2478,7 +2511,7 @@ export const celebrities = [
                         "description": "같은 실력이라도 기회 차이가 결과를 만든다는 것을 알았다면, 우리 팀에서 덜 주목받는 동료에게 기회를 만들어주는 제안을 해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0316017930?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0316017930?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-성공하는-사람들의-7가지-습관",
@@ -2505,7 +2538,7 @@ export const celebrities = [
                         "description": "내가 살면서 진정으로 이루고 싶은 것, 어떤 사람이 되고 싶은 것을 한 문장으로 써보세요. 사명이 명확한 사람은 매일 작은 결정을 더 빠르고 일관되게 합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1451639619?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1451639619?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-에센셜리즘",
@@ -2532,7 +2565,7 @@ export const celebrities = [
                         "description": "지금 내 업무 목표 중 진심으로 원하는 것과 주변 기대에 맞추는 것을 분리해 써보세요. 자신의 우선순위를 지키는 사람이 에센셜리스트입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0804137382?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0804137382?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-기브-앤-테이크",
@@ -2559,7 +2592,7 @@ export const celebrities = [
                         "description": "매주 팀 슬랙이나 메일에 유용한 정보를 하나 공유하는 것을 시작해보세요. 작은 기여가 쌓이면 팀 전체의 생산성이 오르고, 당신의 영향력도 커집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0143124986?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0143124986?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-시크릿",
@@ -2586,7 +2619,7 @@ export const celebrities = [
                         "description": "'나는 건강하고 풍요로운 삶을 살고 있다'처럼 이미 이뤄진 것처럼 현재형으로 확언을 써보세요. 매일 소리 내어 읽으면 잠재의식이 그 방향으로 이끌려 갑니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1582701709?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1582701709?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-나는-4시간만-일한다",
@@ -2613,7 +2646,7 @@ export const celebrities = [
                         "description": "지금 내가 직접 하는 반복 업무 중 템플릿화, 자동화, 또는 위임 가능한 것 하나를 찾아 이번 달 안에 그 업무에서 손을 떼보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307465357?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307465357?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-부의-추월차선",
@@ -2640,7 +2673,7 @@ export const celebrities = [
                         "description": "블로그, 유튜브, 온라인 강의, 전자책 등 지금 당장 시작할 수 있는 부수입 실험 하나를 이번 달 안에 시작해보세요. 완성도보다 시작이 먼저입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0984358145?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0984358145?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-부자의-그릇",
@@ -2694,7 +2727,7 @@ export const celebrities = [
                         "description": "월 10만 원을 연 6% 수익률로 30년 투자하면 얼마가 되는지 계산해보세요. 숫자를 직접 보면 지금 당장 시작하고 싶어집니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0451205362?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0451205362?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-이웃집-백만장자",
@@ -2721,7 +2754,7 @@ export const celebrities = [
                         "description": "자산(예금, 투자, 부동산)에서 부채(대출, 카드빚)를 뺀 순자산을 계산해보세요. 이웃집 백만장자는 수입이 아닌 순자산으로 부를 측정합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1589795474?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1589795474?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-생각의-비밀",
@@ -2991,7 +3024,7 @@ export const celebrities = [
                         "description": "줄이고 싶은 행동(야식, 핸드폰)을 하기 위해 추가 단계가 필요하도록 환경을 설계해보세요. 사탕을 불투명 그릇에, 앱을 폴더 안으로. 마찰이 행동을 줄입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0143137523?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0143137523?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-국부론",
@@ -3018,7 +3051,7 @@ export const celebrities = [
                         "description": "팀이나 부서 간 자원(정보, 스킬, 인맥)을 교환하면 서로 윈윈이 되는 협업 아이디어를 하나 제안해보세요. 교환이 가치를 창출한다는 스미스의 통찰을 적용하는 것입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0553585975?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0553585975?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-부의-시나리오",
@@ -3049,6 +3082,7 @@ export const celebrities = [
             },
             {
                 "section": "ECONOMY",
+                "id": "behavioral-economics",
                 "title": "행동경제학",
                 "author": "리처드 탈러",
                 "cover": "https://contents.kyobobook.co.kr/sih/fit-in/458x0/pdt/9780393352795.jpg",
@@ -3071,7 +3105,7 @@ export const celebrities = [
                         "description": "다음 연봉 협상이나 거래에서 내가 원하는 숫자보다 더 높은 첫 제안을 해보세요. 첫 숫자가 협상의 기준점이 됩니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0061353248?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0061353248?tag=whiteboard2026-20"
             },
             {
                 "id": "lean-startup",
@@ -3098,7 +3132,7 @@ export const celebrities = [
                         "description": "내 업무 결과물(보고서, 제품, 서비스)을 실제 사용자 1명에게 보여주고 솔직한 반응을 받아보세요. 가정이 아닌 데이터로 개선하는 것이 린 방식입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307887898?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307887898?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-원칙-principles",
@@ -3125,7 +3159,7 @@ export const celebrities = [
                         "description": "최근 실패한 경험 하나를 떠올려 '왜 실패했는가', '다음엔 어떻게 할 것인가'를 원칙 형식으로 써보세요. 고통 + 성찰 = 진보입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1501124021?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1501124021?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-피터-드러커의-훌륭한-관리자",
@@ -3152,7 +3186,7 @@ export const celebrities = [
                         "description": "내가 오늘 하루 가장 중요한 성과를 냈는지 퇴근 전에 점검해보세요. 바쁘게 보낸 것이 아니라 결과를 낸 것이 지식 노동자의 생산성 기준입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0062574582?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0062574582?tag=whiteboard2026-20"
             },
             {
                 "id": "steve-jobs",
@@ -3179,7 +3213,7 @@ export const celebrities = [
                         "description": "현재 내 업무 결과물에서 남들이 넘기는 작은 디테일 하나를 끝까지 완성해보세요. 탁월함은 큰 도약이 아니라 작은 완성도의 집착에서 나옵니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1451648537?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1451648537?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-블루오션-전략",
@@ -3206,7 +3240,7 @@ export const celebrities = [
                         "description": "우리 업계에서 다들 하지만 고객/사용자에게 실제 가치를 주지 못하는 관행을 하나 찾아보세요. 그것을 제거하거나 바꾸는 것이 블루오션의 시작입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1591396190?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1591396190?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-아메바-경영",
@@ -3260,7 +3294,7 @@ export const celebrities = [
                         "description": "단기 실적을 위해 포기하고 있는 장기 투자가 무엇인지 돌아보세요. 플라이휠은 처음엔 느리지만, 돌리기 시작하면 멈추지 않는 힘이 생깁니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1400231582?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1400231582?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-지적-대화를-위한-넓고-얕은-지식",
@@ -3314,7 +3348,7 @@ export const celebrities = [
                         "description": "오늘 하루 중 '이건 왜 이렇게 됐지?'라고 궁금증을 가질 수 있는 것 하나를 찾아보세요. 호기심을 유지하는 것이 코스모스가 가르쳐주는 가장 중요한 태도입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0345539435?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0345539435?tag=whiteboard2026-20"
             },
             {
                 "id": "justice",
@@ -3341,7 +3375,7 @@ export const celebrities = [
                         "description": "성과급, 연공서열, 능력주의 중 당연하다고 생각한 것 하나에 '이게 진짜 공정한가?'를 물어보세요. 불편한 질문이 더 나은 제도를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0374532508?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0374532508?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-이기적-유전자",
@@ -3368,7 +3402,7 @@ export const celebrities = [
                         "description": "내가 자주 하는 비합리적 행동(회피, 과시, 경쟁심)이 진화적으로 왜 생겼는지 생각해보세요. 본능을 이해하면 더 의식적으로 행동할 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0198788606?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0198788606?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-짜라투스트라는-이렇게-말했다",
@@ -3395,7 +3429,7 @@ export const celebrities = [
                         "description": "편안한 선택 대신 성장에 도움이 되지만 불편한 것 하나를 오늘 선택해보세요. 니체의 핵심은 저항과 극복을 통해 더 강해진다는 것입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0140441189?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0140441189?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-역사란-무엇인가",
@@ -3422,7 +3456,7 @@ export const celebrities = [
                         "description": "지금 내가 하는 일과 결정이 10년 뒤 어떻게 기록될지 써보세요. 미래의 관점이 현재의 선택을 더 신중하게 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0394703073?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0394703073?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-군주론",
@@ -3449,7 +3483,7 @@ export const celebrities = [
                         "description": "마키아벨리는 두려움을 주는 것이 존경받는 것보다 안전하다고 했지만, 현대에선 다릅니다. 내가 팀에서 어떤 방식으로 신뢰를 쌓고 싶은지 써보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0486272745?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0486272745?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-자유론",
@@ -3476,7 +3510,7 @@ export const celebrities = [
                         "description": "다음 팀 회의에서 가장 조용한 사람의 의견을 먼저 물어보세요. 다수결이 항상 옳지 않으며, 소수 의견 안에 더 나은 해답이 있을 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0140432078?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0140432078?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-예루살렘의-아이히만",
@@ -3503,7 +3537,7 @@ export const celebrities = [
                         "description": "미리 '이런 상황이라면 나는 이렇게 할 것이다'를 정해두세요. 위기의 순간에 사전에 정한 원칙이 용기를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0143039881?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0143039881?tag=whiteboard2026-20"
             },
             {
                 "id": "courage-to-be-disliked",
@@ -3530,7 +3564,7 @@ export const celebrities = [
                         "description": "과거의 실패나 미래의 걱정 대신, 지금 이 순간 할 수 있는 것에 집중하는 연습을 해보세요. 아들러는 지금 여기(here and now)에서만 변화가 시작된다고 했습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1501197274?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1501197274?tag=whiteboard2026-20"
             },
             {
                 "id": "frame",
@@ -3584,7 +3618,7 @@ export const celebrities = [
                         "description": "다음 협업이나 협상 전에 상대방과 공통점을 찾고 진심 어린 칭찬을 먼저 해보세요. 사람은 자신을 좋아하는 사람의 말에 더 귀를 기울입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/006124189X?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/006124189X?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-생각-빠르고-느리게",
@@ -3611,7 +3645,7 @@ export const celebrities = [
                         "description": "이득을 얻는 기쁨보다 손실의 고통이 2배 크다는 것을 알고, 내가 손실이 두려워 포기한 기회가 있는지 돌아보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0374533555?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-회복탄력성",
@@ -3692,7 +3726,7 @@ export const celebrities = [
                         "description": "화나거나 짜증나는 상황에서 즉각 반응하지 말고 '나는 지금 왜 이 감정을 느끼는가?'를 3초 동안 물어보세요. 감정을 관찰하는 순간 그것에 지배당하지 않게 됩니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1101984310?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1101984310?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-내면소통",
@@ -3746,7 +3780,7 @@ export const celebrities = [
                         "description": "중요한 대화, 결정, 아이디어를 즉시 메모하는 습관을 만들어보세요. 우리 뇌는 기억을 왜곡하고 재구성합니다. 기록만이 정확합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0547304153?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0547304153?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-만일-내가-인생을-다시-산다면",
@@ -3813,7 +3847,7 @@ export const celebrities = [
                         "description": "우리 팀에서 특정 사람이나 부서에만 집중되는 자원(정보, 기회, 예산)이 있다면 더 공정하게 배분할 방법을 한 장 제안서로 써보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0393317552?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-아웨이크",
@@ -3842,7 +3876,7 @@ export const celebrities = [
                         "description": "다음 주에 이루고 싶은 목표를 달성했을 때의 느낌, 소리, 표정까지 생생하게 상상해 적어보세요. 뇌는 생생한 이미지를 현실과 구분하지 못합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0671791540?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0671791540?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-습관의-디테일",
@@ -3871,7 +3905,7 @@ export const celebrities = [
                         "description": "줄이고 싶은 습관(핸드폰 과다사용, 야식)에 물리적 불편함을 하나 추가해보세요. 핸드폰을 서랍 안에, 과자를 안 보이는 곳에. 마찰만 높여도 절반은 성공입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0544633792?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0544633792?tag=whiteboard2026-20"
             },
             {
                 "id": "future-self",
@@ -3900,7 +3934,7 @@ export const celebrities = [
                         "description": "오늘 중요한 결정 앞에서 지금의 나가 아닌 5년 후 내가 원하는 나라면 어떤 선택을 할지 자문해보세요. 미래 자아의 관점이 현재를 바꿉니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1401967574?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1401967574?tag=whiteboard2026-20"
             },
             {
                 "id": "immersion",
@@ -3929,7 +3963,7 @@ export const celebrities = [
                         "description": "집중이 깨지는 순간 무엇이 방해했나를 기록해보세요. 슬랙 알림, 동료의 말걸기, 배고픔 등 방해 요인을 알아야 막을 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0061339202?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0061339202?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-당신은-왜-그-일을-하는가-",
@@ -3958,7 +3992,7 @@ export const celebrities = [
                         "description": "우리 회사가 존재하는 이유와 내가 일하는 이유를 각각 적고, 겹치는 부분이 얼마나 되는지 확인해보세요. 그 교집합이 클수록 번아웃 없이 오래 일할 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1591846447?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1591846447?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-초격차",
@@ -4045,7 +4079,7 @@ export const celebrities = [
                         "description": "부자들의 가장 기본 습관은 먼저 저축하고 나머지로 생활하는 것입니다. 급여가 들어오는 날, 자동이체로 10%를 빼두는 시스템을 만들어보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1934938939?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1934938939?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-파이어족이-온다",
@@ -4074,7 +4108,7 @@ export const celebrities = [
                         "description": "지금 내 스킬과 시간으로 만들 수 있는 부수입 아이디어를 제약 없이 3가지 적어보세요. 소액이라도 첫 걸음이 FIRE 여정을 실감하게 합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0865718989?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0865718989?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-한국의-젊은-부자들",
@@ -4132,7 +4166,7 @@ export const celebrities = [
                         "description": "지금 내 수입이 내 시간을 파는 것인지, 결과나 시스템을 파는 것인지 구분해보세요. 스케일 가능한 수입 구조로 전환하는 첫 아이디어를 써보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0984358188?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0984358188?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-경제기사-궁금증-300문-300답",
@@ -4190,7 +4224,7 @@ export const celebrities = [
                         "description": "올해 물가상승률과 내 연봉인상률을 비교해 실질 임금이 오른 건지 내린 건지 계산해보세요. 숫자로 보면 협상 근거가 생깁니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1319098754?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1319098754?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-이코노믹-씽킹",
@@ -4219,7 +4253,7 @@ export const celebrities = [
                         "description": "지금 해야 할 업무 목록에서 추가 1시간 투자 대비 성과가 가장 큰 일이 무엇인지 골라 그것부터 시작하세요. 한계 편익 사고가 생산성을 높입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0465060710?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0465060710?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-장하준의-경제학-강의",
@@ -4248,7 +4282,7 @@ export const celebrities = [
                         "description": "핀란드 교육, 독일 제조업, 싱가포르 금융 등 특정 국가의 성공 정책 하나를 깊이 파고 우리나라나 우리 회사에 적용 가능한 점을 찾아보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1620400314?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1620400314?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-환율의-미래",
@@ -4306,7 +4340,7 @@ export const celebrities = [
                         "description": "현금 예금이 자산의 몇 %인지 확인하고, 인플레이션이 지속될 때 현금 자산의 실질 가치가 어떻게 줄어드는지 계산해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1591845564?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1591845564?tag=whiteboard2026-20"
             },
             {
                 "id": "good-to-great",
@@ -4335,7 +4369,7 @@ export const celebrities = [
                         "description": "꾸준히 돌리면 결국 가속이 붙는 플라이휠(반복 가능한 작은 성공 루프)을 내 업무에서 찾아보세요. 오늘의 작은 반복이 내년의 큰 성과를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/Good-Great-Some-Companies-Others/dp/0066620996?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/Good-Great-Some-Companies-Others/dp/0066620996?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-구글의-아침은-자유가-시작된다",
@@ -4364,7 +4398,7 @@ export const celebrities = [
                         "description": "구글이 밝힌 최고 팀의 조건 1위는 심리적 안정감입니다. 우리 팀에서 솔직한 의견을 말할 수 있는 분위기인지, 내가 만들 수 있는 변화가 무엇인지 생각해보세요."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1455554790?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1455554790?tag=whiteboard2026-20"
             },
             {
                 "id": "no-rules-rules",
@@ -4393,7 +4427,7 @@ export const celebrities = [
                         "description": "출퇴근 시간이나 자리 지킴이 아닌 성과로 평가받기 위해 내 업무의 명확한 결과 지표를 상사와 합의해보세요. 측정 가능한 목표가 자유를 만듭니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1984877860?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1984877860?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-딥-워크",
@@ -4422,7 +4456,7 @@ export const celebrities = [
                         "description": "오늘 퇴근 전 5분, 내일 가장 집중해서 할 한 가지를 메모해두세요. 아침에 무엇을 할지 고민하는 시간을 없애면 딥 워크로 바로 진입할 수 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1455586692?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1455586692?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-그로스-해킹",
@@ -4451,7 +4485,7 @@ export const celebrities = [
                         "description": "우리 팀이 만드는 제품이나 서비스에서 고객이 이거다를 느끼는 순간이 언제인지 동료들과 토론해보세요. 그 순간까지 빠르게 도달시키는 것이 그로스의 핵심입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1591847389?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1591847389?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-도덕경",
@@ -4480,7 +4514,7 @@ export const celebrities = [
                         "description": "팀원이나 동료에게 일을 맡겼을 때 중간에 끼어들고 싶은 충동을 한 번 참아보세요. 통제를 줄이면 신뢰가 생기고 팀이 성장합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0140441387?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0140441387?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-명상록",
@@ -4509,7 +4543,7 @@ export const celebrities = [
                         "description": "다음 번 피드백이나 비판을 받을 때 방어 반응 대신 무엇을 배울 수 있나를 먼저 물어보세요. 스토아 철학에서 역경은 성장의 재료입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0812968255?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0812968255?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-공정하다는-착각",
@@ -4538,7 +4572,7 @@ export const celebrities = [
                         "description": "다음 번 동료 평가나 성과 검토 때, 결과만이 아닌 그 사람이 처한 환경과 조건을 함께 고려해보세요. 공정한 판단은 맥락을 보는 것에서 시작합니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0374289982?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0374289982?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-생각의-탄생",
@@ -4567,7 +4601,7 @@ export const celebrities = [
                         "description": "출퇴근길이나 업무 중 눈에 띄는 것 하나를 자세히 관찰하고 기록해보세요. 세밀한 관찰 습관이 창의적 문제 해결의 기초입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0618620311?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0618620311?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-당신의-뇌는-최적화를-원한다",
@@ -4625,7 +4659,7 @@ export const celebrities = [
                         "description": "오늘 동료와 업무 외의 이야기(주말, 가족, 고민)를 5분이라도 나눠보세요. 사회적 연결감이 뇌의 스트레스 반응을 줄이는 가장 효과적인 방법입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1626251207?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1626251207?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-감정의-발견",
@@ -4654,7 +4688,7 @@ export const celebrities = [
                         "description": "다음 팀 미팅 전에 오늘 어때요? 진짜로요 라고 한 번 물어보세요. 감정 인식 능력이 높은 리더의 팀이 성과도 높다는 연구 결과가 있습니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/1250212847?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/1250212847?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-조용한-성격의-힘",
@@ -4683,7 +4717,7 @@ export const celebrities = [
                         "description": "내향인이 잘하는 것(깊은 분석, 경청, 글쓰기, 1:1 관계)이 지금 내 직무에서 어떻게 강점이 될 수 있는지 써보세요. 강점을 살리는 것이 더 효과적입니다."
                     }
                 ],
-                "amazonLink": "https://www.amazon.com/dp/0307352153?tag=archiview2026-20"
+                "amazonLink": "https://www.amazon.com/dp/0307352153?tag=whiteboard2026-20"
             },
             {
                 "id": "top70-자존감-수업",
@@ -4716,4 +4750,1078 @@ export const celebrities = [
             }
         ]
     }
+,
+{
+    "id": "youtube-bestsellers",
+    "name": "유튜브/셀럽 베스트 추천",
+    "role": "도서 추천 큐레이터",
+    "image": "/images/celebrities/youtube.jpg",
+    "readingNow": "역행자",
+    "intro": "유튜브 자기계발, 경제 채널과 유명 인플루언서들이 인생을 바꾼 책으로 가장 강력하게 추천하는 분야별 최고의 명저들을 모았습니다.",
+    "quote": "읽은 책이 곧 나의 미래를 결정한다.",
+    "books": [
+        {
+            "id": "yeok-haeng-ja",
+            "section": "WEALTH",
+            "title": "역행자",
+            "author": "자청",
+            "cover": "/images/covers/yeokhaengja.jpg",
+            "desc": "돈, 시간, 운명으로부터 완전한 자유를 얻는 7단계 인생 공략집.",
+            "review": "순리자로 살 것인가, 역행자로 살 것인가? 자수성가 청년 '자청'이 제안하는 무자본 연쇄 창업과 마인드 리셋의 정수입니다.",
+            "source": "YouTube Top Choice",
+            "price": "17,500원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "자아 해체하기",
+                    "description": "내 고집과 자존심을 버리고 객관적으로 나를 바라보기"
+                }
+            ]
+        },
+        {
+            "id": "atomic-habits",
+            "section": "HABIT",
+            "title": "아주 작은 습관의 힘",
+            "author": "제임스 클리어",
+            "cover": "/images/covers/atomic-habits.jpg",
+            "desc": "1퍼센트의 성장이 만드는 단단한 습관 복리의 마법.",
+            "review": "목표를 높이지 말고 시스템의 수준을 낮춰라! 삶을 자동화하고 사소한 행동을 성공으로 연결하는 전 세계적 베스트셀러.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "환경 설계",
+                    "description": "나쁜 습관은 하기 어렵게, 좋은 습관은 하기 쉽게 주변을 세팅하기"
+                }
+            ]
+        },
+        {
+            "id": "tools-of-titans",
+            "section": "SUCCESS",
+            "title": "타이탄의 도구들",
+            "author": "팀 페리스",
+            "cover": "/images/covers/titans.jpg",
+            "desc": "세계 최정상에 오른 1만 시간의 법칙을 깨는 혁신적 방법들.",
+            "review": "비범한 성취를 이룬 수백 명의 타이탄들이 매일 실천하는 사소한 디테일과 마인드셋의 총집합.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "승리하는 아침 만들기",
+                    "description": "이부자리 정리부터 명상까지 아침 루틴 확보하기"
+                }
+            ]
+        },
+        {
+            "id": "rich-dad-poor-dad",
+            "section": "WEALTH",
+            "title": "부자 아빠 가난한 아빠",
+            "author": "로버트 기요사키",
+            "cover": "/images/covers/rich-dad.jpg",
+            "desc": "돈과 투자의 개념을 완전히 뒤바꾼 금융 문맹 탈출 바이블.",
+            "review": "돈을 위해 일하지 말고 돈이 나를 위해 일하게 하라. 소득 공간을 어떻게 이동해야 하는지를 명확히 짚어줍니다.",
+            "source": "YouTube Top Choice",
+            "price": "15,800원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "자산과 부채 구분하기",
+                    "description": "내 주머니에 돈을 넣어주는 자산만 사기"
+                }
+            ]
+        },
+        {
+            "id": "guns-germs-and-steel",
+            "section": "HISTORY",
+            "title": "총, 균, 쇠",
+            "author": "재레드 다이아몬드",
+            "cover": "/images/covers/guns-germs-steel.jpg",
+            "desc": "무기, 병균, 금속이 문명의 불평등과 권력 지도를 어떻게 바꿨는가.",
+            "review": "인류의 역사가 지리적 환경 차이에서 비롯되었음을 설득력 있게 증명해낸 퓰리처상 수상작.",
+            "source": "YouTube Top Choice",
+            "price": "28,000원",
+            "category": "역사",
+            "actionGuide": [
+                {
+                    "title": "환경적 시각 가지기",
+                    "description": "현상의 원인을 개인의 능력이 아닌 구조적/환경적 차이로 넓혀서 바라보기"
+                }
+            ]
+        },
+        {
+            "id": "how-to-win-friends",
+            "section": "MINDSET",
+            "title": "데일 카네기 인간관계론",
+            "author": "데일 카네기",
+            "cover": "/images/covers/carnegie.jpg",
+            "desc": "시대를 초월하는 인간관계의 성공 철학이자 가장 완벽한 멘토링.",
+            "review": "비판하지 말고 칭찬하라. 상대방의 입장에서 생각하는 법을 다룬 절대불변의 인간관계 교과서.",
+            "source": "YouTube Top Choice",
+            "price": "11,500원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "진심으로 인정하기",
+                    "description": "오늘 세 사람에게 진심을 다해 칭찬 건네기"
+                }
+            ]
+        },
+        {
+            "id": "grit",
+            "section": "SUCCESS",
+            "title": "그릿 (GRIT)",
+            "author": "앤절라 더크워스",
+            "cover": "/images/covers/grit.jpg",
+            "desc": "천재를 이기는 끝없는 열정과 끈기의 힘.",
+            "review": "재능보다 중요한 것은 넘어졌을 때 다시 일어나는 투지와 집념이라는 사실을 수많은 연구로 증명합니다.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "작은 목표부터 끝내기",
+                    "description": "포기하지 않고 끝까지 마무리를 짓는 경험 쌓기"
+                }
+            ]
+        },
+        {
+            "id": "miracle-morning",
+            "section": "HABIT",
+            "title": "미라클 모닝",
+            "author": "할 엘로드",
+            "cover": "/images/covers/miracle-morning.jpg",
+            "desc": "하루를 바꾸고 인생을 기적처럼 변화시키는 아침 의식.",
+            "review": "침묵, 확언, 시각화, 운동, 독서, 기록의 6가지 '라이프 세이버'로 아침을 혁명적으로 바꾸는 책.",
+            "source": "YouTube Top Choice",
+            "price": "13,500원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "10분 일찍 일어나기",
+                    "description": "기존 기상 시간보다 10분 일찍 일어나 확언 외치기"
+                }
+            ]
+        },
+        {
+            "id": "mindset",
+            "section": "MINDSET",
+            "title": "마인드셋",
+            "author": "캐럴 드웩",
+            "cover": "/images/covers/mindset.jpg",
+            "desc": "무엇이든 배울 수 있고 변할 수 있다는 성장을 이끄는 믿음.",
+            "review": "고정 마인드셋을 버리고 성장 마인드셋을 장착할 때 우리 한계는 무한히 확장됨을 역설합니다.",
+            "source": "YouTube Top Choice",
+            "price": "17,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "'아직'이라는 단어 쓰기",
+                    "description": "못한다가 아니라 '아직' 배우는 중이라고 말하기"
+                }
+            ]
+        },
+        {
+            "id": "think-and-grow-rich",
+            "section": "WEALTH",
+            "title": "생각하라 그리고 부자가 되어라",
+            "author": "나폴레온 힐",
+            "cover": "/images/covers/think-rich.jpg",
+            "desc": "성공을 위한 위대한 철학, 잠재의식을 활용하여 부를 끌어당기는 법.",
+            "review": "소망을 현실로 만드는 강력한 신념과 끈기의 중요성, 그리고 명확한 목표 설정의 기적을 증명합니다.",
+            "source": "YouTube Top Choice",
+            "price": "15,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "목표 선언문 작성",
+                    "description": "구체적인 돈의 액수와 시한을 적고 매일 아침저녁 낭독하기"
+                }
+            ]
+        },
+        {
+            "id": "outliers",
+            "section": "SUCCESS",
+            "title": "아웃라이어",
+            "author": "말콤 글래드웰",
+            "cover": "/images/covers/outliers.jpg",
+            "desc": "성공의 기회를 발견한 사람들의 비밀, 1만 시간의 법칙.",
+            "review": "천재는 태어나는 것이 아니라 만들어지며, 환경적 요인과 축적된 시간의 놀라운 상관관계를 탐구합니다.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "시간 가계부 쓰기",
+                    "description": "매일 내 전문성 향상에 몇 시간을 쓰고 있는지 추적하기"
+                }
+            ]
+        },
+        {
+            "id": "7-habits",
+            "section": "SUCCESS",
+            "title": "성공하는 사람들의 7가지 습관",
+            "author": "스티븐 코비",
+            "cover": "/images/covers/7-habits.jpg",
+            "desc": "개인과 조직을 성공으로 이끄는 강력하고 보편적인 영원한 바이블.",
+            "review": "주도성, 끝을 생각하며 시작하기, 소중한 것을 먼저 하기 등 자기 혁신과 타인과의 상호 의존성을 배웁니다.",
+            "source": "YouTube Top Choice",
+            "price": "19,800원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "주도성 발휘하기",
+                    "description": "자극과 반응 사이의 공간에서 나의 선택 자각하기"
+                }
+            ]
+        },
+        {
+            "id": "essentialism",
+            "section": "MINDSET",
+            "title": "에센셜리즘",
+            "author": "그렉 맥커운",
+            "cover": "/images/covers/essentialism.jpg",
+            "desc": "더 적게, 하지만 더 낫게! 본질에 집중하는 힘.",
+            "review": "모든 것을 하려는 욕심을 버리고 오직 내 삶에서 가장 핵심적인 소수에게만 헌신하는 방법을 가르칩니다.",
+            "source": "YouTube Top Choice",
+            "price": "16,800원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "강력한 '거절' 연습",
+                    "description": "본질적이지 않은 요청에는 부드럽고 단호하게 'No'라고 말하기"
+                }
+            ]
+        },
+        {
+            "id": "give-and-take",
+            "section": "SUCCESS",
+            "title": "기브 앤 테이크",
+            "author": "애덤 그랜트",
+            "cover": "/images/covers/give-and-take.jpg",
+            "desc": "승자 독식의 착각을 깨는, 주는 사람이 결국 성공하는 이유.",
+            "review": "이기적인 테이커가 아닌 전략적인 기버들이 결국 사회의 거대한 성공 사다리 꼭대기에 서는 비밀.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "5분 헌신",
+                    "description": "타인을 위해 아무런 조건 없이 5분간 도움이나 지식 나누기"
+                }
+            ]
+        },
+        {
+            "id": "the-secret",
+            "section": "MINDSET",
+            "title": "시크릿",
+            "author": "론다 번",
+            "cover": "/images/covers/secret.jpg",
+            "desc": "수 세기 동안 소수만이 알고 있던 '끌어당김의 법칙'의 비밀.",
+            "review": "우리의 생각은 현실을 창조하며, 긍정적인 생각과 에너지가 어떻게 부, 건강, 행복을 유입시키는가.",
+            "source": "YouTube Top Choice",
+            "price": "15,800원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "감사 일기 쓰기",
+                    "description": "이미 이룬 것처럼 구체적이고 생생하게 상상하며 감사하기"
+                }
+            ]
+        },
+        {
+            "id": "4-hour-workweek",
+            "section": "WEALTH",
+            "title": "나는 4시간만 일한다",
+            "author": "팀 페리스",
+            "cover": "/images/covers/4hour.jpg",
+            "desc": "아웃소싱과 자동화를 통한 뉴리치(New Rich)의 시간적, 장소적 자유.",
+            "review": "시간=돈의 공식을 끊어내고 미니 은퇴를 즐기며 인생의 통제권을 완전히 되찾는 실질적인 가이드.",
+            "source": "YouTube Top Choice",
+            "price": "17,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "정보 다이어트",
+                    "description": "불필요한 뉴스 시청 중단 및 가장 비효율적인 업무 하나 줄이기"
+                }
+            ]
+        },
+        {
+            "id": "fastlane",
+            "section": "WEALTH",
+            "title": "부의 추월차선",
+            "author": "엠제이 드마코",
+            "cover": "/images/covers/fastlane.jpg",
+            "desc": "휠체어 탄 부자를 거부하고 젊어서 부와 자유를 거머쥐는 법.",
+            "review": "절약하고 모아서 늙어 부자가 되라는 기존의 상식을 부수고, 사업 시스템을 통해 폭발적인 부를 창출하라는 일침.",
+            "source": "YouTube Top Choice",
+            "price": "16,500원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "생산자 마인드셋",
+                    "description": "물건을 소비하는 관점에서 그것을 제공하는 관점으로 생각 전환하기"
+                }
+            ]
+        },
+        {
+            "id": "money-vessel",
+            "section": "WEALTH",
+            "title": "부자의 그릇",
+            "author": "이즈미 마사토",
+            "cover": "/images/covers/money-vessel.jpg",
+            "desc": "스토리텔링 형식으로 배우는 돈을 다루는 능력과 마음가짐.",
+            "review": "돈을 대하는 태도, 빚에 대한 두려움 극복, 그리고 내 돈의 그릇 크기를 늘려야 큰 돈이 담길 수 있다는 철학.",
+            "source": "YouTube Top Choice",
+            "price": "15,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "현재 돈의 그릇 파악하기",
+                    "description": "투자/지출에 대한 나의 불안 지수를 객관적으로 체크하기"
+                }
+            ]
+        },
+        {
+            "id": "richest-man-in-babylon",
+            "section": "WEALTH",
+            "title": "바빌론 부자들의 돈 버는 지혜",
+            "author": "조지 S. 클레이슨",
+            "cover": "/images/covers/babylon.jpg",
+            "desc": "가장 오래되고 역사적으로 증명된 고대 바빌론 부자들의 법칙.",
+            "review": "수입의 1할을 먼저 저축하라, 돈이 나를 위해 일하게 하라. 아주 기초적이지만 단 한 번도 변하지 않은 절대 진리.",
+            "source": "YouTube Top Choice",
+            "price": "14,500원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "선저축 후지출",
+                    "description": "월급이 들어오면 무조건 10%를 떼어 강제로 모으기"
+                }
+            ]
+        },
+        {
+            "id": "millionaire-next-door",
+            "section": "WEALTH",
+            "title": "이웃집 백만장자",
+            "author": "토머스 J. 스탠리",
+            "cover": "/images/covers/millionaire-next-door.jpg",
+            "desc": "화려한 부자의 이미지를 깨부수는, 진짜 부자들의 검소한 라이프 스타일.",
+            "review": "진짜 부자들은 화려한 외제차나 명품을 사지 않는다. 축적형 부자들의 자산 관리와 삶의 태도를 낱낱이 파헤친다.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "지출 통제하기",
+                    "description": "내 자산 대비 '부유함 과시 비용'이 얼마나 되는지 점검하기"
+                }
+            ]
+        },
+        {
+            "id": "secret-of-thought",
+            "section": "WEALTH",
+            "title": "생각의 비밀",
+            "author": "김승호",
+            "cover": "/images/covers/secret-thought.jpg",
+            "desc": "김승호 회장이 말하는 성공할 수밖에 없는 부자들의 생각법.",
+            "review": "기적을 부르는 생각의 힘, 작은 돈을 소중히 여기는 태도, 그리고 목표를 100일간 100번 쓰는 실천력의 가치.",
+            "source": "YouTube Top Choice",
+            "price": "15,800원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "100번 쓰기",
+                    "description": "가장 절실한 목표 1개를 정하고 매일 100일 동안 손으로 쓰기"
+                }
+            ]
+        },
+        {
+            "id": "millionaire-mind",
+            "section": "MINDSET",
+            "title": "백만장자 시크릿",
+            "author": "하브 에커",
+            "cover": "/images/covers/millionaire-mind.jpg",
+            "desc": "부를 끌어당기는 내면의 무의식적 마인드 세팅과 '돈의 청사진'.",
+            "review": "당신의 경제 상태는 당신 내면의 거울이다. 마음속 깊이 박힌 돈에 대한 부정적 인식을 뜯어고치는 명저.",
+            "source": "YouTube Top Choice",
+            "price": "16,500원",
+            "category": "자기계발",
+            "actionGuide": [
+                {
+                    "title": "부자 선언하기",
+                    "description": "나는 백만장자의 마인드를 가졌다고 긍정적 자기 암시하기"
+                }
+            ]
+        },
+        {
+            "id": "fire-era",
+            "section": "WEALTH",
+            "title": "파이어 시대",
+            "author": "강환국",
+            "cover": "/images/covers/fire.jpg",
+            "desc": "조기 은퇴를 준비하고 경제적 탈출을 꿈꾸는 한국형 파이어족 메뉴얼.",
+            "review": "극한의 절약, 자산 배분 투자 추월차선을 통해 남들보다 10년, 20년 일찍 경제적 자유를 이루는 현실적 방법론.",
+            "source": "YouTube Top Choice",
+            "price": "17,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "파이어 목표액 산정",
+                    "description": "연간 생활비의 25배를 계산해 경제적 자유의 구체적 타겟 정하기"
+                }
+            ]
+        },
+        {
+            "id": "latte-factor",
+            "section": "WEALTH",
+            "title": "가장 먼저 부자되는 법",
+            "author": "데이비드 바흐",
+            "cover": "/images/covers/latte-factor.jpg",
+            "desc": "의식하지도 못하게 새어나가는 푼돈, '라떼 요인'의 기적.",
+            "review": "자신을 위해 먼저 적은 금액이라도 자동으로 투자되게 설정하라. 작은 행동 하나가 인생 후반의 막대한 자산을 만든다.",
+            "source": "YouTube Top Choice",
+            "price": "14,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "자동 이체 투자",
+                    "description": "급여일 당일, 자동이체를 통해 나를 위한 자산에 우선 투자하기"
+                }
+            ]
+        },
+        {
+            "id": "capitalism-ebs",
+            "section": "ECONOMY",
+            "title": "자본주의",
+            "author": "EBS 자본주의 제작팀",
+            "cover": "/images/covers/capitalism.jpg",
+            "desc": "우리가 살고 있는 이 자본주의 시스템이 굴러가는 뼈대와 작동 원리.",
+            "review": "돈은 어떻게 만들어지는가? 빚 없이 자본주의는 유지될 수 없는 구조적 진실과 생존을 위한 금융 지식을 아주 쉽게 설명한다.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "금융 맹점 체크",
+                    "description": "내가 가입한 펀드나 보험의 구조와 수수료를 다시 한번 살펴보기"
+                }
+            ]
+        },
+        {
+            "id": "economy-3years",
+            "section": "ECONOMY",
+            "title": "앞으로 3년 경제전쟁의 미래",
+            "author": "오건영",
+            "cover": "/images/covers/economy-3years.jpg",
+            "desc": "인플레이션, 환율, 금리의 삼각형으로 읽는 거시경제 흐름.",
+            "review": "각국 중앙은행의 딜레마와 금리의 방향, 환율 변동이 어떻게 우리 주머니에 직격탄을 날리는지 알려주는 필독 경제서.",
+            "source": "YouTube Top Choice",
+            "price": "18,800원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "매일 금리 지표 체크",
+                    "description": "미국채 금리와 원달러 환율 흐름을 관찰하는 습관 들이기"
+                }
+            ]
+        },
+        {
+            "id": "history-of-money",
+            "section": "HISTORY",
+            "title": "돈의 역사",
+            "author": "홍춘욱",
+            "cover": "/images/covers/history-money.jpg",
+            "desc": "돈의 관점에서 세계의 패권이 어떻게 이동해왔는가.",
+            "review": "가장 강력한 국가의 흥망성쇠 뒤에는 경제력과 화폐 권력이 있었다. 세계사를 통해 경제의 미래를 읽어내는 통찰.",
+            "source": "YouTube Top Choice",
+            "price": "17,500원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "역사적 시각 접근",
+                    "description": "현대의 경제 뉴스 속에서 과거와 비슷한 패턴 찾아보기"
+                }
+            ]
+        },
+        {
+            "id": "undercover-economist",
+            "section": "ECONOMY",
+            "title": "경제학 콘서트",
+            "author": "팀 하포드",
+            "cover": "/images/covers/undercover.jpg",
+            "desc": "커피 한 잔 가격에 숨겨진 차액지대와 일상 속에 숨겨진 경제학 원리.",
+            "review": "할인 마트의 가격 정책부터 주택 난까지, 일상을 움직이는 수요와 공급, 정보의 비대칭성을 유쾌하게 풀어낸다.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "가격 차별 구조 찾기",
+                    "description": "스타벅스나 영화관에서 소비자 잉여를 착취하는 가격 구조 관전하기"
+                }
+            ]
+        },
+        {
+            "id": "wealth-humanities",
+            "section": "ECONOMY",
+            "title": "부의 인문학",
+            "author": "브라운스톤",
+            "cover": "/images/covers/wealth-humanities.jpg",
+            "desc": "위대한 투자 거인들과 철학자들의 시선으로 현대 시장을 꿰뚫기.",
+            "review": "직관에 의존하는 투자가 아닌, 인문학과 역사가 검증한 거시적인 관점에서 입지와 가치 평가를 내리는 법.",
+            "source": "YouTube Top Choice",
+            "price": "16,800원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "거인의 어깨 빌리기",
+                    "description": "거시적 파도에 맞서지 말고 기본 가치 위에 머문다는 철학 새기기"
+                }
+            ]
+        },
+        {
+            "id": "nudge",
+            "section": "ECONOMY",
+            "title": "넛지",
+            "author": "리처드 탈러",
+            "cover": "/images/covers/nudge.jpg",
+            "desc": "타인의 선택을 유도하는 똑똑하고 부드러운 개입, 행동경제학의 정수.",
+            "review": "인간의 심리와 휴리스틱 오류를 이용해 강압 없이 사람들을 더 나은 선택으로 유도하는 놀라운 메커니즘.",
+            "source": "YouTube Top Choice",
+            "price": "19,800원",
+            "category": "경제/비즈니스",
+            "actionGuide": [
+                {
+                    "title": "넛지 디자인하기",
+                    "description": "내 삶의 좋은 습관을 위해 넛지 요소(알람, 배치)를 주변에 설정하기"
+                }
+            ]
+        },
+        {
+            "id": "wealth-of-nations",
+            "section": "ECONOMY",
+            "title": "국부론",
+            "author": "애덤 스미스",
+            "cover": "/images/covers/wealth-of-nations.jpg",
+            "desc": "보이지 않는 손과 분업, 자본주의의 근간을 세운 고전 중의 고전.",
+            "review": "인간의 이기심이 어떻게 사회 전체의 부를 창출하는지, 원초적 경제 원형과 자본주의 뿌리를 살핀다.",
+            "source": "YouTube Top Choice",
+            "price": "25,000원",
+            "category": "인문/경제",
+            "actionGuide": [
+                {
+                    "title": "시장 원리 이해",
+                    "description": "개인의 이익 추구가 공공의 이익이 되는 현상을 일상에서 통찰하기"
+                }
+            ]
+        },
+        {
+            "id": "financial-scenario",
+            "section": "ECONOMY",
+            "title": "부의 시나리오",
+            "author": "오건영",
+            "cover": "/images/covers/scenario.jpg",
+            "desc": "금리와 환율을 통해 앞으로 다가올 충격과 기회라는 징후를 읽다.",
+            "review": "변동성이 지배하는 글로벌 시장에서 4가지 성장-물가 시나리오를 통해 자산 배분의 나침반을 제공한다.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "시나리오 자산 배치",
+                    "description": "금리/물가 상승락 시나리오에 대비하여 내 자산을 사분면으로 분산하기"
+                }
+            ]
+        },
+        {
+            "id": "behavioral-econ",
+            "section": "ECONOMY",
+            "title": "행동경제학",
+            "author": "리처드 탈러",
+            "cover": "/images/covers/behavioral.jpg",
+            "desc": "인간은 결코 합리적이지 않다, 비합리적 선택을 분석하는 새로운 경제 모형.",
+            "review": "기존 주류 경제학의 호모 에코노미쿠스 가정을 박살내고, 편향으로 가득 찬 인간의 민낯을 드러낸다.",
+            "source": "YouTube Top Choice",
+            "price": "17,500원",
+            "category": "경제경영",
+            "actionGuide": [
+                {
+                    "title": "프레이밍 효과 역이용",
+                    "description": "물건 구매 전, 할인율의 착시에서 벗어나 절대 금액을 따져보기"
+                }
+            ]
+        },
+        {
+            "id": "lean-startup",
+            "section": "BUSINESS",
+            "title": "린 스타트업",
+            "author": "에릭 리스",
+            "cover": "/images/covers/lean.jpg",
+            "desc": "낭비를 없애고 혁신적 비즈니스를 개척하는 실리콘밸리의 궁극적 방법론.",
+            "review": "최소 기능 제품(MVP)을 출시하고 측정과 학습(Build-Measure-Learn)의 피드백 루프를 가장 빠르게 돌려 성장하는 법.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "경영/비즈니스",
+            "actionGuide": [
+                {
+                    "title": "가설 시뮬레이션",
+                    "description": "아이디어를 처음부터 완벽하게 만들지 말고 최소 시간만 들여 테스트해보기"
+                }
+            ]
+        },
+        {
+            "id": "principles",
+            "section": "BUSINESS",
+            "title": "원칙 (Principles)",
+            "author": "레이 달리오",
+            "cover": "/images/covers/principles.jpg",
+            "desc": "세계 최고 헤지펀드 매니저의 투명성에 기반한 삶과 경영 철학.",
+            "review": "실패에서 찾은 원칙들을 알고리즘화하여 무자비한 현실 직시와 극단적 투명성을 조직에 적용시킨 궤적.",
+            "source": "YouTube Top Choice",
+            "price": "24,000원",
+            "category": "경영/경제",
+            "actionGuide": [
+                {
+                    "title": "나만의 원칙 리스트화",
+                    "description": "실패하거나 실수했을 때 얻은 교훈을 기록하고 나만의 프로토콜 만들기"
+                }
+            ]
+        },
+        {
+            "id": "drucker-manager",
+            "section": "BUSINESS",
+            "title": "피터 드러커의 훌륭한 관리자",
+            "author": "피터 드러커",
+            "cover": "/images/covers/drucker.jpg",
+            "desc": "경영학의 아버지가 말하는 매니지먼트의 본질과 인간 존중의 철학.",
+            "review": "목표 관리와 자기 통제, 조직 구성원이 회사 안에서 어떻게 공헌해야 하는지 방향을 제시해주는 영원한 지침서.",
+            "source": "YouTube Top Choice",
+            "price": "16,800원",
+            "category": "경영",
+            "actionGuide": [
+                {
+                    "title": "강점에 집중하기",
+                    "description": "내 팀원의 약점을 메우기보다는 강점을 극대화시킬 기회 부여하기"
+                }
+            ]
+        },
+        {
+            "id": "steve-jobs",
+            "section": "BUSINESS",
+            "title": "스티브 잡스",
+            "author": "월터 아이작슨",
+            "cover": "/images/covers/jobs.jpg",
+            "desc": "실리콘밸리 경영의 정수이자 혁신의 아이콘, 완벽주의자의 찬란하고 어두운 이면.",
+            "review": "단순함의 미학과 현실 왜곡장 콤플렉스 속에서 기술과 인문학의 교차점을 찾아낸 잡스의 공식 전기.",
+            "source": "YouTube Top Choice",
+            "price": "28,000원",
+            "category": "인물/경영",
+            "actionGuide": [
+                {
+                    "title": "단순함 추구하기",
+                    "description": "진행 중인 기획안이나 제품에서 불필요한 기능 한 가지 과감히 쳐내기"
+                }
+            ]
+        },
+        {
+            "id": "blue-ocean",
+            "section": "BUSINESS",
+            "title": "블루오션 전략",
+            "author": "위찬김",
+            "cover": "/images/covers/blue-ocean.jpg",
+            "desc": "피 터지는 경쟁의 룰을 부수고 나만의 비경쟁 시장을 창출하라.",
+            "review": "가치 혁신을 통해 시장의 경계를 재구축하고 경쟁자를 무의미하게 만드는 뻔하지 않은 파괴적 생각.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "경영",
+            "actionGuide": [
+                {
+                    "title": "가치 곡선 그려보기",
+                    "description": "내 아이템이나 나 자신의 핵심 요소(감소/제거/증가/창출) 분석해 보기"
+                }
+            ]
+        },
+        {
+            "id": "amoeba-mgmt",
+            "section": "BUSINESS",
+            "title": "아메바 경영",
+            "author": "이나모리 가즈오",
+            "cover": "/images/covers/amoeba.jpg",
+            "desc": "전 직원이 스스로 경영자가 되는 기업을 살려낸 전설적 기법.",
+            "review": "교세라 그룹을 세계적 기업으로 만든 바탕이자 조직을 세분화하여 각자 채산성을 따지게 만드는 현장 밀착형 지혜.",
+            "source": "YouTube Top Choice",
+            "price": "15,000원",
+            "category": "비즈니스",
+            "actionGuide": [
+                {
+                    "title": "오너십 장착",
+                    "description": "내 업무 파트를 작은 회사라고 생각하고 일일 손익 따져보기"
+                }
+            ]
+        },
+        {
+            "id": "flywheel",
+            "section": "BUSINESS",
+            "title": "플라이휠을 돌려라",
+            "author": "짐 콜린스",
+            "cover": "/images/covers/flywheel.jpg",
+            "desc": "아마존의 성공 비결로 불리는 '플라이휠' 모멘텀의 위대함.",
+            "review": "한 번에 빵 터지는 기적은 없다. 선순환의 고리를 찾아 무거운 금속 바퀴를 서서히 돌리는 자만이 위대한 돌파에 이른다.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "경영",
+            "actionGuide": [
+                {
+                    "title": "플라이휠 설계",
+                    "description": "나의 브랜딩이 작동하기 위한 순환 톱니바퀴 3단계 그려보기"
+                }
+            ]
+        },
+        {
+            "id": "jidawel",
+            "section": "PHILOSOPHY",
+            "title": "지적 대화를 위한 넓고 얕은 지식",
+            "author": "채사장",
+            "cover": "/images/covers/jidawel.jpg",
+            "desc": "역사, 경제, 정치, 사회, 윤리를 하나의 맥락으로 관통하는 현대인의 인문학 필독서.",
+            "review": "방대한 인문사회 지식을 이분법의 프레임으로 직관적으로 이해시켜 세상을 바라보는 해상도를 획기적으로 높인다.",
+            "source": "YouTube Top Choice",
+            "price": "17,000원",
+            "category": "인문",
+            "actionGuide": [
+                {
+                    "title": "지식 융합하기",
+                    "description": "정치 이슈 이면에 있는 경제적 이해관계 유추해보기"
+                }
+            ]
+        },
+        {
+            "id": "cosmos",
+            "section": "SCIENCE",
+            "title": "코스모스",
+            "author": "칼 세이건",
+            "cover": "/images/covers/cosmos.jpg",
+            "desc": "우주와 생명, 그리고 모래알 같은 인간의 존재를 돌아보는 위대한 과학 인문서.",
+            "review": "광활한 138억 년의 우주 속에서 지구라는 '창백한 푸른 점'을 아끼고, 무지에서 벗어나 경이로움으로 나아가는 안내서.",
+            "source": "YouTube Top Choice",
+            "price": "22,000원",
+            "category": "인문과학",
+            "actionGuide": [
+                {
+                    "title": "창백한 푸른 점 떠올리기",
+                    "description": "삶이 스트레스로 다가올 때 우주적 관점에서 얼마나 사소한 일인지 환기하기"
+                }
+            ]
+        },
+        {
+            "id": "justice",
+            "section": "PHILOSOPHY",
+            "title": "정의란 무엇인가",
+            "author": "마이클 샌델",
+            "cover": "/images/covers/justice.jpg",
+            "desc": "전 세계를 강타한 마이클 샌델의 정의와 공동선에 대한 뜨거운 딜레마.",
+            "review": "공리주의, 자유지상주의, 목적론적 윤리를 오가며 과연 무엇이 옳은 가치 판단인가를 파고드는 지적 충격의 향연.",
+            "source": "YouTube Top Choice",
+            "price": "17,500원",
+            "category": "인문사회",
+            "actionGuide": [
+                {
+                    "title": "트롤리 딜레마 던지기",
+                    "description": "내 행동의 윤리적 기준이 다수의 행복인지 절차의 공정함인지 고민하기"
+                }
+            ]
+        },
+        {
+            "id": "selfish-gene",
+            "section": "SCIENCE",
+            "title": "이기적 유전자",
+            "author": "리처드 도킨스",
+            "cover": "/images/covers/selfish-gene.jpg",
+            "desc": "진화론의 시각에서 인간은 유전자의 생존 기계에 불과하다.",
+            "review": "이기적 유전자의 무자비함 속에서도 이타성이 왜 나타나는지, 그리고 문화적 전달자 '밈(Meme)'의 개념까지 제시한 역작.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "인문과학",
+            "actionGuide": [
+                {
+                    "title": "밈 생성기",
+                    "description": "나의 생각과 이념이 유전자 너머 후대에게 전달될 가치가 있는지 돌아보기"
+                }
+            ]
+        },
+        {
+            "id": "zarathustra",
+            "section": "PHILOSOPHY",
+            "title": "짜라투스트라는 이렇게 말했다",
+            "author": "프리드리히 니체",
+            "cover": "/images/covers/zarathustra.jpg",
+            "desc": "신은 죽었다. 위버맨쉬와 아모르파티 철학이 춤추는 니체의 모든 것.",
+            "review": "구시대적 가치를 부수고 사자와 같이 자유로우며 어린아이처럼 스스로 창조하는 '극복하는 인간'을 향한 위대한 찬가.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "철학",
+            "actionGuide": [
+                {
+                    "title": "현재 고통 사랑하기",
+                    "description": "도망치지 않고 이 시련이 영원히 반복되어도 좋다고 선언할 용기 갖기"
+                }
+            ]
+        },
+        {
+            "id": "what-is-history",
+            "section": "HISTORY",
+            "title": "역사란 무엇인가",
+            "author": "E.H. 카",
+            "cover": "/images/covers/eh-carr.jpg",
+            "desc": "\"역사는 과거와 현재의 끊임없는 대화이다.\" 역사 인식의 기본을 세우는 고전.",
+            "review": "단순한 사실 관계의 나열이 아닌 사가의 주관과 시대정신이 개입된다는 것을 증명하며 판단 중심의 역사를 갈파.",
+            "source": "YouTube Top Choice",
+            "price": "14,000원",
+            "category": "역사철학",
+            "actionGuide": [
+                {
+                    "title": "기사의 프레임 생각하기",
+                    "description": "오늘 본 뉴스를 누가 어떤 의도로 작성하였는지 비판적으로 의심해보기"
+                }
+            ]
+        },
+        {
+            "id": "prince-machiavelli",
+            "section": "HISTORY",
+            "title": "군주론",
+            "author": "마키아벨리",
+            "cover": "/images/covers/prince.jpg",
+            "desc": "권력의 창출과 유지에 대한 가장 현실적이고 냉철하며 비정한 처방.",
+            "review": "사자가 주는 공포와 여우가 주는 교활함을 동시에 지녀야 피비린내 나는 정치판에서 살아남는다는 인간 본성의 해부학.",
+            "source": "YouTube Top Choice",
+            "price": "13,000원",
+            "category": "정치철학",
+            "actionGuide": [
+                {
+                    "title": "여우와 사자 모드 전환",
+                    "description": "직장과 협상에서 따뜻함과 동시에 단호함을 분리해서 취해보기"
+                }
+            ]
+        },
+        {
+            "id": "on-liberty",
+            "section": "PHILOSOPHY",
+            "title": "자유론",
+            "author": "존 스튜어트 밀",
+            "cover": "/images/covers/liberty.jpg",
+            "desc": "단 한 사람의 의견이라도 그것을 묵살할 권리는 누구에게도 없다.",
+            "review": "타인에게 해를 끼치지 않는 한 인간의 사상과 표현, 삶의 방식의 자유를 목숨처럼 치열하게 지킨 지성적 옹호.",
+            "source": "YouTube Top Choice",
+            "price": "13,500원",
+            "category": "철학",
+            "actionGuide": [
+                {
+                    "title": "반대 의견 경청",
+                    "description": "나와 완전히 엇갈리는 입장의 글을 끝까지 인내를 가지고 읽어보기"
+                }
+            ]
+        },
+        {
+            "id": "eichmann-jerusalem",
+            "section": "PHILOSOPHY",
+            "title": "예루살렘의 아이히만",
+            "author": "한나 아렌트",
+            "cover": "/images/covers/eichmann.jpg",
+            "desc": "상관의 명령만 따랐을 뿐이라는 '악의 평범성', 생각하지 않는 것이 죄다.",
+            "review": "홀로코스트 전범 아이히만이 지극히 평범한 이웃이라는 충격 속에서, 비판적 사유의 부재가 괴물을 만든다는 경고.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "철학",
+            "actionGuide": [
+                {
+                    "title": "왜 해야 하는가 묻기",
+                    "description": "관행처럼 내려온 일상의 지시에 대해 '과연 옳은가' 한번 더 생각하기"
+                }
+            ]
+        },
+        {
+            "id": "courage-to-disliked",
+            "section": "MINDSET",
+            "title": "미움받을 용기",
+            "author": "기시미 이치로",
+            "cover": "/images/covers/courage.jpg",
+            "desc": "아들러 심리학이 알려주는, 타인의 불편한 시선에서 완벽하게 해방되는 법.",
+            "review": "트라우마를 부정하고 과제의 분리를 통해 지금 당장 내 삶의 만족과 온전한 행복을 선언하는 위대한 용기.",
+            "source": "YouTube Top Choice",
+            "price": "15,800원",
+            "category": "심리",
+            "actionGuide": [
+                {
+                    "title": "과제의 분리",
+                    "description": "타인이 나를 어떻게 평가할지는 타인의 과제라고 선을 긋기"
+                }
+            ]
+        },
+        {
+            "id": "frame-psychology",
+            "section": "MINDSET",
+            "title": "프레임",
+            "author": "최인철",
+            "cover": "/images/covers/frame.jpg",
+            "desc": "세상을 바라보는 창, 내 창을 어떻게 바꾸느냐가 삶을 결정한다.",
+            "review": "상황 프레임, 이름 짓기 프레임의 놀라운 힘을 파헤치며 지혜로운 삶을 살기 위해 어떤 관점 혁명이 필요한가.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "심리",
+            "actionGuide": [
+                {
+                    "title": "접근 프레임 장착",
+                    "description": "문제 발생 시 회피보다는 성장의 기회라는 이름으로 프레임 리셋하기"
+                }
+            ]
+        },
+        {
+            "id": "influence",
+            "section": "MINDSET",
+            "title": "설득의 심리학",
+            "author": "로버트 치알디니",
+            "cover": "/images/covers/influence.jpg",
+            "desc": "내가 원하지 않아도 스피커를 사게 되는 6가지 불변의 법칙.",
+            "review": "상호성, 권위, 희귀성, 호감 등 상대방을 내 편으로 엮고 예스(YES)를 이끌어내는 압도적인 인간 심리 트릭 해부.",
+            "source": "YouTube Top Choice",
+            "price": "18,000원",
+            "category": "심리",
+            "actionGuide": [
+                {
+                    "title": "'왜냐하면' 법칙 적용",
+                    "description": "누군가에게 부탁할 때 사소하더라도 구체적으로 이유를 갖다붙이기"
+                }
+            ]
+        },
+        {
+            "id": "thinking-fast-slow",
+            "section": "MINDSET",
+            "title": "생각, 빠르고 느리게",
+            "author": "대니얼 카너먼",
+            "cover": "/images/covers/fast-slow.jpg",
+            "desc": "직관적 시스템1 구조와 이성적 시스템2 사고가 벌이는 치열한 두뇌 게임.",
+            "review": "노벨경제학상 수상자의 평생의 통찰. 직관의 맹점을 깨닫고 언제 충동을 잠재우고 논리를 켜야 하는지에 관한 해법.",
+            "source": "YouTube Top Choice",
+            "price": "24,000원",
+            "category": "행동심리학",
+            "actionGuide": [
+                {
+                    "title": "시스템 2 강제 개입",
+                    "description": "중요한 결정 전, 하룻밤 묵히고 천천히 이성적으로 두 가지 손익계산 해보기"
+                }
+            ]
+        },
+        {
+            "id": "resilience",
+            "section": "HEALING",
+            "title": "회복탄력성",
+            "author": "김주환",
+            "cover": "/images/covers/resilience.jpg",
+            "desc": "바닥까지 떨어진 시련을 행운과 성장의 밑거름으로 바꾸는 유쾌한 내면 훈련.",
+            "review": "고난은 벽이 아니라 도약의 발판이다. 자기 조절 능력과 대인관계 능력으로 상처를 웃으며 튕겨내는 마음 근력.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "심리",
+            "actionGuide": [
+                {
+                    "title": "장점 재발견",
+                    "description": "내 약점을 집요하게 파는 대신 나의 가장 강력한 장점 한 가지를 발휘하기"
+                }
+            ]
+        },
+        {
+            "id": "you-are-right",
+            "section": "HEALING",
+            "title": "당신이 옳다",
+            "author": "정혜신",
+            "cover": "/images/covers/you-are-right.jpg",
+            "desc": "모든 마음의 상처를 치유하는 한 마디, 온전하고 전폭적인 공감의 힘.",
+            "review": "충고, 기만, 분석은 접어라. 사람을 살리는 건 조건 지우지 않은 심리적 CPR, '당신이 무슨 일을 했든 옳다'는 공감뿐이다.",
+            "source": "YouTube Top Choice",
+            "price": "15,000원",
+            "category": "심리/상담",
+            "actionGuide": [
+                {
+                    "title": "존재 자체에 공감",
+                    "description": "가족이나 친구가 화낼 때 '너는 틀렸어'가 아니라 '감정과 마음'을 먼저 수용해주기"
+                }
+            ]
+        },
+        {
+            "id": "laws-of-nature",
+            "section": "MINDSET",
+            "title": "인간 본성의 법칙",
+            "author": "로버트 그린",
+            "cover": "/images/covers/human-nature.jpg",
+            "desc": "타인과 나의 본성을 꿰뚫어보는 심층 심리, 인간관계 게임의 궁극적 무기.",
+            "review": "역사적 인물들을 해부하여 시기심, 분노, 자기도취 등 우리 안에 똬리 튼 어두운 본질을 인정하고 통제하는 위대한 전략.",
+            "source": "YouTube Top Choice",
+            "price": "32,000원",
+            "category": "심리/처세",
+            "actionGuide": [
+                {
+                    "title": "감정의 분리",
+                    "description": "누군가의 비난에 즉각 반응하지 말고, 그 이면의 열등감과 본성을 한 걸음 물러나 관찰하기"
+                }
+            ]
+        },
+        {
+            "id": "inner-comms",
+            "section": "HEALING",
+            "title": "내면소통",
+            "author": "김주환",
+            "cover": "/images/covers/inner.jpg",
+            "desc": "명상과 뇌과학을 기반으로 철저하게 과학적으로 내면을 단련하는 최강의 훈련법.",
+            "review": "결국 모든 문제는 나와의 소통 단절이다. 전두엽을 일깨우고 편도체를 안정시켜 두려움으로부터 승리하는 마음 컨트롤.",
+            "source": "YouTube Top Choice",
+            "price": "24,000원",
+            "category": "심리",
+            "actionGuide": [
+                {
+                    "title": "편도체 리셋",
+                    "description": "극도의 스트레스 순간에 심호흡을 3회 반복하며 신체적 긴장 먼저 오프시키기"
+                }
+            ]
+        },
+        {
+            "id": "kluge",
+            "section": "MINDSET",
+            "title": "클루지",
+            "author": "개리 마커스",
+            "cover": "/images/covers/kluge.jpg",
+            "desc": "진화가 남긴 설계의 부산물, 우리 뇌의 치명적인 오류를 극복하는 구체적 방법.",
+            "review": "완벽하지 않은 뇌의 오류인 클루지를 인지하는 것만으로 잘못된 선택과 충동을 억제하고 합리성으로 가는 길을 엽니다.",
+            "source": "YouTube Top Choice",
+            "price": "16,000원",
+            "category": "심리/진화론",
+            "actionGuide": [
+                {
+                    "title": "의식적 지연",
+                    "description": "큰 결정 앞에서는 반드시 산책 등 거리를 두는 시간을 가지며 인지적 오류 벗어나기"
+                }
+            ]
+        },
+        {
+            "id": "live-again",
+            "section": "HEALING",
+            "title": "만일 내가 인생을 다시 산다면",
+            "author": "김혜남",
+            "cover": "/images/covers/live-again.jpg",
+            "desc": "파킨슨병을 안고 30년 간 정신분석의로 살아온 저자가 무거운 짐을 진 현대인들에게 주는 따스한 위로 깊은 이야기.",
+            "review": "완벽하려 애쓰지 마라, 조금 상처받고 삐걱거리더라도 내 삶을 온전히 향유하는 것이 인생의 유일무이한 답임을 증명합니다.",
+            "source": "YouTube Top Choice",
+            "price": "15,800원",
+            "category": "심리에세이",
+            "actionGuide": [
+                {
+                    "title": "결점 환대하기",
+                    "description": "나의 모자란 부분을 부끄러워하지 말고 나의 매력으로 담담하게 긍정해보기"
+                }
+            ]
+        }
+    ]
+}
 ];

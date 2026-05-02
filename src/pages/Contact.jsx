@@ -1,86 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
 export default function Contact() {
-    const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('');
+  const nameRef = useRef(null);
+  const emailRef = useRef(null);
+  const messageRef = useRef(null);
 
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setStatus('sending');
-        // Simple simulation
-        setTimeout(() => {
-            setStatus('success');
-            setTimeout(() => setStatus(''), 3000);
-        }, 1000);
-    };
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const name = nameRef.current?.value || '';
+    const email = emailRef.current?.value || '';
+    const message = messageRef.current?.value || '';
 
-    return (
-        <div className="bg-white dark:bg-slate-950 font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
-            <TopNavigation title="Contact Us" />
-
-            <main className="px-6 pt-24 pb-12">
-                <section className="mb-10">
-                    <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Get in touch</span>
-                    <h2 className="serif-title text-3xl text-slate-900 dark:text-white mb-6">운영진에게 <br />문의하기</h2>
-                    <p className="text-sm text-slate-500 leading-relaxed font-light">
-                        서비스 이용 중 궁금하신 점이나 개선 제안이 있다면 언제든 편하게 메시지를 남겨주세요. 아카이뷰 팀이 정성껏 답변해 드리겠습니다.
-                    </p>
-                </section>
-
-                <section className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 mb-8">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="size-10 rounded-full bg-gold/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-gold">mail</span>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official Email</p>
-                            <a href="mailto:support@archiview.co.kr" className="text-sm font-bold text-slate-900 dark:text-white hover:text-gold transition-colors">support@archiview.co.kr</a>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Name</label>
-                            <input
-                                required
-                                type="text"
-                                placeholder="성함을 입력하세요"
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 transition-all font-light"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Message</label>
-                            <textarea
-                                required
-                                rows="5"
-                                placeholder="문의 내용을 입력하세요"
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 transition-all font-light"
-                            ></textarea>
-                        </div>
-
-                        <button
-                            disabled={status === 'sending' || status === 'success'}
-                            className={`w-full py-4 rounded-2xl font-bold text-sm tracking-widest shadow-xl transition-all active:scale-95 ${status === 'success'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-gold hover:text-slate-900'
-                                }`}
-                        >
-                            {status === 'sending' ? '보내는 중...' : status === 'success' ? '전송 완료!' : '문의 보내기'}
-                        </button>
-                    </form>
-                </section>
-
-                <p className="text-[10px] text-center text-slate-400 font-medium">제안하신 내용은 서비스 운영 및 발전에 큰 도움이 됩니다. 감사합니다.</p>
-            </main>
-
-            <Footer />
-            <BottomNavigation />
-        </div>
+    const subject = encodeURIComponent(`[Whiteboard 문의] ${name}`);
+    const body = encodeURIComponent(
+      `이름: ${name}\n이메일: ${email}\n\n문의 내용:\n${message}`
     );
+
+    window.location.href = `mailto:gosipass902@gmail.com?subject=${subject}&body=${body}`;
+    setStatus('sent');
+  };
+
+  return (
+    <div className="bg-white text-slate-900 min-h-screen pb-24">
+      <Helmet>
+        <title>문의 | Whiteboard</title>
+        <meta name="description" content="Whiteboard 운영팀에 문의하거나 콘텐츠 정정, 제휴, 광고 관련 의견을 보낼 수 있습니다." />
+        <link rel="canonical" href="https://archiview.shop/contact" />
+      </Helmet>
+      <TopNavigation title="문의" />
+
+      <main className="mx-auto max-w-3xl px-6 pt-28 pb-16">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-600">Contact</p>
+        <h1 className="mt-4 text-3xl font-black tracking-tight">문의하기</h1>
+        <p className="mt-4 text-sm leading-7 text-slate-600">
+          콘텐츠 정정 요청, 저작권 관련 문의, 제휴 및 광고 문의는 아래 이메일로 보내주세요.
+          일반적으로 영업일 기준 3일 이내에 확인합니다.
+        </p>
+
+        <section className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Official Email</p>
+          <a href="mailto:gosipass902@gmail.com" className="mt-2 inline-block text-lg font-black text-blue-600 underline">
+            gosipass902@gmail.com
+          </a>
+        </section>
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5 rounded-lg border border-slate-200 p-6">
+          <div>
+            <label htmlFor="contact-name" className="block text-xs font-black uppercase tracking-widest text-slate-500">
+              이름
+            </label>
+            <input
+              id="contact-name"
+              ref={nameRef}
+              required
+              className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label htmlFor="contact-email" className="block text-xs font-black uppercase tracking-widest text-slate-500">
+              이메일
+            </label>
+            <input
+              id="contact-email"
+              ref={emailRef}
+              required
+              type="email"
+              className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label htmlFor="contact-message" className="block text-xs font-black uppercase tracking-widest text-slate-500">
+              문의 내용
+            </label>
+            <textarea
+              id="contact-message"
+              ref={messageRef}
+              required
+              rows={6}
+              className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full rounded-md bg-slate-900 px-5 py-3 text-sm font-black text-white hover:bg-blue-700"
+          >
+            이메일로 문의 보내기
+          </button>
+          <p className="text-xs text-slate-400 text-center">
+            버튼을 누르면 이메일 앱이 열립니다. 직접 이메일을 보내셔도 됩니다.
+          </p>
+          {status === 'sent' && (
+            <p className="rounded-md bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
+              이메일 앱이 열렸습니다. 작성 후 전송해 주세요.
+            </p>
+          )}
+        </form>
+      </main>
+
+      <Footer />
+      <BottomNavigation />
+    </div>
+  );
 }

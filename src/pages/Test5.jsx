@@ -7,7 +7,7 @@ const SketchFrame = ({ cut, color }) => {
     const isBoth = c === 'both' || c === 'group';
     const isWoman = c === 'woman';
     const isNight = (cut.scene || '').includes('밤') || (cut.scene || '').includes('새벽') || (cut.scene || '').includes('야간');
-    const isPhone = (cut.scene || '').includes('스마트폰') || (cut.scene || '').includes('앱') || (cut.scene || '').includes('아카이뷰');
+    const isPhone = (cut.scene || '').includes('스마트폰') || (cut.scene || '').includes('앱') || (cut.scene || '').includes('Whiteboard');
     const isSplit = isBoth && cut.cut >= 5;
     const isCTA = cut.cut === 6;
     const bg = isNight ? '#0d1117' : '#1a1f2e';
@@ -74,7 +74,7 @@ const SketchFrame = ({ cut, color }) => {
                 // CTA 컷: 로고 + 텍스트
                 <>
                     <rect x="0" y="0" width="160" height="100" fill="#0a0a0a" />
-                    <text x="80" y="38" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#f97316" fontFamily="serif">ArchiView</text>
+                    <text x="80" y="38" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#f97316" fontFamily="serif">Whiteboard</text>
                     <line x1="40" y1="45" x2="120" y2="45" stroke="#f97316" strokeWidth="0.8" />
                     <text x="80" y="58" textAnchor="middle" fontSize="6.5" fill="#ffffff99" fontFamily="sans-serif">출퇴근 15분,</text>
                     <text x="80" y="67" textAnchor="middle" fontSize="6.5" fill="#ffffff99" fontFamily="sans-serif">성공한 사람들의 인사이트</text>
@@ -137,7 +137,7 @@ const STORIES = [
         tagline: '같은 지하철, 다른 하루',
         characters: '남자 + 여자',
         setting: '아침 출근 지하철 / 밤 퇴근 지하철',
-        arc: '두 직장인이 각자 출퇴근길에 아카이뷰를 발견하고, 피곤하고 무감각했던 일상이 희망과 에너지로 변한다',
+        arc: '두 직장인이 각자 출퇴근길에 Whiteboard를 발견하고, 피곤하고 무감각했던 일상이 희망과 에너지로 변한다',
         color: '#3b82f6',
         mood: '공감 → 희망',
     },
@@ -159,7 +159,7 @@ const STORIES = [
         tagline: '월요일도 달라질 수 있다',
         characters: '남자 단독',
         setting: '침대 → 출근길 지하철',
-        arc: '알람을 5번 끄는 남자. 무기력하게 출근 준비. 지하철에서 헤드폰을 끼고 아카이뷰를 켜는 순간부터 표정이 달라지고 걸음걸이가 달라진다',
+        arc: '알람을 5번 끄는 남자. 무기력하게 출근 준비. 지하철에서 헤드폰을 끼고 Whiteboard를 켜는 순간부터 표정이 달라지고 걸음걸이가 달라진다',
         color: '#f97316',
         mood: '무기력 → 각성',
     },
@@ -170,7 +170,7 @@ const STORIES = [
         tagline: '12시 30분의 인사이트',
         characters: '남자 + 여자 (모르는 사이)',
         setting: '회사 옥상 / 점심 시간',
-        arc: '점심을 혼자 먹으러 옥상에 온 두 사람. 각자 이어폰을 끼고 아카이뷰를 듣는다. 같은 공간에서 각자 성장하는 장면. 마지막에 눈이 마주치며 미소',
+        arc: '점심을 혼자 먹으러 옥상에 온 두 사람. 각자 이어폰을 끼고 Whiteboard를 듣는다. 같은 공간에서 각자 성장하는 장면. 마지막에 눈이 마주치며 미소',
         color: '#f59e0b',
         mood: '일상 → 성장의 순간',
     },
@@ -181,7 +181,7 @@ const STORIES = [
         tagline: '지친 밤, 카페에서 찾은 인사이트',
         characters: '여자 단독',
         setting: '밤 11시 카페, 노트북 앞',
-        arc: '마감에 지쳐 카페에서 혼자 야근 중인 여자. 노트북 앞에서 멍하니 있다가 이어폰을 꽂고 아카이뷰를 켠다. 집중력이 돌아오고 손이 다시 키보드를 두드리기 시작한다',
+        arc: '마감에 지쳐 카페에서 혼자 야근 중인 여자. 노트북 앞에서 멍하니 있다가 이어폰을 꽂고 Whiteboard를 켠다. 집중력이 돌아오고 손이 다시 키보드를 두드리기 시작한다',
         color: '#ec4899',
         mood: '번아웃 → 집중력 회복',
     },
@@ -192,7 +192,7 @@ const STORIES = [
         tagline: '빗속에서도 귀는 성장한다',
         characters: '남자 단독',
         setting: '비오는 저녁, 거리 + 지하철',
-        arc: '비가 쏟아지는 퇴근길. 우산을 들고 터덜터덜 걷는 남자. 지하철 들어가며 헤드폰을 쓰고 아카이뷰를 켠다. 빗소리가 배경이 되고 그의 세계가 달라진다',
+        arc: '비가 쏟아지는 퇴근길. 우산을 들고 터덜터덜 걷는 남자. 지하철 들어가며 헤드폰을 쓰고 Whiteboard를 켠다. 빗소리가 배경이 되고 그의 세계가 달라진다',
         color: '#06b6d4',
         mood: '우울 → 감성적 충전',
     },
@@ -203,7 +203,7 @@ const STORIES = [
         tagline: '몸도 마음도 함께 달린다',
         characters: '남자 단독',
         setting: '주말 이른 아침, 한강 러닝코스',
-        arc: '주말 아침 침대에서 억지로 일어나는 남자. 러닝 나가서 헤드폰 끼고 아카이뷰를 켠다. 달리면서 인사이트를 듣고 눈빛이 살아난다. 마지막엔 뛰는 속도가 빨라진다',
+        arc: '주말 아침 침대에서 억지로 일어나는 남자. 러닝 나가서 헤드폰 끼고 Whiteboard를 켠다. 달리면서 인사이트를 듣고 눈빛이 살아난다. 마지막엔 뛰는 속도가 빨라진다',
         color: '#22c55e',
         mood: '게으름 → 활력',
     },
@@ -214,7 +214,7 @@ const STORIES = [
         tagline: '답은 이미 존재한다',
         characters: '남자 + 여자 (동료)',
         setting: '회사 복도 / 엘리베이터 앞',
-        arc: '각자 승진 문제로 고민하며 복도를 걷는 두 사람. 각자 이어폰을 꽂고 아카이뷰를 듣는다. 같은 고민을 하던 두 사람이 각자 작은 확신을 얻은 표정으로 마무리',
+        arc: '각자 승진 문제로 고민하며 복도를 걷는 두 사람. 각자 이어폰을 꽂고 Whiteboard를 듣는다. 같은 고민을 하던 두 사람이 각자 작은 확신을 얻은 표정으로 마무리',
         color: '#a855f7',
         mood: '고민 → 확신',
     },
@@ -225,7 +225,7 @@ const STORIES = [
         tagline: '10분이 쌓이면 사람이 달라진다',
         characters: '남자 단독',
         setting: '같은 지하철 / 1달 간격 비교',
-        arc: '1달 전: 멍하니 폰만 보는 무기력한 남자. 지금: 헤드폰 끼고 아카이뷰 들으며 노트 앱에 메모하는 남자. 분할화면으로 두 모습을 대비. 마지막에 "10분이 달랐다"',
+        arc: '1달 전: 멍하니 폰만 보는 무기력한 남자. 지금: 헤드폰 끼고 Whiteboard 들으며 노트 앱에 메모하는 남자. 분할화면으로 두 모습을 대비. 마지막에 "10분이 달랐다"',
         color: '#f97316',
         mood: '대비 → 동기부여',
     },
@@ -236,7 +236,7 @@ const STORIES = [
         tagline: '다들 볼 때, 당신은 채운다',
         characters: '여러 사람 + 여자 단독',
         setting: '지하철 안 / 여러 사람들',
-        arc: '지하철 안 모두가 숏폼 영상을 보고 있다. 카메라가 한 명씩 스캔. 한 여자만 이어폰 끼고 아카이뷰를 듣고 있다. 그녀의 표정만 다르다. "모두 흘려보낼 때, 당신은 채워갑니다"',
+        arc: '지하철 안 모두가 숏폼 영상을 보고 있다. 카메라가 한 명씩 스캔. 한 여자만 이어폰 끼고 Whiteboard를 듣고 있다. 그녀의 표정만 다르다. "모두 흘려보낼 때, 당신은 채워갑니다"',
         color: '#64748b',
         mood: '대조 → 각성',
     },
@@ -316,7 +316,7 @@ Rules:
 - 6 cuts total (3-5 seconds each)
 - Emotion flow: problem/empathy -> turning point -> change/hope -> CTA
 - Cuts 1-2: empathy scenes (tired, struggling reality)
-- Cuts 3-4: discovering and starting Archiview app
+- Cuts 3-4: discovering and starting Whiteboard app
 - Cut 5: transformation (expression/emotion change)
 - Cut 6: logo + CTA
 

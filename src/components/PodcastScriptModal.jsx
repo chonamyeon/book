@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
-import { db } from '../firebase';
-import { getDoc, doc } from 'firebase/firestore';
 
 const Avatar = ({ role }) => {
     const [error, setError] = useState(false);
@@ -34,24 +32,10 @@ export default function PodcastScriptModal() {
     } = useAudio();
 
     const localScript = scriptModalBookId ? (bookScripts[scriptModalBookId] || null) : null;
-    const [firestoreScript, setFirestoreScript] = useState(null);
     const [timestamps, setTimestamps] = useState(null); // public/timestamps/{id}.json
 
     useEffect(() => {
-        if (!scriptModalBookId) { setFirestoreScript(null); setTimestamps(null); return; }
-
-        // 대본: Firestore 우선
-        getDoc(doc(db, 'scripts', scriptModalBookId)).then(snap => {
-            if (snap.exists()) {
-                const lines = snap.data().lines || [];
-                setFirestoreScript(lines.map(l => ({
-                    role: l.role || (l.speaker === '스텔라' ? 'B' : 'A'),
-                    text: l.text,
-                })));
-            } else {
-                setFirestoreScript(null);
-            }
-        }).catch(() => setFirestoreScript(null));
+        if (!scriptModalBookId) { setTimestamps(null); return; }
 
         // 타임스탬프: public/timestamps/{id}.json (Whisper 생성)
         fetch(`/timestamps/${scriptModalBookId}.json`)
@@ -66,8 +50,7 @@ export default function PodcastScriptModal() {
             .catch(() => setTimestamps(null));
     }, [scriptModalBookId]);
 
-    // Firestore 우선, 없으면 로컬 bookScripts 폴백
-    const script = (firestoreScript && firestoreScript.length > 0) ? firestoreScript : (localScript || []);
+    const script = localScript || [];
     const chatEndRef = useRef(null);
     const containerRef = useRef(null);
     const [userScrolled, setUserScrolled] = useState(false);

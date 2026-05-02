@@ -5,7 +5,7 @@
  * 2. 확인 후 전체 실행
  * 3. 대본 생성 + TTS + celebrities.js 업데이트
  * 4. bookScripts.js 동기화
- * 5. firebase deploy
+ * 5. vercel deploy
  */
 
 import 'dotenv/config';
@@ -52,7 +52,7 @@ async function inputBooks() {
 
 async function main() {
   console.log('\n==============================================');
-  console.log('   Archiview Batch Podcast Generator');
+  console.log('   Whiteboard Batch Podcast Generator');
   console.log('==============================================');
   console.log('처리할 책을 입력하세요. 다 입력하면 한번에 실행됩니다.\n');
 
@@ -114,16 +114,16 @@ async function main() {
     console.error('  ERROR: 동기화 실패 —', err.message);
   }
 
-  // ── STEP 3: Firebase deploy ──────────────────────────────
-  console.log('\n[STEP 3/3] Firebase 배포...');
+  // ── STEP 3: Vercel deploy ──────────────────────────────
+  console.log('\n[STEP 3/3] Vercel 배포...');
   try {
-    execSync('firebase deploy --only hosting', {
+    execSync('npm run deploy', {
       cwd: ROOT,
       stdio: 'inherit',
     });
   } catch (err) {
     console.error('  ERROR: 배포 실패 —', err.message);
-    console.log('  수동으로 실행: firebase deploy --only hosting');
+    console.log('  수동으로 실행: npm run deploy');
   }
 
   const elapsed = formatElapsed(Date.now() - totalStart);

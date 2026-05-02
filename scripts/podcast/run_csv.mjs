@@ -166,15 +166,15 @@ async function main() {
     console.error('  ERROR: 동기화 실패 —', err.message);
   }
 
-  // ── STEP 3: Firebase deploy ──────────────────────────────
-  console.log('\n[STEP 3/3] Firebase 배포...');
+  // ── STEP 3: Vercel deploy ──────────────────────────────
+  console.log('\n[STEP 3/3] Vercel 배포...');
   try {
-    execSync('firebase deploy --only hosting', {
+    execSync('npm run deploy', {
       cwd: ROOT, stdio: 'inherit',
     });
   } catch (err) {
     console.error('  ERROR: 배포 실패 —', err.message);
-    console.log('  수동으로 실행: firebase deploy --only hosting');
+    console.log('  수동으로 실행: npm run deploy');
   }
 
   const elapsed = formatElapsed(Date.now() - totalStart);

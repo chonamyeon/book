@@ -77,7 +77,7 @@ async function drawCard(ctx, W, H, book, shareUrl, coverImg) {
     ctx.font = 'italic bold 34px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(212,175,55,0.85)';
-    ctx.fillText('✦  ARCHIVIEW  ✦', W / 2, 68);
+    ctx.fillText('✦  Whiteboard  ✦', W / 2, 68);
 
     // Top divider
     ctx.strokeStyle = goldGrad(ctx, W);
@@ -252,7 +252,7 @@ export async function generateShareCard(book, shareUrl) {
 
 export async function shareCard(book, shareUrl) {
     const blob = await generateShareCard(book, shareUrl);
-    const fileName = `archiview-${book.id || book.title}.png`;
+    const fileName = `whiteboard-${book.id || book.title}.png`;
 
     // 모바일: 네이티브 이미지 공유 (인스타 스토리 등)
     if (navigator.share && navigator.canShare) {
@@ -260,7 +260,7 @@ export async function shareCard(book, shareUrl) {
         if (navigator.canShare({ files: [file] })) {
             await navigator.share({
                 files: [file],
-                title: `[아카이뷰] ${book.title}`,
+                title: `[Whiteboard] ${book.title}`,
                 url: shareUrl,
             });
             return;

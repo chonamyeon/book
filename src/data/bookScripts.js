@@ -1,11 +1,11 @@
-// Archiview Original Factory Protocol (VERIFIED 2026 - FINAL)
+// Whiteboard Original Factory Protocol (VERIFIED 2026 - FINAL)
 // 1. Content: 40+ turns of empathetic/funny office-life dialogue (Script 2.0 style)
 // 2. Voice Generation Engine (NO CHIRP/TTS):
 //     - General Books: Google 2.5 Flash Preview
 //     - Original Books: Google 2.5 Pro Preview
 // 3. Voice Consistency: Index-based (Even/Odd) assignment to prevent mid-script voice changes.
 // 4. Audio: 44.1kHz Stereo, merge with intro_jingle.mp3 at both ends.
-// 5. UI & Deploy: Kakao-style chat view, Auto-update celebrities.js/bookScripts.js, build and deploy to Firebase.
+// 5. UI & Deploy: Kakao-style chat view, Auto-update celebrities.js/bookScripts.js, build and deploy to Vercel.
 // 6. Spoiler Policy: STRONGLY PROHIBITED. Do not reveal critical plot twists or endings. Focus on themes, insights, and relatable office situations.
 
 export const bookScripts = {
@@ -942,7 +942,7 @@ export const bookScripts = {
 		},
 		{
 				"role": "B",
-				"text": "오늘도 아카이뷰와 깨달음이 있는 하루 되시길 바랍니다. 감사합니다."
+				"text": "오늘도 Whiteboard와 깨달음이 있는 하루 되시길 바랍니다. 감사합니다."
 		}
 ],
 	
@@ -3892,7 +3892,7 @@ export const bookScripts = {
 	},
 	{
 		"role": "A",
-		"text": "화이팅입니다, 스텔라님. 여러분의 모든 조용한 투쟁을 아카이뷰가 응원합니다."
+		"text": "화이팅입니다, 스텔라님. 여러분의 모든 조용한 투쟁을 Whiteboard가 응원합니다."
 	},
 	{
 		"role": "B",
@@ -3904,7 +3904,7 @@ export const bookScripts = {
 	},
 	{
 		"role": "B",
-		"text": "궁금하다면 내일도 아카이뷰! 잊지 마세요, '너의 이름은' 스토너다!"
+		"text": "궁금하다면 내일도 Whiteboard! 잊지 마세요, '너의 이름은' 스토너다!"
 	},
 	{
 		"role": "A",

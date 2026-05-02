@@ -7,8 +7,6 @@ import { celebrities } from '../data/celebrities';
 import { useAudio } from '../contexts/AudioContext';
 import { bookScripts } from '../data/bookScripts';
 import { availableAudio } from '../data/availableAudio';
-import { db } from '../firebase';
-import { getDoc, doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useBookData } from '../hooks/useBookData';
 import SubscriptionModal from '../components/SubscriptionModal';
@@ -334,7 +332,7 @@ function buildPages(book) {
     // -- Bibliography Page (Always include) --
     let bibTitle = book.title;
     let bibAuthor = book.author;
-    let bibPublisher = '아카이뷰 에디션';
+    let bibPublisher = 'Whiteboard 에디션';
 
     const biblioMatch = main.match(/참고\s*도서:\s*([^,/\n]+)[,/]\s*저자:?\s*([^,/\n]+)[,/]\s*출판사:?\s*([^\n\r]+)/);
     if (biblioMatch) {
@@ -491,17 +489,8 @@ export default function ReviewDetail() {
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
     const [showShareMenu, setShowShareMenu] = useState(false);
     const [cardLoading, setCardLoading] = useState(false);
-    const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3, updatePodcastCover } = useAudio();
+    const { isSpeaking, activeAudioId, playPodcast, stopAll, playPodcastMP3, podcastPlaying, podcastInfo, currentTime, duration, seekPodcastMP3 } = useAudio();
     // currentTime, duration: 싱크 제거됐으나 seekPodcastMP3/진행바에서 사용
-
-    const [firestoreCoverUrl, setFirestoreCoverUrl] = useState(null);
-
-    // 파이어스토어 표지가 로드되면 미니플레이어 커버 즉시 업데이트
-    useEffect(() => {
-        if (firestoreCoverUrl && id) {
-            updatePodcastCover(id, firestoreCoverUrl);
-        }
-    }, [firestoreCoverUrl, id, updatePodcastCover]);
 
     const book = useMemo(() => {
         if (!id) return null;
@@ -523,33 +512,26 @@ export default function ReviewDetail() {
                 id: validId,
                 isPodcast: b.isPodcast || hasAudioFile,
                 podcastFile: b.podcastFile || (hasAudioFile ? `/audio/${fileName}` : null),
-                coverUrl: firestoreCoverUrl || b.cover || b.coverUrl
+                coverUrl: b.cover || b.coverUrl
             };
         }
         return null;
-    }, [id, firestoreCoverUrl, getBook]);
+    }, [id, getBook]);
 
     const hasReview = useMemo(() => !!(book?.review && book.review.trim().length > 100), [book]);
     const pages = useMemo(() => (book ? buildPages(book) : []), [book]);
 
-    // ─── Action Integration ───
-    const [completedActions, setCompletedActions] = useState([]);
-
-    useEffect(() => {
-        if (!user || !book) return;
-
-        const q = query(
-            collection(db, 'users', user.uid, 'readingNotes'),
-            where('bookTitle', '==', book?.title || ''),
-            where('type', 'in', ['action', '#액션'])
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const actions = snapshot.docs.map(doc => doc.data().actionTitle).filter(Boolean);
-            setCompletedActions(actions);
-        });
-
-        return () => unsubscribe();
+    const completedActions = useMemo(() => {
+        if (!user || !book) return [];
+        try {
+            const saved = JSON.parse(localStorage.getItem(`whiteboard_reading_notes_${user.uid}`) || '[]');
+            return saved
+                .filter(note => note.bookTitle === book.title && ['action', '#액션'].includes(note.type))
+                .map(note => note.actionTitle)
+                .filter(Boolean);
+        } catch {
+            return [];
+        }
     }, [user, book]);
 
     const initialTab = searchParams.get('tab');
@@ -595,15 +577,8 @@ export default function ReviewDetail() {
     const [chatLoading, setChatLoading] = useState(false);
     const chatScrollRef = useRef(null);
 
-    // Firestore / Script / Podcast States & Derivations
-    const [firestoreScript, setFirestoreScript] = useState(null);
-    const [firestoreAudioUrl, setFirestoreAudioUrl] = useState(null);
-    const [firestoreIsPodcast, setFirestoreIsPodcast] = useState(false);
-    const [firestoreEbook, setFirestoreEbook] = useState(null);
-    const [ebookLoading, setEbookLoading] = useState(true);
-
     const script = useMemo(() => {
-        let raw = firestoreScript && firestoreScript.length > 0 ? firestoreScript : (bookScripts[id] || []);
+        let raw = bookScripts[id] || [];
         if (raw.length === 0 && book?.podcastScript) {
             try { raw = typeof book.podcastScript === 'string' ? JSON.parse(book.podcastScript) : book.podcastScript; } catch {}
         }
@@ -611,24 +586,23 @@ export default function ReviewDetail() {
             ...turn,
             role: turn.role || (turn.speaker === 'B' || turn.speaker === '스텔라' ? 'B' : 'A'),
         }));
-    }, [id, firestoreScript, book]);
+    }, [id, book]);
     const hasScript = script.length > 0;
-    const isPodcast = book?.isPodcast || firestoreIsPodcast;
+    const isPodcast = book?.isPodcast;
 
     const podcastSrc = useMemo(() => {
         if (!book) return '';
-        // 로컬 파일이 availableAudio에 있으면 항상 로컬 우선 (Firestore URL이 만료돼도 안전)
+        // 로컬 파일이 availableAudio에 있으면 항상 로컬 우선
         // 영어 ID 먼저 체크 (URL 인코딩 이슈 없음)
         if (book.id && availableAudio[`${book.id}.mp3`]) return `/audio/${book.id}.mp3`;
         const koreanSlug = (book.title || '').replace(/\s+/g, '-');
         if (koreanSlug && availableAudio[`${koreanSlug}.mp3`]) return `/audio/${koreanSlug}.mp3`;
-        // 로컬 파일 없으면 Firestore/override URL 사용
-        if (firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile) {
-            return firestoreAudioUrl || book.voiceAudioUrl || book.podcastFile;
+        if (book.voiceAudioUrl || book.podcastFile) {
+            return book.voiceAudioUrl || book.podcastFile;
         }
         if (koreanSlug && koreanSlug !== book.id) return `/audio/${koreanSlug}.mp3`;
         return `/audio/${book.id}.mp3`;
-    }, [book, firestoreAudioUrl]);
+    }, [book]);
 
     const coupangUrl = useMemo(() => {
         if (!book) return '';
@@ -643,11 +617,11 @@ export default function ReviewDetail() {
         const rawAmazon = book.amazonLink || '';
         if (rawAmazon) {
             if (rawAmazon.includes('amazon.com') && !rawAmazon.includes('tag=')) {
-                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=archiview2026-20';
+                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=whiteboard2026-20';
             }
             return rawAmazon;
         }
-        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=archiview2026-20`;
+        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=whiteboard2026-20`;
     }, [book]);
 
     const hasRealAmazon = useMemo(() => !!book?.amazonLink, [book]);
@@ -661,7 +635,8 @@ export default function ReviewDetail() {
         return duration || 0;
     }, [book, duration]);
 
-    const ebookPages = useMemo(() => firestoreEbook || [], [firestoreEbook]);
+    const ebookPages = [];
+    const ebookLoading = false;
     const hasEbook = ebookPages.length > 0;
     const hasAnyReview = hasEbook || hasReview;
 
@@ -694,109 +669,8 @@ export default function ReviewDetail() {
     const isThisPodcastActive = podcastInfo?.src === podcastSrc;
 
     const chatEndRef = useRef(null);
-
-    // Firestore에서 대본 + 오디오 URL + isPodcast 실시간 로드
-    useEffect(() => {
-        if (!id) return;
-        // Firestore 대본 조회 — 영어 ID 실패 시 한국어 title slug로 재시도
-        const loadScript = async () => {
-            const parseScript = (snap) => {
-                if (!snap.exists()) return false;
-                const d = snap.data();
-                const arr = (Array.isArray(d.script) && d.script.length > 0) ? d.script
-                    : (Array.isArray(d.lines) && d.lines.length > 0) ? d.lines
-                    : (Array.isArray(d.content) && d.content.length > 0) ? d.content
-                    : null;
-                if (!arr) return false;
-                setFirestoreScript(arr.map(l => ({
-                    role: l.role ? l.role : (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
-                    text: l.text || l.message || ''
-                })));
-                return true;
-            };
-            try {
-                let snap = await getDoc(doc(db, 'scripts', id));
-                if (parseScript(snap)) return;
-                // 한국어 title slug로 재시도 (예: hitchhikers-guide → 은하수를-여행하는-히치하이커를-위한-안내서)
-                const koreanSlug = (book?.title || '').replace(/\s+/g, '-');
-                if (koreanSlug && koreanSlug !== id) {
-                    snap = await getDoc(doc(db, 'scripts', koreanSlug));
-                    parseScript(snap);
-                }
-            } catch {}
-        };
-        loadScript();
-        // 성우 MP3 / 오디오 URL / isPodcast / Cover URL Firestore 오버라이드 조회
-        getDoc(doc(db, 'book_overrides', id)).then(snap => {
-            if (snap.exists()) {
-                const d = snap.data();
-                setFirestoreAudioUrl(d.voiceAudioUrl || d.audioUrl || null);
-                if (d.isPodcast) setFirestoreIsPodcast(true);
-                if (d.cover) setFirestoreCoverUrl(d.cover);
-            }
-        }).catch(() => { });
-
-        // 이북 데이터 조회 — 파싱은 idle time에 실행해 초기 렌더링 블로킹 방지
-        getDoc(doc(db, 'ebooks', id)).then(snap => {
-            const parseEbook = async () => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    const mc = getMobileMaxChars();
-                    let rawPages = null;
-                    if (data.pages && Array.isArray(data.pages)) {
-                        rawPages = data.pages.flatMap(p => splitEbookSection(optimizeParagraphs(normalizeBrTags(p)), mc));
-                    } else if (data.content) {
-                        const content = data.content;
-                        const sections = content.split(/<section[^>]*class=["']ebook-page["'][^>]*>/i);
-                        const validSections = sections
-                            .map(s => s.split(/<\/section>/i)[0])
-                            .filter(s => s.trim() && !s.includes('<!DOCTYPE') && !s.includes('<html'));
-                        if (validSections.length > 0) {
-                            rawPages = validSections.flatMap(s => splitEbookSection(optimizeParagraphs(normalizeBrTags(s || '')), mc));
-                        } else {
-                            rawPages = splitEbookSection(optimizeParagraphs(normalizeBrTags(content || '')), mc);
-                        }
-                    }
-                    if (rawPages) {
-                        const finalPages = await measureAndResplitPages(rawPages);
-                        setFirestoreEbook(finalPages);
-                    }
-                }
-                setEbookLoading(false);
-            };
-            // requestIdleCallback 지원 브라우저는 idle time에 파싱, 미지원 시 setTimeout
-            if (typeof requestIdleCallback !== 'undefined') {
-                requestIdleCallback(() => parseEbook(), { timeout: 3000 });
-            } else {
-                setTimeout(parseEbook, 200);
-            }
-        }).catch(() => setEbookLoading(false));
-    }, [id]);
-
-    // book이 나중에 로딩되면 한국어 slug로 스크립트 재시도
-    useEffect(() => {
-        if (!book?.title || (firestoreScript && firestoreScript.length > 0)) return;
-        const koreanSlug = book.title.replace(/\s+/g, '-');
-        if (!koreanSlug || koreanSlug === id) return;
-        getDoc(doc(db, 'scripts', koreanSlug)).then(snap => {
-            if (!snap.exists()) return;
-            const d = snap.data();
-            const arr = (Array.isArray(d.script) && d.script.length > 0) ? d.script
-                : (Array.isArray(d.lines) && d.lines.length > 0) ? d.lines
-                : (Array.isArray(d.content) && d.content.length > 0) ? d.content
-                : null;
-            if (!arr) return;
-            setFirestoreScript(arr.map(l => ({
-                role: l.role ? l.role : (l.speaker === '스텔라' || l.speaker?.toLowerCase() === 'stella') ? 'B' : 'A',
-                text: l.text || l.message || ''
-            })));
-        }).catch(() => {});
-    }, [book?.title, id]);
-
     const bubbleRefs = useRef([]);
 
-    // 수동 타임스탬프 (Firestore timestamps/{id}) 로드 + mode
-    // localStorage 캐시로 매번 Firestore 호출 방지 (24시간 유효)
     // 첫 렌더부터 올바른 위치 표시 — localStorage에서 동기적으로 초기화
     const [timestampSegments, setTimestampSegments] = useState(() => {
         if (!id) return null;
@@ -822,36 +696,6 @@ export default function ReviewDetail() {
         } catch(e) {}
         return false;
     });
-    useEffect(() => {
-        if (!id) return;
-        const CACHE_TTL = 5 * 60 * 1000; // 5분 — Admin 수정 후 최대 5분 내 반영
-        const cacheKey = `rv_ts_${id}`;
-        // 캐시 있으면 즉시 렌더 (미니플레이어 클릭 시 처음으로 튀는 현상 방지)
-        try {
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const { segments, mode, cachedAt } = JSON.parse(cached);
-                if (segments?.length && Date.now() - cachedAt < CACHE_TTL) {
-                    setTimestampSegments(segments);
-                    setSyncMode(mode === 'sync');
-                    return;
-                }
-            }
-        } catch (e) {}
-        // 캐시 없거나 만료 → Firestore 호출
-        getDoc(doc(db, 'timestamps', id)).then(snap => {
-            if (snap.exists() && snap.data().segments?.length) {
-                const { segments, mode } = snap.data();
-                setTimestampSegments(segments);
-                setSyncMode(mode === 'sync');
-                try { localStorage.setItem(cacheKey, JSON.stringify({ segments, mode, cachedAt: Date.now() })); } catch(e) {}
-            } else {
-                setTimestampSegments(null);
-                setSyncMode(false);
-            }
-        }).catch(() => { setTimestampSegments(null); setSyncMode(false); });
-    }, [id]);
-
     const hasSyncData = !!(timestampSegments && script.length && timestampSegments.length === script.length);
 
     // currentTime 기반 activeTurnIndex — 싱크 모드 + 타임스탬프 있을 때만 활성
@@ -964,8 +808,8 @@ export default function ReviewDetail() {
         window.Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
-                title: `[아카이뷰] ${book.title}`,
-                description: book.desc || '아카이뷰의 정밀 도서 리뷰',
+                title: `[Whiteboard] ${book.title}`,
+                description: book.desc || 'Whiteboard의 정밀 도서 리뷰',
                 imageUrl: shareImage,
                 link: {
                     mobileWebUrl: shareUrl,
@@ -989,8 +833,8 @@ export default function ReviewDetail() {
         const shareUrl = `https://archiview.shop/review/${encodeURIComponent(book.id)}`;
         if (navigator.share) {
             navigator.share({
-                title: `[아카이뷰] ${book.title}`,
-                text: `『${book.title}』 - 아카이뷰에서 읽어보세요!`,
+                title: `[Whiteboard] ${book.title}`,
+                text: `『${book.title}』 - Whiteboard에서 읽어보세요!`,
                 url: shareUrl,
             }).catch(() => {});
         } else {
@@ -1083,9 +927,9 @@ ${scriptContext}
     return (
         <>
         <Helmet>
-            <title>{book.title || '아카이뷰 도서'} - ARCHIVIEW</title>
-            <meta property="og:title" content={`[아카이뷰] ${book.title || '도서'}`} />
-            <meta property="og:description" content={book.desc || '아카이뷰의 정밀 도서 리뷰'} />
+            <title>{book.title || 'Whiteboard 도서'} - Whiteboard</title>
+            <meta property="og:title" content={`[Whiteboard] ${book.title || '도서'}`} />
+            <meta property="og:description" content={book.desc || 'Whiteboard의 정밀 도서 리뷰'} />
             <meta property="og:image" content={ogImage} />
             <meta property="og:url" content={`https://archiview.shop/review/${encodeURIComponent(book.id)}`} />
             <meta property="og:type" content="article" />
@@ -1311,7 +1155,7 @@ ${scriptContext}
                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 28px', textAlign: 'center', gap: '12px' }}>
                                             <div className="rv-ebook-final-brand-row">
                                                 <span className="rv-ebook-final-ornament">✦</span>
-                                                <span className="rv-ebook-final-brand-name">THE ARCHIVIEW</span>
+                                                <span className="rv-ebook-final-brand-name">THE Whiteboard</span>
                                                 <span className="rv-ebook-final-ornament">✦</span>
                                             </div>
                                             <h2 className="rv-ebook-final-booktitle">{book.title}</h2>
@@ -1337,7 +1181,7 @@ ${scriptContext}
                                             <h1 className="rv-cover-title">{book.title}</h1>
                                             <p className="rv-cover-author">{book.author}</p>
                                             <div className="rv-cover-divider" style={{ marginBottom: 0 }} />
-                                            <p className="rv-cover-edition">Premium Archiview Edition</p>
+                                            <p className="rv-cover-edition">Premium Whiteboard Edition</p>
                                             <p className="rv-cover-hint">스와이프하여 넘기기 →</p>
                                         </div>
                                     </Page>,
@@ -1345,7 +1189,7 @@ ${scriptContext}
                                         <Page key={`review-${i}`}>
                                             <div className="rv-content">
                                                 <div className="rv-section-label">
-                                                    The Archiview · Review
+                                                    The Whiteboard · Review
                                                 </div>
                                                 <h2 className="rv-page-header">{p.header}</h2>
                                                 {p.isSummary ? (
@@ -1396,7 +1240,7 @@ ${scriptContext}
                                     )),
                                     <Page key="review-final" density="hard" className="rv-final-page">
                                         <div className="rv-final-inner">
-                                            <div className="rv-final-logo">ARCHIVIEW</div>
+                                            <div className="rv-final-logo">Whiteboard</div>
                                             <div className="rv-final-divider"></div>
                                             <h3 style={{marginBottom: '10px'}}>READ & ASCEND</h3>
                                             <p style={{marginBottom: '25px'}}>기록은 영감이 되고,<br />영감은 행동이 됩니다.</p>
@@ -1474,7 +1318,7 @@ ${scriptContext}
                                                  </div>
                                              </div>
 
-                                            <div className="rv-final-footer">THE ARCHIVIEW ORIGINAL</div>
+                                            <div className="rv-final-footer">THE Whiteboard ORIGINAL</div>
                                         </div>
                                     </Page>
                                 ]
@@ -1534,7 +1378,7 @@ ${scriptContext}
                                 <KakaoAdFit unit="DAN-8TOvfml5bpBYgcZ0" width="320" height="50" />
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                                     <span style={{ fontSize: '8px', color: '#c8a870', opacity: 0.7 }}>✦</span>
-                                    <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '4px', color: 'rgba(200,168,112,0.6)', textTransform: 'uppercase' }}>THE ARCHIVIEW</span>
+                                    <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '4px', color: 'rgba(200,168,112,0.6)', textTransform: 'uppercase' }}>THE Whiteboard</span>
                                     <span style={{ fontSize: '8px', color: '#c8a870', opacity: 0.7 }}>✦</span>
                                 </div>
                                 <h2 style={{ fontSize: 'clamp(15px,4vw,18px)', fontWeight: 700, color: '#f5ead8', marginBottom: '16px', wordBreak: 'keep-all' }}>{book.title}</h2>
@@ -1596,7 +1440,7 @@ ${scriptContext}
 
                                 <div style={{ width: '100%', marginTop: '20px', padding: '0 4px' }}>
                                     <p style={{ fontSize: '8px', lineHeight: 1.7, color: 'rgba(200,168,112,0.35)', padding: '0 10px', marginBottom: '5px' }}>본 콘텐츠는 독자의 인사이트를 담은 창작 에세이 리뷰이며, 더 풍부한 내용은 가까운 서점이나 온라인 서점에서 구매하여 보시기 바랍니다.</p>
-                                    <p style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(200,168,112,0.5)' }}>© The Archiview — All Rights Reserved</p>
+                                    <p style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(200,168,112,0.5)' }}>© The Whiteboard — All Rights Reserved</p>
                                 </div>
                             </div>
                         </div>
@@ -1787,8 +1631,8 @@ const EbookPage = React.forwardRef(({ children, className, bookTitle, pageNum, t
             <div className="rv-sheet">
                 {/* 프리미엄 러닝 헤더 (책에서 흔히 보는 상단 정보) */}
                 <div className="rv-ebook-page-header">
-                    <span className="rv-ebook-chapter-label">{bookTitle || 'THE ARCHIVIEW ORIGINAL'}</span>
-                    <span className="rv-ebook-brand">ARCHIVIEW</span>
+                    <span className="rv-ebook-chapter-label">{bookTitle || 'THE Whiteboard ORIGINAL'}</span>
+                    <span className="rv-ebook-brand">Whiteboard</span>
                 </div>
 
                 <div className="rv-ebook-body-content">
@@ -1803,4 +1647,3 @@ const EbookPage = React.forwardRef(({ children, className, bookTitle, pageNum, t
         </div>
     );
 });
-

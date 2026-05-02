@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import { useAudio } from '../contexts/AudioContext';
 import { useBookData } from '../hooks/useBookData';
 import BookCardActions from '../components/BookCardActions';
+import { resolveEbookContent } from '../utils/ebookContent';
 
 export default function Celebrity() {
     const { id } = useParams();
@@ -19,7 +20,7 @@ export default function Celebrity() {
         if (booksLoading) return celeb.books || [];
         const all = getAllBooks();
 
-        // 1. 기존 celebrities.js 에 있던 도서들에 Firestore 덮어쓰기 적용
+        // 1. 기존 celebrities.js 에 있던 도서들에 static data 덮어쓰기 적용
         const staticBooksWithOverrides = (celeb.books || []).map(staticBook => {
             const staticId = staticBook.id || staticBook.title.toLowerCase().replace(/\s+/g, '-');
             const overrideBook = all.find(b => b.id === staticId);
@@ -28,13 +29,13 @@ export default function Celebrity() {
 
         // 2. 이 셀럽을 위해 새로 추가된 완전 신규 도서
         const staticIds = new Set(staticBooksWithOverrides.map(b => b.id));
-        const firestoreBooks = all.filter(b =>
+        const staticDataBooks = all.filter(b =>
             (b.celebName === id || b.celebritySlug === id || b.celebId === id) &&
             b.isPublic === true &&
             !staticIds.has(b.id)
         );
 
-        return [...staticBooksWithOverrides, ...firestoreBooks];
+        return [...staticBooksWithOverrides, ...staticDataBooks];
     }, [getAllBooks, booksLoading, id, celeb.books]);
 
     const [expandedReviews, setExpandedReviews] = useState({});
@@ -52,16 +53,22 @@ export default function Celebrity() {
     }, []);
 
     // 각 도서의 desc/review 정제 텍스트를 미리 계산
-    const cleanedBooks = useMemo(() =>
-        allCelebBooks.map(book => ({
-            ...book,
-            _cleanDesc: cleanText(book.desc),
-            // review > description(Firestore) > desc 순서로 가장 긴 내용 사용
-            _cleanReview: [book.review, book.description, book.desc]
-                .map(t => cleanText(t))
-                .sort((a, b) => b.length - a.length)[0] || '',
-        })),
-    [allCelebBooks, cleanText]);
+    const cleanedBooks = useMemo(() => {
+        const map = new Map();
+        allCelebBooks.forEach(book => {
+            const key = `${(book.title || '').normalize('NFC').trim().toLowerCase()}|${(book.author || '').normalize('NFC').trim().toLowerCase()}`;
+            const next = {
+                ...book,
+                _cleanDesc: cleanText(book.desc),
+                _cleanReview: cleanText(resolveEbookContent(book)),
+            };
+            const current = map.get(key);
+            if (!current || next._cleanReview.length > current._cleanReview.length) {
+                map.set(key, next);
+            }
+        });
+        return Array.from(map.values());
+    }, [allCelebBooks, cleanText]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -141,7 +148,7 @@ export default function Celebrity() {
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-2 leading-tight">당신의 지적 취향을 발견하세요</h3>
                                     <p className="text-slate-300 text-[11px] leading-relaxed max-w-[200px] mb-6">
-                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 아카이뷰를 완성하세요.
+                                        나에게 맞는 책 찾기 테스트를 통해 당신만의 개인 Whiteboard를 완성하세요.
                                     </p>
                                     <div className="px-8 py-3 bg-gold text-primary font-black rounded-none text-xs shadow-lg shadow-gold/20 active:scale-95 transition-transform flex items-center gap-2">
                                         <span>테스트 시작하기</span>
@@ -211,16 +218,8 @@ export default function Celebrity() {
                                                         <span className="material-symbols-outlined text-sm">edit_note</span>
                                                         Insight & Review
                                                     </h6>
-                                                    {book._cleanReview.length > 150 && (
-                                                        <button
-                                                            onClick={() => toggleReview(index)}
-                                                            className="px-4 py-2 rounded-none bg-gold/10 text-gold text-[10px] font-black uppercase tracking-tight hover:bg-gold/20 transition-all active:scale-90 min-h-[36px]"
-                                                        >
-                                                            {expandedReviews[index] ? '접기' : '열기'}
-                                                        </button>
-                                                    )}
                                                 </div>
-                                                <p className={`text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap ${expandedReviews[index] ? '' : 'line-clamp-3'}`}>
+                                                <p className="text-slate-300 text-sm leading-relaxed font-light whitespace-pre-wrap">
                                                     {book._cleanReview}
                                                 </p>
                                             </div>

@@ -1,5 +1,5 @@
 /**
- * Archiview Voice Lockdown System (2026)
+ * Whiteboard Voice Lockdown System (2026)
  * [절대 원칙] 모든 팟캐스트는 제임스(남)와 스텔라(여) 보이스만 사용합니다.
  * - Male (제임스): Puck — Index 짝수 (0, 2, 4...)
  * - Female (스텔라): Kore — Index 홀수 (1, 3, 5...)

@@ -243,7 +243,7 @@ execSync(`"${ffmpegPath}" -y -f concat -safe 0 -i "${listFilePath}" -c:a libmp3l
 
 const outputFileName = `${BOOK_ID}.mp3`;
 const outputPath = path.join(OUTPUT_DIR, outputFileName);
-const metadata = `-metadata title="${BOOK_TITLE}" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+const metadata = `-metadata title="${BOOK_TITLE}" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 const jinglePath = path.resolve(__dirname, '../public/music/intro_jingle.mp3');
 
 if (fs.existsSync(jinglePath)) {

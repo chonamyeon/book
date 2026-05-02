@@ -172,7 +172,7 @@ export async function generateTTS(bookInfo, scriptOverride = null) {
 
   // 최종 MP3
   const finalMp3 = path.join(OUTPUT_DIR, `${id}.mp3`);
-  const metadata = `-metadata title="${title}" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+  const metadata = `-metadata title="${title}" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 
   if (fs.existsSync(JINGLE_PATH)) {
     console.log('  🎵 징글 삽입 + loudnorm...');

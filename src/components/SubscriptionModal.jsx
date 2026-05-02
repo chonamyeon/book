@@ -25,7 +25,7 @@ export default function SubscriptionModal({ onClose, trialDaysLeft }) {
                     </h2>
                     <p className="text-slate-400 text-sm leading-relaxed">
                         {isExpired
-                            ? '팟캐스트를 계속 듣고 싶다면\n아카이뷰 프리미엄을 시작하세요.'
+                            ? '팟캐스트를 계속 듣고 싶다면\nWhiteboard 프리미엄을 시작하세요.'
                             : '프리미엄으로 업그레이드하면\n광고 없이 무제한으로 즐길 수 있어요.'}
                     </p>
                 </div>

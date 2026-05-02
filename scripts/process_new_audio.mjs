@@ -42,7 +42,7 @@ for (const file of files) {
 
     console.log(`\n🚀 [${file}] -> [${baseName}.mp3] 변환 및 병합 중...`);
 
-    const metadata = `-metadata title="${baseName}" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+    const metadata = `-metadata title="${baseName}" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 
     try {
         // ffmpeg 커맨드 (fix_audio_merge.mjs의 로직 사용)

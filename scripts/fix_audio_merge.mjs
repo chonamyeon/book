@@ -26,7 +26,7 @@ if (!fs.existsSync(jingleFile)) {
 
 console.log('🎵 인트로/아웃트로 병합 및 MP3 변환 시작...');
 
-const metadata = `-metadata title="원씽" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+const metadata = `-metadata title="원씽" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 
 try {
     // 병합 커맨드 실행

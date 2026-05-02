@@ -1,4 +1,4 @@
-# Archiview 이북(E-Book) 제작 가이드
+# Whiteboard 이북(E-Book) 제작 가이드
 
 > **이북 작업 시 반드시 이 파일을 참고하세요.**
 > AdminDashboard의 이북 생성 프롬프트는 이 가이드 기준으로 작성됩니다.

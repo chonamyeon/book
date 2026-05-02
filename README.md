@@ -1,10 +1,10 @@
-# The Archiview (이카이뷰)
+# Whiteboard (이카이뷰)
 
 프리미엄 디지털 도서관 플랫폼 — 독서 성향 분석 + 맞춤 도서 추천 + 팟캐스트 요약 서비스
 
 - **배포**: https://book-site-123.web.app
-- **스택**: React 19 + Vite 7 + Firebase 12 + Tailwind CSS 3
-- **Firebase Project**: book-site-123
+- **스택**: React 19 + Vite 7 + Vercel 12 + Tailwind CSS 3
+- **Vercel Project**: book-site-123
 
 ---
 
@@ -27,11 +27,11 @@
 - **인트로 5초 오프셋**: 일부 파일 0초 시작 문제 → 첫 턴이 5초 미만이면 자동 보정
 
 ### 신규 기능
-- **AssemblyAI 일괄 타임스탬프 생성**: TTS 검증 탭에 배치 UI 추가 (WAV 폴더 선택 → 다중 도서 순차 처리 → Firestore 자동 저장)
+- **AssemblyAI 일괄 타임스탬프 생성**: TTS 검증 탭에 배치 UI 추가 (WAV 폴더 선택 → 다중 도서 순차 처리 → static data 자동 저장)
 
 ### iOS 모바일 최적화
 - 채팅 말풍선 폰트 +3px (모바일 전용: 13.5→16.5px)
-- Firebase 도메인 `preconnect` 추가
+- Vercel 도메인 `preconnect` 추가
 - Microsoft Clarity `window.load` 이후 defer
 - Google Fonts / Material Symbols 비동기 로드 (렌더 블로킹 제거)
 - 이북 파싱 `requestIdleCallback` defer

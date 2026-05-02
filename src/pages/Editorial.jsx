@@ -10,6 +10,7 @@ import { useAudio } from '../contexts/AudioContext';
 import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
 import { availableAudio } from '../data/availableAudio';
+import { SITE_ORIGIN } from '../config/site';
 
 const categoriesInfo = [
     {
@@ -19,7 +20,7 @@ const categoriesInfo = [
         sub: "내 성장을 가속화하고 싶을 때. 삶의 질을 높이는 강력한 도구들.",
         img: '/images/photo_selfdev.png',
         readTime: "12 MIN READ",
-        author: "TEAM ARCHIVIEW"
+        author: "TEAM Whiteboard"
     },
     {
         label: "경제",
@@ -28,7 +29,7 @@ const categoriesInfo = [
         sub: "부의 본질과 경제 흐름을 알고 싶을 때. 시장의 맥락을 짚는 통찰.",
         img: '/images/photo_economy.png',
         readTime: "15 MIN READ",
-        author: "TEAM ARCHIVIEW"
+        author: "TEAM Whiteboard"
     },
     {
         label: "경영",
@@ -37,7 +38,7 @@ const categoriesInfo = [
         sub: "압도적인 성과와 경영의 지혜. 조직과 개인을 이끄는 힘.",
         img: '/images/photo_management.png',
         readTime: "10 MIN READ",
-        author: "TEAM ARCHIVIEW"
+        author: "TEAM Whiteboard"
     },
     {
         label: "인문",
@@ -46,7 +47,7 @@ const categoriesInfo = [
         sub: "시대를 관통하는 통찰과 지혜. 오래된 것에서 발견하는 미래.",
         img: '/images/photo_humanities.png',
         readTime: "14 MIN READ",
-        author: "TEAM ARCHIVIEW"
+        author: "TEAM Whiteboard"
     },
     {
         label: "심리",
@@ -55,7 +56,7 @@ const categoriesInfo = [
         sub: "내 마음을 돌보고 위로가 필요할 때. 멈춰 서서 나를 들여다보는 시간.",
         img: '/images/photo_psychology.png',
         readTime: "9 MIN READ",
-        author: "TEAM ARCHIVIEW"
+        author: "TEAM Whiteboard"
     }
 ];
 
@@ -129,7 +130,7 @@ export default function Editorial() {
             <div className="bg-[#0e1015] min-h-screen flex items-center justify-center font-display">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-2 border-orange-500/20 border-t-orange-500 rounded-none animate-spin" />
-                    <span className="text-orange-500 text-[10px] font-bold tracking-widest uppercase">Archiview</span>
+                    <span className="text-orange-500 text-[10px] font-bold tracking-widest uppercase">Whiteboard</span>
                 </div>
             </div>
         );
@@ -138,8 +139,8 @@ export default function Editorial() {
     return (
         <div className="bg-[#0e1015] text-white font-sans antialiased min-h-screen pb-32 flex justify-center selection:bg-orange-500/30">
             <Helmet>
-                <title>에디토리얼 — 아카이뷰 큐레이션 인사이트 | ArchiView</title>
-                <meta name="description" content="아카이뷰 에디터가 엄선한 분야별 베스트셀러 큐레이션. 자기계발·경제·경영·인문·심리 카테고리별 도서 인사이트를 만나보세요." />
+                <title>에디토리얼 — Whiteboard 큐레이션 인사이트 | Whiteboard</title>
+                <meta name="description" content="Whiteboard 에디터가 엄선한 분야별 베스트셀러 큐레이션. 자기계발·경제·경영·인문·심리 카테고리별 도서 인사이트를 만나보세요." />
                 <meta name="robots" content="noindex, nofollow" />
                 <link rel="canonical" href="https://archiview.shop/editorial" />
             </Helmet>
@@ -210,7 +211,7 @@ export default function Editorial() {
                     {/* 🚀 2. Trending Now Horizontal Scroll */}
                     <section className="relative">
                         <div className="px-2 mb-6 flex justify-between items-end">
-                            <h3 className="text-xl font-bold tracking-tighter">직장인이 가장 많이 듣는 아카이뷰</h3>
+                            <h3 className="text-xl font-bold tracking-tighter">직장인이 가장 많이 듣는 Whiteboard</h3>
                             <button className="text-orange-500 text-xs font-bold tracking-widest uppercase mt-2 block text-right" style={{ width: "auto" }}>VIEW ALL</button>
                         </div>
                         <div className="relative group/slider">

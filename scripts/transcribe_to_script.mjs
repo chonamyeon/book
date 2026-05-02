@@ -86,7 +86,7 @@ async function transcribe(filePath, bookId) {
 3. 전체 글자 수는 공백 포함 3,000자 이상의 고밀도 리뷰가 되도록 상세하게 작성하세요.
 4. 오디오의 핵심 인사이트가 모두 포함되어야 하며, 직장인들이 출퇴근이나 점심시간에 공감할 수 있는 말투와 에피소드를 섞어주세요.
 5. 제임스와 스텔라의 목소리 톤을 일관되게 유지하세요 (Index 기반: 0, 2, 4...=제임스 / 1, 3, 5...=스텔라).
-6. **가장 중요한 규칙**: 마지막 40번째 대사는 반드시 "**오늘도 아카이뷰와 깨달음이 있는 하루 되시길 바랍니다. 감사합니다.**"로 끝나야 합니다. 그 뒤에 어떠한 농담이나 추가 텍스트도 붙이지 마세요.
+6. **가장 중요한 규칙**: 마지막 40번째 대사는 반드시 "**오늘도 Whiteboard와 깨달음이 있는 하루 되시길 바랍니다. 감사합니다.**"로 끝나야 합니다. 그 뒤에 어떠한 농담이나 추가 텍스트도 붙이지 마세요.
 7. 대본을 반드시 JSON 배열 형식으로 출력하세요: [ { "speaker": "제임스", "text": "..." }, ... ]`;
 
         const result = await model.generateContent([
@@ -137,7 +137,7 @@ function updateBookScripts(bookId, script) {
 }
 
 async function main() {
-    console.log('🚀 Archiview 오디오-대본 동기화 시스템을 시작합니다.');
+    console.log('🚀 Whiteboard 오디오-대본 동기화 시스템을 시작합니다.');
     
     if (!fs.existsSync(audioDir)) {
         console.error('❌ 오디오 디렉토리를 찾을 수 없습니다:', audioDir);

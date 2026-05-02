@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
-import { logout } from '../firebase';
+import { logout } from '../lib/localAuth';
 import { useAuth } from '../hooks/useAuth';
 import { useAudio } from '../contexts/AudioContext';
 import Footer from '../components/Footer';
@@ -83,7 +83,7 @@ export default function Profile() {
                         <div className="absolute inset-0 p-6 flex flex-col justify-between">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="serif-title text-gold text-lg italic tracking-wider">The Archiview</h3>
+                                    <h3 className="serif-title text-gold text-lg italic tracking-wider">The Whiteboard</h3>
                                     <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] block mt-1">Private Membership</span>
                                 </div>
                                 <div className="size-8 rounded-none border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-sm">
@@ -118,7 +118,7 @@ export default function Profile() {
                     {/* Insight Time Banner (Replacing Stats Row) */}
                     <div className="relative bg-[#101218]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-sm w-full">
                         {/* Premium Glassmorphism Background */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 blur-xl opacity-50 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/15 via-blue-500/10 to-blue-500/15 blur-xl opacity-50 pointer-events-none" />
                         
                         <div className="relative z-10 flex flex-col gap-4">
                             {/* Header Row */}
@@ -126,9 +126,9 @@ export default function Profile() {
                                 <div className="flex items-center gap-2">
                                     <h3 className="text-[13px] font-black tracking-tight text-white/90 uppercase">오늘의 인사이트 타임</h3>
                                 </div>
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-orange-500/10 border border-orange-500/20">
-                                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">ON AIR</span>
-                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_5px_rgba(249,115,22,0.8)]" />
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-blue-500/10 border border-blue-500/20">
+                                    <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">ON AIR</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
                                 </div>
                             </div>
 
@@ -149,14 +149,14 @@ export default function Profile() {
 
                             {/* Progress Row */}
                             <div className="space-y-2">
-                                <div className="text-[14px] sm:text-[16px] font-mono tracking-[0.12em] text-orange-500/90 leading-none filter drop-shadow-[0_0_8px_rgba(249,115,22,0.4)] whitespace-nowrap overflow-hidden text-clip flex justify-center w-full">
+                                <div className="text-[14px] sm:text-[16px] font-mono tracking-[0.12em] text-blue-600/90 leading-none filter drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] whitespace-nowrap overflow-hidden text-clip flex justify-center w-full">
                                     {progressBar}
                                 </div>
                                 <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-1">
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-[12px] font-black text-white/70 tracking-tight">{streak}일 연속 달성 중</span>
                                     </div>
-                                    <span className="text-[9px] font-black text-orange-500/50 uppercase tracking-[0.2em]">Growing Daily</span>
+                                    <span className="text-[9px] font-black text-blue-600/50 uppercase tracking-[0.2em]">Growing Daily</span>
                                 </div>
                             </div>
                         </div>
@@ -164,7 +164,7 @@ export default function Profile() {
 
                     {/* Menu Links */}
                     <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My archiview</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">My whiteboard</h4>
 
                         <div className="bg-white/5 rounded-none overflow-hidden border border-white/5 divide-y divide-white/5">
                             <button className="w-full flex items-center justify-between p-4 hover:bg-white/10 transition-colors group">
@@ -225,7 +225,7 @@ export default function Profile() {
                     </div>
 
                     <p className="text-center text-[10px] text-slate-600 font-mono pt-8">
-                        The Archiview ID: {user.uid.slice(0, 8).toUpperCase()}<br />
+                        The Whiteboard ID: {user.uid.slice(0, 8).toUpperCase()}<br />
                         Version 1.4.0 (Build 2024.05)
                     </p>
                     <Footer />

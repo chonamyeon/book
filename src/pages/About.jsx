@@ -1,83 +1,63 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
 export default function About() {
-    const navigate = useNavigate();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+  return (
+    <div className="bg-white text-slate-900 min-h-screen pb-24">
+      <Helmet>
+        <title>소개 | Whiteboard</title>
+        <meta
+          name="description"
+          content="Whiteboard는 책을 읽을 시간이 부족한 독자를 위해 비평, 맥락, 실천 아이디어를 정리하는 독서 인사이트 매거진입니다."
+        />
+        <link rel="canonical" href="https://archiview.shop/about" />
+      </Helmet>
+      <TopNavigation title="소개" />
 
-    return (
-        <div className="bg-white dark:bg-slate-950 font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
-            <TopNavigation title="Brand Story" />
+      <main className="mx-auto max-w-3xl px-6 pt-28 pb-16">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-600">About Whiteboard</p>
+        <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight md:text-5xl">
+          책의 요약을 넘어, 독자가 바로 쓸 수 있는 관점을 정리합니다.
+        </h1>
+        <p className="mt-6 text-base leading-8 text-slate-600">
+          Whiteboard는 자기계발, 경제, 경영, 인문, 심리 분야의 도서를 중심으로 핵심 주장과 배경 맥락,
+          비판적 관점, 생활 속 적용법을 함께 다룹니다. 단순 줄거리 소개가 아니라 독자가 책을 고를 때
+          필요한 판단 기준과 읽은 뒤 실천할 수 있는 질문을 제공합니다.
+        </p>
 
-            <main className="px-6 pt-24 pb-12">
-                <section className="mb-12 animate-fade-in">
-                    <span className="text-gold text-[10px] font-black uppercase tracking-[0.3em] block mb-4">The Vision</span>
-                    <h2 className="serif-title text-3xl text-slate-900 dark:text-white mb-6 leading-tight">
-                        아카이뷰: <br />
-                        생각의 시간
-                    </h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                        우리는 매일 수많은 정보의 홍수 속에서 살아갑니다. <br />
-                        하지만 정작 '나 자신'의 생각을 정리하고 마주할 시간은 점점 줄어들고 있습니다.
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                        <strong>아카이뷰(Archiview)</strong>는 'archiview'와 'Review'의 합성어로,
-                        단순히 책을 읽는 행위를 넘어 그 과정에서 발생하는 '생각의 조각'들을 기록하고
-                        나만의 철학을 구축하는 공간을 지향합니다.
-                    </p>
-                </section>
+        <section className="mt-12 grid gap-5 md:grid-cols-3">
+          {[
+            ['독창적 해설', '각 글은 책의 주제와 독자 상황을 연결해 새롭게 구성한 비평형 콘텐츠입니다.'],
+            ['명확한 출처 태도', '책 제목, 저자, 분야를 명시하고 원저작권을 존중하는 범위에서 분석합니다.'],
+            ['사용자 경험', '모바일과 데스크톱 모두에서 읽기 쉬운 구조와 명확한 내비게이션을 우선합니다.'],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+              <h2 className="text-sm font-black text-slate-900">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{body}</p>
+            </div>
+          ))}
+        </section>
 
-                <div className="h-px bg-slate-100 dark:bg-white/5 mb-12"></div>
+        <section className="mt-12 rounded-lg border border-blue-100 bg-blue-50 p-6">
+          <h2 className="text-lg font-black text-slate-900">편집 원칙</h2>
+          <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-700">
+            <li>책의 핵심을 과장하지 않고, 독자가 판단할 수 있도록 맥락을 제공합니다.</li>
+            <li>저작권 보호를 위해 원문을 길게 복제하지 않으며, 비평과 해설 중심으로 작성합니다.</li>
+            <li>건강, 법률, 투자 같은 민감한 주제는 전문 조언이 아닌 일반 정보로만 다룹니다.</li>
+            <li>콘텐츠와 광고가 혼동되지 않도록 광고 영역은 명확히 분리합니다.</li>
+          </ul>
+        </section>
+      </main>
 
-                <section className="mb-12 animate-fade-in delay-200">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">왜 아카이뷰인가요?</h3>
-                    <div className="space-y-6">
-                        <div className="flex gap-4">
-                            <span className="material-symbols-outlined text-gold">auto_stories</span>
-                            <div>
-                                <h4 className="font-bold text-sm mb-1">맞춤형 인지 분석</h4>
-                                <p className="text-xs text-slate-500 leading-relaxed">심리학과 빅데이터를 결합하여 당신의 독서 유형과 인지 패턴을 분석합니다.</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <span className="material-symbols-outlined text-gold">history_edu</span>
-                            <div>
-                                <h4 className="font-bold text-sm mb-1">고유한 사색의 기록</h4>
-                                <p className="text-xs text-slate-500 leading-relaxed">남들의 평가가 아닌, 오직 나의 내면에 집중하는 기록의 도구를 제공합니다.</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <span className="material-symbols-outlined text-gold">self_improvement</span>
-                            <div>
-                                <h4 className="font-bold text-sm mb-1">성장을 위한 큐레이션</h4>
-                                <p className="text-xs text-slate-500 leading-relaxed">단순 베스트셀러가 아닌, 당신의 페르소나에 맞는 책과 경험을 제안합니다.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="bg-slate-50 dark:bg-white/5 p-8 rounded-[2rem] text-center border border-slate-100 dark:border-white/5 animate-fade-in delay-300">
-                    <p className="text-sm font-serif italic text-slate-600 dark:text-slate-300 mb-4">
-                        "책을 기록하는 '아카이뷰'의 공간에서,<br />
-                        오롯이 나만의 '생각의 시간'을 갖는다"
-                    </p>
-                    <button
-                        onClick={() => navigate('/quiz')}
-                        className="mt-4 px-8 py-3 bg-gold text-slate-900 font-bold rounded-xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all"
-                    >
-                        지금 진단 시작하기
-                    </button>
-                </section>
-            </main>
-
-            <Footer />
-            <BottomNavigation />
-        </div>
-    );
+      <Footer />
+      <BottomNavigation />
+    </div>
+  );
 }

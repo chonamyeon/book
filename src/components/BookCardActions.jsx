@@ -40,7 +40,7 @@ export default function BookCardActions({ book, className = '' }) {
         navigate(path);
     };
 
-    // 구매 링크 로직 — book에 없으면 Firestore override에서 직접 조회
+    // 구매 링크 로직 — book에 없으면 static data override에서 직접 조회
     const titleId = book.title?.toLowerCase().replace(/\s+/g, '-') || '';
     const bookKey = book.id || titleId;
     const normStr = s => s.normalize('NFC');
@@ -54,7 +54,7 @@ export default function BookCardActions({ book, className = '' }) {
     };
     const coupangUrl = useMemo(() => {
         if (!book) return '';
-        // 1. Firestore 오버라이드 확인
+        // 1. static data 오버라이드 확인
         const overrideLink = findInOverrides('coupangLink') || findInOverrides('purchaseLink');
         if (overrideLink && (overrideLink.includes('coupang.com') || overrideLink.includes('link.coupang.com'))) {
             return overrideLink;
@@ -74,20 +74,20 @@ export default function BookCardActions({ book, className = '' }) {
     
     const amazonUrl = useMemo(() => {
         if (!book) return '';
-        // 1. Firestore 오버라이드 확인
+        // 1. static data 오버라이드 확인
         const overrideLink = findInOverrides('amazonLink');
         
         // 2. 도서 데이터 내 아마존 링크 또는 오버라이드 링크 처리
         const rawAmazon = overrideLink || book.amazonLink || '';
         if (rawAmazon) {
             if (rawAmazon.includes('amazon.com') && !rawAmazon.includes('tag=')) {
-                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=archiview2026-20';
+                return rawAmazon + (rawAmazon.includes('?') ? '&' : '?') + 'tag=whiteboard2026-20';
             }
             return rawAmazon;
         }
         
         // 3. 자동 검색 링크
-        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=archiview2026-20`;
+        return `https://www.amazon.com/s?k=${encodeURIComponent(book.title || '')}&tag=whiteboard2026-20`;
     }, [book, overrides, findInOverrides]);
 
     const safeId = book.id || book.title.toLowerCase().replace(/\s+/g, '-');
@@ -142,8 +142,8 @@ export default function BookCardActions({ book, className = '' }) {
         window.Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
-                title: `[아카이뷰] ${book.title}`,
-                description: book.desc || '아카이뷰의 정밀 도서 리뷰',
+                title: `[Whiteboard] ${book.title}`,
+                description: book.desc || 'Whiteboard의 정밀 도서 리뷰',
                 imageUrl: shareImage,
                 link: {
                     mobileWebUrl: shareUrl,

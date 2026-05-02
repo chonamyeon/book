@@ -1,6 +1,6 @@
-# /story/ 페이지 Firestore ID 매핑
+# /story/ 페이지 static data ID 매핑
 
-| 도서명 | Firestore document ID | URL |
+| 도서명 | static data document ID | URL |
 |---|---|---|
 | 아주 작은 습관의 힘 | `atomic-habits` | `/story/atomic-habits` |
 | 타이탄의 도구들 | `tools-of-titans` | `/story/tools-of-titans` |
@@ -26,7 +26,7 @@
 | 설득의 심리학 | `influence` | `/story/influence` |
 | 세이노의 가르침 | `sayno` | `/story/sayno` |
 
-## 미확인 (Firestore 등록 여부 불명)
+## 미확인 (static data 등록 여부 불명)
 | 도서명 | books.js 로컬 ID |
 |---|---|
 | 부자 아빠 가난한 아빠 | `rich-dad-poor-dad` |

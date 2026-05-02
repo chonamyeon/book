@@ -51,7 +51,7 @@ export default function Result() {
     const handleShare = () => {
         if (navigator.share) {
             navigator.share({
-                title: 'The Archiview - 인지 분석 결과',
+                title: 'The Whiteboard - 인지 분석 결과',
                 text: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
                 url: window.location.href,
             }).catch(console.error);
@@ -67,8 +67,8 @@ export default function Result() {
         // so we prompt for share sheet (where Instagram can be selected) or give instructions.
         if (navigator.share) {
             navigator.share({
-                title: 'The Archiview',
-                text: `${data.persona} - 나의 인지 분석 결과! #TheArchiview #독서테스트`,
+                title: 'The Whiteboard',
+                text: `${data.persona} - 나의 인지 분석 결과! #TheWhiteboard #독서테스트`,
                 url: window.location.href,
             }).catch(console.error);
         } else {
@@ -84,7 +84,7 @@ export default function Result() {
         window.Kakao.Link.sendDefault({
             objectType: 'feed',
             content: {
-                title: '아카이뷰 인지 분석 결과',
+                title: 'Whiteboard 인지 분석 결과',
                 description: `${data.persona} - 나의 독서 성향 분석 결과입니다.`,
                 imageUrl: `https://the-archive.web.app${data.image}`,
                 link: {

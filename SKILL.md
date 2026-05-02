@@ -1,18 +1,18 @@
 ---
 name: the-archive-expert
-description: 아카이뷰(The Archive) 프로젝트의 이북 시스템, AI 연동 및 데이터 관리 전문 지식
+description: Whiteboard(The Archive) 프로젝트의 이북 시스템, AI 연동 및 데이터 관리 전문 지식
 ---
 
-# 아카이뷰(The Archive) 프로젝트 스킬 가이드
+# Whiteboard(The Archive) 프로젝트 스킬 가이드
 
-본 문서는 아카이뷰 프로젝트의 핵심 아키텍처와 AI 기능을 유지보수하고 확장하기 위한 전용 스킬 가이드입니다.
+본 문서는 Whiteboard 프로젝트의 핵심 아키텍처와 AI 기능을 유지보수하고 확장하기 위한 전용 스킬 가이드입니다.
 
 ## 1. 프로젝트 개요
-'아카이뷰'는 셀러브리티들의 독서 리스트와 깊이 있는 리뷰를 제공하는 프리미엄 이북 플랫폼입니다. React, Vite, Firebase, Tailwind CSS를 기반으로 하며 Google Gemini AI를 통해 사색적인 독서 경험을 제공합니다.
+'Whiteboard'는 셀러브리티들의 독서 리스트와 깊이 있는 리뷰를 제공하는 프리미엄 이북 플랫폼입니다. React, Vite, Vercel, Tailwind CSS를 기반으로 하며 Google Gemini AI를 통해 사색적인 독서 경험을 제공합니다.
 
 ## 2. 핵심 기술 스택
 - **Frontend**: React, Vite, Tailwind CSS, Framer Motion
-- **Database/Hosting**: Firebase (Firestore, Hosting)
+- **Database/Hosting**: Vercel (static data, Hosting)
 - **AI Engine**: Google AI Studio (Gemini 2.5 Pro)
 - **Special Libraries**: `react-pageflip` (이북 구현), `framer-motion` (애니메이션)
 
@@ -38,14 +38,14 @@ Gemini API는 다음 세 가지 주요 기능을 담당합니다.
 ## 6. 에이전트 작업 가이드
 1. **리뷰 업데이트 시**: 도서 리뷰 텍스트를 수정할 때는 `celebrities.js` 내의 해당 도서 항목을 찾으십시오. 5,000자 이상의 장문 리뷰인 경우 이북 뷰어에서 잘릴 수 있으므로 스타일 가이드를 준수해야 합니다.
 2. **AI 기능 확장 시**: 새로운 AI 기능을 추가할 때는 `gemini.js`에 공통 서비스를 만들고 호출하는 방식을 권장합니다.
-3. **배포 규칙**: 모든 코드 수정 완료 후 반드시 `npm run build; firebase deploy` 명령을 통해 원스톱 배포를 수행해야 합니다.
+3. **배포 규칙**: 모든 코드 수정 완료 후 반드시 `npm run build; vercel deploy` 명령을 통해 원스톱 배포를 수행해야 합니다.
 
 ---
 **Powered by Google Senior AI Agent**
 
 ## 7. 고퀄리티 롱폼(Long-form) 독후감 작성 전략 (4,000자 이상)
 
-아카이뷰의 프리미엄 콘텐츠를 위해 4,000자 이상의 깊이 있는 독후감을 구성하는 단계별 전략입니다.
+Whiteboard의 프리미엄 콘텐츠를 위해 4,000자 이상의 깊이 있는 독후감을 구성하는 단계별 전략입니다.
 
 ### 1단계: 준비 단계 (읽으면서 메모하기)
 분량이 많은 글을 쓸 때는 기억력에만 의존할 수 없습니다. 책을 읽으며 다음을 기록하세요.

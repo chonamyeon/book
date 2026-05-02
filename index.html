@@ -1,133 +1,117 @@
 <!doctype html>
-<html lang="ko" class="dark">
-
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <!-- iOS 홈 화면 아이콘 (180x180 PNG) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Whiteboard | 책을 깊게 읽는 독서 인사이트 매거진</title>
+  <meta name="description" content="Whiteboard는 자기계발, 경제, 경영, 인문, 심리 분야의 책을 비평과 맥락, 실천 아이디어로 정리하는 독서 인사이트 매거진입니다." />
+  <meta name="keywords" content="Whiteboard, 독서 리뷰, 도서 비평, 책 추천, 자기계발, 경제 도서, 경영 도서, 인문학, 심리학" />
+  <meta name="author" content="Whiteboard Team" />
+  <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="google-adsense-account" content="ca-pub-8121712799499251" />
+  <link rel="canonical" href="https://archiview.shop/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Whiteboard | 책을 깊게 읽는 독서 인사이트 매거진" />
+  <meta property="og:description" content="책의 핵심 주장, 배경 맥락, 비판적 관점, 실천 아이디어를 한 번에 읽어보세요." />
+  <meta property="og:url" content="https://archiview.shop/" />
+  <meta property="og:site_name" content="Whiteboard" />
+  <meta property="og:image" content="https://archiview.shop/images/hero_expert_v5.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Whiteboard | 책을 깊게 읽는 독서 인사이트 매거진" />
+  <meta name="twitter:description" content="책의 핵심 주장, 배경 맥락, 비판적 관점, 실천 아이디어를 한 번에 읽어보세요." />
+  <meta name="twitter:image" content="https://archiview.shop/images/hero_expert_v5.png" />
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="manifest" href="/manifest.json" />
-  <title>아카이뷰(ArchiView) — 성공한 사람들의 인사이트를 읽다</title>
+  <meta name="theme-color" content="#1d4ed8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Whiteboard" />
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+  <meta name="rating" content="general" />
+  <meta name="language" content="Korean" />
+  <meta name="geo.region" content="KR" />
 
-  <!-- SEO -->
-  <meta name="description" content="아카이뷰 - 자기계발·경제·경영·인문·심리 분야 베스트셀러의 독창적인 비평과 실전 인사이트. 단순 요약이 아닌 에디터의 관점으로 성공한 사람들의 생각을 깊이 분석합니다.">
-  <meta name="keywords" content="아카이뷰, 책비평, 독서인사이트, 자기계발, 경제책, 경영책, 인문학, 심리학, 직장인, 독서, 베스트셀러분석, 책추천">
-  <meta name="author" content="ARCHIVIEW">
-  <meta property="og:title" content="ARCHIVIEW - 출퇴근길 성공한 사람들의 인사이트를 듣다">
-  <meta property="og:description" content="바쁜 직장인을 위한 오디오 인사이트 플랫폼. 세계적 베스트셀러의 핵심을 15분으로 만나보세요.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://archiview.shop">
-  <meta property="og:image" content="https://archiview.shop/images/hero_expert_v5.png">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://archiview.shop">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+  <link rel="preload" as="image" href="/images/hero_expert_v5.png" fetchpriority="high" />
 
-  <!-- iOS & PWA Settings -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Archiview">
-  <meta name="theme-color" content="#090b10">
-  <!-- 모바일 포맷 감지 비활성화 (전화번호 파란 링크 방지) -->
-  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-
-  <!-- DNS Prefetch & Preconnect: 외부 리소스 연결 선행 처리 -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://book-site-123.firebasestorage.app" crossorigin>
-  <link rel="dns-prefetch" href="https://accounts.google.com">
-  <link rel="dns-prefetch" href="https://www.googleapis.com">
-
-  <!-- LCP 최적화: 히어로 이미지 조기 다운로드 (Largest Contentful Paint) -->
-  <link rel="preload" as="image" href="/images/hero_expert_v5.png" fetchpriority="high">
-
-  <!-- Pretendard (한글 본문 폰트) - display=swap으로 FOIT 방지 -->
-  <link rel="stylesheet" crossorigin
-    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css" />
-
-  <!-- Material Symbols + 디스플레이 폰트 (비동기 로드로 렌더링 블로킹 제거) -->
-  <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap"
-    onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@700;800;900&display=swap" />
   </noscript>
 
-  <!-- Google Consent Mode v2 - 기본 비동의 설정 (광고/분석 스크립트 로드 전에 반드시 선행) -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    // 기본값: 모두 비동의 상태 (사용자 동의 배너 표시 전)
     gtag('consent', 'default', {
-      'analytics_storage': 'denied',
-      'ad_storage': 'denied',
-      'ad_user_data': 'denied',
-      'ad_personalization': 'denied',
-      'wait_for_update': 800
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 800
     });
-    // 한국 사용자 지역 설정
     gtag('set', 'url_passthrough', true);
   </script>
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8121712799499251"
-     crossorigin="anonymous"></script>
-
-  <!-- Microsoft Clarity (defer to not block initial render) -->
-  <script>
-    window.addEventListener('load', function() {
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "vzbcnwf750");
-    });
-  </script>
-
-  <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-1WBL218LEF"></script>
   <script>
     gtag('js', new Date());
     gtag('config', 'G-1WBL218LEF');
   </script>
-
-
-  <!-- Meta Pixel Code: 쿠키 동의 후에만 실행 -->
-  <script>
-    window._fbPixelId = '34999557622968690';
-    function _initFbPixel() {
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', window._fbPixelId);
-      fbq('track', 'PageView');
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8121712799499251" crossorigin="anonymous"></script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://archiview.shop/#organization",
+          "name": "Whiteboard",
+          "url": "https://archiview.shop/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://archiview.shop/images/hero_expert_v5.png",
+            "width": 1200,
+            "height": 630
+          },
+          "email": "gosipass902@gmail.com",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "gosipass902@gmail.com",
+            "availableLanguage": "Korean"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://archiview.shop/#website",
+          "url": "https://archiview.shop/",
+          "name": "Whiteboard",
+          "description": "자기계발, 경제, 경영, 인문, 심리 분야의 책을 비평과 맥락, 실천 아이디어로 정리하는 독서 인사이트 매거진",
+          "inLanguage": "ko-KR",
+          "publisher": { "@id": "https://archiview.shop/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://archiview.shop/library?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
     }
-    // 쿠키 전체 동의가 된 경우에만 Pixel 초기화
-    try {
-      if (localStorage.getItem('archiview_cookie_consent') === 'all') {
-        _initFbPixel();
-      }
-    } catch(e) {}
   </script>
-  <!-- End Meta Pixel Code -->
-
 </head>
-
-<body class="text-slate-100 antialiased overflow-x-hidden" style="background:#090b10;margin:0;padding:0;">
+<body class="text-gray-900 antialiased overflow-x-hidden" style="background:#ffffff;margin:0;padding:0;">
   <div id="root"></div>
-  <!-- Google Sign-In SDK - defer로 렌더링 블로킹 방지 -->
   <script src="https://accounts.google.com/gsi/client" defer></script>
-  <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
-  <!-- Kakao SDK (공유 기능) -->
   <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous" defer></script>
-  <script type="module" src="/src/main.jsx?v=4"></script>
+  <script type="module" src="/src/main.jsx?v=5"></script>
 </body>
-
 </html>

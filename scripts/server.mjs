@@ -516,12 +516,12 @@ app.post('/api/voice/merge', voiceUpload.single('voiceFile'), async (req, res) =
         } catch (_) { }
 
         vprog(100);
-        vlog(`✨ '${bookId}' 성우 병합 완료! Firestore 자동 저장 중...`);
+        vlog(`✨ '${bookId}' 성우 병합 완료! static data 자동 저장 중...`);
 
         // 타임스탬프 자동 생성
         generateTimestamps(bookId, vlog);
 
-        // 프론트엔드에서 Firestore 자동 업데이트하도록 이벤트 전송
+        // 프론트엔드에서 static data 자동 업데이트하도록 이벤트 전송
         io.emit('voice-complete', {
             bookId,
             voiceAudioUrl: `/audio/${outputFileName}`,
@@ -562,7 +562,7 @@ app.post('/api/script/generate', async (req, res) => {
         ? `- 핵심 주제 / 반드시 다룰 내용:\n${themes.split('\n').filter(Boolean).map(t => `  ${t}`).join('\n')}`
         : '';
 
-    const prompt = `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
+    const prompt = `당신은 Whiteboard 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
 이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
 
 [책 정보]
@@ -595,7 +595,7 @@ ${themesBlock}
   4. [21~30턴: 사례] **실제 사례 2개** (현실 대입)
   5. [31~36턴: 행동] **행동 지침 3개** (실전 적용 가이드)
   6. [37~39턴: 요약] 대화의 정수를 찌르는 핵심 요약
-  7. [40턴: 마무리] 친근한 반말 클로징 ("오늘도 아카이뷰와 함께 깨달음 있는 하루 보내길 바랄게. 우린 다음에 또 만나!")
+  7. [40턴: 마무리] 친근한 반말 클로징 ("오늘도 Whiteboard와 함께 깨달음 있는 하루 보내길 바랄게. 우린 다음에 또 만나!")
 - **자연스러운 서사**: 상황 → 질문 → 통찰 → 사례 → 행동 순으로 매끄럽고 재미있게 연결하세요.
 - **무조건 40턴**: 정확히 40턴을 꽉 채워야 합니다. 중간에 끊기면 안 됩니다.
 - ⚠️ 인트로 금지: 바로 상황 속 에피소드로 시작하세요.

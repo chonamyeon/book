@@ -89,7 +89,7 @@ export async function extractTextFromFile(fileName) {
 
 export async function generatePodcastScript(bookText) {
     console.log(`\n🤖 [Step 2] Claude API로 대본 생성 중 (직장인 맞춤형 유쾌한 톤)...`);
-    const prompt = `당신은 아카이뷰 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
+    const prompt = `당신은 Whiteboard 오리지널 팟캐스트 대본(Script 2.0)을 쓰는 프로 작가입니다.
 이 대본은 제임스와 스텔라가 책의 인사이트를 바탕으로 직장인과 현대인의 삶을 유쾌하고 깊이 있게 나누는 콘텐츠입니다.
 
 【❗️작성 지침 - 반드시 준수❗️】
@@ -116,7 +116,7 @@ export async function generatePodcastScript(bookText) {
   4. [21~30턴: 사례] **실제 사례 2개** (현실 대입)
   5. [31~36턴: 행동] **행동 지침 3개** (실전 적용 가이드)
   6. [37~39턴: 요약] 대화의 정수를 찌르는 핵심 요약
-  7. [40턴: 마무리] 친근한 반말 클로징 ("오늘도 아카이뷰와 함께 깨달음 있는 하루 보내길 바랄게. 우린 다음에 또 만나!")
+  7. [40턴: 마무리] 친근한 반말 클로징 ("오늘도 Whiteboard와 함께 깨달음 있는 하루 보내길 바랄게. 우린 다음에 또 만나!")
 - ❗ **자연스러운 서사**: 상황 → 질문 → 통찰 → 사례 → 행동 순으로 매끄럽고 재미있게 연결하세요.
 - ❗ **정확히 40턴**: 내용이 일찍 끝나더라도 더 깊은 인사이트나 사례를 추가해서 무조건 40턴을 꽉 채우세요.
 - ❗ **각 대사**: 반드시 **3~5문장**으로 풍성하게 작성 (한 턴당 분량 확보)
@@ -190,7 +190,7 @@ export async function generatePodcastScript(bookText) {
 // --- [이북 리뷰 자동 생성] ---
 export async function generateBookReview(bookText, bookTitle, bookAuthor, bookPublisher) {
     console.log(`\n📖 [Step 2-B] Claude로 이북 리뷰 자동 생성 중 (${bookTitle})...`);
-    const prompt = `당신은 Archiview의 전문 북 큐레이터이자 에세이 작가입니다.
+    const prompt = `당신은 Whiteboard의 전문 북 큐레이터이자 에세이 작가입니다.
 주어진 책의 원문 텍스트를 바탕으로, 이 책이 독자의 삶에 어떤 방향을 제시하는지를 중심으로 깊은 감상 에세이를 작성하세요.
 
 ## 도서 정보
@@ -466,7 +466,7 @@ export async function mergeAudio(audioFilePaths, outputFileName, bookTitle) {
     const hasJingle = fs.existsSync(jinglePath);
 
     try {
-        const metadata = `-metadata title="${bookTitle}" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+        const metadata = `-metadata title="${bookTitle}" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 
         // 1. 각 개별 파일을 표준 포맷(44.1k Stereo)으로 임시 변환 (병합용)
         const transitionDir = path.join(bookTempDir, 'normalized');
@@ -848,7 +848,7 @@ if (isMain) {
         if (targetBookId) {
             console.log(`🎯 [단일 처리 모드] 대상 도서: ${targetBookId}`);
         } else {
-            console.log(`🏭 Archiview Podcast Factory 가동 시작! (전체 처리 모드)`);
+            console.log(`🏭 Whiteboard Podcast Factory 가동 시작! (전체 처리 모드)`);
         }
 
         const booksToProcess = fs.readdirSync(INPUT_DIR)

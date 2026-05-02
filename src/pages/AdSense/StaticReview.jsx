@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import TopNavigation from '../../components/TopNavigation';
 import { adsenseBooks } from '../../data/adsense/books';
-import { db } from '../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { bookInsightById } from '../../data/bookInsights';
+import { ensureHtml, getAdminEbook, resolveEbookContent, stripHtml } from '../../utils/ebookContent';
 
 // 모듈 레벨 prefetch 캐시 (hover 시 미리 fetch)
 const prefetchCache = new Map();
 
-export function prefetchStory(id) {
-  if (prefetchCache.has(id)) return;
-  const promise = getDoc(doc(db, 'adsenseBooks', id))
-    .then(snap => snap.exists() ? { ...snap.data(), id } : null)
-    .catch(() => null);
-  prefetchCache.set(id, promise);
+export function prefetchStory(bookId) {
+  if (prefetchCache.has(bookId)) return;
+  const row = adsenseBooks.find((b) => b.id === bookId);
+  prefetchCache.set(bookId, Promise.resolve(row ? { ...row, id: bookId } : null));
 }
 
 function FaqSection({ faq }) {
@@ -27,7 +26,7 @@ function FaqSection({ faq }) {
           독자들이 가장 많이 물어본 질문
         </h2>
         <p className="text-gray-500 text-sm mt-3 text-center max-w-md">
-          아카이뷰 에디터가 직접 답하는 핵심 질문 {faq.length}가지
+          Whiteboard 에디터가 직접 답하는 핵심 질문 {faq.length}가지
         </p>
       </div>
       <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
@@ -59,7 +58,7 @@ function FaqSection({ faq }) {
   );
 }
 
-const STORY_CACHE_PREFIX = 'archiview_story_cache_';
+const STORY_CACHE_PREFIX = 'whiteboard_story_cache_';
 const loadStoryCache = (bookId) => {
   try {
     const raw = localStorage.getItem(STORY_CACHE_PREFIX + bookId);
@@ -73,7 +72,13 @@ const saveStoryCache = (bookId, data) => {
 export default function StaticReview() {
   const { id } = useParams();
 
-  const staticBook = adsenseBooks.find((b) => b.id === id);
+  const adminEbook = getAdminEbook(id);
+  const celebBook = bookInsightById[id] || null;
+  const staticBook = adsenseBooks.find((b) => b.id === id)
+    || (celebBook && !celebBook.fullReview
+        ? adsenseBooks.find((b) => b.title === celebBook.title) || celebBook
+        : celebBook)
+    || null;
   const cachedBook = loadStoryCache(id);
 
   const [book, setBook] = useState(cachedBook || staticBook || null);
@@ -86,22 +91,18 @@ export default function StaticReview() {
 
     const fetchBook = async () => {
       try {
-        // hover prefetch로 이미 fetch 중인 경우 재사용
-        const dbData = prefetchCache.has(id)
-          ? await prefetchCache.get(id)
-          : await getDoc(doc(db, 'adsenseBooks', id)).then(s => s.exists() ? { ...s.data(), id } : null);
-
-        if (dbData) {
-          const localMatch = staticBook || adsenseBooks.find(b => b.title === dbData.title);
-          const merged = { ...(localMatch || {}), ...dbData, id };
-          setBook(prev => {
-            if (prev && prev.fullReview && prev.fullReview === merged.fullReview) return prev;
-            return merged;
-          });
-          saveStoryCache(id, merged);
+        const base = staticBook || {};
+        const merged = { ...base, id };
+        if (adminEbook) {
+          merged.title = adminEbook.title || merged.title;
+          merged.author = adminEbook.author || merged.author;
+          merged.ebookText = adminEbook.content;
+          merged.updatedAt = adminEbook.updatedAt || merged.updatedAt;
         }
+        setBook(merged);
+        saveStoryCache(id, merged);
       } catch (e) {
-        console.error("Firestore fetch error:", e);
+        console.error('Story load error:', e);
       } finally {
         setLoading(false);
       }
@@ -151,22 +152,27 @@ export default function StaticReview() {
     );
   }
 
-  const sections = (book.fullReview || "").split('■').filter(s => s.trim());
+  const rawContent = resolveEbookContent(book);
+  const displayContent = ensureHtml(rawContent);
+  const plainContent = stripHtml(rawContent);
+  const sections = plainContent.split(/\n{2,}/).filter(s => s.trim());
   const script = book.script || [];
   const faq = book.faq || [];
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans leading-relaxed pb-20">
       <Helmet>
-        <title>{book.title} - 아카이뷰 비평 & 인사이트 분석 | ArchiView</title>
-        <meta name="description" content={`『${book.title}』(${book.author})에 대한 아카이뷰 에디터의 비평과 실전 인사이트. ${book.desc} 단순 요약이 아닌 독창적인 관점으로 분석합니다.`} />
-        <meta name="keywords" content={`${book.title}, ${book.author}, ${book.category}, 책비평, 인사이트분석, 아카이뷰`} />
-        <meta property="og:title" content={`${book.title} 비평 & 인사이트 | 아카이뷰`} />
+        <title>{book.title} - Whiteboard 비평 & 인사이트 분석 | Whiteboard</title>
+        <meta name="description" content={`『${book.title}』(${book.author})에 대한 Whiteboard 에디터의 비평과 실전 인사이트. ${book.desc} 단순 요약이 아닌 독창적인 관점으로 분석합니다.`} />
+        <meta name="keywords" content={`${book.title}, ${book.author}, ${book.category}, 책비평, 인사이트분석, Whiteboard`} />
+        <meta property="og:title" content={`${book.title} 비평 & 인사이트 | Whiteboard`} />
         <meta property="og:description" content={book.desc} />
         <meta property="og:type" content="article" />
         <meta property="og:url" content={`https://archiview.shop/story/${book.id}`} />
-        <meta property="og:site_name" content="아카이뷰(ArchiView)" />
+        <meta property="og:site_name" content="Whiteboard(Whiteboard)" />
         <meta property="og:image" content="https://archiview.shop/images/hero_expert_v5.png" />
+        <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
         <meta name="twitter:card" content="summary_large_image" />
         <link rel="canonical" href={`https://archiview.shop/story/${book.id}`} />
         <script type="application/ld+json">{JSON.stringify({
@@ -174,19 +180,19 @@ export default function StaticReview() {
           "@graph": [
             {
               "@type": "Article",
-              "headline": `${book.title} - 아카이뷰 비평 & 인사이트`,
+              "headline": `${book.title} - Whiteboard 비평 & 인사이트`,
               "description": book.desc,
               "image": book.cover || "https://archiview.shop/images/hero_expert_v5.png",
               "datePublished": book.publishedAt || "2026-01-01T00:00:00Z",
               "dateModified": new Date().toISOString().split('T')[0] + 'T00:00:00Z',
-              "author": { "@type": "Organization", "name": "아카이뷰(ArchiView)", "url": "https://archiview.shop" },
+              "author": { "@type": "Organization", "name": "Whiteboard(Whiteboard)", "url": "https://archiview.shop" },
               "publisher": { 
                 "@type": "Organization", 
-                "name": "아카이뷰(ArchiView)", 
+                "name": "Whiteboard(Whiteboard)", 
                 "url": "https://archiview.shop",
                 "logo": {
                   "@type": "ImageObject",
-                  "url": "https://archiview.shop/favicon.ico"
+                  "url": "https://archiview.shop/favicon.svg"
                 }
               },
               "url": `https://archiview.shop/story/${book.id}`,
@@ -213,41 +219,18 @@ export default function StaticReview() {
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4">
           <span className="inline-block px-2 py-0.5 bg-amber-400 text-black text-[10px] font-black rounded-md tracking-tighter">CONTENT POLICY</span>
           <p className="text-[11px] md:text-[13px] text-slate-300 font-medium leading-relaxed break-keep">
-            아카이뷰의 모든 도서 비평은 원저작물의 저작권을 존중하며, <strong className="text-white">교육 및 비평 목적으로 작성된 독창적인 분석 콘텐츠</strong>임을 명시합니다.
+            Whiteboard의 모든 도서 비평은 원저작물의 저작권을 존중하며, <strong className="text-white">교육 및 비평 목적으로 작성된 독창적인 분석 콘텐츠</strong>임을 명시합니다.
           </p>
         </div>
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="w-full px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold tracking-tight text-gray-900 shrink-0">
-            ArchiView
-          </Link>
-          <nav aria-label="카테고리 메뉴" className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            <Link to="/about" className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors whitespace-nowrap px-2 py-1">소개</Link>
-          </nav>
-        </div>
-      </header>
+      <TopNavigation type="sub" />
 
       {/* Hero Section */}
-      <main className="w-full pt-4">
+      <main className="w-full pt-20">
         <div className="max-w-4xl mx-auto px-4 md:px-10">
-          <div className="flex flex-row gap-5 items-start mb-10">
-            {/* Static Review Cover */}
-            <div
-              className={`w-28 h-40 md:w-48 md:h-64 flex-shrink-0 shadow-2xl rounded-xl overflow-hidden border border-gray-100 flex flex-col items-center justify-center bg-gradient-to-br ${book.gradient || 'from-gray-700 to-black'} relative group`}
-            >
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
-              <span className="material-symbols-outlined text-white/90 text-4xl md:text-6xl mb-2 md:mb-4 drop-shadow-lg">
-                {book.icon || 'book'}
-              </span>
-              <div className="px-2 md:px-4 text-center">
-                <span className="text-[8px] md:text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1 block">Knowledge Library</span>
-                <span className="text-xs md:text-sm font-bold text-white leading-tight drop-shadow-md line-clamp-2">{book.title}</span>
-              </div>
-            </div>
-
+          <div className="mb-10">
             <div className="flex-1 text-left">
               <h1 className="text-xl md:text-5xl font-black text-gray-900 mb-2 tracking-tight leading-tight break-keep">
                 {book.title}
@@ -263,10 +246,10 @@ export default function StaticReview() {
 
           {/* Content Body */}
           <article className="border-b border-gray-100 pb-16">
-            {book.fullReview && (/<[a-z][\s\S]*>/i.test(book.fullReview) || book.fullReview.includes('<')) ? (
+            {displayContent && (/<[a-z][\s\S]*>/i.test(displayContent) || displayContent.includes('<')) ? (
               <div
                 className="ebook-content-wrapper ebook-page prose prose-sm md:prose-lg prose-slate max-w-none"
-                dangerouslySetInnerHTML={{ __html: book.fullReview }}
+                dangerouslySetInnerHTML={{ __html: displayContent }}
               />
             ) : (
               <div className="prose prose-sm md:prose-lg prose-slate max-w-none">
@@ -482,7 +465,7 @@ export default function StaticReview() {
             <Link to="/terms" className="text-gray-400 hover:text-gray-900 text-xs font-medium">이용약관</Link>
           </nav>
           <p className="text-center text-[10px] text-gray-300 font-bold tracking-widest uppercase">
-            © 2026 ArchiView Original Factory. All Rights Reserved.
+            © 2026 Whiteboard Original Factory. All Rights Reserved.
           </p>
         </footer>
         </div>{/* max-w-4xl wrapper */}

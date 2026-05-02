@@ -1,16 +1,31 @@
 {
-    "name": "The Archiview",
-    "short_name": "Archiview",
-    "start_url": "/?source=pwa",
-    "display": "standalone",
-    "orientation": "portrait",
-    "background_color": "#090b10",
-    "theme_color": "#090b10",
-    "scope": "/",
-    "lang": "ko",
-    "description": "프리미엄 디지털 도서관 - 독서 성향 분석, 맞춤 도서 추천, 팟캐스트 요약 서비스",
-    "categories": ["books", "education", "lifestyle"],
-    "icons": [],
-    "screenshots": [],
-    "prefer_related_applications": false
+  "name": "Whiteboard | 독서 인사이트 매거진",
+  "short_name": "Whiteboard",
+  "description": "자기계발, 경제, 경영, 인문, 심리 분야의 책을 비평과 맥락, 실천 아이디어로 정리하는 독서 인사이트 매거진",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "scope": "/",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["books", "education", "lifestyle", "news"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/hero_expert_v5.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "id": "https://archiview.shop/"
 }

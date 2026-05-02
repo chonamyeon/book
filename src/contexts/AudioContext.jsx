@@ -33,7 +33,7 @@ export const AudioProvider = ({ children }) => {
     // Load progress from localStorage
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        const savedData = JSON.parse(localStorage.getItem('archiview_progress') || '{}');
+        const savedData = JSON.parse(localStorage.getItem('whiteboard_progress') || '{}');
         
         if (savedData.date === today) {
             setDailyListenTime(savedData.listenTime || 0);
@@ -62,7 +62,7 @@ export const AudioProvider = ({ children }) => {
             listenTime: dailyListenTime,
             streak: streak
         };
-        localStorage.setItem('archiview_progress', JSON.stringify(data));
+        localStorage.setItem('whiteboard_progress', JSON.stringify(data));
     }, [dailyListenTime, streak]);
 
     // Tracking Loop

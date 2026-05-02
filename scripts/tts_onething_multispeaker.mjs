@@ -224,7 +224,7 @@ execSync(`"${ffmpegPath}" -y -f concat -safe 0 -i "${fileListPath}" -c copy "${m
 
 // 징글 + 본문 + 징글 병합
 const outputPath = path.join(OUTPUT_DIR, `${BOOK_ID}.mp3`);
-const metadata = `-metadata title="${BOOK_TITLE}" -metadata artist="Archiview Editorial" -metadata album="Archiview Podcast"`;
+const metadata = `-metadata title="${BOOK_TITLE}" -metadata artist="Whiteboard Editorial" -metadata album="Whiteboard Podcast"`;
 const jinglePath = path.resolve(__dirname, '../public/music/intro_jingle.mp3');
 
 if (fs.existsSync(jinglePath)) {

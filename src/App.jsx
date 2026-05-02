@@ -84,6 +84,7 @@ const CategoryBooks = lazyWithRetry(() => import('./pages/CategoryBooks'));
 const ReviewBoard   = lazyWithRetry(() => import('./pages/ReviewBoard'));
 const ReviewBoardDetail = lazyWithRetry(() => import('./pages/ReviewBoardDetail'));
 const Terms         = lazyWithRetry(() => import('./pages/Terms'));
+const Disclaimer    = lazyWithRetry(() => import('./pages/Disclaimer'));
 const Test4         = lazyWithRetry(() => import('./pages/Test4'));
 
 
@@ -98,7 +99,7 @@ const PageLoader = () => (
 );
 
 const MobileLayout = ({ children }) => (
-  <div className="max-w-[430px] mx-auto min-h-[100dvh] bg-background-light dark:bg-background-dark shadow-2xl relative flex flex-col">
+  <div className="w-full min-h-screen bg-white relative flex flex-col">
     {children}
   </div>
 );
@@ -115,7 +116,7 @@ export default function App() {
       <AudioProvider>
         <Router>
           <ScrollToTop />
-          <div className="min-h-screen bg-slate-950">
+          <div className="min-h-screen bg-white">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
@@ -135,6 +136,7 @@ export default function App() {
                   <Route path="/privacy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
                   <Route path="/privacy-policy" element={<MobileLayout><PrivacyPolicy /></MobileLayout>} />
                   <Route path="/terms" element={<MobileLayout><Terms /></MobileLayout>} />
+                  <Route path="/disclaimer" element={<MobileLayout><Disclaimer /></MobileLayout>} />
                   <Route path="/contact" element={<MobileLayout><Contact /></MobileLayout>} />
                   <Route path="/review/:id" element={<ProtectedRoute><MobileLayout><ReviewDetail /></MobileLayout></ProtectedRoute>} />
                   <Route path="/review-board" element={<MobileLayout><ReviewBoard /></MobileLayout>} />

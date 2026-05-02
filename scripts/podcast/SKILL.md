@@ -1,4 +1,4 @@
-# 아카이뷰 팟캐스트 대본 원칙 (SKILL.md)
+# Whiteboard 팟캐스트 대본 원칙 (SKILL.md)
 
 모든 에이전트가 공유하는 기준. system prompt에 포함된다.
 

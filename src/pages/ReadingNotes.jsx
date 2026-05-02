@@ -7,35 +7,32 @@ import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import { celebrities } from '../data/celebrities';
 import KakaoAdFit from '../components/KakaoAdFit';
-import { db } from '../firebase';
-import {
-    collection, addDoc, getDocs, deleteDoc,
-    doc, updateDoc, query, orderBy, serverTimestamp,
-} from 'firebase/firestore';
 import { summarizeReview, generateDailyThought } from '../services/gemini';
 import { AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
 
+const getNotesKey = (uid) => `whiteboard_reading_notes_${uid}`;
+
 // ─── Constants ───────────────────────────────────────────────────
 const MOODS = [
-    { emoji: '🔥', label: '감명받음', color: 'from-orange-600/30 to-red-600/20 border-orange-500/40 text-orange-300' },
-    { emoji: '💡', label: '통찰', color: 'from-yellow-600/30 to-amber-600/20 border-yellow-500/40 text-yellow-300' },
+    { emoji: '🔥', label: '감명받음', color: 'from-blue-700/30 to-blue-600/20 border-blue-500/40 text-blue-400' },
+    { emoji: '💡', label: '통찰', color: 'from-blue-600/30 to-blue-600/20 border-blue-500/40 text-blue-300' },
     { emoji: '🤔', label: '고민', color: 'from-blue-600/30 to-indigo-600/20 border-blue-500/40 text-blue-300' },
     { emoji: '😊', label: '행복', color: 'from-pink-600/30 to-rose-600/20 border-pink-500/40 text-pink-300' },
     { emoji: '⚡', label: '충격', color: 'from-violet-600/30 to-purple-600/20 border-violet-500/40 text-violet-300' },
-    { emoji: '📌', label: '중요', color: 'from-orange-700/30 to-amber-700/20 border-orange-600/40 text-orange-400' },
+    { emoji: '📌', label: '중요', color: 'from-blue-700/30 to-blue-700/20 border-blue-600/40 text-blue-500' },
     { emoji: '📚', label: '배움', color: 'from-slate-600/30 to-slate-600/20 border-slate-500/40 text-slate-300' },
     { emoji: '🌈', label: '영감', color: 'from-indigo-600/30 to-purple-600/20 border-indigo-500/40 text-indigo-300' },
-    { emoji: '🌿', label: '치유', color: 'from-amber-600/30 to-orange-500/20 border-amber-500/40 text-amber-300' },
+    { emoji: '🌿', label: '치유', color: 'from-blue-700/30 to-blue-500/20 border-blue-500/40 text-blue-400' },
     { emoji: '💎', label: '가치', color: 'from-cyan-600/30 to-blue-600/20 border-cyan-500/40 text-cyan-300' },
-    { emoji: '🧭', label: '방향', color: 'from-amber-600/30 to-orange-600/20 border-amber-500/40 text-amber-300' },
+    { emoji: '🧭', label: '방향', color: 'from-blue-700/30 to-blue-600/20 border-blue-500/40 text-blue-400' },
     { emoji: '✍️', label: '기록', color: 'from-stone-600/30 to-zinc-600/20 border-stone-500/40 text-stone-300' },
     { emoji: '🌊', label: '몰입', color: 'from-blue-700/30 to-cyan-700/20 border-blue-600/40 text-blue-300' },
-    { emoji: '☀️', label: '희망', color: 'from-yellow-400/30 to-orange-400/20 border-yellow-300/40 text-yellow-200' },
+    { emoji: '☀️', label: '희망', color: 'from-blue-400/30 to-blue-400/20 border-blue-300/40 text-blue-200' },
     { emoji: '🌙', label: '사색', color: 'from-indigo-900/30 to-slate-900/20 border-indigo-800/40 text-indigo-200' },
-    { emoji: '🍀', label: '행운', color: 'from-orange-500/30 to-yellow-500/20 border-orange-400/40 text-orange-200' },
+    { emoji: '🍀', label: '행운', color: 'from-blue-500/30 to-blue-400/20 border-blue-400/40 text-blue-300' },
     { emoji: '🎯', label: '목표', color: 'from-red-600/30 to-rose-600/20 border-red-500/40 text-red-300' },
-    { emoji: '✨', label: '기적', color: 'from-yellow-300/30 to-amber-300/20 border-white/40 text-white' },
+    { emoji: '✨', label: '기적', color: 'from-blue-300/30 to-blue-300/20 border-slate-300 text-slate-900' },
 ];
 
 const TAG_SUGGESTIONS = ['인생', '성장', '철학', '경제', '투자', '소설', '심리', '역사', '자기계발', '과학'];
@@ -128,7 +125,7 @@ export default function ReadingNotes() {
                 scale: 2,
             });
             const link = document.createElement('a');
-            link.download = `archiview-tree-${new Date().getTime()}.png`;
+            link.download = `whiteboard-tree-${new Date().getTime()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         } catch (e) {
@@ -150,8 +147,8 @@ export default function ReadingNotes() {
         if (!user) return;
         setFetching(true);
         try {
-            const snap = await getDocs(query(collection(db, 'users', user.uid, 'readingNotes'), orderBy('createdAt', 'desc')));
-            setNotes(snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate?.() || new Date() })));
+            const saved = JSON.parse(localStorage.getItem(getNotesKey(user.uid)) || '[]');
+            setNotes(saved.map(note => ({ ...note, createdAt: note.createdAt ? new Date(note.createdAt) : new Date() })));
         } catch (e) { console.error(e); }
         finally { setFetching(false); }
     };
@@ -251,10 +248,13 @@ export default function ReadingNotes() {
                 rating: noteType === '#서평' ? rating : null,
                 actionTitle: noteType === '#액션' ? actionTitle : null,
                 checkedActions: noteType === '#액션' ? checkedActions : null,
-                updatedAt: serverTimestamp()
+                updatedAt: new Date().toISOString()
             };
-            if (editingId) await updateDoc(doc(db, 'users', user.uid, 'readingNotes', editingId), data);
-            else await addDoc(collection(db, 'users', user.uid, 'readingNotes'), { ...data, createdAt: serverTimestamp() });
+            const saved = JSON.parse(localStorage.getItem(getNotesKey(user.uid)) || '[]');
+            const nextNotes = editingId
+                ? saved.map(note => note.id === editingId ? { ...note, ...data } : note)
+                : [{ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...saved];
+            localStorage.setItem(getNotesKey(user.uid), JSON.stringify(nextNotes));
             resetForm();
             await fetchNotes();
         } catch (e) { console.error(e); }
@@ -292,8 +292,9 @@ export default function ReadingNotes() {
     };
 
     const handleDelete = async (id) => {
-        await deleteDoc(doc(db, 'users', user.uid, 'readingNotes', id));
-        setNotes(notes.filter(n => n.id !== id)); setDeleteConfirmId(null);
+        const nextNotes = notes.filter(n => n.id !== id);
+        localStorage.setItem(getNotesKey(user.uid), JSON.stringify(nextNotes));
+        setNotes(nextNotes); setDeleteConfirmId(null);
     };
 
     const filtered = notes.filter(n => {
@@ -313,7 +314,7 @@ export default function ReadingNotes() {
 
     // AI Quote logic
     const fetchAiQuote = async () => {
-        const quote = await generateDailyThought("인생과 독서", "아카이뷰 사서");
+        const quote = await generateDailyThought("인생과 독서", "Whiteboard 사서");
         if (quote) setAiQuote(quote);
     };
 
@@ -355,9 +356,9 @@ export default function ReadingNotes() {
     // 기록의 나무 로직
     const getTreeLevel = (count) => {
         if (count >= 100) return { level: 5, name: '풍성한 지혜의 달인', fruits: 15, color: 'text-gold', bg: 'bg-gold/20' };
-        if (count >= 50) return { level: 4, name: '사유의 집행자', fruits: 5, color: 'text-amber-500', bg: 'bg-amber-500/20' };
-        if (count >= 30) return { level: 3, name: '깊어지는 통찰러', fruits: 3, color: 'text-orange-500', bg: 'bg-orange-500/20' };
-        if (count >= 10) return { level: 2, name: '지식의 탐구자', fruits: 1, color: 'text-orange-400', bg: 'bg-orange-400/20' };
+        if (count >= 50) return { level: 4, name: '사유의 집행자', fruits: 5, color: 'text-blue-500', bg: 'bg-blue-500/20' };
+        if (count >= 30) return { level: 3, name: '깊어지는 통찰러', fruits: 3, color: 'text-blue-600', bg: 'bg-blue-500/20' };
+        if (count >= 10) return { level: 2, name: '지식의 탐구자', fruits: 1, color: 'text-blue-500', bg: 'bg-blue-400/20' };
         return { level: 1, name: '성찰의 시작', fruits: 0, color: 'text-slate-400', bg: 'bg-slate-500/10' };
     };
 
@@ -376,48 +377,48 @@ export default function ReadingNotes() {
 
 
     if (loading) return (
-        <div className="bg-background-dark min-h-screen flex items-center justify-center">
+        <div className="bg-white min-h-screen flex items-center justify-center">
              <div className="relative"><div className="absolute inset-0 bg-gold/20 blur-3xl rounded-none animate-pulse" /><div className="size-12 rounded-none border-t-2 border-gold animate-spin relative" /></div>
         </div>
     );
     if (!user) return (
-        <div className="bg-[#101218] text-white font-sans antialiased min-h-screen flex justify-center selection:bg-orange-500/30">
+        <div className="bg-white text-slate-900 font-sans antialiased min-h-screen flex justify-center selection:bg-blue-500/30">
             <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10 overflow-x-hidden">
                 <TopNavigation type="sub" />
                 <main className="px-6 pt-10 pb-24 flex-grow flex flex-col items-center justify-center text-center space-y-6">
                     <div className="space-y-3 mb-4">
-                        <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em]">Reading Journal</span>
-                        <h2 className="text-2xl text-white font-black tracking-tight">기록노트</h2>
-                        <p className="text-white/50 text-[13px] leading-relaxed break-keep max-w-xs mx-auto">
+                        <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">Reading Journal</span>
+                        <h2 className="text-2xl text-slate-900 font-black tracking-tight">기록노트</h2>
+                        <p className="text-slate-400 text-[13px] leading-relaxed break-keep max-w-xs mx-auto">
                             책에서 받은 감동과 인사이트를<br />나만의 노트에 기록해보세요.
                         </p>
                     </div>
                     <div className="w-full space-y-3 max-w-xs">
-                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
-                            <span className="material-symbols-outlined text-orange-500 text-2xl">edit_note</span>
+                        <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-blue-600 text-2xl">edit_note</span>
                             <div>
-                                <p className="text-white text-[13px] font-black">독서 메모 & 감상</p>
-                                <p className="text-white/40 text-[11px]">책을 읽으며 떠오른 생각을 기록</p>
+                                <p className="text-slate-900 text-[13px] font-black">독서 메모 & 감상</p>
+                                <p className="text-slate-400 text-[11px]">책을 읽으며 떠오른 생각을 기록</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
-                            <span className="material-symbols-outlined text-orange-500 text-2xl">mood</span>
+                        <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-blue-600 text-2xl">mood</span>
                             <div>
-                                <p className="text-white text-[13px] font-black">감정 태그 & 별점</p>
-                                <p className="text-white/40 text-[11px]">나만의 감정으로 독서 기록 완성</p>
+                                <p className="text-slate-900 text-[13px] font-black">감정 태그 & 별점</p>
+                                <p className="text-slate-400 text-[11px]">나만의 감정으로 독서 기록 완성</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-sm text-left">
-                            <span className="material-symbols-outlined text-orange-500 text-2xl">share</span>
+                        <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-sm text-left">
+                            <span className="material-symbols-outlined text-blue-600 text-2xl">share</span>
                             <div>
-                                <p className="text-white text-[13px] font-black">카드 이미지 저장</p>
-                                <p className="text-white/40 text-[11px]">독서 기록을 이미지로 저장 & 공유</p>
+                                <p className="text-slate-900 text-[13px] font-black">카드 이미지 저장</p>
+                                <p className="text-slate-400 text-[11px]">독서 기록을 이미지로 저장 & 공유</p>
                             </div>
                         </div>
                     </div>
                     <Link
                         to="/login"
-                        className="w-full max-w-xs h-[52px] bg-orange-600 flex items-center justify-center text-white font-black rounded-sm text-[13px] tracking-wide hover:bg-orange-500 transition-colors shadow-lg shadow-orange-600/20"
+                        className="w-full max-w-xs h-[52px] bg-blue-600 flex items-center justify-center text-white font-black rounded-sm text-[13px] tracking-wide hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
                     >
                         로그인 후 기록노트 이용하기
                     </Link>
@@ -446,12 +447,12 @@ export default function ReadingNotes() {
     );
 
     return (
-        <div className="bg-[#101218] font-sans text-white antialiased min-h-screen flex justify-center selection:bg-orange-500/30 relative overflow-hidden">
+        <div className="bg-white font-sans text-slate-900 antialiased min-h-screen flex justify-center selection:bg-blue-500/30 relative overflow-hidden">
             {/* ── Background Ambient Lighting ── */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/5 blur-[120px] rounded-none animate-pulse" />
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-none animate-pulse" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-900/10 blur-[130px] rounded-none" />
-                <div className="absolute top-[30%] right-[-5%] w-[30%] h-[30%] bg-orange-900/5 blur-[100px] rounded-none" />
+                <div className="absolute top-[30%] right-[-5%] w-[30%] h-[30%] bg-blue-900/5 blur-[100px] rounded-none" />
             </div>
 
             <div className="w-full max-w-md relative min-h-screen flex flex-col pb-32 z-10">
@@ -462,8 +463,8 @@ export default function ReadingNotes() {
                 {/* ── Today's Choice Section (Tree of Records) ── */}
                 <header className="px-6 pt-4 pb-8">
                     <div className="flex items-center justify-between mb-4 invisible h-0 overflow-hidden">
-                        <h2 className="text-xl font-black flex items-center gap-2 text-white italic">
-                            <span className="material-symbols-outlined text-orange-500 fill-1">potted_plant</span>
+                        <h2 className="text-xl font-black flex items-center gap-2 text-slate-900 italic">
+                            <span className="material-symbols-outlined text-blue-600 fill-1">potted_plant</span>
                             기록의 나무
                         </h2>
                         <div className="flex flex-col items-end gap-1">
@@ -472,14 +473,14 @@ export default function ReadingNotes() {
                             </span>
                             <button
                                 onClick={() => setShowBenefits(true)}
-                                className="text-[10px] font-bold text-orange-500/80 bg-orange-500/10 px-2 py-0.5 rounded-none border border-orange-500/20 hover:bg-orange-500/20 transition-all flex items-center gap-1"
+                                className="text-[10px] font-bold text-blue-600/80 bg-blue-500/10 px-2 py-0.5 rounded-none border border-blue-500/20 hover:bg-blue-500/20 transition-all flex items-center gap-1"
                             >
                                 <span className="material-symbols-outlined text-xs">redeem</span>
                                 혜택보기
                             </button>
                             <button
                                 onClick={handleDownloadTree}
-                                className="text-[10px] font-bold text-slate-400 bg-white/5 px-2 py-0.5 rounded-none border border-white/10 hover:bg-white/10 transition-all flex items-center gap-1 mt-1"
+                                className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-none border border-slate-200 hover:bg-slate-100 transition-all flex items-center gap-1 mt-1"
                             >
                                 <span className="material-symbols-outlined text-xs">download</span>
                                 이미지 저장
@@ -504,7 +505,7 @@ export default function ReadingNotes() {
                                         animate={{ scale: 1, opacity: 1 }}
                                         className="relative"
                                     >
-                                        {/* Archiview Tree Script Text */}
+                                        {/* Whiteboard Tree Script Text */}
                                          <div className="absolute top-[30px] left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-80 mt-1">
                                              <motion.span
                                                  initial={{ opacity: 0, y: -10 }}
@@ -513,7 +514,7 @@ export default function ReadingNotes() {
                                                  className="text-[#ffdf91] text-3xl font-normal tracking-wide"
                                                  style={{ fontFamily: "'Great Vibes', cursive", textShadow: "0 0 10px rgba(255,223,145,0.4)" }}
                                              >
-                                                 Archiview Tree
+                                                 Whiteboard Tree
                                              </motion.span>
                                          </div>
 
@@ -530,11 +531,11 @@ export default function ReadingNotes() {
                                                     repeat: Infinity,
                                                     ease: "easeInOut"
                                                 }}
-                                                className="relative bg-orange-600/95 text-white px-4 py-2 rounded-none text-[10px] font-black shadow-xl shadow-orange-950/30 backdrop-blur-sm border border-orange-500/50"
+                                                className="relative bg-blue-600/95 text-slate-900 px-4 py-2 rounded-none text-[10px] font-black shadow-xl shadow-blue-950/30 backdrop-blur-sm border border-blue-500/50"
                                             >
                                                 메모를 남기면 열매가 생겨나요! 🍊
                                                 {/* Triangle pointer */}
-                                                <div className="absolute -bottom-1 left-[30%] -translate-x-1/2 w-2.5 h-2.5 bg-orange-600 rotate-45 border-r border-b border-orange-500/50" />
+                                                <div className="absolute -bottom-1 left-[30%] -translate-x-1/2 w-2.5 h-2.5 bg-blue-600 rotate-45 border-r border-b border-blue-500/50" />
                                             </motion.div>
                                         </div>
 
@@ -543,7 +544,7 @@ export default function ReadingNotes() {
                                             <motion.div
                                                 animate={{
                                                      scale: totalThoughts >= 100 ? [1.1, 1.12, 1.1] : totalThoughts >= 50 ? [1.05, 1.07, 1.05] : [1, 1.02, 1],
-                                                     filter: ["drop-shadow(0 0 10px rgba(249,115,22,0.1))", "drop-shadow(0 0 25px rgba(249,115,22,0.3))", "drop-shadow(0 0 10px rgba(249,115,22,0.1))"]
+                                                     filter: ["drop-shadow(0 0 10px rgba(59,130,246,0.1))", "drop-shadow(0 0 25px rgba(59,130,246,0.3))", "drop-shadow(0 0 10px rgba(59,130,246,0.1))"]
                                                  }}
                                                 transition={{
                                                     duration: 4,
@@ -609,7 +610,7 @@ export default function ReadingNotes() {
                                                                 delay: i * 0.2
                                                             }}
                                                             style={{ left: `${x}px`, top: `${y}px` }}
-                                                            className="absolute size-3.5 bg-gradient-to-br from-[#ffda79] via-[#ff9f43] to-[#ee5253] rounded-full border border-white/40 z-20 shadow-lg"
+                                                            className="absolute size-3.5 bg-gradient-to-br from-[#ffda79] via-[#ff9f43] to-[#ee5253] rounded-full border border-slate-300 z-20 shadow-lg"
                                                         >
                                                             <div className="absolute top-0.5 left-0.5 size-1 bg-white rounded-full opacity-70" />
                                                         </motion.div>
@@ -622,7 +623,7 @@ export default function ReadingNotes() {
                             </div>
 
                             {/* Info Section (Positioned to reveal roots) */}
-                            <div className="px-8 pt-10 pb-10 space-y-8 text-center bg-[#0f172a] -mt-4 relative z-30 rounded-none shadow-[0_-20px_40px_rgba(15,23,42,0.8)] border-t border-white/5">
+                            <div className="px-8 pt-10 pb-10 space-y-8 text-center bg-[#0f172a] -mt-4 relative z-30 rounded-none shadow-[0_-20px_40px_rgba(15,23,42,0.8)] border-t border-slate-100">
                                 {/* Tree Info (Progress Bar) */}
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between mb-2">
@@ -630,17 +631,17 @@ export default function ReadingNotes() {
                                             <h3 className="text-white font-bold text-sm tracking-wide">{totalThoughts}개의 기록 열매</h3>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className={`px-3 py-1.5 ${treeState.bg} ${treeState.color} border border-white/10 rounded-none flex items-center justify-center gap-1.5 shadow-lg`}>
+                                            <div className={`px-3 py-1.5 ${treeState.bg} ${treeState.color} border border-slate-200 rounded-none flex items-center justify-center gap-1.5 shadow-lg`}>
                                                 <span className="text-[10px] font-black opacity-60">LV.{treeState.level}</span>
                                                 <span className="text-[10px] font-black tracking-wider">{treeState.name}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="h-1.5 w-full bg-white/5 rounded-none overflow-hidden border border-white/5">
+                                    <div className="h-1.5 w-full bg-slate-50 rounded-none overflow-hidden border border-slate-100">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${treeProgress}%` }}
-                                            className={`h-full bg-gradient-to-r from-orange-500 to-amber-400 shadow-[0_0_10px_rgba(249,115,22,0.3)]`}
+                                            className={`h-full bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)]`}
                                         />
                                     </div>
                                 </div>
@@ -648,17 +649,17 @@ export default function ReadingNotes() {
                                 {/* Quote */}
                                 <div className="space-y-2 py-4">
                                     <p className="text-white text-[16px] font-bold leading-relaxed italic">
-                                        "지혜는 눈에 보이지 않지만<br />아카이뷰에서는 나무로 자라납니다."
+                                        "지혜는 눈에 보이지 않지만<br />Whiteboard에서는 나무로 자라납니다."
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3 py-4 border-y border-white/5">
-                                    <div className="flex flex-col items-center p-3 rounded-none bg-white/[0.02]">
-                                        <span className="text-orange-400 font-black text-xl leading-none">{totalThoughts >= 100 ? 'MAX' : (nextMilestone - totalThoughts > 0 ? nextMilestone - totalThoughts : 0)}</span>
+                                <div className="grid grid-cols-2 gap-3 py-4 border-y border-slate-100">
+                                    <div className="flex flex-col items-center p-3 rounded-none bg-slate-50">
+                                        <span className="text-blue-500 font-black text-xl leading-none">{totalThoughts >= 100 ? 'MAX' : (nextMilestone - totalThoughts > 0 ? nextMilestone - totalThoughts : 0)}</span>
                                         <span className="text-[9px] text-slate-500 font-bold uppercase mt-1">{totalThoughts >= 100 ? 'Level' : 'Next Fruit'}</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-3 rounded-none bg-white/[0.02]">
-                                        <span className="text-orange-500 font-black text-xl leading-none">{totalThoughts}</span>
+                                    <div className="flex flex-col items-center p-3 rounded-none bg-slate-50">
+                                        <span className="text-blue-600 font-black text-xl leading-none">{totalThoughts}</span>
                                         <span className="text-[9px] text-slate-500 font-bold uppercase mt-1">Record Fruit</span>
                                     </div>
                                 </div>
@@ -666,7 +667,7 @@ export default function ReadingNotes() {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => { resetForm(); setShowForm(true); }}
-                                        className="flex-1 px-8 py-5 bg-orange-600 text-white rounded-none font-black text-[14px] uppercase tracking-[0.2em] transition-all hover:bg-orange-500 hover:shadow-2xl hover:shadow-orange-600/30 active:scale-95 text-center flex items-center justify-center shadow-lg"
+                                        className="flex-1 px-8 py-5 bg-blue-600 text-slate-900 rounded-none font-black text-[14px] uppercase tracking-[0.2em] transition-all hover:bg-blue-500 hover:shadow-2xl hover:shadow-blue-600/30 active:scale-95 text-center flex items-center justify-center shadow-lg"
                                     >
                                         기록 남기고 성장하기
                                     </button>
@@ -686,7 +687,7 @@ export default function ReadingNotes() {
                 <section className="px-6 space-y-6 pt-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-[16px] font-black flex items-center gap-2">
-                            <span className="material-symbols-outlined text-orange-500">history_edu</span>
+                            <span className="material-symbols-outlined text-blue-600">history_edu</span>
                             나의 기록 피드
                         </h2>
                     </div>
@@ -699,8 +700,8 @@ export default function ReadingNotes() {
                                 onClick={() => setActiveFilter(f)}
                                 className={`px-4 py-1.5 rounded-none text-[12px] font-black transition-all whitespace-nowrap
                                     ${activeFilter === f
-                                        ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
-                                        : 'bg-white/[0.02] border border-white/5 text-white/40 hover:text-white hover:bg-white/[0.05]'}`}
+                                        ? 'bg-blue-600 text-slate-900 shadow-lg shadow-blue-600/20'
+                                        : 'bg-slate-50 border border-slate-100 text-slate-400 hover:text-white hover:bg-slate-50'}`}
                             >
                                 {f}
                             </button>
@@ -711,11 +712,11 @@ export default function ReadingNotes() {
                          {fetching ? (
                              <div className="space-y-4">
                                  {[1, 2, 3].map(i => (
-                                     <div key={i} className="h-32 bg-white/5 rounded-none animate-pulse border border-slate-800" />
+                                     <div key={i} className="h-32 bg-slate-50 rounded-none animate-pulse border border-slate-800" />
                                  ))}
                              </div>
                          ) : filtered.length === 0 ? (
-                             <div className="py-20 text-center opacity-30 border border-dashed border-white/10 rounded-none">
+                             <div className="py-20 text-center opacity-30 border border-dashed border-slate-200 rounded-none">
                                  <p className="text-white text-sm">기록된 문장이 없습니다.</p>
                              </div>
                         ) : (
@@ -733,10 +734,10 @@ export default function ReadingNotes() {
                                                 onClick={() => setExpandedId(isExp ? null : note.id)}
                                                 className={`flex items-center gap-4 p-4 rounded-none border transition-all duration-300 cursor-pointer 
                                                     ${isReview
-                                                        ? (isExp ? 'border-orange-500 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-orange-500/30')
+                                                        ? (isExp ? 'border-blue-500 bg-slate-50' : 'bg-slate-50 border-slate-100 hover:border-blue-500/30')
                                                         : isAction
-                                                            ? (isExp ? 'border-indigo-400 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-indigo-400/30')
-                                                            : (isExp ? 'border-orange-600 bg-white/[0.05]' : 'bg-white/[0.02] border-white/5 hover:border-orange-500/30')
+                                                            ? (isExp ? 'border-indigo-400 bg-slate-50' : 'bg-slate-50 border-slate-100 hover:border-indigo-400/30')
+                                                            : (isExp ? 'border-blue-600 bg-slate-50' : 'bg-slate-50 border-slate-100 hover:border-blue-500/30')
                                                     }`}
                                             >
                                                 {/* Left: Thumbnail & Title */}
@@ -746,7 +747,7 @@ export default function ReadingNotes() {
                                                             ? 'bg-slate-800'
                                                             : isAction
                                                                 ? 'bg-transparent border border-indigo-400/30 shadow-[0_0_15px_rgba(129,140,248,0.1)]'
-                                                                : 'bg-transparent border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
+                                                                : 'bg-transparent border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
                                                         }`}
                                                     >
                                                         {(isReview || (isAction && note.bookCover)) ? (
@@ -759,8 +760,8 @@ export default function ReadingNotes() {
                                                             )
                                                         ) : (
                                                             <div className="flex flex-col items-center gap-1.5">
-                                                                <span style={{ fontSize: '36px', filter: isAction ? 'drop-shadow(0 0 10px rgba(129,140,248,0.3))' : 'drop-shadow(0 0 10px rgba(249,115,22,0.3))' }}>{note.mood?.emoji || (isAction ? '🎯' : '📝')}</span>
-                                                                <span className={`text-[9px] font-black uppercase tracking-widest opacity-80 ${isAction ? 'text-indigo-400' : 'text-orange-500'}`}>
+                                                                <span style={{ fontSize: '36px', filter: isAction ? 'drop-shadow(0 0 10px rgba(129,140,248,0.3))' : 'drop-shadow(0 0 10px rgba(59,130,246,0.3))' }}>{note.mood?.emoji || (isAction ? '🎯' : '📝')}</span>
+                                                                <span className={`text-[9px] font-black uppercase tracking-widest opacity-80 ${isAction ? 'text-indigo-400' : 'text-blue-600'}`}>
                                                                     {isAction ? 'Action' : 'MEMO'}
                                                                 </span>
                                                             </div>
@@ -769,7 +770,7 @@ export default function ReadingNotes() {
 
                                                     {/* Title Label */}
                                                     {(isReview || (isAction && note.bookCover)) && (
-                                                        <span className="text-[11px] text-white/80 font-bold text-center w-20 leading-tight">
+                                                        <span className="text-[11px] text-slate-600 font-bold text-center w-20 leading-tight">
                                                             {note.bookTitle}
                                                         </span>
                                                     )}
@@ -779,7 +780,7 @@ export default function ReadingNotes() {
                                                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                                                     <div>
                                                         <div className="flex justify-between items-start mb-1">
-                                                            <h4 className={`font-black text-[10px] uppercase tracking-wider ${isReview ? 'text-orange-500' : isAction ? 'text-indigo-400' : 'text-orange-500'}`}>
+                                                            <h4 className={`font-black text-[10px] uppercase tracking-wider ${isReview ? 'text-blue-600' : isAction ? 'text-indigo-400' : 'text-blue-600'}`}>
                                                                 {isReview ? 'Book Review' : isAction ? 'Action Log' : 'Short Memo'}
                                                             </h4>
                                                             <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap ml-2">
@@ -787,14 +788,14 @@ export default function ReadingNotes() {
                                                             </span>
                                                         </div>
 
-                                                        <h4 className="font-bold text-sm text-white mb-1 truncate">
+                                                        <h4 className="font-bold text-sm text-slate-900 mb-1 truncate">
                                                             {isReview ? note.bookTitle : (note.title || (isAction ? '액션 가이드' : '오늘의 기록'))}
                                                         </h4>
 
                                                         {isReview && note.rating > 0 && (
                                                             <div className="flex gap-0.5 mb-2">
                                                                 {[1, 2, 3, 4, 5].map(star => (
-                                                                    <span key={star} className={`material-symbols-outlined text-[10px] ${star <= note.rating ? 'text-orange-500 fill-1' : 'text-slate-600'}`}>star</span>
+                                                                    <span key={star} className={`material-symbols-outlined text-[10px] ${star <= note.rating ? 'text-blue-600 fill-1' : 'text-slate-600'}`}>star</span>
                                                                 ))}
                                                             </div>
                                                         )}
@@ -805,15 +806,15 @@ export default function ReadingNotes() {
 
                                                         {/* Action Achievement Summary */}
                                                          {isAction && note.checkedActions && (
-                                                             <div className="mt-3 py-3 px-4 bg-black/20 rounded-none border border-white/[0.05] space-y-3">
+                                                             <div className="mt-3 py-3 px-4 bg-slate-50 rounded-none border border-white/[0.05] space-y-3">
                                                                  <div className="flex items-center justify-between">
                                                                      <div className="flex items-center gap-2">
                                                                          <span className="material-symbols-outlined text-indigo-400 text-[14px]">checklist</span>
                                                                          <span className="text-[10px] font-black text-indigo-400 tracking-wider">ACTION CHECKLIST</span>
-                                                                         <span className="text-[10px] font-bold text-white/40 bg-white/5 px-1.5 rounded-none">{Object.values(note.checkedActions).filter(Boolean).length}/3</span>
+                                                                         <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 rounded-none">{Object.values(note.checkedActions).filter(Boolean).length}/3</span>
                                                                      </div>
                                                                     {Object.values(note.checkedActions).filter(Boolean).length === 3 && (
-                                                                        <span className="text-[10px] font-black text-orange-400 px-2 py-0.5 bg-orange-500/10 rounded-none flex items-center gap-1 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
+                                                                        <span className="text-[10px] font-black text-blue-500 px-2 py-0.5 bg-blue-500/10 rounded-none flex items-center gap-1 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
                                                                             <span className="material-symbols-outlined text-[12px]">verified</span>
                                                                             모든 액션 완료!
                                                                         </span>
@@ -826,10 +827,10 @@ export default function ReadingNotes() {
                                                                          const isChecked = note.checkedActions[idx];
                                                                          return (
                                                                              <div key={idx} className={`flex items-start gap-2.5 p-2 rounded-none transition-all ${isChecked ? 'bg-indigo-500/5' : ''}`}>
-                                                                                 <div className={`mt-0.5 shrink-0 flex items-center justify-center size-4 rounded-none border transition-colors ${isChecked ? 'bg-indigo-400 border-indigo-400 text-black' : 'border-white/20 text-transparent'}`}>
+                                                                                 <div className={`mt-0.5 shrink-0 flex items-center justify-center size-4 rounded-none border transition-colors ${isChecked ? 'bg-indigo-400 border-indigo-400 text-black' : 'border-slate-200 text-transparent'}`}>
                                                                                      <span className="material-symbols-outlined text-[10px] font-bold">check</span>
                                                                                  </div>
-                                                                                <p className={`text-[12px] leading-tight ${isChecked ? 'text-indigo-300 font-bold' : 'text-white/50'}`}>
+                                                                                <p className={`text-[12px] leading-tight ${isChecked ? 'text-indigo-300 font-bold' : 'text-slate-400'}`}>
                                                                                     {guideData.title}
                                                                                 </p>
                                                                             </div>
@@ -843,24 +844,24 @@ export default function ReadingNotes() {
                                                      {!isExp && (
                                                          <div className="flex flex-wrap gap-1.5 mt-2">
                                                              {note.tags?.map(t => (
-                                                                 <span key={t} className={`text-[9px] font-semibold italic ${isReview ? 'text-orange-500/60' : isAction ? 'text-indigo-400/60' : 'text-orange-500/60'}`}>#{t}</span>
+                                                                 <span key={t} className={`text-[9px] font-semibold italic ${isReview ? 'text-blue-600/60' : isAction ? 'text-indigo-400/60' : 'text-blue-600/60'}`}>#{t}</span>
                                                              ))}
                                                          </div>
                                                      )}
 
                                                     {/* Action Buttons when expanded */}
                                                     {isExp && (
-                                                        <div className="mt-4 pt-4 border-t border-white/5 flex gap-4 justify-end">
+                                                        <div className="mt-4 pt-4 border-t border-slate-100 flex gap-4 justify-end">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); handleEdit(note); }}
-                                                                className="text-[10px] font-bold text-white/40 hover:text-white transition-colors flex items-center gap-1"
+                                                                className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1"
                                                             >
                                                                 <span className="material-symbols-outlined text-[14px]">edit</span>
                                                                 수정
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(note.id); }}
-                                                                className="text-[10px] font-bold text-white/40 hover:text-red-400 transition-colors flex items-center gap-1"
+                                                                className="text-[10px] font-bold text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1"
                                                             >
                                                                 <span className="material-symbols-outlined text-[14px]">delete</span>
                                                                 삭제
@@ -871,9 +872,9 @@ export default function ReadingNotes() {
                                             </div>
 
                                              {isDel && (
-                                                 <div className="absolute inset-0 z-20 backdrop-blur-md bg-black/60 rounded-none flex items-center justify-center p-6 gap-4 animate-in fade-in duration-300">
-                                                     <button onClick={() => handleDelete(note.id)} className="flex-1 h-10 rounded-none bg-red-500 text-white text-[12px] font-bold">삭제 확정</button>
-                                                     <button onClick={() => setDeleteConfirmId(null)} className="h-10 px-6 rounded-none bg-white/10 text-white text-[12px] font-bold">취소</button>
+                                                 <div className="absolute inset-0 z-20 backdrop-blur-md bg-slate-200 rounded-none flex items-center justify-center p-6 gap-4 animate-in fade-in duration-300">
+                                                     <button onClick={() => handleDelete(note.id)} className="flex-1 h-10 rounded-none bg-red-500 text-slate-900 text-[12px] font-bold">삭제 확정</button>
+                                                     <button onClick={() => setDeleteConfirmId(null)} className="h-10 px-6 rounded-none bg-slate-100 text-slate-900 text-[12px] font-bold">취소</button>
                                                  </div>
                                              )}
                                         </article>
@@ -884,24 +885,24 @@ export default function ReadingNotes() {
 
                      {/* Library Status Banner */}
                      <div className="pt-10 pb-20">
-                         <div className="p-6 rounded-none bg-white/[0.02] border border-white/5 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative glass-card">
+                         <div className="p-6 rounded-none bg-slate-50 border border-slate-100 text-slate-900 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative glass-card">
                              <div className="absolute right-0 top-0 opacity-5 scale-150 pointer-events-none translate-x-1/4 -translate-y-1/4">
                                  <span className="material-symbols-outlined text-[150px]">ink_pen</span>
                              </div>
                              <div className="z-10 text-center md:text-left">
                                  <h3 className="text-lg font-black mb-1">사유의 기록이 쌓이고 있습니다</h3>
-                                 <p className="text-white/60 text-[11px] opacity-80">지금까지 {totalThoughts}개의 소중한 기록을 남겼습니다.</p>
+                                 <p className="text-slate-500 text-[11px] opacity-80">지금까지 {totalThoughts}개의 소중한 기록을 남겼습니다.</p>
                              </div>
                              <div className="z-10 flex gap-3 w-full md:w-auto">
                                  <button
                                      onClick={() => { resetForm(); setShowForm(true); }}
-                                     className="flex-1 md:flex-none px-5 py-2 bg-orange-600 text-white rounded-none font-black text-xs shadow-lg hover:bg-orange-500 transition-colors"
+                                     className="flex-1 md:flex-none px-5 py-2 bg-blue-600 text-slate-900 rounded-none font-black text-xs shadow-lg hover:bg-blue-500 transition-colors"
                                  >
                                      기록하기
                                  </button>
                                  <button
                                      onClick={() => navigate('/library')}
-                                     className="flex-1 md:flex-none px-5 py-2 bg-white/10 text-white border border-white/30 rounded-none font-bold text-xs hover:bg-white/20 transition-colors"
+                                     className="flex-1 md:flex-none px-5 py-2 bg-slate-100 text-slate-900 border border-white/30 rounded-none font-bold text-xs hover:bg-slate-100 transition-colors"
                                  >
                                      서재 가기
                                  </button>
@@ -913,20 +914,20 @@ export default function ReadingNotes() {
                 {/* ── Record Note Modal ── */}
                 {
                     showForm && (
-                        <div className="fixed inset-0 z-[100] bg-[#101218] flex flex-col animate-in slide-in-from-bottom duration-500 shadow-2xl">
+                        <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in slide-in-from-bottom duration-500 shadow-2xl">
                             {/* Modal Header */}
                             <div className="px-6 shrink-0 flex items-center justify-between border-b border-white/[0.05]" style={{ height: 'calc(4rem + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
                                 <button onClick={resetForm} className="size-10 flex items-center justify-center -ml-2">
-                                    <span className="material-symbols-outlined text-white/40">close</span>
+                                    <span className="material-symbols-outlined text-slate-400">close</span>
                                 </button>
-                                <h3 className="text-[15px] font-bold text-white tracking-tight">생각 기록</h3>
+                                <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">생각 기록</h3>
                                 <div className="size-10" />
                             </div>
 
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7 pb-6">
                                 {/* Category Selection */}
                                 <div className="space-y-4">
-                                    <h4 className="text-[14px] font-bold text-orange-500">카테고리 선택</h4>
+                                    <h4 className="text-[14px] font-bold text-blue-600">카테고리 선택</h4>
                                     <div className="flex gap-2">
                                         {['#메모', '#액션'].map(type => (
                                             <button
@@ -934,8 +935,8 @@ export default function ReadingNotes() {
                                                 onClick={() => setNoteType(type)}
                                                 className={`flex-1 h-12 rounded-none flex items-center justify-center gap-2 border text-[13px] font-black transition-all
                                                 ${noteType === type
-                                                        ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
-                                                        : 'bg-white/[0.02] border-white/5 text-white/40 hover:text-white'}`}
+                                                        ? 'bg-blue-500/10 border-blue-500 text-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
+                                                        : 'bg-slate-50 border-slate-100 text-slate-400 hover:text-white'}`}
                                             >
                                                 <span className="material-symbols-outlined text-lg">
                                                     {type === '#액션' ? 'rocket_launch' : 'sticky_note_2'}
@@ -950,14 +951,14 @@ export default function ReadingNotes() {
                                 {(noteType === '#액션') && (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                            <h4 className="text-[14px] font-bold text-blue-600 flex items-center gap-2">
                                                 도서 선택 (선택 사항)
                                                 <span className="material-symbols-outlined text-lg">auto_stories</span>
                                             </h4>
                                             {bookTitle && (
                                                 <button
                                                     onClick={() => { setBookTitle(''); setBookSearch(''); setCustomBookInput(false); setShowBookDropdown(false); }}
-                                                    className="text-[11px] text-white/30 hover:text-red-400 transition-colors flex items-center gap-1"
+                                                    className="text-[11px] text-slate-900/30 hover:text-red-400 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">close</span>
                                                     선택 해제
@@ -976,15 +977,15 @@ export default function ReadingNotes() {
                                                     setActiveActionGuide([]);
                                                     setCheckedActions({});
                                                 }}
-                                                className="flex items-center justify-between px-4 py-3 bg-orange-500/10 border border-orange-500/30 rounded-none cursor-pointer hover:bg-orange-500/20 transition-all group"
+                                                className="flex items-center justify-between px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-none cursor-pointer hover:bg-blue-500/20 transition-all group"
                                             >
                                                 <div className="flex items-center gap-3 truncate">
-                                                    <span className="material-symbols-outlined text-orange-500 text-lg">menu_book</span>
-                                                    <span className="text-[14px] text-orange-500 font-bold truncate">{bookTitle}</span>
+                                                    <span className="material-symbols-outlined text-blue-600 text-lg">menu_book</span>
+                                                    <span className="text-[14px] text-blue-600 font-bold truncate">{bookTitle}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] text-orange-500/60 font-bold opacity-0 group-hover:opacity-100 transition-opacity">변경하기</span>
-                                                    <span className="material-symbols-outlined text-orange-500/60 text-sm group-hover:text-orange-500 transition-colors">sync</span>
+                                                    <span className="text-[10px] text-blue-600/60 font-bold opacity-0 group-hover:opacity-100 transition-opacity">변경하기</span>
+                                                    <span className="material-symbols-outlined text-blue-600/60 text-sm group-hover:text-blue-600 transition-colors">sync</span>
                                                 </div>
                                             </div>
                                         )}
@@ -992,18 +993,18 @@ export default function ReadingNotes() {
                                         {/* 검색 입력 - 도서가 선택되지 않았을 때만 표시 */}
                                         {!customBookInput && !bookTitle && (
                                             <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-lg pointer-events-none">search</span>
+                                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-900/30 text-lg pointer-events-none">search</span>
                                                 <input
                                                     type="text"
                                                     placeholder="책 제목이나 저자로 검색..."
                                                     value={bookSearch}
                                                     onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); }}
                                                     onFocus={() => setShowBookDropdown(true)}
-                                                    className="w-full bg-white/[0.03] border border-white/[0.05] rounded-none pl-11 pr-10 py-4 text-[14px] text-white/80 outline-none focus:border-orange-500/30 transition-all placeholder-white/20"
+                                                    className="w-full bg-slate-50 border border-white/[0.05] rounded-none pl-11 pr-10 py-4 text-[14px] text-slate-600 outline-none focus:border-blue-500/30 transition-all placeholder-white/20"
                                                 />
                                                 {bookSearch && (
                                                     <button onClick={() => { setBookSearch(''); setShowBookDropdown(false); }} className="absolute right-4 top-1/2 -translate-y-1/2">
-                                                        <span className="material-symbols-outlined text-white/30 text-lg">close</span>
+                                                        <span className="material-symbols-outlined text-slate-900/30 text-lg">close</span>
                                                     </button>
                                                 )}
                                             </div>
@@ -1014,7 +1015,7 @@ export default function ReadingNotes() {
                                             <div className="bg-[#0e1420] border border-white/[0.07] rounded-none overflow-hidden shadow-2xl">
                                                 <div className="max-h-56 overflow-y-auto">
                                                     {filteredBooks.length === 0 && bookSearch ? (
-                                                        <div className="px-5 py-5 text-[13px] text-white/30 text-center">
+                                                        <div className="px-5 py-5 text-[13px] text-slate-900/30 text-center">
                                                             해당 도서를 찾을 수 없습니다.
                                                         </div>
                                                     ) : (
@@ -1027,12 +1028,12 @@ export default function ReadingNotes() {
                                                                     setShowBookDropdown(false);
                                                                     setActiveActionGuide(book.actionGuide || []);
                                                                 }}
-                                                                className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-white/5 active:bg-white/10 transition-colors border-b border-white/[0.03] last:border-0"
+                                                                className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors border-b border-white/[0.03] last:border-0"
                                                             >
-                                                                <span className="material-symbols-outlined text-white/20 text-base shrink-0">menu_book</span>
+                                                                <span className="material-symbols-outlined text-slate-900/20 text-base shrink-0">menu_book</span>
                                                                 <div className="min-w-0">
-                                                                    <p className="text-[13px] text-white/80 font-bold truncate">{book.title}</p>
-                                                                    <p className="text-[11px] text-white/30 truncate">{book.author}</p>
+                                                                    <p className="text-[13px] text-slate-600 font-bold truncate">{book.title}</p>
+                                                                    <p className="text-[11px] text-slate-900/30 truncate">{book.author}</p>
                                                                 </div>
                                                             </button>
                                                         ))
@@ -1040,10 +1041,10 @@ export default function ReadingNotes() {
                                                 </div>
                                                 <button
                                                     onClick={() => { setCustomBookInput(true); setShowBookDropdown(false); setBookSearch(''); }}
-                                                    className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-white/5 transition-colors border-t border-white/[0.06]"
+                                                    className="w-full px-5 py-3.5 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors border-t border-white/[0.06]"
                                                 >
-                                                    <span className="material-symbols-outlined text-orange-500/50 text-base shrink-0">edit</span>
-                                                    <span className="text-[13px] text-orange-500/70 font-bold">직접 입력...</span>
+                                                    <span className="material-symbols-outlined text-blue-600/50 text-base shrink-0">edit</span>
+                                                    <span className="text-[13px] text-blue-600/70 font-bold">직접 입력...</span>
                                                 </button>
                                             </div>
                                         )}
@@ -1056,12 +1057,12 @@ export default function ReadingNotes() {
                                                     placeholder="책 제목을 직접 입력하세요"
                                                     value={bookTitle}
                                                     onChange={e => setBookTitle(e.target.value)}
-                                                    className="w-full bg-white/[0.03] border border-orange-500/20 rounded-none px-5 py-4 text-[14px] text-white/80 outline-none focus:border-orange-500/50 transition-all placeholder-white/20"
+                                                    className="w-full bg-slate-50 border border-blue-500/20 rounded-none px-5 py-4 text-[14px] text-slate-600 outline-none focus:border-blue-500/50 transition-all placeholder-white/20"
                                                     autoFocus
                                                 />
                                                 <button
                                                     onClick={() => { setCustomBookInput(false); setBookTitle(''); }}
-                                                    className="text-[11px] text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"
+                                                    className="text-[11px] text-slate-900/30 hover:text-slate-500 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">arrow_back</span>
                                                     목록에서 선택하기
@@ -1074,7 +1075,7 @@ export default function ReadingNotes() {
                                 {/* Action Guide Checklist - Only for #액션 and when book is selected */}
                                 {noteType === '#액션' && bookTitle && activeActionGuide.length > 0 && (
                                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center justify-between">
+                                        <h4 className="text-[14px] font-bold text-blue-600 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 실천 지침 체크리스트
                                                 <span className="material-symbols-outlined text-lg">fact_check</span>
@@ -1083,35 +1084,35 @@ export default function ReadingNotes() {
                                                  <motion.span
                                                      initial={{ scale: 0.8, opacity: 0 }}
                                                      animate={{ scale: 1, opacity: 1 }}
-                                                     className="px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 text-orange-300 text-[10px] rounded-none flex items-center gap-1"
+                                                     className="px-2 py-0.5 bg-blue-500/20 border border-blue-500/40 text-blue-400 text-[10px] rounded-none flex items-center gap-1"
                                                  >
                                                      <span className="material-symbols-outlined text-[12px]">verified</span>
                                                      모든 지침 달성 완료!
                                                  </motion.span>
                                             )}
                                         </h4>
-                                        <div className="space-y-2 bg-white/[0.02] border border-white/[0.05] rounded-none p-3">
+                                        <div className="space-y-2 bg-slate-50 border border-white/[0.05] rounded-none p-3">
                                             {activeActionGuide.map((item, idx) => (
                                                 <div
                                                     key={idx}
                                                     onClick={() => setCheckedActions(prev => ({ ...prev, [idx]: !prev[idx] }))}
                                                     className={`flex items-start gap-3 p-2.5 rounded-none cursor-pointer transition-all border
                                                         ${checkedActions[idx]
-                                                            ? 'bg-orange-500/10 border-orange-500/30'
-                                                            : 'bg-white/5 border-transparent hover:border-white/10'}`}
+                                                            ? 'bg-blue-500/10 border-blue-500/30'
+                                                            : 'bg-slate-50 border-transparent hover:border-slate-200'}`}
                                                 >
                                                     <div className={`mt-0.5 size-5 rounded-none border flex items-center justify-center shrink-0 transition-all
                                                         ${checkedActions[idx]
-                                                            ? 'bg-orange-500 border-orange-500 text-white'
-                                                            : 'bg-white/5 border-white/20 text-transparent'}`}
+                                                            ? 'bg-blue-500 border-blue-500 text-slate-900'
+                                                            : 'bg-slate-50 border-slate-200 text-transparent'}`}
                                                     >
                                                         <span className="material-symbols-outlined text-sm font-black">check</span>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-orange-500' : 'text-white'}`}>
+                                                        <p className={`text-[13px] font-bold leading-tight mb-1 ${checkedActions[idx] ? 'text-blue-600' : 'text-white'}`}>
                                                             {idx + 1}. {item.title}
                                                         </p>
-                                                        <p className="text-[12px] text-white leading-relaxed">
+                                                        <p className="text-[12px] text-slate-900 leading-relaxed">
                                                             {item.description}
                                                         </p>
                                                     </div>
@@ -1122,10 +1123,10 @@ export default function ReadingNotes() {
                                                 <motion.div
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-none text-center"
+                                                    className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-none text-center"
                                                 >
-                                                    <p className="text-[13px] text-orange-500 font-bold mb-1">🎯 모든 액션을 성공적으로 달성했습니다!</p>
-                                                    <p className="text-[11px] text-white/60 leading-tight">이제 실천하며 느낀 경험과 성장을 상세히 기록해보세요.</p>
+                                                    <p className="text-[13px] text-blue-600 font-bold mb-1">🎯 모든 액션을 성공적으로 달성했습니다!</p>
+                                                    <p className="text-[11px] text-slate-500 leading-tight">이제 실천하며 느낀 경험과 성장을 상세히 기록해보세요.</p>
                                                 </motion.div>
                                             )}
                                         </div>
@@ -1136,7 +1137,7 @@ export default function ReadingNotes() {
                                 {/* Mood Selection - #메모 시에만 표시 (액션은 🎯 고정) */}
                                 {noteType === '#메모' && (
                                     <div className="space-y-4">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                        <h4 className="text-[14px] font-bold text-blue-600 flex items-center gap-2">
                                             이모지 선택 (필수)
                                             <span className="material-symbols-outlined text-lg">mood</span>
                                         </h4>
@@ -1147,15 +1148,15 @@ export default function ReadingNotes() {
                                                     onClick={() => setSelectedMood(m)}
                                                     className={`aspect-square rounded-none flex items-center justify-center text-xl transition-all border
                                                     ${selectedMood?.label === m.label
-                                                            ? 'bg-orange-500/20 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)] scale-110 z-10'
-                                                            : 'bg-white/[0.02] border-white/5 hover:border-white/20'}`}
+                                                            ? 'bg-blue-500/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)] scale-110 z-10'
+                                                            : 'bg-slate-50 border-slate-100 hover:border-slate-200'}`}
                                                 >
                                                     {m.emoji}
                                                 </button>
                                             ))}
                                         </div>
                                         {selectedMood && (
-                                            <p className="text-[11px] text-orange-500/80 font-medium mt-2">선택됨: {selectedMood.label}</p>
+                                            <p className="text-[11px] text-blue-600/80 font-medium mt-2">선택됨: {selectedMood.label}</p>
                                         )}
                                     </div>
                                 )}
@@ -1163,7 +1164,7 @@ export default function ReadingNotes() {
                                 {/* Thought Input */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[14px] font-bold text-orange-500 flex items-center gap-2">
+                                        <h4 className="text-[14px] font-bold text-blue-600 flex items-center gap-2">
                                             나의 생각 / 기록
                                             <span className="material-symbols-outlined text-lg rotate-12">attach_file</span>
                                         </h4>
@@ -1171,7 +1172,7 @@ export default function ReadingNotes() {
                                             onClick={handleAiRefine}
                                             disabled={isAiProcessing || !body.trim()}
                                             className={`px-3 py-1.5 rounded-none flex items-center gap-1.5 transition-all
-                                            ${isAiProcessing ? 'bg-orange-500/20 text-orange-500 animate-pulse' : 'bg-white/5 text-white/40 hover:bg-orange-500/10 hover:text-orange-500 border border-white/10'}`}
+                                            ${isAiProcessing ? 'bg-blue-500/20 text-blue-600 animate-pulse' : 'bg-slate-50 text-slate-400 hover:bg-blue-500/10 hover:text-blue-600 border border-slate-200'}`}
                                         >
                                             <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
                                             <span className="text-[10px] font-bold uppercase tracking-wider">{isAiProcessing ? 'Processing' : 'AI Insight'}</span>
@@ -1182,10 +1183,10 @@ export default function ReadingNotes() {
                                             value={body}
                                             onChange={e => setBody(e.target.value)}
                                             placeholder="책을 읽으며 떠오른 생각이나 간직하고 싶은 문장을 자유롭게 기록해보세요..."
-                                            className="w-full bg-transparent border-none text-[16px] text-white placeholder-white/50 min-h-[300px] outline-none resize-none leading-relaxed"
+                                            className="w-full bg-transparent border-none text-[16px] text-slate-900 placeholder-white/50 min-h-[300px] outline-none resize-none leading-relaxed"
                                         />
                                         <div className="flex justify-end pt-4">
-                                            <span className="flex items-center gap-2 text-[11px] text-white/30 font-medium">
+                                            <span className="flex items-center gap-2 text-[11px] text-slate-900/30 font-medium">
                                                 <span className="material-symbols-outlined text-sm">edit</span>
                                                 {body.length} characters
                                             </span>
@@ -1199,7 +1200,7 @@ export default function ReadingNotes() {
                                 <button
                                     onClick={handleSave}
                                     disabled={saving || !body.trim() || (noteType === '#메모' && !selectedMood) || ((noteType === '#서평' || noteType === '#액션') && !bookTitle.trim())}
-                                    className="w-full h-12 rounded-none bg-orange-600 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-orange-600/20"
+                                    className="w-full h-12 rounded-none bg-blue-600 text-slate-900 font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-xl shadow-blue-600/20"
                                 >
                                     {saving ? (
                                         <div className="size-5 border-2 border-primary/20 border-t-primary rounded-none animate-spin" />
@@ -1229,18 +1230,18 @@ export default function ReadingNotes() {
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                                className="w-full max-w-sm bg-[#0f172a] rounded-none border border-white/5 overflow-hidden shadow-2xl"
+                                className="w-full max-w-sm bg-[#0f172a] rounded-none border border-slate-100 overflow-hidden shadow-2xl"
                             >
                                 <div className="p-8 space-y-8">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-xl font-black text-white italic flex items-center gap-2">
-                                             <span className="material-symbols-outlined text-orange-500 fill-1">redeem</span>
+                                        <h3 className="text-xl font-black text-slate-900 italic flex items-center gap-2">
+                                             <span className="material-symbols-outlined text-blue-600 fill-1">redeem</span>
                                              나무 성장 혜택
                                         </h3>
                                          <button
                                              onClick={() => setShowBenefits(false)}
-                                             className="size-10 rounded-none bg-white/5 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-white/50">close</span>
+                                             className="size-10 rounded-none bg-slate-50 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-slate-400">close</span>
                                         </button>
                                     </div>
 
@@ -1249,18 +1250,18 @@ export default function ReadingNotes() {
                                             { lv: 1, name: '어린 나무 (10개)', benefit: '커스텀 프로필 뱃지 지급' },
                                             { lv: 2, name: '자라나는 나무 (30개)', benefit: '사이트 테마 - 블랙 골드 해제' },
                                             { lv: 3, name: '열매 맺는 나무 (50개)', benefit: '한정판 기록 템플릿 제공' },
-                                            { lv: 4, name: '풍성한 지혜의 나무 (100개)', benefit: '아카이뷰 VIP 멤버십 승격' }
+                                            { lv: 4, name: '풍성한 지혜의 나무 (100개)', benefit: 'Whiteboard VIP 멤버십 승격' }
                                         ].map((item, idx) => (
-                                            <div key={idx} className={`p-4 rounded-none flex items-center gap-4 border transition-all ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/[0.02] border-white/5 opacity-50'}`}>
-                                                <div className={`size-10 rounded-none flex items-center justify-center font-black ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/30'}`}>
+                                            <div key={idx} className={`p-4 rounded-none flex items-center gap-4 border transition-all ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
+                                                <div className={`size-10 rounded-none flex items-center justify-center font-black ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'bg-blue-500 text-slate-900' : 'bg-slate-100 text-slate-900/30'}`}>
                                                     Lv.{item.lv}
                                                 </div>
                                                 <div>
-                                                    <p className="text-[13px] font-bold text-white">{item.name}</p>
-                                                    <p className={`text-[11px] font-medium ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'text-orange-500/70' : 'text-white/30'}`}>{item.benefit}</p>
+                                                    <p className="text-[13px] font-bold text-slate-900">{item.name}</p>
+                                                    <p className={`text-[11px] font-medium ${totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) ? 'text-blue-600/70' : 'text-white/30'}`}>{item.benefit}</p>
                                                 </div>
                                                 {totalThoughts >= (idx === 0 ? 10 : idx === 1 ? 30 : idx === 2 ? 50 : 100) && (
-                                                    <span className="material-symbols-outlined text-orange-500 ml-auto fill-1">check_circle</span>
+                                                    <span className="material-symbols-outlined text-blue-600 ml-auto fill-1">check_circle</span>
                                                 )}
                                             </div>
                                         ))}
@@ -1268,7 +1269,7 @@ export default function ReadingNotes() {
 
                                      <button
                                          onClick={() => setShowBenefits(false)}
-                                         className="w-full h-14 rounded-none bg-orange-600 text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-orange-600/20"
+                                         className="w-full h-14 rounded-none bg-blue-600 text-slate-900 font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-blue-600/20"
                                      >
                                          확인했습니다
                                      </button>

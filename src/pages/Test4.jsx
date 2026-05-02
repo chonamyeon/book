@@ -9,8 +9,6 @@ import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 import InsightBanner from '../components/InsightBanner';
 import BookCardActions from '../components/BookCardActions';
-import { db } from '../firebase';
-import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { availableAudio } from '../data/availableAudio';
 
 export default function Test4() {
@@ -105,7 +103,7 @@ export default function Test4() {
     }, [getAllBooks]);
 
     const originalContents = useMemo(() => {
-        return allBooks.filter(b => b.section === 'ARCHIVIEW_ORIGINAL').slice(0, 3);
+        return allBooks.filter(b => b.section === 'Whiteboard_ORIGINAL').slice(0, 3);
     }, [allBooks]);
 
     // Mapping for Category Chips to Category Page IDs
@@ -117,58 +115,18 @@ export default function Test4() {
         '심리': 'PSYCHOLOGY'
     };
 
-    // ── Firestore 섹션 데이터 ──────────────────────────────────────────
-    const [weeklyFocusRaw, setWeeklyFocusRaw] = useState(() => {
+    // ── 정적 섹션 데이터 ──────────────────────────────────────────
+    const [weeklyFocusRaw] = useState(() => {
         try { return JSON.parse(localStorage.getItem('wf_cache') || '[]'); } catch { return []; }
     });
-    const [weeklyMostViewedRaw, setWeeklyMostViewedRaw] = useState([]);
-    const [popularArchives, setPopularArchives] = useState([
+    const weeklyMostViewedRaw = [];
+    const popularArchives = [
         { id: "wealth-way", title: "부자들이 돈을 보는 방식", listens: "12.4k" },
         { id: "decision-making", title: "억만장자의 의사결정", listens: "10.1k" },
         { id: "warren-buffett", title: "워런 버핏 사고법", listens: "8.9k" },
         { id: "leverage", title: "레버리지: 부의 추월차선", listens: "7.5k" },
         { id: "story-power", title: "스토리의 힘", listens: "6.8k" },
-    ]);
-
-    // 위클리포커스 스케줄 자동 적용 — 월요일 6시 이후 Firestore 업데이트
-    useEffect(() => {
-        const applySchedule = async () => {
-            try {
-                const snap = await getDoc(doc(db, 'site_config', 'weekly_focus_schedule'));
-                if (!snap.exists()) return;
-                const weeks = snap.data().weeks || [];
-                const now = new Date();
-                const activeWeek = [...weeks]
-                    .filter(w => w.weekStart && new Date(w.weekStart) <= now && w.books?.length > 0)
-                    .sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))[0];
-                if (!activeWeek) return;
-                const cur = await getDoc(doc(db, 'site_config', 'weekly_focus'));
-                const curIds = (cur.data()?.books || []).map(b => b.id).join(',');
-                const newIds = activeWeek.books.map(b => b.id).join(',');
-                if (curIds !== newIds) {
-                    await setDoc(doc(db, 'site_config', 'weekly_focus'), { books: activeWeek.books });
-                }
-            } catch {}
-        };
-        applySchedule();
-    }, []);
-
-    useEffect(() => {
-        const unsub1 = onSnapshot(doc(db, 'site_config', 'popular_archives'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) setPopularArchives(snap.data().books);
-        });
-        const unsub2 = onSnapshot(doc(db, 'site_config', 'weekly_focus'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) {
-                const books = snap.data().books;
-                setWeeklyFocusRaw(books);
-                try { localStorage.setItem('wf_cache', JSON.stringify(books)); } catch {}
-            }
-        });
-        const unsub3 = onSnapshot(doc(db, 'site_config', 'weekly_most_viewed'), (snap) => {
-            if (snap.exists() && snap.data().books?.length) setWeeklyMostViewedRaw(snap.data().books);
-        });
-        return () => { unsub1(); unsub2(); unsub3(); };
-    }, []);
+    ];
 
     const enrich = (list) => list.map(item => {
         const bookData = allBooks.find(b => b.id === item.id) || {};
@@ -194,7 +152,7 @@ export default function Test4() {
         return allBooks.filter(b => b.section === 'WEEKLY_FOCUS').sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).slice(0, 5);
     }, [weeklyFocusRaw, allBooks]);
 
-    // 주간 최다조회: Firestore 데이터 우선, 없으면 popular_archives fallback
+    // 주간 최다조회: static data 데이터 우선, 없으면 popular_archives fallback
     const enrichedWeeklyMostViewed = useMemo(() => {
         if (weeklyMostViewedRaw.length > 0) return enrich(weeklyMostViewedRaw);
         return enrichedPopularArchives;
@@ -255,7 +213,7 @@ export default function Test4() {
                                         <motion.div animate={{ height: [10, 14, 10] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", delay: 0.3 }} className="w-[3px] bg-zinc-400 rounded-none" />
                                         <motion.div animate={{ height: [14, 18, 14] }} transition={{ repeat: Infinity, duration: 1, ease: "easeInOut", delay: 0.4 }} className="w-[3px] bg-zinc-400 rounded-none" />
                                     </div>
-                                    <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>ARCHIVIEW</span>
+                                    <span className="text-[19px] font-black tracking-[-0.03em] uppercase mt-0.5" style={{ fontFamily: "'Montserrat', sans-serif" }}>Whiteboard</span>
                                 </div>
                             </Link>
                             <div className="flex items-center gap-[25px]">
@@ -381,7 +339,7 @@ export default function Test4() {
                                 </div>
                             </div>
                             {weeklyFocusBooks.length === 0 && booksLoading ? (
-                                // 첫 방문자용 스켈레톤 (Firestore 로딩 중)
+                                // 첫 방문자용 스켈레톤 (static data 로딩 중)
                                 [0, 1].map(i => (
                                     <div key={i} className="glass-card rounded-none p-4 flex gap-5 items-center border border-white/5 animate-pulse">
                                         <div className="w-[70px] h-[98px] rounded-none bg-white/10 flex-shrink-0" />
@@ -501,14 +459,14 @@ export default function Test4() {
                         <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', margin: '2px 0 0', lineHeight: 1.2 }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
                     </div>
 
-                    {/* 4️⃣ 인기 아카이뷰 */}
+                    {/* 4️⃣ 인기 Whiteboard */}
                     <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-5 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
-                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 아카이뷰</h2>
+                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">최다 조회 Whiteboard</h2>
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
-                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번주 가장 많이 들은 아카이뷰</p>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">이번주 가장 많이 들은 Whiteboard</p>
                                 </div>
                             </div>
                         </div>
@@ -540,7 +498,7 @@ export default function Test4() {
 
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-0"></div>
 
-                    {/* 🎬 2.5 아카이뷰 Originals Section */}
+                    {/* 🎬 2.5 Whiteboard Originals Section */}
                     {originalContents.length > 0 && (
                         <motion.section
                             initial="hidden"
@@ -551,10 +509,10 @@ export default function Test4() {
                         >
                             <div className="mb-8 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">아카이뷰 Originals</h2>
+                                    <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Whiteboard Originals</h2>
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
-                                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">아카이뷰 만에 특별한 오리지널 컨텐츠</p>
+                                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Whiteboard 만에 특별한 오리지널 컨텐츠</p>
                                     </div>
                                 </div>
                             </div>
@@ -582,7 +540,7 @@ export default function Test4() {
                                         <div className="flex-1 flex flex-col justify-between py-0.5">
                                             <div className="space-y-1">
                                                 <h3 className="text-white font-black text-[15px] leading-tight break-keep line-clamp-2">{content.title}</h3>
-                                                <p className="text-gold text-[10px] font-black uppercase tracking-[0.15em] mb-1">아카이뷰 오리지널</p>
+                                                <p className="text-gold text-[10px] font-black uppercase tracking-[0.15em] mb-1">Whiteboard 오리지널</p>
 
                                             </div>
 
@@ -600,7 +558,7 @@ export default function Test4() {
                     <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="px-6 pt-7 pb-7">
                         <div className="mb-8 flex items-center justify-between">
                             <div>
-                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">유명인들의 추천 아카이뷰</h2>
+                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">유명인들의 추천 Whiteboard</h2>
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">유명 셀럽들이 추천했던 도서 컬렉션</p>
@@ -656,7 +614,7 @@ export default function Test4() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-3">
                                             <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-tighter shadow-lg">New Creator Course</span>
-                                            <span className="text-zinc-500 text-[11px] font-medium tracking-tight italic">아카이뷰 추천</span>
+                                            <span className="text-zinc-500 text-[11px] font-medium tracking-tight italic">Whiteboard 추천</span>
                                         </div>
                                         <h3 className="text-white text-[18px] font-black leading-tight break-keep">"듣기만 하던 인사이트를 영상으로" 1인 미디어 제작 실무 프로젝트</h3>
                                     </div>
@@ -698,7 +656,7 @@ export default function Test4() {
                                 </a>
                                 
                                 <p className="mt-5 text-[9px] text-zinc-600 font-medium text-center opacity-80">
-                                    * 위 링크를 통해 신청 시 아카이뷰는 제휴 마케팅 활동의 일환으로 일정액의 수수료를 제공받을 수 있습니다.
+                                    * 위 링크를 통해 신청 시 Whiteboard는 제휴 마케팅 활동의 일환으로 일정액의 수수료를 제공받을 수 있습니다.
                                 </p>
                             </div>
                         </div>
@@ -716,7 +674,7 @@ export default function Test4() {
                     >
                         <div className="mb-8 flex items-center justify-between">
                             <div>
-                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">아카이뷰 유료 멤버십 안내</h2>
+                                <h2 className="text-[22px] font-black tracking-tight leading-none mb-1.5 text-white">Whiteboard 유료 멤버십 안내</h2>
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-[2px] bg-orange-500 rounded-none"></div>
                                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Membership Guide</p>
@@ -729,7 +687,7 @@ export default function Test4() {
                             <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-2xl rounded-full -mr-10 -mt-10"></div>
                             <h3 className="text-[13px] font-black text-orange-500 mb-3 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[16px]">stars</span>
-                                아카이뷰는 이런 분께 추천합니다
+                                Whiteboard는 이런 분께 추천합니다
                             </h3>
                             <div className="grid grid-cols-1 gap-y-2.5">
                                 {[
@@ -746,7 +704,7 @@ export default function Test4() {
                                 ))}
                             </div>
                             <p className="mt-4 text-[12px] font-medium text-gray-500 bg-white/5 p-2 border-l-2 border-orange-500/30">
-                                아카이뷰를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
+                                Whiteboard를 통해 바쁜 일상 속에서도 당신만의 <span className="text-white">지식과 통찰</span>을 얻을 수 있습니다.
                             </p>
                         </div>
 
@@ -828,7 +786,7 @@ export default function Test4() {
                     >
                         <div className="mb-10 text-center">
                             <h2 className="text-[20px] font-black tracking-tight leading-none mb-2 text-white">어떻게 이용하나요?</h2>
-                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">How to use Archiview</p>
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">How to use Whiteboard</p>
                         </div>
 
                         <div className="space-y-6 relative">

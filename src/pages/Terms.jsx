@@ -1,140 +1,126 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import TopNavigation from '../components/TopNavigation';
 import BottomNavigation from '../components/BottomNavigation';
 import Footer from '../components/Footer';
 
 export default function Terms() {
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
-    return (
-        <div className="bg-white dark:bg-slate-950 font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
-            <Helmet>
-                <title>이용약관 | 아카이뷰(ArchiView)</title>
-                <meta name="description" content="아카이뷰 서비스 이용약관입니다. 서비스 이용 전 반드시 확인해 주세요." />
-                <link rel="canonical" href="https://archiview.shop/terms" />
-            </Helmet>
-            <TopNavigation title="이용약관" />
+  return (
+    <div className="bg-white text-slate-900 min-h-screen pb-24">
+      <Helmet>
+        <title>이용약관 | Whiteboard</title>
+        <meta name="description" content="Whiteboard 서비스 이용 조건, 콘텐츠 저작권, 광고 및 면책 조항 안내입니다." />
+        <link rel="canonical" href="https://archiview.shop/terms" />
+      </Helmet>
+      <TopNavigation title="이용약관" />
 
-            <main className="px-6 pt-24 pb-12">
-                <article>
-                    <h1 className="text-2xl font-black mb-2">서비스 이용약관</h1>
-                    <p className="text-xs text-slate-400 mb-8">시행일: 2026년 2월 20일 · 최종 수정: 2026년 4월 1일</p>
+      <main className="mx-auto max-w-3xl px-6 pt-28 pb-16">
+        <h1 className="text-3xl font-black tracking-tight">이용약관</h1>
+        <p className="mt-3 text-sm text-slate-500">시행일: 2026년 5월 2일 · 최종 수정: 2026년 5월 2일</p>
 
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
-                        아카이뷰(이하 '회사')가 제공하는 모든 서비스(이하 '서비스')를 이용하기 전에 본 이용약관을 주의 깊게 읽어주시기 바랍니다. 서비스를 이용하거나 접속함으로써 이 약관에 동의하게 됩니다.
-                    </p>
+        <div className="mt-10 space-y-9 text-sm leading-7 text-slate-700">
+          <section>
+            <h2 className="text-lg font-black text-slate-900">1. 목적</h2>
+            <p className="mt-3">
+              본 약관은 Whiteboard(이하 "서비스")가 제공하는 독서 인사이트 콘텐츠, 리뷰, 오디오 및 관련 서비스의
+              이용 조건과 이용자와 서비스 운영자 간의 권리·의무 관계를 정합니다.
+            </p>
+          </section>
 
-                    <div className="space-y-8">
+          <section>
+            <h2 className="text-lg font-black text-slate-900">2. 이용 자격</h2>
+            <p className="mt-3">
+              본 서비스는 만 14세 이상 누구나 이용할 수 있습니다. 만 14세 미만 이용자는 법정대리인의 동의 없이
+              회원가입 또는 개인정보 제공이 제한됩니다. 서비스를 이용함으로써 본 약관에 동의한 것으로 간주합니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제1조 (목적)</h2>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                                본 약관은 아카이뷰(https://archiview.shop)가 제공하는 오디오 인사이트 플랫폼 서비스의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
-                            </p>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">3. 콘텐츠 이용</h2>
+            <p className="mt-3">
+              Whiteboard의 모든 콘텐츠(텍스트, 이미지, 오디오, 비평 글 등)는 정보 제공 및 비평 목적의 2차 창작물입니다.
+              사전 서면 허가 없이 다음 행위를 금지합니다.
+            </p>
+            <ul className="mt-3 list-disc list-inside space-y-1 text-slate-600">
+              <li>콘텐츠의 무단 복제, 배포, 전송, 방송</li>
+              <li>상업적 목적의 재사용 및 2차 가공</li>
+              <li>자동화된 수단(크롤러, 스크래퍼 등)을 이용한 대량 수집</li>
+            </ul>
+            <p className="mt-3">
+              비상업적 인용, 교육 목적의 짧은 발췌는 출처를 명시하는 조건으로 허용됩니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제2조 (정의)</h2>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① "서비스"란 회사가 제공하는 오디오 인사이트 콘텐츠, 도서 리뷰, 독서 성향 테스트, 독서 노트 등 일체의 서비스를 의미합니다.</li>
-                                <li>② "이용자"란 본 약관에 동의하고 서비스를 이용하는 모든 회원 및 비회원을 의미합니다.</li>
-                                <li>③ "콘텐츠"란 회사가 서비스를 통해 제공하는 오디오, 텍스트, 이미지 등 모든 형태의 정보를 의미합니다.</li>
-                            </ul>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">4. 이용자 행동 규범</h2>
+            <p className="mt-3">이용자는 서비스를 이용할 때 다음 사항을 준수해야 합니다.</p>
+            <ul className="mt-3 list-disc list-inside space-y-1 text-slate-600">
+              <li>타인의 권리를 침해하는 콘텐츠를 게시하지 않습니다.</li>
+              <li>허위 정보, 스팸, 악성코드를 전파하지 않습니다.</li>
+              <li>서비스의 정상적인 운영을 방해하는 행위를 하지 않습니다.</li>
+              <li>관련 법령 및 본 약관을 위반하지 않습니다.</li>
+            </ul>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제3조 (약관의 효력 및 변경)</h2>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① 본 약관은 서비스 화면에 게시하거나 기타 방법으로 이용자에게 공지함으로써 효력이 발생합니다.</li>
-                                <li>② 회사는 합리적인 사유가 발생할 경우 약관을 변경할 수 있으며, 변경 시 시행일 7일 전 공지합니다.</li>
-                                <li>③ 이용자가 변경된 약관에 동의하지 않을 경우 서비스 이용을 중단하고 회원 탈퇴를 요청할 수 있습니다.</li>
-                            </ul>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">5. 광고와 제휴</h2>
+            <p className="mt-3">
+              사이트 운영을 위해 <strong>Google AdSense</strong> 등 광고 서비스와 제휴 링크가 포함될 수 있습니다.
+              광고와 편집 콘텐츠는 명확히 구분되며, 광고주의 주장은 Whiteboard의 의견을 의미하지 않습니다.
+              광고 수익은 사이트 운영 및 콘텐츠 제작 비용에 사용됩니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제4조 (서비스 이용)</h2>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① 회사가 제공하는 일부 콘텐츠는 비회원도 이용할 수 있으나, 서재 관리·독서 노트 등 개인화 기능은 회원 가입 후 이용 가능합니다.</li>
-                                <li>② 회사는 서비스의 질적 향상을 위해 사전 공지 없이 콘텐츠 및 기능을 변경하거나 중단할 수 있습니다.</li>
-                                <li>③ 서비스 이용 시간은 원칙적으로 연중무휴 24시간이나, 시스템 유지보수 등의 사유로 일시 중단될 수 있습니다.</li>
-                            </ul>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">6. 서비스 변경 및 중단</h2>
+            <p className="mt-3">
+              운영자는 서비스의 내용, 기능, 이용 조건을 사전 공지 후 변경하거나 일시적·영구적으로 중단할 수 있습니다.
+              서비스 중단으로 인한 손해에 대해 법령이 정한 범위 내에서 책임을 집니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제5조 (이용자의 의무)</h2>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-3">이용자는 다음 행위를 하여서는 안 됩니다.</p>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① 타인의 정보를 도용하거나 허위 정보를 등록하는 행위</li>
-                                <li>② 회사의 지식재산권을 침해하는 행위 (콘텐츠 무단 복제·배포·상업적 이용 등)</li>
-                                <li>③ 서비스의 정상적인 운영을 방해하는 행위</li>
-                                <li>④ 관련 법령 또는 공서양속에 반하는 행위</li>
-                                <li>⑤ 기타 회사가 부적절하다고 판단하는 행위</li>
-                            </ul>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">7. 면책</h2>
+            <p className="mt-3">
+              모든 콘텐츠는 일반 정보 제공을 목적으로 합니다. 투자, 법률, 의료, 직업 선택 등 중요한 결정은
+              별도의 전문가 상담과 원문 확인을 권장합니다. 서비스 이용으로 발생하는 손해에 대해 고의 또는
+              중과실이 없는 경우 책임을 지지 않습니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제6조 (지식재산권)</h2>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① 서비스 내의 모든 콘텐츠(오디오, 텍스트, 이미지, 디자인 등)에 대한 저작권 및 지식재산권은 회사에 귀속됩니다.</li>
-                                <li>② 아카이뷰의 콘텐츠는 원저작물을 낭독하지 않으며, 각 도서의 핵심 철학을 분석한 독창적인 2차 창작물입니다.</li>
-                                <li>③ 이용자는 회사의 사전 동의 없이 콘텐츠를 복제·배포·방송·전송하거나 상업적 목적으로 활용할 수 없습니다.</li>
-                            </ul>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">8. 준거법 및 분쟁 해결</h2>
+            <p className="mt-3">
+              본 약관은 <strong>대한민국 법률</strong>에 따라 해석되고 적용됩니다.
+              서비스 이용과 관련하여 분쟁이 발생한 경우, 운영자와 이용자는 상호 협의를 통해 해결하는 것을 우선으로 합니다.
+              협의가 이루어지지 않을 경우 관련 법령에 따른 관할 법원에 소를 제기할 수 있습니다.
+            </p>
+          </section>
 
-                        <section className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 p-5 rounded-xl">
-                            <h2 className="text-base font-black mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-amber-500 text-[18px]">campaign</span>
-                                제7조 (광고 게재)
-                            </h2>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <p>① 회사는 서비스 운영을 위해 Google AdSense 등 제3자 광고 서비스를 통해 광고를 게재할 수 있습니다.</p>
-                                <p>② 이용자는 광고 게재에 동의하며, 광고 내용에 관한 책임은 광고주에게 있습니다.</p>
-                                <p>③ Google AdSense는 이용자의 관심사에 맞는 맞춤형 광고를 위해 쿠키를 사용할 수 있습니다. 쿠키 설정은 개인정보처리방침 및 쿠키 동의 배너를 통해 관리할 수 있습니다.</p>
-                            </div>
-                        </section>
+          <section>
+            <h2 className="text-lg font-black text-slate-900">9. 약관 변경</h2>
+            <p className="mt-3">
+              본 약관은 필요 시 변경될 수 있으며, 중요한 변경 사항은 사이트 공지 또는 이메일을 통해 7일 전에 안내합니다.
+              변경된 약관에 동의하지 않을 경우 서비스 이용을 중단할 수 있습니다.
+            </p>
+          </section>
 
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제8조 (면책 조항)</h2>
-                            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-                                <li>① 회사는 천재지변, 불가항력적 사유로 인한 서비스 제공 불가에 대해 책임을 지지 않습니다.</li>
-                                <li>② 회사는 이용자의 귀책 사유로 인한 서비스 이용 장애에 대해 책임을 지지 않습니다.</li>
-                                <li>③ 아카이뷰의 콘텐츠는 정보 제공 목적으로 제작된 독창적 2차 창작물이며, 투자·법률·의료 등 전문 분야에 대한 조언을 대체하지 않습니다.</li>
-                            </ul>
-                        </section>
-
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제9조 (준거법 및 관할)</h2>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                                본 약관은 대한민국 법률에 따라 규율되며, 서비스와 관련한 분쟁이 발생한 경우 회사의 소재지를 관할하는 법원을 전속 관할 법원으로 합니다.
-                            </p>
-                        </section>
-
-                        <section className="border-l-4 border-amber-400 pl-4">
-                            <h2 className="text-base font-black mb-3">제10조 (문의)</h2>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1 leading-relaxed">
-                                <p>약관과 관련한 문의는 아래 연락처로 해주시기 바랍니다.</p>
-                                <p>• 서비스명: 아카이뷰 (Archiview)</p>
-                                <p>• 이메일: <a href="mailto:gosipass902@gmail.com" className="text-amber-600 underline">gosipass902@gmail.com</a></p>
-                                <p>• 웹사이트: <a href="https://archiview.shop" className="text-amber-600 underline">https://archiview.shop</a></p>
-                            </div>
-                        </section>
-
-                    </div>
-
-                    <div className="mt-10 pt-8 border-t border-slate-100 dark:border-white/5 flex gap-4 justify-center flex-wrap">
-                        <Link to="/about" className="text-xs text-slate-400 hover:text-slate-600 underline">서비스 소개</Link>
-                        <Link to="/privacy" className="text-xs text-slate-400 hover:text-slate-600 underline">개인정보처리방침</Link>
-                        <Link to="/contact" className="text-xs text-slate-400 hover:text-slate-600 underline">문의하기</Link>
-                    </div>
-                </article>
-            </main>
-
-            <Footer />
-            <BottomNavigation />
+          <section>
+            <h2 className="text-lg font-black text-slate-900">10. 문의</h2>
+            <p className="mt-3">
+              약관 및 서비스 관련 문의:{' '}
+              <a className="text-blue-600 underline" href="mailto:gosipass902@gmail.com">gosipass902@gmail.com</a>
+            </p>
+          </section>
         </div>
-    );
+      </main>
+
+      <Footer />
+      <BottomNavigation />
+    </div>
+  );
 }

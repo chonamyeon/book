@@ -140,8 +140,8 @@ export async function runPodcast(bookInfo, { skipScript = false, skipTts = false
   console.log('\n[STEP 3/4] celebrities.js 업데이트');
   updateCelebrities(bookInfo.id, celebId);
 
-  // ── STEP 4: Firestore 동기화 안내 ─────────────────────────
-  console.log('\n[STEP 4/4] Firestore 스크립트 동기화');
+  // ── STEP 4: static data 동기화 안내 ─────────────────────────
+  console.log('\n[STEP 4/4] static data 스크립트 동기화');
   console.log('   Admin 대시보드 -> "스크립트 동기화" 버튼 클릭');
 
   // ── 완료 요약 ──────────────────────────────────────────────

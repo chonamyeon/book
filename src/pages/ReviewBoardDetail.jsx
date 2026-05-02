@@ -21,7 +21,7 @@ export default function ReviewBoardDetail() {
 
   useEffect(() => {
     if (book) {
-      document.title = `${book.title} 리뷰 및 핵심 요약 - 아카이뷰`;
+      document.title = `${book.title} 리뷰 및 핵심 요약 - Whiteboard`;
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement('meta');

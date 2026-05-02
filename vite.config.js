@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'build_output',
     chunkSizeWarningLimit: 1500,
-    sourcemap: true,
+    sourcemap: false,
     target: ['es2020', 'chrome80', 'safari14'],
     cssCodeSplit: true,
     reportCompressedSize: false,
@@ -16,9 +16,6 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
             return 'vendor-react'
-          }
-          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
-            return 'vendor-firebase'
           }
           if (id.includes('node_modules/framer-motion')) {
             return 'vendor-framer'

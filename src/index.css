@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== 화이트 모드 전역 오버라이드 ===== */
+/* PC 레이아웃: 전체 너비 사용 */
+@layer base {
+    body {
+        background-color: #ffffff;
+        color: #111827;
+    }
+}
+
 /* ===== 모바일 전역 최적화 ===== */
 
 /* iOS 텍스트 크기 자동 확대 방지 */
@@ -75,6 +84,11 @@ button,
 [role="button"],
 a {
     min-height: 44px;
+}
+
+/* 상단 네비게이션 링크는 min-height 예외 */
+header a, header nav a {
+    min-height: unset;
 }
 
 /* 작은 아이콘 버튼은 예외 (패딩으로 보완) */
@@ -162,7 +176,7 @@ a {
     }
 
     .glass-nav {
-        background: rgba(8, 13, 20, 0.8);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
     }

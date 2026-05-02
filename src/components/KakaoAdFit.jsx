@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 
 const KakaoAdFit = ({ unit, width = "320", height = "100", disabled }) => {
   const adRef = useRef(null);
+  const enabled = import.meta.env.VITE_ENABLE_KAKAO_ADFIT === 'true';
 
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || !enabled) return;
 
     // SPA 환경에서 페이지 이동 시 광고가 로드되지 않는 문제를 해결하기 위해
     // 광고 스크립트가 이미 로드되어 있더라도, ins 태그가 렌더링된 후 
@@ -38,7 +39,9 @@ const KakaoAdFit = ({ unit, width = "320", height = "100", disabled }) => {
     return () => {
         if (adRef.current) adRef.current.innerHTML = '';
     };
-  }, [unit, width, height, disabled]);
+  }, [unit, width, height, disabled, enabled]);
+
+  if (!enabled) return null;
 
   return (
     <div ref={adRef} className="flex justify-center my-8 overflow-hidden ad-container" style={{ minHeight: `${height}px` }}>
